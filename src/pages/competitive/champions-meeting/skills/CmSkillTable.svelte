@@ -151,28 +151,20 @@
             />
             {#if otherVariants.length}
               <span
-                class="upgrade-icon"
-                title="Skill upgrade"
-              >
-                <Icon
-                  name="arrow-left"
-                  size={14}
-                />
-              </span>
-              <span
-                class="variant-alias"
+                class="variant-alternatives"
                 title={aliases(Number(row.id))}
               >
                 {#each otherVariants.slice(0, 1) as id}
                   <RaceSkill
                     {id}
                     name={skillName(id)}
-                    fill
+                    iconOnly
                   />
                 {/each}
-                {#if otherVariants.length > 1}<small class="variant-count">
-                    +{otherVariants.length - 1}
-                  </small>{/if}
+                <span>
+                  {otherVariants.length}
+                  {otherVariants.length === 1 ? 'alternative' : 'alternatives'}
+                </span>
               </span>
             {/if}
           </span>

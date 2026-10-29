@@ -143,6 +143,36 @@ describe('race capture parser', () => {
     ).toMatchObject({ courseId: 10606, laneDistanceMax: 16.875 });
   });
 
+  it('joins each runner with its trained character for the deck and parents', () => {
+    const supportDeck = [{ position: 1, support_card_id: 30010, limit_break_count: 4 }];
+    const parents = [{ position_id: 10, card_id: 100101 }];
+    const payload = {
+      race_horse_data_array: [
+        { chara_name: 'Special Week', viewer_id: 7, trained_chara_id: 2, speed: 1200 },
+        { chara_name: 'Silence Suzuka', viewer_id: 7, trained_chara_id: 3 }
+      ],
+      trained_chara_array: [
+        {
+          viewer_id: 7,
+          trained_chara_id: 2,
+          speed: 900,
+          support_card_list: supportDeck,
+          succession_chara_array: parents
+        }
+      ],
+      race_scenario: scenario()
+    };
+
+    const [joined, unmatched] = parseRaceCapture(payload).runners;
+
+    expect(joined?.raw).toMatchObject({
+      support_card_list: supportDeck,
+      succession_chara_array: parents,
+      speed: 1200
+    });
+    expect(unmatched?.raw.support_card_list).toBeUndefined();
+  });
+
   it('retains race-instance IDs from room packets, filenames and archived replays', () => {
     const horses = [{ chara_name: 'Special Week' }],
       race_scenario = scenario();

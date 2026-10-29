@@ -7,6 +7,7 @@
   import { UPDATE_LOG, type ChangeCategory } from '@/services/site/update-log';
   import { CURRENT_UPDATE_VERSION } from '@/services/site/site-services';
   import { afterPageReady } from '@/routes/after-page-paint';
+  import ReleaseTour from './updates/ReleaseTour.svelte';
 
   let { request = 0 }: { request?: number } = $props();
 
@@ -21,6 +22,7 @@
   }));
 
   const latest = updates[0]!;
+  const featuredCategories = latest.categories.filter((category) => category.preview);
   const categoryIcons: Record<string, IconName> = {
     major: 'gauge',
     improvement: 'trending-up',
@@ -128,8 +130,8 @@
   <Dialog
     {open}
     title="What’s new"
-    maxWidth="580px"
-    maxHeight="85dvh"
+    maxWidth={history || !featuredCategories.length ? '580px' : '1000px'}
+    maxHeight="90dvh"
     mobileInset="16px"
     contentPadding="0"
     mobileContentPadding="0"
@@ -141,27 +143,41 @@
         data-nosnippet
         class:latest-header={!history}
       >
-        <span class="header-star">
-          <Icon
-            name={history ? 'timeline' : 'star'}
-            size={20}
-          />
-        </span>
         <span
           id={titleId}
           class="sr-only"
         >
           What’s new
         </span>
-        <h2>{history ? 'Previous updates' : latest.title}</h2>
         {#if history}
-          <span class="history-count">
-            {updates.length - 1} releases
+          <span class="header-icon">
+            <Icon
+              name="timeline"
+              size={18}
+            />
           </span>
-        {:else if latest.date}
-          <time datetime={latest.date}>
-            {releaseDate(latest.date)}
-          </time>
+          <h2>Previous updates</h2>
+          <span class="header-meta">{updates.length - 1} releases</span>
+        {:else}
+          {#if latest.version}
+            <span
+              class="version-badge"
+              title="uma.moe {latest.version}"
+            >
+              {latest.version}
+            </span>
+          {/if}
+          <div class="release-title">
+            <h2>{latest.title}</h2>
+            {#if latest.date}
+              <time
+                class="header-meta"
+                datetime={latest.date}
+              >
+                {releaseDate(latest.date)}
+              </time>
+            {/if}
+          </div>
         {/if}
       </div>
     {/snippet}
@@ -218,22 +234,14 @@
           {#if latest.summary}
             <p class="release-summary">{latest.summary}</p>
           {/if}
-          {@render releaseSections(latest.categories)}
-        </div>
-        <div class="feedback-banner">
-          <Icon
-            name="discord"
-            size={18}
-          />
-          <span>Feedback or a bug? Let us know.</span>
-          <Button
-            href="https://discord.uma.moe/"
-            target="_blank"
-            size="sm"
-            variant="ghost"
-          >
-            Discord <span aria-hidden="true">↗</span>
-          </Button>
+          {#if featuredCategories.length}
+            <ReleaseTour
+              categories={featuredCategories}
+              onexplore={close}
+            />
+          {:else}
+            {@render releaseSections(latest.categories)}
+          {/if}
         </div>
       {/if}
     </div>
@@ -247,21 +255,23 @@
         >
           {history ? 'Latest release' : 'Previous updates'}
         </Button>
+        <Button
+          href="https://discord.uma.moe/"
+          target="_blank"
+          size="sm"
+          variant="ghost"
+          icon="discord"
+          title="Report a bug or share feedback on Discord"
+        >
+          Feedback
+        </Button>
         <span class="footer-spacer"></span>
         <Button
           size="sm"
-          variant="secondary"
           onclick={close}
         >
           Got it
-        </Button>{#if !history}
-          <Button
-            size="sm"
-            onclick={close}
-          >
-            Explore update
-          </Button>
-        {/if}
+        </Button>
       </div>
     {/snippet}
   </Dialog>

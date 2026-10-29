@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import type { SkillData } from '@/lib/game-data/skills/skills';
 import { SECTIONS, SKILL_KINDS, type SkillFacts, type SkillPoint } from './skill-explorer-data';
-import { SKILL_RARITIES, pickTypes, plotView, type PlotOptions } from './skill-explorer-view';
+import { SKILL_RARITIES, toggleType, plotView, type PlotOptions } from './skill-explorer-view';
 import { valueAxis, valuePercent } from './scatter/scatter-scale';
 
 function skill(skillId: number, name: string, extra: Partial<SkillData> = {}): SkillData {
@@ -71,6 +71,24 @@ function shownIds(options: Partial<PlotOptions> = {}): number[] {
 }
 
 describe('Skill Explorer plot view', () => {
+  it('shows an exported skill only once its ID is in the loaded Global skill resources', () => {
+    const upcomingId = 999991;
+    const exported = [...points, point(upcomingId, 20, 0.5)];
+    const exportedFacts = new Map<number, SkillFacts>([
+      ...facts,
+      [upcomingId, { kind: 'speed', card: 199901 }]
+    ]);
+
+    expect(shownIds({ points: exported, facts: exportedFacts })).not.toContain(upcomingId);
+
+    const releasedSkills = new Map(skills);
+    releasedSkills.set(upcomingId, skill(upcomingId, 'Newly released unique'));
+
+    expect(shownIds({ points: exported, facts: exportedFacts, skills: releasedSkills })).toContain(
+      upcomingId
+    );
+  });
+
   it('leaves out negative skills and, unless asked, day-bound ones', () => {
     expect(shownIds()).toEqual([200341, 200011, 200012, 900011]);
     expect(shownIds({ showDayBound: true })).toContain(200151);
@@ -111,6 +129,52 @@ describe('Skill Explorer plot view', () => {
   it('shows the most valuable skills, plus search matches beyond the limit', () => {
     expect(shownIds({ limit: 2 })).toEqual([200341, 200011]);
     expect(shownIds({ limit: 2, search: 'inherited' })).toEqual([200341, 200011, 900011]);
+  });
+
+  it('keeps compared skills beyond the limit after the search changes', () => {
+    const comparedSkillIds = new Set([900011, 200012]);
+    const plotted = view({ limit: 1, search: 'corner', comparedSkillIds }).plotted;
+
+    expect(plotted.map((p) => p.skillId)).toEqual([200341, 200012, 900011]);
+    expect(plotted.find((p) => p.skillId === 200341)?.searchMatch).toBe(true);
+    expect(plotted.find((p) => p.skillId === 900011)?.searchMatch).toBe(false);
+  });
+
+  it('keeps a compared version beside the best of its family', () => {
+    expect(shownIds({ bestOfFamily: true, comparedSkillIds: new Set([200012]) })).toContain(200012);
+  });
+
+  it('keeps compared skills when their rarity and effect types are switched off', () => {
+    const comparedSkillIds = new Set([200011, 200341]);
+    const hiddenTypes = { rarities: new Set<never>(), kinds: new Set<never>() };
+
+    expect(shownIds({ comparedSkillIds, ...hiddenTypes })).toEqual([200341, 200011]);
+    expect(shownIds(hiddenTypes)).toEqual([]);
+  });
+
+  it('does not reintroduce unavailable or negative skills through comparison', () => {
+    const comparedSkillIds = new Set([999991, 200013, 200151]);
+    const shown = shownIds({ comparedSkillIds, day: { season: 1, weather: 3, ground: 4 } });
+
+    expect(shown).not.toContain(999991);
+    expect(shown).not.toContain(200013);
+    expect(shown).not.toContain(200151);
+  });
+
+  it('keeps a compared day-bound skill when its display option is switched off', () => {
+    expect(shownIds({ comparedSkillIds: new Set([200151]), showDayBound: false })).toContain(
+      200151
+    );
+  });
+
+  it('marks a name search independently from an Uma highlight', () => {
+    const plotted = view({ limit: 1, search: 'inherited', umaSkillIds: new Set([200012]) }).plotted;
+
+    expect(plotted.find((p) => p.skillId === 900011)).toMatchObject({
+      searchMatch: true,
+      matches: false
+    });
+    expect(view().plotted.every((p) => !p.searchMatch)).toBe(true);
   });
 
   it('matches the skills of a picked uma, beyond the limit', () => {
@@ -184,19 +248,18 @@ describe('value axis', () => {
   });
 });
 
-describe('pickTypes', () => {
-  const all = ['white', 'gold', 'unique'] as const;
+describe('toggleType', () => {
+  it('unchecks only the chosen type when all are selected', () => {
+    const selected = new Set(['white', 'gold', 'unique']);
 
-  it('narrows to the first pick, then adds and removes', () => {
-    const goldOnly = pickTypes(new Set(all), 'gold', all);
-    const goldAndUnique = pickTypes(goldOnly, 'unique', all);
-
-    expect([...goldOnly]).toEqual(['gold']);
-    expect([...goldAndUnique]).toEqual(['gold', 'unique']);
-    expect([...pickTypes(goldAndUnique, 'gold', all)]).toEqual(['unique']);
+    expect([...toggleType(selected, 'gold')]).toEqual(['white', 'unique']);
+    expect(selected.size).toBe(3);
   });
 
-  it('turns everything back on when the last pick is taken off', () => {
-    expect(pickTypes(new Set(['gold'] as const), 'gold', all).size).toBe(3);
+  it('allows the last type to be unchecked, then checked again', () => {
+    const empty = toggleType(new Set(['gold']), 'gold');
+
+    expect(empty.size).toBe(0);
+    expect([...toggleType(empty, 'unique')]).toEqual(['unique']);
   });
 });

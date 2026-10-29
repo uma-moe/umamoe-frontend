@@ -88,9 +88,6 @@
   }
 }
 @media (max-width: 767px) {
-  .cm-workspace {
-    padding-inline: 12px;
-  }
   .navigation {
     gap: 4px;
   }

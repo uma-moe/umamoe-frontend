@@ -110,8 +110,8 @@
     margin-top: var(--space-3);
   }
   .compact summary {
-    min-height: 36px;
-    padding: 4px 0;
+    min-height: var(--disclosure-compact-summary-height, 36px);
+    padding: var(--disclosure-compact-summary-padding, 4px 0);
     border: 0;
     border-radius: 0;
     background: transparent;
@@ -123,7 +123,7 @@
     font-size: 10px;
   }
   .compact[open] > .disclosure-content {
-    margin-top: 8px;
+    margin-top: var(--disclosure-compact-content-gap, 8px);
   }
   @media (max-width: 480px) {
     summary {

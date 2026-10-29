@@ -2,7 +2,12 @@
   import { formatWinPoints } from '../scatter/scatter-scale';
   import { SECTIONS, type SkillPoint } from '../skill-explorer-data';
   import type { CountGate } from './skill-requirements';
+  import type { SkillEffectDetails } from './skill-effects';
+  import type { SkillProvider, SkillProviders } from './skill-providers';
   import { finalSpurtSection, FINAL_SPURT_HELP } from '@/lib/race/final-spurt';
+  import Disclosure from '@/components/overlays/Disclosure.svelte';
+  import PickupImages from '@/components/cards/PickupImages.svelte';
+  import SkillPoints from '@/components/game/SkillPoints.svelte';
 
   export interface TerrainSegment {
     start: number;
@@ -28,6 +33,10 @@
     /** A unique's own skill icon, shown on its character. */
     badge?: string;
     description?: string;
+    effects?: SkillEffectDetails[];
+    spCost?: number;
+    providers?: SkillProviders;
+    providerStatus?: 'loading' | 'ready' | 'error';
     /** What it needs to fire, in words: one list per alternative, any of which will do. */
     requirements: string[][];
     /** Skills that raise its value most beside it, on a single course. */
@@ -47,6 +56,10 @@
     image,
     badge,
     description,
+    effects = [],
+    spCost,
+    providers,
+    providerStatus = 'ready',
     requirements,
     partners,
     gate,
@@ -54,6 +67,7 @@
     course,
     inBuild
   }: Props = $props();
+  const sourcesId = $props.id();
 
   // The final leg is the last sixth; a runner's spurt can begin earlier, in late race.
   const PHASES = [
@@ -63,10 +77,11 @@
     { label: 'Final', from: 20, to: 24 }
   ];
   const WIDTH = 276;
-  const HEIGHT = 62;
+  const HEIGHT = 48;
   const TOP = 14;
   const SECTION_WIDTH = WIDTH / SECTIONS;
   const spurt = finalSpurtSection(1);
+  const NUMBER = /([+−-]?\d+(?:\.\d+)?%?)/;
 
   /** A passive (or a gate skill) takes hold at the start: its proc point says nothing, so no chart is drawn. */
   const fromGate = $derived(point.rate > 0 && point.mean * SECTIONS < 0.05);
@@ -105,7 +120,7 @@
     <div>
       <h3>{name}</h3>
       {#if description}
-        <p>{description}</p>
+        <p>{@render numberText(description)}</p>
       {/if}
     </div>
   </header>
@@ -113,14 +128,20 @@
   <dl class="worth">
     <div>
       <dt>In build</dt>
-      <dd>
+      <dd
+        class:positive={point.win > 0}
+        class:negative={point.win < 0}
+      >
         {formatWinPoints(point.win)}
         <small>win rate</small>
       </dd>
     </div>
     <div>
       <dt>Alone</dt>
-      <dd>
+      <dd
+        class:positive={point.winAlone > 0}
+        class:negative={point.winAlone < 0}
+      >
         {formatWinPoints(point.winAlone)}
         <small>win rate</small>
       </dd>
@@ -139,6 +160,29 @@
     </div>
   </dl>
 
+  <section class="effects">
+    <div class="effect-heading">
+      <h4>Base effect</h4>
+      {#if spCost !== undefined}
+        <span class="sp-cost">
+          <SkillPoints
+            value={spCost}
+            note="Base cost before hint discounts"
+          />
+        </span>
+      {/if}
+    </div>
+    {#each effects as alternative, index (alternative.effects.join('|') + alternative.duration)}
+      {#if index > 0}
+        <span class="or">or</span>
+      {/if}
+      <p>{@render numberText(alternative.effects.join(' · '))}</p>
+      <small>{@render numberText(alternative.duration)}</small>
+    {:else}
+      <p class="unavailable">Numeric effect data unavailable.</p>
+    {/each}
+  </section>
+
   {#if point.forced > 0}
     <p class="forced">
       Never procs for her{point.courses > 1
@@ -154,7 +198,7 @@
         {#if index > 0}
           <span class="or">or</span>
         {/if}
-        <p>{alternative.join(' · ')}</p>
+        <p>{@render numberText(alternative.join(' · '))}</p>
       {/each}
     </section>
   {/if}
@@ -167,7 +211,8 @@
     <section class="related">
       <h4>Fed by</h4>
       <p class="gate">
-        {gate.gate.count} of her skills must fire {gate.gate.where} first. Skills that fire there:
+        <span class="number">{gate.gate.count}</span>
+        of her skills must fire {gate.gate.where} first. Skills that fire there:
       </p>
       {@render relatedList(gate.feeders)}
     </section>
@@ -180,6 +225,45 @@
     </section>
   {/if}
 
+  <section
+    class="sources"
+    aria-label="Skill sources"
+  >
+    {#if providers && providers.umas.length > 0}
+      <div class="provider-group">
+        <Disclosure
+          id={`${sourcesId}-umas`}
+          title="Uma trainees"
+          description={`${providers.umas.length}`}
+          compact
+          open
+        >
+          {@render providerList(providers.umas, 'uma')}
+        </Disclosure>
+      </div>
+    {/if}
+    {#if providers && providers.supports.length > 0}
+      <div class="provider-group">
+        <Disclosure
+          id={`${sourcesId}-supports`}
+          title="Support cards"
+          description={`${providers.supports.length}`}
+          compact
+          open
+        >
+          {@render providerList(providers.supports, 'support')}
+        </Disclosure>
+      </div>
+    {/if}
+    {#if providerStatus === 'loading'}
+      <p>Loading skill sources…</p>
+    {:else if providerStatus === 'error'}
+      <p>Skill sources could not load.</p>
+    {:else if !providers || (providers.umas.length === 0 && providers.supports.length === 0)}
+      <p>No sources listed in this data.</p>
+    {/if}
+  </section>
+
   {#if inBuild || scopeCourses > 1}
     <ul class="notes">
       {#if inBuild}
@@ -191,6 +275,28 @@
     </ul>
   {/if}
 </article>
+
+{#snippet numberText(value: string)}
+  {#each value.split(NUMBER) as part, index}
+    <span class:number={index % 2 === 1}>{part}</span>
+  {/each}
+{/snippet}
+
+{#snippet providerList(sources: SkillProvider[], kind: 'uma' | 'support')}
+  <PickupImages
+    items={sources.map((source) => ({
+      id: String(source.id),
+      name: source.name,
+      subLabel: source.detail,
+      image: source.image,
+      gametoraUrl: source.href,
+      kind: kind === 'uma' ? 'character' : 'support'
+    }))}
+    label={kind === 'uma' ? 'Uma trainees' : 'Support cards'}
+    wrap
+    grow
+  />
+{/snippet}
 
 {#snippet relatedList(skills: RelatedSkill[])}
   <ul>

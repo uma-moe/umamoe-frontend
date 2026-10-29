@@ -1,6 +1,5 @@
 <script lang="ts">
   import { onMount } from 'svelte';
-  import Banner from '@/components/feedback/Banner.svelte';
   import { loadSkills, type SkillData } from '@/lib/game-data/skills/skills';
   import { buildOptimizeRequest } from './requests/optimize-request';
   import { simulatorRepository, type OptimizeResult } from './simulator-repository';
@@ -37,8 +36,6 @@
     selectedRaceInstanceId,
     selectedCourse,
     simulatorCourseData,
-    courseDataErrorVisible,
-    dismissCourseDataError,
     simulatorSession
   } from './simulator-session.svelte';
 
@@ -61,11 +58,31 @@
   let budgetInSetup = $state(false);
   let resultPanel = $state<HTMLElement>();
   let codeOpen = $state(false);
+  let codeText = $state('');
 
   // Keep the setup in this browser as it changes.
   $effect(saveBuildSearch);
 
+  /**
+   * A link can carry a build code as `?build=`. It opens the import with the code so its preview shows what replaces
+   * the saved setup, and leaves the address so a reload does not ask again.
+   */
+  function openLinkedCode(): void {
+    const url = new URL(location.href);
+    const linked = url.searchParams.get('build');
+    if (linked === null) return;
+
+    url.searchParams.delete('build');
+    history.replaceState(history.state, '', url.pathname + url.search + url.hash);
+
+    // An unescaped `+` in base64 arrives as a space.
+    codeText = linked.trim().replace(/ /g, '+');
+    codeOpen = codeText !== '';
+  }
+
   onMount(() => {
+    openLinkedCode();
+
     let active = true;
     void loadSkills()
       .then((value) => {
@@ -186,7 +203,7 @@
     };
   }
 
-  /** Loads the whole Skill planner from a code copied from it. */
+  /** Loads the whole Build optimizer from a code copied from it. */
   function restoreTab(page: BuildCodePage): string | void {
     if (page.tab !== 'build') return 'This code was copied from another tab.';
 
@@ -261,18 +278,6 @@
   }
 </script>
 
-{#if courseDataErrorVisible()}
-  <Banner
-    title="Race data unavailable"
-    tone="danger"
-    reportable={false}
-    dismissible
-    ondismiss={dismissCourseDataError}
-  >
-    {simulatorCourseData.error}
-  </Banner>
-{/if}
-
 <SimulatorShell
   mode="build"
   showUma={false}
@@ -281,7 +286,7 @@
     <div
       class="build-form"
       role="group"
-      aria-label="Skill planner input"
+      aria-label="Build optimizer input"
     >
       <RunnerInput
         bind:uma={buildSearch.uma}
@@ -317,10 +322,10 @@
     />
     <aside
       class="build-side"
-      aria-label="Skill planner result"
+      aria-label="Build optimizer result"
       bind:this={resultPanel}
     >
-      <h2 class="sr-only">Skill planner result</h2>
+      <h2 class="sr-only">Build optimizer result</h2>
       <BuildResult
         result={run?.result}
         {theorized}
@@ -339,6 +344,7 @@
 
 <BuildCodeDialog
   bind:open={codeOpen}
+  bind:text={codeText}
   target="build"
   current={currentCode}
   onrestore={restoreTab}

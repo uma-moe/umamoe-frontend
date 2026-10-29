@@ -23,6 +23,7 @@
   import Button from '@/components/controls/Button.svelte';
   import Banner from '@/components/feedback/Banner.svelte';
   import LineageTree from '@/components/lineage/LineageTree.svelte';
+  import SkillPoints, { LEARNED_SKILL_POINTS_NOTE } from '@/components/game/SkillPoints.svelte';
 
   let {
     veteran,
@@ -96,9 +97,14 @@
           <dt>Total Stats</dt>
           <dd>{totalStats(veteran).toLocaleString()}</dd>
         </div>
-        <div title="Base cost of learned skills including prerequisites, before hint discounts">
-          <dt>SP total</dt>
-          <dd>{spTotal?.toLocaleString() ?? '-'}</dd>
+        <div>
+          <dt>Skills</dt>
+          <dd>
+            <SkillPoints
+              value={spTotal}
+              note={LEARNED_SKILL_POINTS_NOTE}
+            />
+          </dd>
         </div>
       </dl>
     </header>

@@ -155,7 +155,11 @@
     </header>
   {/if}
   {#if simulatorCourseData.loading}
-    <Spinner label="Loading courses…" />
+    <Spinner
+      centered
+      minHeight="160px"
+      label="Loading courses…"
+    />
   {:else}
     {#if workspace && !inlineConditions}
       <div class="course-visual">

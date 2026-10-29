@@ -100,7 +100,8 @@
           {
             id: 'final-spurt',
             label: 'Final spurt',
-            segments: [finalSpurtSection(profile.distance)]
+            // The row is already named, so a narrow band shows only "Spurt".
+            segments: [{ ...finalSpurtSection(profile.distance), short: 'Spurt' }]
           },
           {
             id: 'race-sections',
@@ -287,8 +288,8 @@
             Course profile unavailable
           {:else}
             <Spinner
-              size={18}
-              showLabel
+              centered
+              minHeight="140px"
               label="Loading course profile…"
             />
           {/if}

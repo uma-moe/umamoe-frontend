@@ -7,7 +7,6 @@ import {
   skillsGivenBy,
   umaRelease,
   unvaluedSkills,
-  upcomingUniques,
   type CharacterBanner
 } from './uma-skills';
 
@@ -132,23 +131,5 @@ describe('uma picker', () => {
 
     expect(unvalued).toEqual({ unique: true, skills: 0 });
     expect(newer).toEqual({ unique: true, skills: 1 });
-  });
-
-  it('names a unique the Global skill list lacks after its uma', () => {
-    const globalSkills = new Map([
-      [
-        900011,
-        { skill_id: 900011, name: 'Shooting Star', rarity: 1, icon: 'utx_ico_skill_10011.png' }
-      ]
-    ]);
-
-    const unnamed = upcomingUniques(umas, globalSkills);
-
-    expect(unnamed.has(900011)).toBe(false);
-    expect(unnamed.get(910651)).toMatchObject({
-      name: 'Daitaku Helios (Joyful Jamboree!) unique',
-      unique: true,
-      inherited: true
-    });
   });
 });

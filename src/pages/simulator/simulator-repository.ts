@@ -397,11 +397,161 @@ export function isOptimizeTheory(value: unknown): value is OptimizeTheory {
   return builds && offers && isRecord(value.field) && isNumber(value.builds_valued);
 }
 
+/** V5's own move scores, timing observations and exact paired measurements. Scores are not lengths. */
+export interface V5PurchaseValue {
+  purchase: number;
+  held: boolean;
+  score: number;
+  source: 'v5' | 'ranker' | 'posterior' | 'recovery_races';
+  seconds?: number;
+  win?: number;
+  fire: TheoryFire & { races: number };
+  measured?: { gain: number; standard_error: number };
+}
+
+export interface V5BuildValues {
+  purchases: number[];
+  timing_races: number;
+  skills: V5PurchaseValue[];
+}
+
+export interface OptimizeModel {
+  model: string;
+  error?: string;
+  races: number;
+  budget: number;
+  lobbies: number;
+  rooms: number;
+  build?: {
+    model: string;
+    model_sha256: string;
+    ranker_sha256?: string;
+    course_prior: boolean;
+    seconds: number;
+    first_steps: {
+      add: number;
+      cost: number;
+      predicted: number;
+      beaten: number;
+      win: number;
+      time: number;
+    }[];
+    rounds: {
+      races: number;
+      slope: number;
+      trust: number;
+      tested: {
+        move: string;
+        prior: number;
+        measured: number;
+        se: number;
+        posterior: number;
+        p: number;
+      }[];
+      made: string[];
+    }[];
+    explanation?: {
+      phase_bounds: number[];
+      initial: V5BuildValues;
+      optimized: V5BuildValues;
+    };
+  };
+}
+
+/** Validate the V5 report before reading it into the optimizer. Older V5 builds omit the explanation. */
+export function isOptimizeModel(value: unknown): value is OptimizeModel {
+  const index = (v: unknown) => isNumber(v) && Number.isSafeInteger(v) && v >= 0;
+  const optionalNumber = (v: unknown) => v === undefined || isNumber(v);
+  const values = (v: unknown): boolean =>
+    isRecord(v) &&
+    Array.isArray(v.purchases) &&
+    v.purchases.every(index) &&
+    index(v.timing_races) &&
+    Array.isArray(v.skills) &&
+    v.skills.every(
+      (s) =>
+        isRecord(s) &&
+        index(s.purchase) &&
+        typeof s.held === 'boolean' &&
+        isNumber(s.score) &&
+        ['v5', 'ranker', 'posterior', 'recovery_races'].includes(String(s.source)) &&
+        optionalNumber(s.seconds) &&
+        optionalNumber(s.win) &&
+        isFire(s.fire) &&
+        isRecord(s.fire) &&
+        index(s.fire.races) &&
+        s.fire.rate >= 0 &&
+        s.fire.rate <= 1 &&
+        (s.measured === undefined ||
+          (isRecord(s.measured) &&
+            isNumber(s.measured.gain) &&
+            isNumber(s.measured.standard_error) &&
+            s.measured.standard_error >= 0))
+    );
+  if (
+    !isRecord(value) ||
+    typeof value.model !== 'string' ||
+    !index(value.races) ||
+    !index(value.budget) ||
+    !index(value.lobbies) ||
+    !index(value.rooms)
+  )
+    return false;
+  const b = value.build;
+  if (
+    !isRecord(b) ||
+    typeof b.model !== 'string' ||
+    typeof b.model_sha256 !== 'string' ||
+    (b.ranker_sha256 !== undefined && typeof b.ranker_sha256 !== 'string') ||
+    typeof b.course_prior !== 'boolean' ||
+    !isNumber(b.seconds) ||
+    !Array.isArray(b.first_steps) ||
+    !b.first_steps.every(
+      (s) =>
+        isRecord(s) &&
+        index(s.add) &&
+        isNumber(s.cost) &&
+        isNumber(s.predicted) &&
+        isNumber(s.beaten) &&
+        isNumber(s.win) &&
+        isNumber(s.time)
+    ) ||
+    !Array.isArray(b.rounds) ||
+    !b.rounds.every(
+      (r) =>
+        isRecord(r) &&
+        index(r.races) &&
+        isNumber(r.slope) &&
+        isNumber(r.trust) &&
+        Array.isArray(r.made) &&
+        r.made.every((m) => typeof m === 'string') &&
+        Array.isArray(r.tested) &&
+        r.tested.every(
+          (t) =>
+            isRecord(t) &&
+            typeof t.move === 'string' &&
+            [t.prior, t.measured, t.se, t.posterior, t.p].every(isNumber)
+        )
+    )
+  )
+    return false;
+  const e = b.explanation;
+  return (
+    isRecord(e) &&
+    Array.isArray(e.phase_bounds) &&
+    e.phase_bounds.length === 5 &&
+    e.phase_bounds.every((n, i, a) => isNumber(n) && (i === 0 || n > a[i - 1])) &&
+    values(e.initial) &&
+    values(e.optimized)
+  );
+}
+
 export interface OptimizeResult {
   schema_version: number;
   mode: string;
   /** The theory's worth of the finalists and of every purchase, when the theory searched (schema 8). */
   theory?: OptimizeTheory;
+  model?: OptimizeModel;
   /**
    * What gains measure: seconds she saves (`finish_time`, and older services that do not say), or how many more
    * runners she beats in real CM fields (`field_place`).

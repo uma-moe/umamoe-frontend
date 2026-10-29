@@ -1,17 +1,44 @@
 .target-statline {
-  display: grid;
-  grid-template-columns: minmax(10rem, 16rem) minmax(0, 1fr);
-  gap: 0.4rem 1.5rem;
-  align-items: center;
-  padding: 0.6rem 0.9rem;
-  border: 1px solid var(--border-primary);
-  border-radius: 10px;
-  background: var(--component-bg);
+  margin-left: auto;
+  min-width: 0;
+  --inspect-popover-width: 620px;
+  --inspect-popover-padding: 16px;
 }
-
+.stat-strip {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.55rem;
+  min-height: 32px;
+  color: var(--text-secondary);
+}
+.strip-label {
+  color: var(--text-muted);
+  font-size: 0.75rem;
+}
+.strip-stat {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  font-size: 0.8rem;
+  font-weight: 650;
+  font-variant-numeric: tabular-nums;
+}
+.strip-stat img {
+  width: 16px;
+  height: 16px;
+}
+.by-style {
+  font-size: 0.8rem;
+}
+section {
+  display: grid;
+  gap: 0.85rem;
+}
 header {
   display: grid;
   gap: 0.2rem;
+  padding-right: 28px;
 }
 
 h3 {
@@ -114,6 +141,6 @@ tr.selected th {
 
 @media (max-width: 900px) {
   .target-statline {
-    grid-template-columns: minmax(0, 1fr);
+    margin-left: 0;
   }
 }

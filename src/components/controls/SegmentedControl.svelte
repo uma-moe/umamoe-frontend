@@ -162,4 +162,21 @@
     font-size: 11px;
     font-weight: 600;
   }
+  /* A phone shows every option: a control that does not fit wraps rather than scrolling options out of view. */
+  @media (max-width: 767px) {
+    .segments {
+      flex-wrap: wrap;
+      overflow-x: visible;
+    }
+    button {
+      flex: 1 1 auto;
+    }
+    .compact {
+      height: auto;
+      min-height: var(--control-height);
+    }
+    .compact button {
+      min-height: calc(var(--control-height) - 6px);
+    }
+  }
 </style>

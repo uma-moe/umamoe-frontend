@@ -289,5 +289,6 @@
 </div>
 
 <style>
+  @import './outcome-view-heading.css';
   @import './replay-outcome-profile.css';
 </style>

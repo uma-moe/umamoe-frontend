@@ -1,6 +1,5 @@
 <script lang="ts">
   import { onMount } from 'svelte';
-  import Banner from '@/components/feedback/Banner.svelte';
   import { loadSkills, type SkillData } from '@/lib/game-data/skills/skills';
   import type { RaceCourse } from '@/lib/game-data/racing/courses';
   import {
@@ -41,11 +40,8 @@
   } from './simulator-repository';
   import type { SimulatorUma } from './simulator-uma';
   import {
-    courseDataErrorVisible,
-    dismissCourseDataError,
     selectedRaceInstanceId,
     selectedCourse,
-    simulatorCourseData,
     simulatorSession
   } from './simulator-session.svelte';
 
@@ -242,18 +238,6 @@
     Object.assign(hpCalculator, restoreHpCalculator(page.setup));
   }
 </script>
-
-{#if courseDataErrorVisible()}
-  <Banner
-    title="Race data unavailable"
-    tone="danger"
-    reportable={false}
-    dismissible
-    ondismiss={dismissCourseDataError}
-  >
-    {simulatorCourseData.error}
-  </Banner>
-{/if}
 
 <SimulatorShell
   mode="stamina"

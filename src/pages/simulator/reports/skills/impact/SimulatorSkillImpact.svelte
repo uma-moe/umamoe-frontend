@@ -1,6 +1,5 @@
 <script lang="ts">
   import type { Snippet } from 'svelte';
-  import { onMount } from 'svelte';
   import Banner from '@/components/feedback/Banner.svelte';
   import Button from '@/components/controls/Button.svelte';
   import ChartFrame from '@/components/charts/ChartFrame.svelte';
@@ -8,13 +7,8 @@
   import InspectPopover from '@/components/overlays/InspectPopover.svelte';
   import Icon from '@/components/Icon.svelte';
   import SegmentedControl from '@/components/controls/SegmentedControl.svelte';
-  import {
-    loadSkills,
-    resolveEncodedSkill,
-    skillPointTotal,
-    skillRarity,
-    type SkillData
-  } from '@/lib/game-data/skills/skills';
+  import { resolveEncodedSkill, skillPointTotal, skillRarity } from '@/lib/game-data/skills/skills';
+  import { ReportSkillCatalog } from '../report-skill-catalog.svelte';
   import { skillDistributions } from '../skill-distributions';
   import { runnerColor } from '../../simulation-report';
   import ReportRunnerPicker from '../../ReportRunnerPicker.svelte';
@@ -55,44 +49,27 @@
     children?: Snippet;
   } = $props();
 
-  let skillLookup = $state.raw(new Map<number, SkillData>());
   let sample = $state('quick');
-  let skillDataError = $state('');
   let sortKey = $state('value'),
     sortDirection = $state<SortDirection>('descending');
 
-  onMount(() => {
-    let active = true;
-    void loadSkills()
-      .then((value) => {
-        if (active) skillLookup = value;
-      })
-      .catch((reason: unknown) => {
-        if (active)
-          skillDataError =
-            reason instanceof Error
-              ? reason.message
-              : 'Skill names could not be loaded. Measurements remain available.';
-      });
-
-    return () => {
-      active = false;
-    };
-  });
+  const catalog = new ReportSkillCatalog(
+    'Skill names could not be loaded. Measurements remain available.'
+  );
 
   const active = $derived(source !== undefined && sources.includes(source) ? source : sources[0]!);
   const races = $derived(
     sample === 'full' ? result.runs : Math.min(PRELIMINARY_RACES, result.runs)
   );
 
-  const name = (id: number) => resolveEncodedSkill(skillLookup, id).skill?.name ?? 'Skill ' + id;
+  const name = (id: number) => resolveEncodedSkill(catalog.lookup, id).skill?.name ?? 'Skill ' + id;
   const owned = (runner: number) => umas[runner]!.skills.map((skill) => skill.skillId);
   const unique = (id: number) => {
-    const { skill, inherited } = resolveEncodedSkill(skillLookup, id);
+    const { skill, inherited } = resolveEncodedSkill(catalog.lookup, id);
     return skillRarity(skill, inherited) === 'unique-main';
   };
 
-  const cost = (id: number) => (unique(id) ? null : skillPointTotal(skillLookup, [id]));
+  const cost = (id: number) => (unique(id) ? null : skillPointTotal(catalog.lookup, [id]));
   const value = (runner: number, id: number): SkillValue | undefined => {
     const outcome = impacts.get(runner, id);
     return outcome ? skillValue(result, runner, distance, outcome) : undefined;
@@ -195,13 +172,13 @@
     </span>
   </header>
   {@render lead?.()}
-  {#if skillDataError}
+  {#if catalog.error}
     <Banner
       title="Skill data unavailable"
       tone="danger"
       reportable={false}
     >
-      {skillDataError}
+      {catalog.error}
     </Banner>
   {/if}
   {#if impacts.error}<Banner

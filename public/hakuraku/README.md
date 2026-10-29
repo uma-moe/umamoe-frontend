@@ -6,6 +6,9 @@ Imported: 2026-09-21
 License: MIT (see LICENSE in this directory).
 
 `notes/` preserves the published research Markdown, manifest, and attachments.
+Set `"pinned": true` on a note in `notes/manifest.json` to feature it for everyone
+at the top of matching Research results. Remove the field or set it to `false`
+to unpin it. The newest note automatically receives the New badge.
 The Master Data browser follows Hakuraku's `/masterdata` page: it loads the
 complete game `master.mdb` into SQLite in the browser. It reads the database
 from the uma.moe resource manifest (`master.path`) rather than a copy here, and

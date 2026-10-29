@@ -53,8 +53,11 @@
 .race-form :global(.profile.compact) {
   background: var(--surface-2, transparent);
 }
-.race-form :global(section.profile.compact .profile-body) {
-  grid-template-columns: min(26%, 280px) minmax(0, 1fr);
+/* Only while the profile has room for both: narrower, its own layout puts the map under the breakdown. */
+@container course-profile (min-width: 581px) {
+  .race-form :global(section.profile.compact .profile-body) {
+    grid-template-columns: min(26%, 280px) minmax(0, 1fr);
+  }
 }
 .race-form :global(section.profile.compact .distance-profile) {
   padding-block: 10px;
@@ -65,6 +68,7 @@
 @container race-form (max-width:560px) {
   .race-fields {
     grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+    row-gap: 8px;
   }
   .race-fields > :global(.field:first-child) {
     grid-column: 1 / -1;

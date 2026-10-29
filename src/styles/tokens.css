@@ -262,7 +262,7 @@
   /* Backwards-compatible defaults resolve to the focused, normal page. */
   --page-content-max: var(--page-content-normal);
   --page-frame-max: var(--page-frame-normal);
-  --page-gutter-mobile: 4px;
+  --page-gutter-mobile: 6px;
   --page-gutter-compact: 24px;
   --page-gutter-expanded: 32px;
   --ad-rail-width: 160px;

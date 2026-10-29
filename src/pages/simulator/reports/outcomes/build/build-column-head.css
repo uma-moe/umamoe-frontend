@@ -1,8 +1,8 @@
 .head {
   display: grid;
-  gap: 3px;
+  gap: 4px;
   min-width: 0;
-  padding: 0 2px 5px;
+  padding: 0 2px 6px;
   border-bottom: 1px solid var(--border-subtle);
 }
 .rank {
@@ -20,13 +20,6 @@ h4 {
   font-weight: 650;
   color: var(--text-secondary);
 }
-/* Sized to the card's rank line. */
-h4 :global(.badge) {
-  min-height: 0;
-  padding: 1px 6px;
-  font-size: 11px;
-  line-height: 1.4;
-}
 .spend {
   font-size: 11px;
   color: var(--text-muted);
@@ -43,14 +36,14 @@ h4 :global(.badge) {
   font-variant-numeric: tabular-nums;
 }
 .score strong {
-  font-size: 16px;
+  font-size: 14px;
   font-weight: 700;
   letter-spacing: -0.01em;
   color: var(--text-primary);
 }
 .score span {
   font-size: 11px;
-  color: var(--text-muted);
+  color: var(--text-secondary);
 }
 /* How far a build trails the pick: small builds that share most skills differ by tenths of a length. */
 .score .behind {

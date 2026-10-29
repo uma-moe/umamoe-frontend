@@ -146,8 +146,8 @@
     gap: 2px 10px;
     padding-block: var(--dialog-heading-padding, 6px);
   }
+  /* No narrower than its controls: a long description is cut short instead of running under them. */
   .header-actions {
-    min-width: 0;
     min-height: 36px;
     display: flex;
     align-items: center;

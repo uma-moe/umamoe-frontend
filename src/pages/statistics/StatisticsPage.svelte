@@ -254,10 +254,11 @@
       </Banner>
     {/if}
     {#if loading}
-      <div class="loading">
-        <Spinner size={28} />
-        <span>Loading community statistics…</span>
-      </div>
+      <Spinner
+        centered
+        minHeight="300px"
+        label="Loading community statistics…"
+      />
     {:else if stats}
       <StatisticsSummary
         {view}

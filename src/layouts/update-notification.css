@@ -4,12 +4,12 @@
 .release-header {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 12px;
   min-width: 0;
 }
-.header-star {
+.header-icon {
   display: flex;
-  color: var(--accent-warning);
+  color: var(--color-accent);
 }
 .release-header h2 {
   flex: 1;
@@ -19,41 +19,45 @@
 }
 .latest-header h2 {
   font-size: 20px;
-  letter-spacing: -0.4px;
+  letter-spacing: -0.02em;
+  text-wrap: balance;
 }
-.release-header time {
-  padding: 4px 7px;
-  background: var(--surface-2);
-  border-radius: var(--radius-sm);
+/* The release number wears the logo's gradient, the dialog's one mark of the brand. */
+.version-badge {
+  display: grid;
+  flex: none;
+  place-items: center;
+  min-width: 44px;
+  height: 44px;
+  padding: 0 8px;
+  border: 1.5px solid transparent;
+  border-radius: 12px;
+  background:
+    linear-gradient(var(--dialog-surface-bg), var(--dialog-surface-bg)) padding-box,
+    linear-gradient(135deg, #64b5f6, #81c784 55%, #ffd54f) border-box;
+  color: var(--color-text);
+  font-size: 15px;
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.02em;
 }
-time {
+.release-title {
+  display: grid;
+  flex: 1;
+  gap: 2px;
+  min-width: 0;
+}
+.header-meta {
   color: var(--color-text-muted);
   font-size: var(--font-xs);
   white-space: nowrap;
 }
-.feedback-banner {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  padding: 8px 16px;
-  color: var(--color-text-muted);
-  border-top: 1px solid var(--border-subtle);
-  font-size: 12px;
-  line-height: 1.4;
-}
-.feedback-banner > :global(svg) {
-  flex: none;
-  color: var(--accent-purple);
-}
-.feedback-banner > span {
-  flex: 1;
-}
 .release-summary {
-  margin: 16px 20px 0;
+  max-width: 72ch;
+  margin: 14px 24px 16px;
   color: var(--color-text-muted);
   font-size: 14px;
-  line-height: 1.6;
-  max-width: 52ch;
+  line-height: 1.55;
 }
 .release-highlights {
   display: grid;
@@ -183,11 +187,6 @@ ul {
 .footer-spacer {
   flex: 1;
 }
-.history-count {
-  color: var(--color-text-muted);
-  font-size: var(--font-xs);
-  white-space: nowrap;
-}
 .history-year {
   margin: 0;
   padding: 10px 16px 6px;
@@ -216,6 +215,8 @@ summary::-webkit-details-marker {
 .history-date {
   display: grid;
   flex: 0 0 38px;
+  color: var(--color-text-muted);
+  font-size: var(--font-xs);
   justify-items: center;
   gap: 1px;
   line-height: 1.1;
@@ -268,17 +269,24 @@ summary:hover {
     padding: 10px 12px;
     gap: 10px;
   }
-  .feedback-banner {
-    padding: 8px 12px;
-  }
   .release-summary {
-    margin-inline: 12px;
+    margin: 12px;
+    font-size: 13px;
   }
   .release-highlights {
     padding: 12px;
   }
+  .release-header {
+    gap: 10px;
+  }
   .latest-header h2 {
-    font-size: 18px;
+    font-size: 17px;
+  }
+  .version-badge {
+    min-width: 38px;
+    height: 38px;
+    border-radius: 10px;
+    font-size: 13px;
   }
   .latest-release .release-highlights {
     padding: 12px;

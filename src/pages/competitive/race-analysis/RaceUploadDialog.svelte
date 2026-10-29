@@ -34,9 +34,8 @@
     {onfiles}
   />
   <p class="upload-help">
-    Uploaded races are automatically resimulated for detailed analysis. Multiple races add a session
-    report. Captures are sent to the uma.moe simulator; mismatched replays are reported to Sentry
-    for debugging.
+    Uploads are resimulated on the uma.moe simulator, and several races add a session report.
+    Mismatched replays are reported to Sentry.
   </p>
   <div class="demo-actions">
     <span>Try it with demo data</span>

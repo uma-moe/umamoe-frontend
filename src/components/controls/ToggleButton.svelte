@@ -9,6 +9,7 @@
     pressed?: boolean;
     badge?: string;
     action?: boolean;
+    size?: 'sm' | 'md';
     disabled?: boolean;
     ariaLabel?: string;
     onclick?: (event: MouseEvent) => void;
@@ -21,6 +22,7 @@
     pressed = false,
     badge,
     action = false,
+    size = 'md',
     disabled = false,
     ariaLabel,
     onclick
@@ -38,6 +40,7 @@
     class="ui-toggle"
     class:pressed
     class:action
+    class:compact={size === 'sm'}
     type="button"
     aria-label={ariaLabel ?? label}
     aria-pressed={action ? undefined : pressed}
@@ -179,5 +182,28 @@
       height: var(--touch-target);
       padding-inline: 8px;
     }
+  }
+  .ui-toggle.compact {
+    height: 26px;
+    min-height: 26px;
+    padding-inline: 6px;
+    gap: 4px;
+    font-size: 10px;
+  }
+  .compact :global(svg) {
+    width: 12px;
+    height: 12px;
+  }
+  .compact .switch {
+    width: 22px;
+    height: 12px;
+    flex-basis: 22px;
+  }
+  .compact .switch b {
+    width: 6px;
+    height: 6px;
+  }
+  .compact.pressed .switch b {
+    transform: translateX(10px);
   }
 </style>

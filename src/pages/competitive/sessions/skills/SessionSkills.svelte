@@ -264,5 +264,6 @@
 
 <style>
   @import '../../champions-meeting/skills/skill-sections.css';
+  @import '../../champions-meeting/skills/skill-view.css';
   @import './session-skills.css';
 </style>

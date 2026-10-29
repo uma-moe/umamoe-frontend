@@ -19,7 +19,6 @@
     toggles,
     callouts,
     shape,
-    mapPrimary,
     laneMax,
     laneTarget,
     positionViewport,
@@ -31,7 +30,6 @@
     toggles: ReplayToggles;
     callouts: Map<number, RunnerCallout[]>;
     shape?: CourseShape;
-    mapPrimary: boolean;
     laneMax: number;
     laneTarget: number;
     positionViewport: { min: number; max: number };
@@ -43,15 +41,6 @@
     stageHeight = $state(300);
 
   const segments = $derived(courseSegments(course));
-  const stageStart = $derived(
-    Math.max(0, Math.min(...(replay.frame?.horses.map((h) => h.distance) ?? [0])))
-  );
-
-  const stageViewport = $derived(
-    mapPrimary
-      ? { min: stageStart, max: Math.max(stageStart + 1, replay.leader) }
-      : positionViewport
-  );
 
   const crowdedRunners = $derived.by(() => {
     const points = replay.capture.runners.flatMap((r) => {
@@ -79,19 +68,14 @@
   });
 
   const x = (distance: number) =>
-    ((distance - stageViewport.min) / (stageViewport.max - stageViewport.min)) * 1000;
+    ((distance - positionViewport.min) / (positionViewport.max - positionViewport.min)) * 1000;
 
   const hpColor = (value?: number) => hpRemainingColor(value, $theme === 'dark');
 </script>
 
-<div
-  class="positions-target"
-  class:fullscreen-target={!mapPrimary}
-  hidden={mapPrimary}
->
+<div class="positions-target fullscreen-target">
   <div
     class="race-stage"
-    hidden={mapPrimary}
     data-lane-max={laneMax}
     data-lane-target={laneTarget}
     aria-label="Runner positions by distance and lane"
@@ -133,7 +117,8 @@
             <rect
               x={x(segment.start)}
               y="0"
-              width={((segment.end - segment.start) / (stageViewport.max - stageViewport.min)) *
+              width={((segment.end - segment.start) /
+                (positionViewport.max - positionViewport.min)) *
                 1000}
               height="410"
               fill={segment.color}
@@ -186,7 +171,7 @@
               0.0008}{#each [{ min: 3, max: 5 * factor, color: '#be91d4' }, { min: 6.5 * factor, max: 7 * factor, color: '#69b7ee' }, { min: 7.5 * factor, max: 8 * factor, color: '#7bc8a0' }] as zone}
             <rect
               x={x(replay.leader - zone.max)}
-              width={((zone.max - zone.min) / (stageViewport.max - stageViewport.min)) * 1000}
+              width={((zone.max - zone.min) / (positionViewport.max - positionViewport.min)) * 1000}
               y="0"
               height="410"
               fill={zone.color}
@@ -205,7 +190,7 @@
           />
         {/each}
       </svg>
-      {#each [{ distance: 0, label: 'Start' }, { distance: replay.bounds.distanceMax, label: 'Finish' }].filter((m) => m.distance >= stageViewport.min && m.distance <= stageViewport.max) as marker}
+      {#each [{ distance: 0, label: 'Start' }, { distance: replay.bounds.distanceMax, label: 'Finish' }].filter((m) => m.distance >= positionViewport.min && m.distance <= positionViewport.max) as marker}
         <span
           class="course-label boundary-label"
           style:left={x(marker.distance) / 10 + '%'}
@@ -214,14 +199,14 @@
         </span>
       {/each}
       {#if toggles.course}
-        {#each segments.filter((s) => s.start > 0 && s.start >= stageViewport.min && s.start <= stageViewport.max) as segment}
+        {#each segments.filter((s) => s.start > 0 && s.start >= positionViewport.min && s.start <= positionViewport.max) as segment}
           <span
             class="course-label"
             style:left={x(segment.start) / 10 + '%'}
           >
             {segment.label}
           </span>
-        {/each}{#each [{ distance: replay.bounds.distanceMax / 6, label: 'Mid race' }, { distance: finalSpurtSection(replay.bounds.distanceMax).start, label: 'Final spurt window · Late race' }].filter((m) => m.distance >= stageViewport.min && m.distance <= stageViewport.max) as marker}
+        {/each}{#each [{ distance: replay.bounds.distanceMax / 6, label: 'Mid race' }, { distance: finalSpurtSection(replay.bounds.distanceMax).start, label: 'Final spurt window · Late race' }].filter((m) => m.distance >= positionViewport.min && m.distance <= positionViewport.max) as marker}
           <span
             class="course-label phase"
             style:left={x(marker.distance) / 10 + '%'}
@@ -235,7 +220,7 @@
         {@const horse =
           replay.frame?.horses[
             r.index
-          ]}{#if horse && visibility[r.index] !== 2 && horse.distance >= stageViewport.min && horse.distance <= stageViewport.max && (mapPrimary || horse.lanePosition <= laneMax)}
+          ]}{#if horse && visibility[r.index] !== 2 && horse.distance >= positionViewport.min && horse.distance <= positionViewport.max && horse.lanePosition <= laneMax}
           <button
             class="replay-marker"
             class:crowded={crowdedRunners.has(r.index)}
@@ -246,7 +231,7 @@
             class:front-blocked={toggles.blocked &&
               replay.blockingNow.some((b) => b.horseIndex === r.index)}
             style:left={x(horse.distance) / 10 + '%'}
-            style:bottom={(horse.lanePosition / laneMax) * (mapPrimary ? 30 : 100) + '%'}
+            style:bottom={(horse.lanePosition / laneMax) * 100 + '%'}
             style:--runner-color={replay.teamColor(r)}
             aria-label={'Inspect ' + r.name}
             aria-pressed={r.index === replay.runner?.index}
@@ -296,7 +281,7 @@
                 />
               </span>
             {/if}
-            {#if !mapPrimary && (toggles.speed || toggles.accel)}
+            {#if toggles.speed || toggles.accel}
               <span class="marker-telemetry">
                 {#if toggles.speed}
                   <span title="Speed (m/s)">
@@ -319,7 +304,7 @@
           {shape}
           frame={replay.frame}
           runners={replay.capture.runners}
-          viewport={stageViewport}
+          viewport={positionViewport}
           selected={replay.runner?.index ?? -1}
           {visibility}
           teamColor={replay.teamColor}
@@ -328,7 +313,9 @@
       <div class="distance-axis">
         {#each [0, 0.25, 0.5, 0.75, 1] as fraction}
           <span style:left={fraction * 100 + '%'}>
-            {Math.round(stageViewport.min + (stageViewport.max - stageViewport.min) * fraction)}m
+            {Math.round(
+              positionViewport.min + (positionViewport.max - positionViewport.min) * fraction
+            )}m
           </span>
         {/each}
       </div>

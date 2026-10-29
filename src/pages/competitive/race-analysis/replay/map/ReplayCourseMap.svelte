@@ -38,9 +38,7 @@
     viewDistance,
     blockerIndex = -1,
     blocking = [],
-    onexpand,
     onseekdistance,
-    primary = false,
     skillEvents = [],
     runnerLabels = new Map(),
     timers = false,
@@ -60,10 +58,8 @@
     toolbarEnd
   }: {
     blocking?: { horseIndex: number; blockerHorseIndex: number }[];
-    onexpand: () => void;
     viewDistance?: number;
     blockerIndex?: number;
-    primary?: boolean;
     skillEvents?: RaceEvent[];
     runnerLabels?: Map<number, RunnerCallout[]>;
     timers?: boolean;
@@ -95,7 +91,7 @@
   const view = new CourseMapCamera(() => framingPoints);
   const labels = new TrackLabelMotion();
 
-  const lateralScale = $derived(primary && laneDetail ? 2 : 1);
+  const lateralScale = $derived(laneDetail ? 2 : 1);
 
   const helpId = $props.id();
 
@@ -182,7 +178,7 @@
       .join(' ')
   );
 
-  const labelSize = $derived(primary ? (view.width < 600 ? 28 : 36) : 24);
+  const labelSize = $derived(view.width < 600 ? 28 : 36);
   const overlayHeight = $derived((Number(showSpeed) + Number(showAcceleration)) * 14);
   const occupiedLane = $derived(
     Math.max(
@@ -330,7 +326,6 @@
       overlayHeight,
       width: view.width,
       height: view.height,
-      primary,
       following: view.following,
       time: frame?.time ?? 0
     });
@@ -347,21 +342,10 @@
     visible(p, 24) && callouts.every((c) => Math.hypot(c.x - p.x, c.y - p.y) > 40);
 
   const packPath = $derived(trackSection(followPoints, viewport.min, viewport.max));
-
-  function fullCourse() {
-    onexpand();
-    view.release();
-  }
-
-  $effect(() => {
-    if (!primary && !view.following) view.follow();
-  });
 </script>
 
 <section
   class="course-overview"
-  class:primary
-  hidden={!primary}
   aria-label="Course overview"
 >
   <span
@@ -378,7 +362,7 @@
     zoomOutDisabled={view.zoomOutDisabled}
     zoomInDisabled={view.zoomInDisabled}
     onfollow={view.follow}
-    onfullcourse={fullCourse}
+    onfullcourse={view.release}
     onzoom={(factor) => view.zoom(factor)}
     {toolbarStart}
     {toolbarEnd}
@@ -393,7 +377,7 @@
       <span>
         {Math.round(viewport.min).toLocaleString()}–{Math.round(viewport.max).toLocaleString()} m
       </span>
-      {#if primary && laneDetail}
+      {#if laneDetail}
         <small>Lane spacing ×2</small>
       {/if}{#if cone}
         <small

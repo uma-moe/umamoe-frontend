@@ -15,6 +15,7 @@
     skillTier,
     type PricedOffer
   } from './skill-offers';
+  import SkillPoints from '@/components/game/SkillPoints.svelte';
 
   /**
    * The skills she can buy at the end of her career, each with its hint level and what it costs with it, against the SP
@@ -108,7 +109,7 @@
     <dl>
       <div class:over={total > budget}>
         <dt>On offer</dt>
-        <dd>{total.toLocaleString('en-US')} SP</dd>
+        <dd><SkillPoints value={total} /></dd>
       </div>
       {#if offers.locked.length}
         <div
@@ -116,7 +117,7 @@
           class:over={offers.lockedCost > budget}
         >
           <dt>Locked</dt>
-          <dd>{offers.lockedCost.toLocaleString('en-US')} SP</dd>
+          <dd><SkillPoints value={offers.lockedCost} /></dd>
         </div>
       {/if}
     </dl>
@@ -232,8 +233,7 @@
             {#if offer.cost !== offer.base && offer.needs !== 'bundled'}
               <s>{offer.base}</s>
             {/if}
-            <strong>{offer.cost}</strong>
-            <small>SP</small>
+            <SkillPoints value={offer.cost} />
           </span>
           <span class="lock">
             <Button

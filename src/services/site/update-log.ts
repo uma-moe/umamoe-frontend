@@ -11,6 +11,12 @@ export interface ChangeCategory {
   icon?: IconName;
   items: ChangeItem[];
   betaOnly?: boolean;
+  preview?: {
+    image: string;
+    alt: string;
+    link: string;
+    action: string;
+  };
 }
 
 export interface UpdateEntry {
@@ -23,6 +29,178 @@ export interface UpdateEntry {
 
 // Define your updates here - newest first
 export const UPDATE_LOG: UpdateEntry[] = [
+  {
+    title: 'Hakuraku comes to uma.moe',
+    version: '2.1',
+    date: '2026-10-29',
+    summary:
+      'A new home for racing: Hakuraku’s race analysis, CM data and research join uma.moe, with new tools to simulate races, compare skills and plan builds.',
+    categories: [
+      {
+        category: 'major',
+        label: 'Race Simulator',
+        icon: 'race',
+        preview: {
+          image: '/updates/2.1/race-simulator.jpg',
+          alt: 'Race simulator setup with race options, course conditions and an interactive track breakdown.',
+          link: '/simulator/race',
+          action: 'Simulate a race'
+        },
+        items: [
+          {
+            text: 'Race your Veterans or a build code against a full field over many sampled races.'
+          },
+          {
+            text: 'See win rates, finishing spread, skill activations and a replay.'
+          }
+        ]
+      },
+      {
+        category: 'major',
+        label: 'Race Analysis',
+        icon: 'chart',
+        preview: {
+          image: '/updates/2.1/race-analysis.jpg',
+          alt: 'Race analysis with a race replay, runner positions and performance details.',
+          link: '/competitive/race-analysis',
+          action: 'Analyse your races'
+        },
+        items: [
+          { text: 'Upload one race or a whole session to replay it.' },
+          {
+            text: 'Compare builds, HP, speed, position and skill timing.'
+          },
+          { text: 'Resimulate a race, or send runners to the simulator.' }
+        ]
+      },
+      {
+        category: 'major',
+        label: 'Champions Meeting Data',
+        icon: 'trophy',
+        preview: {
+          image: '/updates/2.1/cm-data.jpg',
+          alt: 'Champions Meeting charts comparing running styles, team compositions and win rates.',
+          link: '/competitive/cm-data',
+          action: 'Explore CM data'
+        },
+        items: [
+          {
+            text: 'CM results and simulations by running style, Uma and team.'
+          },
+          {
+            text: 'Uma and team win rates, stats and skill performance.'
+          },
+          {
+            text: 'Team and runner details with sample sizes and win ranges.'
+          }
+        ]
+      },
+      {
+        category: 'major',
+        label: 'Skill Explorer',
+        icon: 'search',
+        preview: {
+          image: '/updates/2.1/skill-explorer.jpg',
+          alt: 'Skill Explorer scatter plot comparing skill value and activation timing across courses.',
+          link: '/tools/skill-explorer',
+          action: 'Compare skills'
+        },
+        items: [
+          {
+            text: 'Modeled skill value on every course, CM and running style.'
+          },
+          {
+            text: 'Proc timing, proc rate and error margin for each skill.'
+          },
+          {
+            text: 'Filter by type, rarity or Uma; open a skill for effects and sources.'
+          }
+        ]
+      },
+      {
+        category: 'major',
+        label: 'HP Calculator',
+        icon: 'battery',
+        preview: {
+          image: '/updates/2.1/hp-calculator.jpg',
+          alt: 'HP calculator setup with runner stats, course selection, recovery skills and race situations.',
+          link: '/simulator/hp',
+          action: 'Check your stamina'
+        },
+        items: [
+          {
+            text: 'Check she has the HP for a full final spurt on your course.'
+          },
+          {
+            text: 'Account for green and recovery skills, debuffs and race situations.'
+          },
+          {
+            text: 'See the stamina she needs as you adjust the build.'
+          }
+        ]
+      },
+      {
+        category: 'major',
+        label: 'Build Optimizer',
+        icon: 'tune',
+        preview: {
+          image: '/updates/2.1/skill-planner.jpg',
+          alt: 'Build optimizer setup with runner stats, a target race and a skill point budget.',
+          link: '/simulator/skills',
+          action: 'Plan a build'
+        },
+        items: [
+          {
+            text: 'Spend her leftover SP at the end of a career, for CM or Team Trials.'
+          },
+          {
+            text: 'Set stats, hints and owned skills, then compare the best builds.'
+          },
+          {
+            text: 'Review costs and gains; share the setup as a build code.'
+          }
+        ]
+      },
+      {
+        category: 'major',
+        label: 'Research Library',
+        icon: 'book',
+        preview: {
+          image: '/updates/2.1/research.jpg',
+          alt: 'Hakuraku research library with searchable articles about racing and game mechanics.',
+          link: '/research',
+          action: 'Read the research'
+        },
+        items: [
+          {
+            text: 'Aya’s Hakuraku research on racing and game mechanics.'
+          },
+          {
+            text: 'Search the library and read notes with formulas and figures.'
+          }
+        ]
+      },
+      {
+        category: 'major',
+        label: 'Master Data',
+        icon: 'database',
+        preview: {
+          image: '/updates/2.1/master-data.jpg',
+          alt: 'Master Data browser with game database tables, a SQL editor and query results.',
+          link: '/tools/master-data',
+          action: 'Browse game data'
+        },
+        items: [
+          {
+            text: 'Browse every game table and query it with SQL in your browser.'
+          },
+          {
+            text: 'Follow linked columns, share queries and export JSON.'
+          }
+        ]
+      }
+    ]
+  },
   {
     title: 'Usability update',
     date: '2026-09-30',

@@ -26,7 +26,7 @@ describe('icon layout', () => {
   it('places a crowd without overlaps and remembers each true point', () => {
     const crowd = Array.from({ length: 12 }, (_, index) => ({ id: index, x: 100, y: 100 }));
 
-    const placed = placeIcons(crowd, plot);
+    const placed = placeIcons(crowd, { ...plot, reach: 3 });
 
     const clashes = placed.filter((icon, index) =>
       placed.slice(index + 1).some((other) => overlapping(icon, other))
@@ -39,5 +39,13 @@ describe('icon layout', () => {
     const [corner] = placeIcons([{ id: 1, x: 0, y: 300 }], plot);
 
     expect(corner).toMatchObject({ x: 10, y: 290 });
+  });
+
+  it('limits the default crowd displacement to one icon footprint', () => {
+    const crowd = Array.from({ length: 24 }, (_, id) => ({ id, x: 200, y: 150 }));
+    const placed = placeIcons(crowd, plot);
+
+    expect(placed.every((icon) => Math.abs(icon.x - 200) <= plot.size + plot.gap)).toBe(true);
+    expect(placed.every((icon) => Math.abs(icon.y - 150) <= plot.size + plot.gap)).toBe(true);
   });
 });

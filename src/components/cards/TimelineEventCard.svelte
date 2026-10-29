@@ -2,6 +2,7 @@
   import Icon from '../Icon.svelte';
   import type { IconName } from '../icon-types';
   import type { TimelineEventData } from './timeline-types';
+  import PickupImages from './PickupImages.svelte';
 
   interface Props {
     event: TimelineEventData;
@@ -223,36 +224,11 @@
         </div>
       {/if}
       {#if hasPickups}
-        <div
-          class="pickups"
-          aria-label="Featured pickups"
-        >
-          {#each event.pickups ?? [] as pickup}
-            <a
-              href={pickup.gametoraUrl}
-              target="_blank"
-              rel="noopener noreferrer"
-              draggable="false"
-              class:character={pickup.kind === 'character'}
-              title={pickup.name}
-            >
-              <img
-                src={loadImages ? pickup.image : undefined}
-                alt={pickup.name}
-                width={pickup.kind === 'character' ? 44 : 42}
-                height={pickup.kind === 'character' ? 52 : 42}
-                loading="lazy"
-                decoding="async"
-                onerror={hideImage}
-              />
-            </a>
-          {/each}
-          {#if event.overflowPickups}
-            <span class="pickup-overflow">
-              +{event.overflowPickups}
-            </span>
-          {/if}
-        </div>
+        <PickupImages
+          items={event.pickups ?? []}
+          {loadImages}
+          overflow={event.overflowPickups}
+        />
       {/if}
       {#if event.canPlan}
         <button

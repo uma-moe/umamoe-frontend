@@ -89,7 +89,11 @@ export function parseStatlines(value: unknown): StatlinesData {
 let statlinesPromise: Promise<StatlinesData> | undefined;
 
 export function loadStatlines(): Promise<StatlinesData> {
-  statlinesPromise ??= fetchJsonResource<unknown>(`${EXPLORER_FILES_URL}/statlines.json.gz`)
+  statlinesPromise ??= fetchJsonResource<unknown>(
+    `${EXPLORER_FILES_URL}/statlines.json.gz`,
+    {},
+    'Stat lines'
+  )
     .then(parseStatlines)
     .catch((error: unknown) => {
       statlinesPromise = undefined;

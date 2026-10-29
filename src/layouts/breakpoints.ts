@@ -54,7 +54,7 @@ export const PAGE_LAYOUT = {
     wide: { contentMax: 1760, frameMax: 2184 },
     xl: { contentMax: 2184, frameMax: 2560 }
   },
-  gutters: { mobile: 4, compact: 24, expanded: 32 },
+  gutters: { mobile: 6, compact: 24, expanded: 32 },
   ads: {
     railWidth: 160,
     railGap: 20,

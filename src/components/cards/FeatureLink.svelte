@@ -1,7 +1,7 @@
 <script lang="ts">
   import Icon from '../Icon.svelte';
   import type { IconName } from '../icon-types';
-  import { updatedNavigationHrefs } from '@/routes/route-manifest';
+  import { navigationBadges } from '@/routes/route-manifest';
 
   interface Props {
     title: string;
@@ -13,7 +13,7 @@
 
   let { title, description, icon, href, accent = 'primary' }: Props = $props();
 
-  const updated = $derived(Boolean(href && updatedNavigationHrefs.has(href)));
+  const badge = $derived(href ? navigationBadges[href] : undefined);
 </script>
 
 <svelte:element
@@ -21,7 +21,8 @@
   {href}
   class="quick-link"
   class:disabled={!href}
-  class:updated-feature={updated}
+  class:updated-feature={badge === 'Updated'}
+  class:new-feature={badge === 'New'}
   aria-disabled={href ? undefined : true}
   style:--feature-accent={`var(--${accent === 'pink' || accent === 'purple' ? 'color' : 'accent'}-${accent})`}
 >
@@ -31,8 +32,14 @@
   />
   <span class="link-content">
     <strong>
-      {title}{#if updated}
-        <small class="updated-badge">Updated</small>
+      {title}{#if badge}
+        <small
+          class="feature-badge"
+          class:updated-badge={badge === 'Updated'}
+          class:new-badge={badge === 'New'}
+        >
+          {badge}
+        </small>
       {/if}
     </strong>
     <span>{description}</span>
@@ -116,10 +123,18 @@
     background: linear-gradient(45deg, #ff9800, #ffb74d);
     box-shadow: 0 2px 8px rgb(255 152 0/0.4);
   }
-  .updated-badge {
+  .feature-badge {
     margin-left: 0.5rem;
     background: linear-gradient(45deg, #2196f3, #81c784);
     box-shadow: 0 2px 8px rgb(33 150 243/0.4);
+  }
+  .new-badge {
+    background: var(--accent-success);
+    color: var(--bg-primary);
+    box-shadow: 0 2px 8px rgb(var(--accent-success-rgb) / 0.25);
+  }
+  :global([data-theme='light']) .new-badge {
+    color: #fff;
   }
   :global([data-theme='light']) .coming-soon-badge {
     background: var(--accent-warning);
@@ -162,7 +177,7 @@
       margin-left: auto;
       font-size: 8px;
     }
-    .updated-badge {
+    .feature-badge {
       font-size: 8px;
     }
   }

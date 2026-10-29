@@ -47,10 +47,11 @@
       </Button>
     </div>
   {:else if bookmarks.loading}
-    <div class="loading">
-      <Spinner size={30} />
-      <span>Loading bookmarks…</span>
-    </div>
+    <Spinner
+      centered
+      minHeight="260px"
+      label="Loading bookmarks…"
+    />
   {:else if bookmarks.error}
     <Banner
       title="Bookmarks unavailable"

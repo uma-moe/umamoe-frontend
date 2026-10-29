@@ -318,13 +318,19 @@
       font-size: 11px;
     }
   }
+  /* A phone shows every tab: a group that does not fit wraps rather than scrolling tabs out of view. */
   @media (max-width: 767px) {
+    .tabs {
+      flex-wrap: wrap;
+      overflow-x: visible;
+    }
     .tab,
     .navigation .tab,
     .detailed .tab {
       min-height: 30px;
     }
     .navigation .tab {
+      flex: 1 1 auto;
       min-width: 0;
       padding-inline: 10px;
       font-size: 12px;
@@ -362,6 +368,7 @@
   }
   @media (max-width: 767px) {
     .compact .tab {
+      flex: 1 1 auto;
       min-height: 30px;
     }
   }

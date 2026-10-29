@@ -6,11 +6,15 @@
     fluid?: boolean;
   }
 
+  /** Below this width a traced outline is thinner than a pixel, so the mark sweeps its fill instead. */
+  const FILL_ONLY_WIDTH = 40;
+
   let { size = 36, label = 'uma.moe', animated = false, fluid = false }: Props = $props();
   let renderedWidth = $state(0);
   let motionAllowed = $state(false);
   let drawing: SVGSVGElement | undefined = $state();
   const id = $props.id();
+  const fillOnly = $derived((renderedWidth || size) < FILL_ONLY_WIDTH);
   $effect(() => {
     if (!animated) return;
     const preference = window.matchMedia('(prefers-reduced-motion: no-preference)');
@@ -32,10 +36,11 @@
 {#if animated}
   <span
     class="mark loading-mark"
+    class:fill-only={fillOnly}
     bind:clientWidth={renderedWidth}
     style:width={fluid ? '100%' : size + 'px'}
     style:height={fluid ? '100%' : size + 'px'}
-    style:--logo-stroke={Math.max(4.5, 509 / (renderedWidth || size))}
+    style:--logo-stroke={Math.max(6, 900 / (renderedWidth || size))}
     style:--logo-paint={'url(#' + id + '-paint)'}
     role={label ? 'img' : undefined}
     aria-label={label || undefined}
@@ -117,7 +122,7 @@
         <use href={'#' + id + '-head'} />
         <use href={'#' + id + '-mane'} />
       </g>
-      {#if motionAllowed}
+      {#if motionAllowed && !fillOnly}
         <g
           class="outline"
           clip-path={'url(#' + id + '-outline-clip)'}
@@ -147,6 +152,8 @@
             <use href={'#' + id + '-mane'} />
           </g>
         </g>
+      {/if}
+      {#if motionAllowed}
         <g
           class="colour"
           clip-path={'url(#' + id + '-fill-clip)'}
@@ -192,9 +199,18 @@
   .trace-white {
     stroke: #fff;
   }
+  /* A sub-pixel stroke only blurs a small mark's edge. */
+  .fill-only .art {
+    stroke: none;
+  }
+  /* The faint silhouette keeps the mark in view while the trace and fill sweep across it. */
   @media (prefers-reduced-motion: no-preference) {
     .base {
-      opacity: 0;
+      opacity: 0.16;
+    }
+    .fill-only .base {
+      fill: currentColor;
+      opacity: 0.3;
     }
   }
 </style>

@@ -37,7 +37,11 @@
       description="Manage your linked game accounts and connected logins."
     />
     {#if !$authReady}
-      <div class="loading-row page-loading"><Spinner size={28} /> Loading…</div>
+      <Spinner
+        centered
+        minHeight="240px"
+        label="Loading settings…"
+      />
     {:else if $authUser}
       <div class="content-container">
         {#if loadError}

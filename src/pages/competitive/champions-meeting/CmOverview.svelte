@@ -48,9 +48,10 @@
       <Button
         variant="ghost"
         size="sm"
+        icon="arrow-right"
         onclick={() => onview('strategy')}
       >
-        Full analysis →
+        Full analysis
       </Button>
     {/snippet}
     <div class="column-head styles">
@@ -96,9 +97,10 @@
       <Button
         variant="ghost"
         size="sm"
+        icon="arrow-right"
         onclick={() => onview('character')}
       >
-        All Umas →
+        All Umas
       </Button>
     {/snippet}
     <div class="column-head">
@@ -146,9 +148,10 @@
       <Button
         variant="ghost"
         size="sm"
+        icon="arrow-right"
         onclick={() => onview('archetypes')}
       >
-        Captured teams →
+        Captured teams
       </Button>
     {/snippet}
     <div class="column-head">

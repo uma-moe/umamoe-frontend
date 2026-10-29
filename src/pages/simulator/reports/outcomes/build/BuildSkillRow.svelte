@@ -1,31 +1,29 @@
 <script lang="ts">
   import Icon from '@/components/Icon.svelte';
   import { skillImage } from '@/lib/game-data/skills/skills';
-  import type { TheoryFire } from '../../../simulator-repository';
+  import type { TheoryFire, V5PurchaseValue } from '../../../simulator-repository';
   import { skillTier, type PricedOffer } from '../../../setup/build/skill-offers';
-  import { fireText, lengthsText, winText, worthState } from './build-result';
+  import { fireText, valueText, winText, worthState } from './build-result';
+  import SkillPoints from '@/components/game/SkillPoints.svelte';
 
-  /**
-   * A skill on one line of a fixed height, named in its tier's colour: what an upgrade is bought with, its SP and the
-   * lengths it gains her. A data bar behind the row draws the worth from the left edge, green when it helps; a skill
-   * that adds nothing is muted and one that costs her is tinted orange. How often and where it fires, and what values
-   * it, show on hover.
-   */
+  /** A compact skill row with its relative contribution drawn behind the text. */
   interface Props {
     offer: PricedOffer;
     /** The skills it builds on that are bought with it. */
     via: PricedOffer[];
     cost: number;
     /** Lengths it gains her, in the build or on her own. */
-    lengths: number;
+    value: number | undefined;
+    unit?: 'lengths' | 'score';
+    measurement?: V5PurchaseValue['measured'];
     /** The same as estimated win points (0–1), when the service sends them. */
     win?: number;
-    fire: TheoryFire;
+    fire: TheoryFire & { races?: number };
     /** `prior`: valued from recorded CM races, as it acts on the field. */
-    source: 'physics' | 'prior';
+    source: 'physics' | 'prior' | V5PurchaseValue['source'] | 'unknown';
     countGated: boolean;
     locked?: boolean;
-    /** The largest worth shown, a full bar. */
+    /** The largest contribution in this build or skill list, represented by a full background bar. */
     scale: number;
     phaseBounds: number[];
     /** Said after the worth on hover: where it was valued. */
@@ -38,7 +36,9 @@
     offer,
     via,
     cost,
-    lengths,
+    value,
+    unit = 'lengths',
+    measurement,
     win,
     fire,
     source,
@@ -50,26 +50,44 @@
     differs = false
   }: Props = $props();
 
-  const state = $derived(worthState(lengths));
-  const never = $derived(fire.rate <= 0);
-  /** The data bar behind the row: the worth's share of the largest shown, from the left edge. */
-  const fill = $derived(scale > 0 ? Math.max(0, lengths / scale) * 100 : 0);
+  const state = $derived(value === undefined ? undefined : worthState(value, unit));
+  const never = $derived(fire.races !== 0 && fire.rate <= 0);
+  /** Bar width is relative to this build; the color and signed number show gain or loss. */
+  const fill = $derived(scale > 0 ? Math.min(100, (Math.abs(value ?? 0) / scale) * 100) : 0);
   const valuedBy = $derived(
-    source === 'prior'
-      ? 'its field value from recorded CM races'
-      : 'raced alone through her whole race'
+    {
+      physics: 'raced alone through her whole race',
+      prior: 'its field value from recorded CM races',
+      v5: 'V5 skill model',
+      ranker: 'V5 with trained move ranker',
+      posterior: 'V5 with paired race feedback',
+      recovery_races: 'paired recovery race estimate',
+      unknown: 'No individual score reported'
+    }[source]
   );
   const breakdown = $derived(
-    lengthsText(lengths) +
+    valueText(value, unit) +
       ' ' +
       context +
       (win === undefined
         ? ''
-        : ' (≈ ' + winText(win) + ' win in a CM field, learned from real CM rooms)') +
+        : ' (model win-rate change: ≈ ' +
+          winText(win).replace('%', ' pp') +
+          '; internal comparison only)') +
       ' · ' +
       fireText({ fire, phaseBounds, countGated }) +
       ' · ' +
-      valuedBy
+      valuedBy +
+      (measurement
+        ? ' · Exact paired gain ' +
+          valueText(measurement.gain, 'score') +
+          ' ± ' +
+          measurement.standard_error.toFixed(2) +
+          ' SE'
+        : '') +
+      (fire.races === undefined
+        ? ''
+        : ' · ' + fire.races.toLocaleString('en-US') + ' timing observations')
   );
   const viaText = $derived(
     via.length ? 'with ' + via.map((base) => base.skill.name).join(', ') : ''
@@ -80,11 +98,11 @@
 
 <div
   class="skill-row tier-{skillTier(offer.skill)}"
-  class:with-win={win !== undefined}
   class:helps={state === 'helps'}
   class:loss={state === 'costs'}
   class:nothing={state === 'nothing'}
   class:never
+  class:unscored={value === undefined}
   class:differs
 >
   {#if fill > 0}
@@ -115,25 +133,15 @@
         label="Locked"
       />
     {/if}
-    {cost.toLocaleString('en-US')}
-    <span class="sr-only">SP</span>
+    <SkillPoints value={cost} />
   </span>
   <span
     class="value"
     title={breakdown}
   >
-    {lengthsText(lengths, 2, false)}
-    <span class="sr-only">lengths</span>
+    {valueText(value, unit, 2, false)}
+    <span class="sr-only">{unit}</span>
   </span>
-  {#if win !== undefined}
-    <span
-      class="win"
-      title={breakdown}
-    >
-      {winText(win)}
-      <span class="sr-only">estimated win rate</span>
-    </span>
-  {/if}
 </div>
 
 <style>

@@ -26,7 +26,14 @@
         Associated team win rate includes wins by an Uma’s teammates. Player counts can overlap; use
         the minimum-player filters and confidence intervals to judge sample size.
       </p>
-      <a href="/research/new-age-umamusume-data">Read the dataset methodology →</a>
+      <Button
+        variant="ghost"
+        size="sm"
+        icon="book"
+        href="/research/new-age-umamusume-data"
+      >
+        Dataset methodology
+      </Button>
     </section>
     <section>
       <h3>Explore the builds behind the numbers</h3>
@@ -41,9 +48,10 @@
       <Button
         variant="secondary"
         size="sm"
+        icon="arrow-right"
         onclick={onbrowse}
       >
-        Browse captured teams →
+        Browse captured teams
       </Button>
     </section>
   </div>
@@ -70,9 +78,6 @@
     font-size: 13px;
     line-height: 1.75;
     color: var(--text-secondary);
-  }
-  .introduction a {
-    font-size: 12px;
   }
   .reading-guide {
     display: grid;

@@ -85,7 +85,7 @@ export interface SkillPoint {
   sections: number[];
   /**
    * Courses of the scope it never fired on in her build, so it was valued forced to fire wherever the course lets it
-   * (its style, distance, day, the runners around her and other skills' activations counting as met).
+   * (the runners around her and other skills' activations counting as met; course, day and style still apply).
    */
   forced: number;
 }
@@ -270,11 +270,11 @@ function parseMargins(value: unknown): ScopeData['margins'] {
 }
 
 /**
- * Every style averaged as the scope files average courses: win points, rates and section shares over all styles (0
- * where a style cannot fire the skill), the fire point over the races it fired in.
+ * Win points, rates and section shares averaged over styles where the skill can fire on at least one course.
+ * Impossible styles keep their zero rows without diluting eligible styles; the fire point is weighted by proc rate.
  */
 export function averageStyles(styles: SkillPoint[][]): SkillPoint[] {
-  const totals = new Map<number, SkillPoint & { firedMean: number }>();
+  const totals = new Map<number, SkillPoint & { firedMean: number; eligibleStyles: number }>();
   for (const points of styles) {
     for (const point of points) {
       let total = totals.get(point.skillId);
@@ -287,6 +287,7 @@ export function averageStyles(styles: SkillPoint[][]): SkillPoint[] {
           rate: 0,
           mean: 0,
           firedMean: 0,
+          eligibleStyles: 0,
           courses: 0,
           sections: new Array<number>(SECTIONS).fill(0),
           forced: 0
@@ -294,6 +295,9 @@ export function averageStyles(styles: SkillPoint[][]): SkillPoint[] {
         totals.set(point.skillId, total);
       }
 
+      if (point.courses === 0) continue;
+
+      total.eligibleStyles += 1;
       total.win += point.win;
       total.winAlone += point.winAlone;
       total.expected += point.expected;
@@ -307,16 +311,18 @@ export function averageStyles(styles: SkillPoint[][]): SkillPoint[] {
     }
   }
 
-  const count = styles.length;
-  return [...totals.values()].map(({ firedMean, ...total }) => ({
-    ...total,
-    win: total.win / count,
-    winAlone: total.winAlone / count,
-    expected: total.expected / count,
-    rate: total.rate / count,
-    mean: total.rate > 0 ? firedMean / total.rate : 0,
-    sections: total.sections.map((share) => share / count)
-  }));
+  return [...totals.values()].map(({ firedMean, eligibleStyles, ...total }) => {
+    const count = Math.max(1, eligibleStyles);
+    return {
+      ...total,
+      win: total.win / count,
+      winAlone: total.winAlone / count,
+      expected: total.expected / count,
+      rate: total.rate / count,
+      mean: total.rate > 0 ? firedMean / total.rate : 0,
+      sections: total.sections.map((share) => share / count)
+    };
+  });
 }
 
 /** A surface, then a length: `turf/medium`. */
@@ -351,7 +357,11 @@ export function scopePath(scope: ExplorerScope): string {
 let indexPromise: Promise<ExplorerIndex> | undefined;
 
 export function loadExplorerIndex(): Promise<ExplorerIndex> {
-  indexPromise ??= fetchJsonResource<unknown>(`${EXPLORER_FILES_URL}/index.json.gz`)
+  indexPromise ??= fetchJsonResource<unknown>(
+    `${EXPLORER_FILES_URL}/index.json.gz`,
+    {},
+    'Skill values'
+  )
     .then(parseIndex)
     .catch((error: unknown) => {
       indexPromise = undefined;
@@ -363,6 +373,10 @@ export function loadExplorerIndex(): Promise<ExplorerIndex> {
 
 export async function loadScope(scope: ExplorerScope, signal?: AbortSignal): Promise<ScopeData> {
   return parseScope(
-    await fetchJsonResource<unknown>(`${EXPLORER_FILES_URL}/${scopePath(scope)}`, { signal })
+    await fetchJsonResource<unknown>(
+      `${EXPLORER_FILES_URL}/${scopePath(scope)}`,
+      { signal },
+      'Skill values for this selection'
+    )
   );
 }

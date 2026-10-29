@@ -138,7 +138,7 @@ test('persistent resources render before the manifest, survive navigation, and r
   await mockResources(context);
   await context.addInitScript(() => {
     localStorage.setItem('page-introduction-audience-v1', 'existing');
-    localStorage.setItem('lastSeenUpdateVersion', '18');
+    localStorage.setItem('lastSeenUpdateVersion', '19');
   });
 
   const page = await context.newPage(),

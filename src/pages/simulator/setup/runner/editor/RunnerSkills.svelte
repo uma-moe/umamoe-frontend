@@ -11,6 +11,7 @@
     type SkillData
   } from '@/lib/game-data/skills/skills';
   import type { MonteCarloSkillInput } from '../../../requests/race-sim-request';
+  import SkillPoints, { LEARNED_SKILL_POINTS_NOTE } from '@/components/game/SkillPoints.svelte';
 
   interface Props {
     skills?: Array<MonteCarloSkillInput>;
@@ -82,18 +83,13 @@
   <div class="head">
     <h3 id={headingId}>Skills</h3>
     <span class="count">{skills.length}</span>
-    <span
-      class="sp"
-      title="Base cost of learned skills including prerequisites, before hint discounts"
-    >
-      <strong>
-        {skillPointTotal(
-          skillLookup,
-          skills.map((skill) => skill.skillId * 10 + (skill.level ?? 1))
-        )?.toLocaleString('en-US') ?? '—'}
-      </strong>
-      SP
-    </span>
+    <SkillPoints
+      value={skillPointTotal(
+        skillLookup,
+        skills.map((skill) => skill.skillId * 10 + (skill.level ?? 1))
+      )}
+      note={LEARNED_SKILL_POINTS_NOTE}
+    />
   </div>
 
   <div
@@ -191,15 +187,9 @@
     font-variant-numeric: tabular-nums;
     text-align: center;
   }
-  .sp {
+  .head > :global(.skill-points) {
     margin-left: auto;
     font-size: 12px;
-    color: var(--text-secondary);
-    font-variant-numeric: tabular-nums;
-  }
-  .sp strong {
-    font-weight: 650;
-    color: var(--text-primary);
   }
   .search {
     --control-height: var(--setup-control-height, 36px);

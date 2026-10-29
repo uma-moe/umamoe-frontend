@@ -258,5 +258,6 @@
 
 <style>
   @import './skill-sections.css';
+  @import './skill-view.css';
   @import './cm-skills.css';
 </style>

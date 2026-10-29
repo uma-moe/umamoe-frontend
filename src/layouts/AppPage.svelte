@@ -143,8 +143,5 @@
     .app-page {
       padding-block: 0 calc(var(--bottom-nav-height) + var(--space-4));
     }
-    .page-sections {
-      padding-inline: 0;
-    }
   }
 </style>

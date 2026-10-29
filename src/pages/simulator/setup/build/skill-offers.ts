@@ -68,6 +68,31 @@ function groupRank(skill: SkillData, group: SkillData[]): number | undefined {
   return 1;
 }
 
+/** The skills of a group, which the game numbers as the skill ID without its last digit. */
+function groupSkills(groupId: number, skillLookup: Map<number, SkillData>): SkillData[] {
+  const first = groupId * 10;
+  return Array.from({ length: 10 }, (_, digit) => skillLookup.get(first + digit)).filter(
+    (skill): skill is SkillData => Boolean(skill)
+  );
+}
+
+/**
+ * The skills a hint discounts. The game keeps hints per group and rarity, so a white hint covers both the ○ and the ◎
+ * of its group; the negative ranks (a ×, Wallflower) are never bought and are left out.
+ */
+export function hintedSkills(
+  hint: { groupId: number; rarity: number },
+  skillLookup: Map<number, SkillData>
+): SkillData[] {
+  const group = groupSkills(hint.groupId, skillLookup);
+  return group.filter((skill) => {
+    if (skill.rarity !== hint.rarity) return false;
+
+    const rank = groupRank(skill, group);
+    return rank === undefined || rank > 0;
+  });
+}
+
 /**
  * The skill a gold or ◎ skill is learned on: the next rank down of its group that is not a × (Swinging Maestro on
  * Corner Recovery ○, See Ya Later! on Playtime's Over!, Blast Forward on Long Straightaways ◎), whichever ID it has.
@@ -76,10 +101,7 @@ export function upgradedSkill(
   skill: SkillData,
   skillLookup: Map<number, SkillData>
 ): SkillData | undefined {
-  const first = Math.floor(skill.skill_id / 10) * 10;
-  const group = Array.from({ length: 10 }, (_, digit) => skillLookup.get(first + digit)).filter(
-    (other): other is SkillData => Boolean(other)
-  );
+  const group = groupSkills(Math.floor(skill.skill_id / 10), skillLookup);
 
   const rank = groupRank(skill, group);
   if (rank === undefined) return undefined;

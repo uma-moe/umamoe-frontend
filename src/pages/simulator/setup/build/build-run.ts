@@ -1,9 +1,5 @@
 import type { SkillData } from '@/lib/game-data/skills/skills';
-import {
-  lengthsText,
-  winRateText,
-  type TheorizedBuild
-} from '../../reports/outcomes/build/build-result';
+import type { TheorizedBuild } from '../../reports/outcomes/build/build-result';
 
 /** A form value as a number, or the fallback when it is empty or not a number. */
 export const formNumber = (value: string | number | null | undefined, fallback = 0) => {
@@ -11,18 +7,17 @@ export const formNumber = (value: string | number | null | undefined, fallback =
   return value === '' || value == null || !Number.isFinite(parsed) ? fallback : parsed;
 };
 
-/**
- * The pick in a line: what it is worth to her (her win rate in the races that ranked the builds, or the lengths it
- * gains her where none did) and what it costs.
- */
+/** The recommended purchases and cost, without presenting an internal metric as a prediction. */
 export function bestSummary(pick: TheorizedBuild): string {
-  if (!pick.count) return 'Buying nothing helps her most';
+  if (!pick.count) return 'No additional skills recommended';
 
-  const worth =
-    pick.raced === undefined
-      ? lengthsText(pick.lengths)
-      : winRateText(pick.raced.win_rate) + ' win rate';
-  return worth + ' · ' + pick.finalist.sp_cost.toLocaleString('en-US') + ' SP';
+  return (
+    pick.count +
+    (pick.count === 1 ? ' skill' : ' skills') +
+    ' · ' +
+    pick.finalist.sp_cost.toLocaleString('en-US') +
+    ' SP'
+  );
 }
 
 /** The server's message in the page's words, for the errors a reader can fix here. */

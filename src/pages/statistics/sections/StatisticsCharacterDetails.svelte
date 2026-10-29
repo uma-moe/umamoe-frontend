@@ -164,10 +164,11 @@
     </div>
   </header>
   {#if loading}
-    <div class="loading">
-      <Spinner size={28} />
-      <span>Loading character statistics…</span>
-    </div>
+    <Spinner
+      centered
+      minHeight="300px"
+      label="Loading character statistics…"
+    />
   {:else if error}
     <Banner
       title="Character statistics unavailable"

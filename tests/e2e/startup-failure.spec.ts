@@ -9,7 +9,7 @@ test.beforeEach(async ({ context }) => {
   await context.addInitScript(() => {
     if (!/^https?:$/.test(location.protocol)) return;
     localStorage.setItem('page-introduction-audience-v1', 'existing');
-    localStorage.setItem('lastSeenUpdateVersion', '18');
+    localStorage.setItem('lastSeenUpdateVersion', '19');
     localStorage.setItem(
       'uma-browser-proof-v1',
       JSON.stringify({ token: 'fixture-proof', expiresAt: Date.now() + 86_400_000 })

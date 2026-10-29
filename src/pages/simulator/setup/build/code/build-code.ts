@@ -59,7 +59,7 @@ export type BuildCodeTab = 'race' | 'stamina' | 'build';
 
 /**
  * A whole tab's setup, as the tab saves it in this browser: the race field with its teams, seed and options; the HP
- * calculator; or the Skill planner. Read only by the tab it was copied from, which checks it as it checks its own saved
+ * calculator; or the Build optimizer. Read only by the tab it was copied from, which checks it as it checks its own saved
  * setup; other tabs and the umalator read the fields beside it.
  */
 export type BuildCodePage =

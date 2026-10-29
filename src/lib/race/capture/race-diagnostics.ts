@@ -402,6 +402,19 @@ export const raceMetricHelp: Record<string, string> = {
   Finish: 'Finishing position in this race. A lower number means a better finish.',
   Runner:
     'The runner’s name, starting gate and running style. Select a runner to inspect their race.',
+  'No.': 'Starting gate number.',
+  Uma: 'Rank, character and trainer. Select a runner to inspect their race.',
+  Time: 'Race completion time. The distance below it is the gap to the previous finisher when that runner crossed the line.',
+  'Style / mood': 'Running style used in this race and the mood on race day.',
+  Delay:
+    'Start delay in milliseconds. Delays of 80 ms or more are late starts; a delay above one simulation frame (66.6 ms) also loses the first acceleration frame.',
+  'Last spurt':
+    'Distance between the first last-spurt check and the selected spurt start; zero means no delay. Speed is the selected spurt target, with the reduction from the full-spurt target in parentheses.',
+  'Duel (s)': 'Seconds spent dueling with another runner on the final straight.',
+  'Downhill (s)':
+    'Seconds in downhill accel mode. The line below splits it into time before the late race and time in it.',
+  'Pace (s)': 'Seconds in position-keeping modes: ↑ Pace Up, Speed Up and Overtake; ↓ Pace Down.',
+  Stats: 'The five build stats, with the total cost of the learned skills in SP.',
   'Time / gap':
     'Race completion time. The gap below it is the distance to the previous finisher when that runner crossed the finish line.',
   'Start delay':
@@ -413,7 +426,7 @@ export const raceMetricHelp: Record<string, string> = {
   'Spurt delay':
     'Distance between the first last-spurt check and the selected spurt start. Zero means no delay. For recorded-only captures, delay is estimated from the late-race boundary. Speed is the selected spurt target; a negative value in parentheses shows the reduction from the full-spurt target, in m/s.',
   'HP result':
-    'HP remaining at the finish, or where it ran out. The second line shows starting HP and any recorded shortfall.',
+    'Survived shows HP left at the finish as a share of maximum HP. Died shows how far before the finish HP ran out and, when resimulated, the HP shortfall as a share of maximum HP.',
   'HP at finish':
     'HP remaining when the runner finishes. Zero means HP was exhausted; the exhaustion distance shows where it happened.',
   'Race modes (s)':

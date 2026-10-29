@@ -13,6 +13,7 @@
   import AptitudeGrade from '@/components/game/AptitudeGrade.svelte';
   import { runningStyleName } from '@/lib/race/replay/race-display';
   import { identity, score, stats } from '../analysis-view';
+  import SkillPoints, { LEARNED_SKILL_POINTS_NOTE } from '@/components/game/SkillPoints.svelte';
 
   let {
     runner,
@@ -163,7 +164,7 @@
   });
 
   onMount(() => {
-    // Only compact cards head their skills with the SP total; without the catalog the total is left out.
+    // Only compact cards head their stats with the SP total; until the catalog loads it reads as a dash.
     if (!compact) return;
 
     void loadSkills()
@@ -202,8 +203,14 @@
       {#if compact}
         <header class="section-heading">
           <h3>Stats</h3>
-          <span>
-            Total stats <strong>{totalStats.toLocaleString('en-US')}</strong>
+          <span class="stat-totals">
+            <span>
+              Total stats <strong>{totalStats.toLocaleString('en-US')}</strong>
+            </span>
+            <SkillPoints
+              value={skillPoints}
+              note={LEARNED_SKILL_POINTS_NOTE}
+            />
           </span>
         </header>
       {/if}
@@ -327,13 +334,6 @@
             <h3>
               Learned skills <span>{runner.skillIds.length}</span>
             </h3>
-            {#if skillPoints !== null}
-              <span
-                title="Base cost of the learned skills, including prerequisites, before hint discounts"
-              >
-                Total SP <strong>{skillPoints.toLocaleString('en-US')}</strong>
-              </span>
-            {/if}
           </header>
         {/if}
         <div class="skills">

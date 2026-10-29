@@ -47,12 +47,9 @@ h2 {
   grid-column: 1/-1;
 }
 .map-loading {
-  height: 170px;
+  height: clamp(320px, 38dvh, 410px);
   display: grid;
   place-items: center;
-}
-.map-loading.primary {
-  height: clamp(320px, 38dvh, 410px);
 }
 @media (max-width: 1150px) {
   .replay-layout {
@@ -67,9 +64,6 @@ h2 {
 }
 @media (max-width: 700px) {
   .map-loading {
-    height: 160px;
-  }
-  .map-loading.primary {
     height: 390px;
   }
   h2 {
@@ -82,9 +76,6 @@ h2 {
     padding: 0 2px;
     padding-block: 0;
   }
-}
-[hidden] {
-  display: none !important;
 }
 .stage-heading {
   padding-bottom: 4px;
@@ -181,7 +172,7 @@ h2 {
     height: 100%;
     min-height: 0;
   }
-  .map-loading.primary {
+  .map-loading {
     height: 100%;
     min-height: 0;
   }

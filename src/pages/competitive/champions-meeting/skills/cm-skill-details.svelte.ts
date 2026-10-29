@@ -75,7 +75,8 @@ export class CmSkillDetails {
 
   private prefetchNext() {
     const signal = this.controller.signal;
-    while (!signal.aborted && this.prefetching < 2 && this.queue.length) {
+    // Fill a browser's usual six connection slots instead of serializing visible rows in pairs.
+    while (!signal.aborted && this.prefetching < 6 && this.queue.length) {
       const id = this.queue.shift();
       if (id === undefined) return;
 

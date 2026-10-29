@@ -192,10 +192,11 @@
     />
   {/if}
   {#if loading}
-    <div class="loading">
-      <Spinner size={30} />
-      <span>{viewerId ? 'Loading viewer report…' : 'Loading suspicion scores…'}</span>
-    </div>
+    <Spinner
+      centered
+      minHeight="260px"
+      label={viewerId ? 'Loading viewer report…' : 'Loading suspicion scores…'}
+    />
   {:else if error}
     <section
       class="error-state"

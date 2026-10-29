@@ -8,6 +8,7 @@
     icon?: IconName;
     ariaLabel?: string;
     description?: string;
+    variant?: 'plain' | 'field';
     checked?: boolean;
     indeterminate?: boolean;
     disabled?: boolean;
@@ -20,6 +21,7 @@
     icon,
     ariaLabel,
     description,
+    variant = 'plain',
     checked = $bindable(false),
     indeterminate = false,
     disabled = false,
@@ -29,6 +31,8 @@
 
 <label
   class="checkbox"
+  class:field={variant === 'field'}
+  class:active={variant === 'field' && (checked || indeterminate)}
   for={id}
 >
   <input
@@ -136,5 +140,40 @@
   small {
     color: var(--color-text-subtle);
     font-size: var(--font-xs);
+  }
+  .field {
+    --color-accent: var(--accent-secondary);
+    min-width: 0;
+    min-height: 34px;
+    grid-template-columns: 18px minmax(0, 1fr);
+    gap: 8px;
+    padding-inline: 10px;
+    border: 1px solid var(--factor-field-border);
+    border-radius: 8px;
+    background: var(--factor-field-bg);
+  }
+  .field.active {
+    border-color: color-mix(in srgb, var(--color-success) 50%, var(--border-primary));
+    background: rgb(var(--accent-primary-rgb) / 0.07);
+  }
+  .field .box {
+    width: 18px;
+    height: 18px;
+  }
+  .field strong {
+    font-size: 11px;
+    line-height: 1.2;
+  }
+  .field small {
+    font-size: 9px;
+    line-height: 1.2;
+  }
+  .field.active small {
+    color: var(--accent-secondary);
+  }
+  @media (max-width: 980px) {
+    .field {
+      min-height: var(--touch-target);
+    }
   }
 </style>

@@ -29,6 +29,7 @@
     importSimulatorUmas
   } from '../../simulator-roster.svelte';
   import { selectedCourse } from '../../simulator-session.svelte';
+  import SkillPoints, { LEARNED_SKILL_POINTS_NOTE } from '@/components/game/SkillPoints.svelte';
 
   let {
     number = 3,
@@ -185,11 +186,11 @@
                 fill
               />
               <span class="skill-cost">
-                {item.unique
-                  ? 'Own unique'
-                  : item.cost >= 0
-                    ? item.cost.toLocaleString('en-US') + ' SP'
-                    : '—'}
+                {#if item.unique}
+                  Own unique
+                {:else}
+                  <SkillPoints value={item.cost >= 0 ? item.cost : null} />
+                {/if}
               </span>
             </li>
           {/each}
@@ -342,13 +343,10 @@
             />
           </div>
           <div class="runner-meta">
-            <span
-              class="sp"
-              title="Base cost of learned skills including prerequisites, before hint discounts"
-            >
-              <strong>{sp?.toLocaleString('en-US') ?? '—'}</strong>
-              SP
-            </span>
+            <SkillPoints
+              value={sp}
+              note={LEARNED_SKILL_POINTS_NOTE}
+            />
             <span
               class="separator"
               aria-hidden="true"

@@ -1,5 +1,10 @@
 import {
   isOptimizeTheory,
+  isOptimizeModel,
+  type OptimizeModel,
+  type OptimizeEvaluation,
+  type OptimizeScenarioResult,
+  type V5PurchaseValue,
   type OptimizeFinalist,
   type OptimizeResult,
   type OptimizeTheory,
@@ -19,6 +24,16 @@ const NOTHING = 0.03;
 const RARELY = 0.3;
 /** First activations this early are at the gate. */
 const GATE_M = 30;
+
+/** Background bars are relative to the largest contribution in their own build or skill list. */
+export function contributionScale(skills: readonly { value: number | undefined }[]): number {
+  let scale = 0;
+  for (const skill of skills) {
+    scale = Math.max(scale, Math.abs(skill.value ?? 0));
+  }
+
+  return scale || 1;
+}
 
 /** `+5.6%`, estimated win points (0–1) as a share of races won; one decimal, two below a point. */
 export function winText(win: number): string {
@@ -71,9 +86,10 @@ export function lengthsText(lengths: number, digits = 2, unit = true): string {
 /** What a skill's worth means for her: it helps, adds nothing, or costs her. */
 export type WorthState = 'helps' | 'nothing' | 'costs';
 
-export function worthState(lengths: number): WorthState {
-  if (lengths > NOTHING) return 'helps';
-  if (lengths < -NOTHING) return 'costs';
+export function worthState(value: number, unit: 'lengths' | 'score' = 'lengths'): WorthState {
+  const threshold = unit === 'score' ? 1e-8 : NOTHING;
+  if (value > threshold) return 'helps';
+  if (value < -threshold) return 'costs';
   return 'nothing';
 }
 
@@ -92,10 +108,11 @@ export function fireText({
   phaseBounds,
   countGated
 }: {
-  fire: TheoryFire;
+  fire: TheoryFire & { races?: number };
   phaseBounds: number[];
   countGated: boolean;
 }): string {
+  if ('races' in fire && fire.races === 0) return 'No activation timing recorded';
   if (fire.rate <= 0 || fire.mean_m === null) {
     return countGated
       ? 'Never fires here: too few of her skills fire before it'
@@ -199,7 +216,7 @@ function heldSkill(offers: PricedOffer[], key: number, held: number[]): HeldSkil
 
 /** How the theory values a skill: its source and whether it waits for her other skills. */
 interface Valuation {
-  source: TheoryOffer['source'];
+  source: TheoryOffer['source'] | V5PurchaseValue['source'] | 'unknown';
   countGated: boolean;
 }
 
@@ -207,10 +224,11 @@ interface Valuation {
 export interface BuildCell {
   skill: HeldSkill;
   /** Lengths it adds to this build: the build against the build without it. */
-  lengths: number;
+  value: number | undefined;
   /** The same as estimated win points (0–1), when the service sends them. */
   win?: number;
-  fire: TheoryFire;
+  fire: TheoryFire & { races?: number };
+  measurement?: V5PurchaseValue['measured'];
   valuation: Valuation;
   locked: boolean;
   /** It holds other skills of the chain than the pick does, or the pick holds none of it. */
@@ -219,15 +237,18 @@ export interface BuildCell {
 
 /** A finalist with what the theory says it is worth, what races in her real fields won her with it, and its card. */
 export interface TheorizedBuild {
+  /** Whole-build gain is lengths for theory, measured seconds saved for V5. */
+  unit?: 'seconds';
+  winRate?: number;
   finalist: OptimizeFinalist;
   /** Lengths it gains her over her build as it is, its skills' synergies included. */
-  lengths: number;
+  value: number | undefined;
   /** Estimated win points (0–1) from its skills', when the service sends them. */
   win?: number;
   /** Her win rate with it in the races that ranked the finalists, when races ranked them; the builds are in its order. */
   raced?: RacedWins;
   /** HP she has left at the finish, below zero when she runs out. */
-  hpLeft: number;
+  hpLeft?: number;
   /** Skills it buys, a chain as one. */
   count: number;
   /** Its skills, the most worth first. */
@@ -241,9 +262,10 @@ export interface ListedSkill {
   key: number;
   offer: PricedOffer;
   cost: number;
-  lengths: number;
+  value: number | undefined;
   win?: number;
-  fire: TheoryFire;
+  fire: TheoryFire & { races?: number };
+  measurement?: V5PurchaseValue['measured'];
   valuation: Valuation;
   locked: boolean;
   bought: boolean;
@@ -253,10 +275,12 @@ export interface ListedSkill {
 export interface TheorizedResult {
   builds: TheorizedBuild[];
   skills: ListedSkill[];
-  /** The largest worth shown, which a full data bar stands for. */
+  /** The largest absolute contribution in the report. */
   scale: number;
   phaseBounds: number[];
-  theory: OptimizeTheory;
+  skillUnit: 'lengths' | 'score';
+  theory?: OptimizeTheory;
+  model?: OptimizeModel;
 }
 
 /**
@@ -283,6 +307,7 @@ export function theorizedResult({
   result: OptimizeResult;
   offers: PricedOffer[];
 }): TheorizedResult | undefined {
+  if (result.model !== undefined) return v5Result(result, offers);
   const theory = theoryOf(result);
   if (!theory) return undefined;
 
@@ -314,7 +339,7 @@ export function theorizedResult({
         return [
           {
             skill: heldSkill(offers, row.chain[0]!, held),
-            lengths: part?.lengths ?? 0,
+            value: part?.lengths ?? 0,
             win: part?.win,
             fire: part?.fire ?? { rate: 0, mean_m: null },
             valuation: valuationOf(held[0]!),
@@ -323,13 +348,13 @@ export function theorizedResult({
           }
         ];
       })
-      .sort((a, b) => b.lengths - a.lengths);
+      .sort((a, b) => (b.value ?? -Infinity) - (a.value ?? -Infinity));
     const skipped = rows.flatMap((row) =>
       build > 0 && row.held[0]!.length && !row.held[build]!.length ? [row.top.skill.name] : []
     );
     return {
       finalist,
-      lengths: theorized.lengths,
+      value: theorized.lengths,
       win: theorized.win,
       raced: theorized.raced,
       hpLeft: theorized.hp_left,
@@ -350,7 +375,7 @@ export function theorizedResult({
           key: offer.purchase,
           offer: priced,
           cost: priced.cost,
-          lengths: offer.lengths,
+          value: offer.lengths,
           win: offer.win,
           fire: offer.fire,
           valuation: { source: offer.source, countGated: offer.count_gated },
@@ -359,18 +384,19 @@ export function theorizedResult({
         }
       ];
     })
-    .sort((a, b) => b.lengths - a.lengths || a.key - b.key);
+    .sort((a, b) => (b.value ?? -Infinity) - (a.value ?? -Infinity) || a.key - b.key);
 
   const shown = [
-    ...builds.flatMap((build) => build.cells.map((cell) => cell.lengths)),
-    ...skills.map((s) => s.lengths)
+    ...builds.flatMap((build) => build.cells.map((cell) => cell.value ?? 0)),
+    ...skills.map((s) => s.value ?? 0)
   ];
   return {
     builds,
     skills,
-    scale: Math.max(0, ...shown) || 1,
+    scale: Math.max(0, ...shown.map(Math.abs)) || 1,
     phaseBounds: theory.phase_bounds,
-    theory
+    theory,
+    skillUnit: 'lengths'
   };
 }
 
@@ -431,13 +457,15 @@ export function leftoverSp({
   budget,
   offers,
   inert,
-  skills
+  skills,
+  skillUnit = 'lengths'
 }: {
   pick: OptimizeFinalist | undefined;
   budget: number | undefined;
   offers: PricedOffer[];
   inert: Set<number>;
   skills: ListedSkill[];
+  skillUnit?: 'lengths' | 'score';
 }) {
   if (!pick || budget === undefined) return undefined;
 
@@ -447,8 +475,11 @@ export function leftoverSp({
     .map((_, index) => index)
     .filter((index) => !bought.has(index) && !inert.has(index))
     .filter((index) => chainCost(offers, bought, index) <= left);
-  const worth = new Map(skills.map((skill) => [skill.key, skill.lengths]));
-  const useless = affordable.filter((index) => (worth.get(index) ?? 0) <= NOTHING);
+  const worth = new Map(skills.map((skill) => [skill.key, skill.value]));
+  const useless = affordable.filter((index) => {
+    const value = worth.get(index);
+    return value !== undefined && value <= (skillUnit === 'score' ? 1e-8 : NOTHING);
+  });
 
   return {
     left,
@@ -498,6 +529,13 @@ export function checkText(finalist: OptimizeFinalist, field: boolean, races: num
   const gain = finalist.validation_gain ?? finalist.gain;
   if (!gain) return '';
 
+  const evaluated = finalist.validation ?? finalist.search;
+  const hp = measuredMean(evaluated, 'hp_left');
+  const spurt = measuredMean(evaluated, 'full_spurt');
+  const survival = [
+    hp === undefined ? '' : winRateText(hp) + ' HP left',
+    spurt === undefined ? '' : winRateText(spurt) + ' full spurt'
+  ].filter(Boolean);
   const unit = field ? ' runners beaten' : ' s';
   const sign = gain.mean >= 0 ? '+' : '−';
   return (
@@ -506,6 +544,159 @@ export function checkText(finalist: OptimizeFinalist, field: boolean, races: num
     ' races: ' +
     sign +
     Math.abs(gain.mean).toFixed(2) +
-    unit
+    unit +
+    (survival.length ? ' · ' + survival.join(' · ') : '')
+  );
+}
+
+/** Weighted by the actual number of races in each scenario, excluding missing metrics. */
+function measuredMean(
+  evaluation: OptimizeEvaluation | null | undefined,
+  key: keyof OptimizeScenarioResult
+): number | undefined {
+  let total = 0,
+    races = 0;
+  for (const scenario of evaluation?.scenarios ?? []) {
+    const metric = scenario[key];
+    if (
+      typeof metric !== 'object' ||
+      !metric ||
+      metric.samples <= 0 ||
+      !Number.isFinite(metric.mean)
+    )
+      continue;
+    total += metric.mean * metric.samples;
+    races += metric.samples;
+  }
+  return races > 0 ? total / races : undefined;
+}
+
+/** Read V5's report into the existing comparison cards, matching builds by purchases rather than position. */
+function v5Result(result: OptimizeResult, offers: PricedOffer[]): TheorizedResult | undefined {
+  const model = result.model;
+  if (!isOptimizeModel(model)) return undefined;
+  const explanation = model.build!.explanation!;
+  const finalists = result.report.finalists.slice(0, COMPARED_BUILDS);
+  const same = (a: number[], b: number[]) => a.length === b.length && a.every((p) => b.includes(p));
+  const reports = finalists.map((f) =>
+    [explanation.optimized, explanation.initial].find((e) => same(e.purchases, f.build.purchases))
+  );
+  if (reports.some((r) => r === undefined)) return undefined;
+  const rows = compareRows(finalists, offers);
+  const baseline = measuredMean(result.report.baseline, 'finish_time_seconds');
+  const builds = finalists.map((finalist, index): TheorizedBuild => {
+    const report = reports[index]!;
+    const worth = new Map(report.skills.filter((s) => s.held).map((s) => [s.purchase, s]));
+    const cells = [...rows.shared, ...rows.differ]
+      .flatMap((row): BuildCell[] => {
+        const held = row.held[index]!;
+        if (!held.length) return [];
+        const part = worth.get(held[0]!);
+        return [
+          {
+            skill: heldSkill(offers, row.chain[0]!, held),
+            value: part?.score,
+            win: part?.win,
+            fire: part?.fire ?? { races: 0, rate: 0, mean_m: null },
+            measurement: part?.measured,
+            valuation: { source: part?.source ?? 'unknown', countGated: false },
+            locked: held.some((p) => offers[p]?.locked === true),
+            differs: index > 0 && held.join() !== row.held[0]!.join()
+          }
+        ];
+      })
+      .sort((a, b) => (b.value ?? -Infinity) - (a.value ?? -Infinity));
+    const evaluated = finalist.validation ?? finalist.search;
+    const seconds = measuredMean(evaluated, 'finish_time_seconds');
+    return {
+      finalist,
+      unit: 'seconds',
+      value: baseline !== undefined && seconds !== undefined ? baseline - seconds : undefined,
+      winRate: measuredMean(evaluated, 'win_rate'),
+      count: cells.length,
+      cells,
+      skipped: [...rows.shared, ...rows.differ].flatMap((row) =>
+        index > 0 && row.held[0]!.length && !row.held[index]!.length ? [row.top.skill.name] : []
+      )
+    };
+  });
+  const picked = new Set(finalists[0]?.build.purchases ?? []);
+  const pickReport = reports[0];
+  const skills: ListedSkill[] = (pickReport?.skills ?? [])
+    .flatMap((part) => {
+      const offer = offers[part.purchase];
+      if (!offer) return [];
+      return [
+        {
+          key: part.purchase,
+          offer,
+          cost: offer.cost,
+          value: part.score,
+          win: part.win,
+          fire: part.fire,
+          measurement: part.measured,
+          valuation: { source: part.source, countGated: false },
+          locked: offer.locked === true,
+          bought: picked.has(part.purchase)
+        }
+      ];
+    })
+    .sort((a, b) => (b.value ?? -Infinity) - (a.value ?? -Infinity) || a.key - b.key);
+  return {
+    builds,
+    skills,
+    skillUnit: 'score',
+    model,
+    phaseBounds: explanation.phase_bounds,
+    scale:
+      Math.max(
+        0,
+        ...builds.flatMap((b) => b.cells.map((c) => Math.abs(c.value ?? 0))),
+        ...skills.map((s) => Math.abs(s.value ?? 0))
+      ) || 1
+  };
+}
+
+/** Display the value in its actual unit, keeping unknown values distinct from zero. */
+export function valueText(
+  value: number | undefined,
+  unit: 'lengths' | 'seconds' | 'score' = 'lengths',
+  digits = 2,
+  showUnit = true
+): string {
+  if (value === undefined) return '—';
+  const text = lengthsText(value, digits, false);
+  return text + (showUnit ? { lengths: ' L', seconds: ' s', score: ' score' }[unit] : '');
+}
+
+export function v5Tally(result: OptimizeResult, model: OptimizeModel): string {
+  const build = model.build!;
+  const rounds = build.rounds;
+  const moves = rounds.reduce((n, r) => n + r.tested.length, 0);
+  const checked = result.report.simulations;
+  return (
+    build.model +
+    (build.ranker_sha256 ? ' with the trained move ranker' : '') +
+    (build.course_prior ? ' and course skill weights' : '') +
+    ' bought the initial build in ' +
+    build.first_steps.length +
+    ' steps, then tested ' +
+    moves +
+    ' moves over ' +
+    rounds.length +
+    ' optimization rounds. ' +
+    model.races.toLocaleString('en-US') +
+    ' search races + ' +
+    checked.toLocaleString('en-US') +
+    ' validation races = ' +
+    (model.races + checked).toLocaleString('en-US') +
+    ' races total. ' +
+    'The search has a ' +
+    model.budget.toLocaleString('en-US') +
+    '-race budget and may finish earlier. ' +
+    'Bars show V5 objective scores using the same model, ranker and paired race feedback as the search. ' +
+    'A held skill is valued by removing it and dependent purchases; an unbought skill by adding it with prerequisites, SP aside. ' +
+    'Model win-rate changes are internal comparisons from the V5 skill model. Card win rates and time differences come from internal validation races; they do not predict in-game results or reorder V5’s picks. ' +
+    'Activation timing is observed during search, in course sections. A paired measurement is shown only when that exact change was raced against that exact build.'
   );
 }

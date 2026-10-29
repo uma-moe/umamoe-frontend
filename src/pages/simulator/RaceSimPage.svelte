@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { onMount, tick } from 'svelte';
+  import { tick } from 'svelte';
   import RaceBar from './shell/RaceBar.svelte';
   import CourseButtons from './shell/CourseButtons.svelte';
   import RunBar from './shell/RunBar.svelte';
@@ -11,7 +11,6 @@
   import TextField from '@/components/controls/TextField.svelte';
   import SimulatorShell from './shell/SimulatorShell.svelte';
   import SimulatorUmaField from './setup/runner/SimulatorUmaField.svelte';
-  import SimulatorVeteranSearch from './setup/veterans/team-search/SimulatorVeteranSearch.svelte';
   import BuildCodeDialog from './setup/build/code/BuildCodeDialog.svelte';
   import {
     BUILD_CODE_VERSION,
@@ -38,8 +37,6 @@
     selectedRaceInstanceId,
     selectedCourse,
     simulatorCourseData,
-    courseDataErrorVisible,
-    dismissCourseDataError,
     simulatorSession
   } from './simulator-session.svelte';
   import {
@@ -72,15 +69,7 @@
 
   let error = $state(''),
     busy = $state(false),
-    searchOpen = $state(false),
     codeOpen = $state(false);
-
-  const searchParams = new URLSearchParams(location.search);
-  const cmSnapshot = searchParams.get('cm-snapshot') ?? '';
-
-  onMount(() => {
-    searchOpen = searchParams.get('team-search') === '1';
-  });
 
   async function showStep(value: 'setup' | 'report') {
     step = value;
@@ -243,17 +232,6 @@
   }
 </script>
 
-{#if courseDataErrorVisible()}
-  <Banner
-    title="Race data unavailable"
-    tone="danger"
-    reportable={false}
-    dismissible
-    ondismiss={dismissCourseDataError}
-  >
-    {simulatorCourseData.error}
-  </Banner>
-{/if}
 {#if error}
   {#key error}
     <Banner
@@ -393,18 +371,7 @@
             }
           ]}
           onimport={importRunners}
-        >
-          {#snippet actions()}
-            <Button
-              variant="secondary"
-              size="sm"
-              icon="veterans"
-              onclick={() => (searchOpen = true)}
-            >
-              Find my best team
-            </Button>
-          {/snippet}
-        </SimulatorUmaField>
+        />
         {#if simulatorSession.importNotice}
           <div class="import-notice">
             <Banner
@@ -531,20 +498,6 @@
     simulatorSession.importNotice =
       'Added ' + umas.map((uma) => uma.name).join(' and ') + ' from a build code.';
     return undefined;
-  }}
-/>
-<SimulatorVeteranSearch
-  bind:open={searchOpen}
-  {course}
-  initialSnapshot={cmSnapshot}
-  seed={Number(simulatorSession.seed)}
-  setup={{
-    raceInstanceId: selectedRaceInstanceId(),
-    raceType: Number(raceType),
-    season: Number(simulatorSession.season),
-    weather: Number(simulatorSession.weather),
-    ground: Number(simulatorSession.ground),
-    startTimeType: Number(simulatorSession.startTime)
   }}
 />
 

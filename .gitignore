@@ -67,6 +67,8 @@ src/assets/
 scripts/
 !scripts/
 scripts/*
+!scripts/build-skill-explorer-providers.ts
+!scripts/build-skill-explorer-providers.test.ts
 !scripts/sync-planner-item-icons.mjs
 !scripts/verify-google-analytics-build.js
 !scripts/generate-favicon.mjs

@@ -124,11 +124,10 @@ p {
 }
 .report-links {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
   gap: 4px;
   min-width: 0;
-  overflow-x: auto;
-  scrollbar-width: thin;
 }
 .report-navigation :global(.ui-button) {
   flex: none;

@@ -11,7 +11,6 @@ interface LabelLayout {
   overlayHeight: number;
   width: number;
   height: number;
-  primary: boolean;
   following: boolean;
   time: number;
 }
@@ -31,7 +30,7 @@ export class TrackLabelMotion {
 
   place(layout: LabelLayout) {
     const { runners, labelSize, overlayHeight, width, height, following } = layout;
-    const view = [width, height, layout.primary, following].join(':'),
+    const view = [width, height, following].join(':'),
       now = layout.time,
       jumped =
         !Number.isFinite(this.#time) || Math.abs(now - this.#time) > 0.5 || view !== this.#view;

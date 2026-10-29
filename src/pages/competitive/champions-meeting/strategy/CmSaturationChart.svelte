@@ -345,5 +345,6 @@
 </figure>
 
 <style>
+  @import '@/components/charts/zoomable-plot.css';
   @import './cm-saturation-chart.css';
 </style>

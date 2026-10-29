@@ -13,7 +13,7 @@ export const serviceStatus = writable<{
 }>({ state: 'loading', endpoints: [] });
 
 export const availableVersion = writable('');
-export const CURRENT_UPDATE_VERSION = 18;
+export const CURRENT_UPDATE_VERSION = 19;
 
 function parseEndpointStatus(value: unknown): EndpointStatus {
   if (value === null || typeof value !== 'object') throw new Error('Invalid service status.');

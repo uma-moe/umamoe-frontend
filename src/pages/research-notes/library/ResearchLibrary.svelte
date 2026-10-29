@@ -122,11 +122,11 @@
     {#if notes.length}
       <ol class="note-grid">
         {#each notes as note (note.id)}
-          <li>
+          <li class:featured={note.pinned || note === latestNote}>
             <ResearchNoteCard
               {note}
               href={noteHref(note)}
-              label={note === latestNote ? 'Latest' : undefined}
+              featured={note.pinned || note === latestNote}
             />
           </li>
         {/each}
@@ -188,6 +188,9 @@
   .note-grid > li {
     display: flex;
     min-width: 0;
+  }
+  .note-grid > li.featured {
+    grid-column: 1 / -1;
   }
   .no-results {
     display: grid;

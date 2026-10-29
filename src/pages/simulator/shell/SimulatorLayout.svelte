@@ -18,7 +18,7 @@
       label: 'Race sim',
       icon: 'race',
       title: 'Race simulator',
-      blurb: 'Compare runners, understand race performance, and test changes to your builds.',
+      blurb: 'Race your runners, compare builds and test changes.',
       load: () => import('../RaceSimPage.svelte')
     },
     {
@@ -27,18 +27,16 @@
       label: 'HP calculator',
       icon: 'battery',
       title: 'HP calculator',
-      blurb:
-        'Check whether she has the HP to spurt at top speed to the finish, and the stamina it takes.',
+      blurb: 'Check she has the HP to spurt to the finish, and the stamina it takes.',
       load: () => import('../SimulatorPage.svelte')
     },
     {
       id: 'build',
       path: '/simulator/skills',
-      label: 'Skill planner',
+      label: 'Build optimizer',
       icon: 'tune',
-      title: 'Skill planner',
-      blurb:
-        'Find the skills to buy with her SP at the end of a career, for a CM or Team Trials race.',
+      title: 'Build optimizer',
+      blurb: 'Pick the skills to buy with her remaining SP, for CM or Team Trials.',
       load: () => import('../BuildPage.svelte')
     }
   ] as const;
@@ -75,7 +73,6 @@
 <AppPage
   routeId={tab.id === 'stamina' ? 'simulator' : 'simulator-' + tab.id}
   title={tab.title}
-  eyebrow="Simulator"
   description={tab.blurb}
   width="wide"
   adSurface="tools"

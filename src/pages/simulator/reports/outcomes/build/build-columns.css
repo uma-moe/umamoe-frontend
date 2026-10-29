@@ -1,58 +1,24 @@
 .builds {
   display: grid;
-  gap: 10px;
+  gap: 8px;
   min-width: 0;
 }
 header {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
-  gap: 6px 16px;
+  gap: 6px 12px;
 }
 h3 {
-  display: flex;
-  align-items: baseline;
-  gap: 6px;
   margin: 0;
   font-size: 12px;
   font-weight: 650;
-  color: var(--text-secondary);
+  color: var(--text-primary);
 }
-h3 span {
-  font-weight: 500;
-  color: var(--text-muted);
-  font-variant-numeric: tabular-nums;
-}
-/* What the bars on the skills mean, in the bars' own colours. */
 .key {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 4px 14px;
-  margin: 0;
-  padding: 0;
-  list-style: none;
   font-size: 11px;
   color: var(--text-muted);
 }
-.key li {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-}
-/* The rows' data bar fills, a little stronger so they read at this size. */
-.swatch {
-  width: 12px;
-  height: 10px;
-  border-radius: 2px;
-  background: color-mix(in srgb, var(--text-muted) 40%, transparent);
-}
-.swatch.helps {
-  background: rgb(var(--accent-success-rgb) / 0.55);
-}
-.swatch.loss {
-  background: rgb(var(--accent-warning-rgb) / 0.45);
-}
-/* How it was measured and its raw data, at the end of the header. */
 .tools {
   display: flex;
   align-items: center;
@@ -62,25 +28,20 @@ h3 span {
 .tools :global(.inspect > .trigger) {
   display: grid;
   place-items: center;
-  width: 24px;
-  height: 24px;
+  width: 32px;
+  height: 32px;
   border-radius: 50%;
-  color: var(--text-muted);
+  color: var(--text-secondary);
 }
 .tools :global(.inspect > .trigger:hover) {
   color: var(--text-primary);
   background: color-mix(in srgb, var(--text-primary) 8%, transparent);
 }
-/* The cards share the width, so every build fits side by side on a desktop, each as tall as its own list; below about
-   250px each they scroll sideways. */
 .columns {
   display: grid;
-  grid-template-columns: repeat(var(--builds), minmax(250px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 320px), 1fr));
   align-items: start;
   gap: 8px;
-  overflow-x: auto;
-  scroll-snap-type: x proximity;
-  scrollbar-width: thin;
 }
 .column {
   display: grid;
@@ -90,7 +51,6 @@ h3 span {
   border: 1px solid var(--border-subtle);
   border-radius: var(--radius-md, 8px);
   background: var(--surface-1);
-  scroll-snap-align: start;
 }
 .column.pick {
   border-color: rgb(var(--accent-primary-rgb) / 0.6);
@@ -105,22 +65,15 @@ h3 span {
 .cells li {
   min-width: 0;
 }
-/* The pick's skills a build goes without, in one muted line under its list. */
 .skips {
-  margin: 2px 0 0;
-  padding-top: 6px;
+  margin: 0;
+  padding: 6px 2px 0;
   border-top: 1px solid var(--border-subtle);
   font-size: 11px;
-  line-height: 1.4;
-  color: var(--text-muted);
+  line-height: 1.5;
+  color: var(--text-secondary);
 }
 .skips span {
   margin-right: 4px;
   font-weight: 650;
-  color: var(--text-secondary);
-}
-@media (max-width: 767px) {
-  .columns {
-    grid-template-columns: repeat(var(--builds), 84%);
-  }
 }

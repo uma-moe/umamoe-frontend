@@ -1,21 +1,19 @@
 <script lang="ts">
   import { skillImage } from '@/lib/game-data/skills/skills';
   import BuildSkillRow from './BuildSkillRow.svelte';
-  import type { ListedSkill, RuledOutSkill } from './build-result';
+  import { contributionScale, type ListedSkill, type RuledOutSkill } from './build-result';
 
-  /**
-   * Every skill on offer, each in a card of its own kind: the skills the theory valued, by the lengths each gains her
-   * bought on her own, those the pick does not buy dimmed; then, last, those that can never fire for her here.
-   */
+  /** Keep scored and inactive offers visible below the build comparison. */
   interface Props {
     skills: ListedSkill[];
     ruledOut: RuledOutSkill[];
-    /** The largest worth shown, a full bar. */
-    scale: number;
+    skillUnit?: 'lengths' | 'score';
     phaseBounds: number[];
   }
 
-  let { skills, ruledOut, scale, phaseBounds }: Props = $props();
+  let { skills, ruledOut, skillUnit = 'lengths', phaseBounds }: Props = $props();
+
+  const scale = $derived(contributionScale(skills));
 </script>
 
 {#if skills.length}
@@ -23,9 +21,9 @@
     class="card"
     aria-labelledby="skill-scores"
   >
-    <h4 id="skill-scores">
-      Skills <span>{skills.length}</span>
-    </h4>
+    <h3 id="skill-scores">
+      All skill scores <span>{skills.length}</span>
+    </h3>
     <ul class="skills">
       {#each skills as skill (skill.key)}
         <li class:dimmed={!skill.bought}>
@@ -33,7 +31,9 @@
             offer={skill.offer}
             via={[]}
             cost={skill.cost}
-            lengths={skill.lengths}
+            value={skill.value}
+            unit={skillUnit}
+            measurement={skill.measurement}
             win={skill.win}
             fire={skill.fire}
             source={skill.valuation.source}
@@ -41,7 +41,11 @@
             locked={skill.locked}
             {scale}
             {phaseBounds}
-            context="on her own"
+            context={skillUnit === 'score'
+              ? skill.bought
+                ? 'in the pick'
+                : 'added beside the pick, including prerequisites'
+              : 'on her own'}
           />
           <span class="sr-only">{skill.bought ? ', in the pick' : ', not in the pick'}</span>
         </li>
@@ -55,9 +59,9 @@
     class="card ruled-out"
     aria-labelledby="skill-ruled-out"
   >
-    <h4 id="skill-ruled-out">
+    <h3 id="skill-ruled-out">
       Can’t fire here <span>{ruledOut.length}</span>
-    </h4>
+    </h3>
     <ul>
       {#each ruledOut as item (item.purchase)}
         <li title={'Needs ' + item.needs}>

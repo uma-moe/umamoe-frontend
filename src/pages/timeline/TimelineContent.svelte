@@ -276,13 +276,11 @@
 {#if plannerVisited || tab === 'carat-planner'}
   <div hidden={tab !== 'carat-planner'}>
     {#await import('@/pages/carat-planner/CaratPlanner.svelte')}
-      <div class="loading">
-        <Spinner
-          label="Loading Carat Planner"
-          size={30}
-        />
-        <span>Loading Carat Planner…</span>
-      </div>
+      <Spinner
+        centered
+        minHeight="320px"
+        label="Loading Carat Planner…"
+      />
     {:then module}
       <module.default
         active={tab === 'carat-planner'}
@@ -442,13 +440,5 @@
   }
   .timeline-error {
     padding: 20px var(--page-gutter-current);
-  }
-  .loading {
-    min-height: 320px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    gap: 12px;
-    color: var(--text-secondary);
   }
 </style>

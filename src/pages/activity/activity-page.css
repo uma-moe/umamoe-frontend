@@ -1,11 +1,3 @@
-.loading {
-  min-height: 260px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 12px;
-  color: var(--text-secondary);
-}
 .error-state {
   min-height: 140px;
   display: flex;

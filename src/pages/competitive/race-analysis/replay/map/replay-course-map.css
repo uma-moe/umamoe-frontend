@@ -35,9 +35,6 @@
 .course-overview {
   display: contents;
 }
-.course-overview[hidden] {
-  display: none;
-}
 .map-scene {
   grid-column: 1;
   grid-row: 2;

@@ -66,7 +66,7 @@
     class="label"
     id="{id}-label"
   >
-    Uma
+    Highlight Uma
   </span>
   <div class="control">
     <button
@@ -100,7 +100,7 @@
           <strong>{selected.name}</strong>
           <small>{subtitleOf(selected)}</small>
         {:else}
-          Any uma
+          None
         {/if}
       </span>
       <Icon
@@ -112,7 +112,7 @@
       <button
         type="button"
         class="clear"
-        aria-label="Show every uma's skills"
+        aria-label="Clear Uma highlight"
         onclick={() => (cardId = undefined)}
       >
         <Icon

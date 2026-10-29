@@ -20,6 +20,11 @@ export async function hashJsonResponse(response: Response): Promise<string | und
   return Array.from(new Uint8Array(hash), (byte) => byte.toString(16).padStart(2, '0')).join('');
 }
 
-export async function fetchJsonResource<T>(url: string, init: RequestInit = {}): Promise<T> {
-  return readJsonResponse<T>(await fetch(url, { credentials: 'omit', ...init }), url);
+/** `label` names the data in a failure message; without one the message shows the URL. */
+export async function fetchJsonResource<T>(
+  url: string,
+  init: RequestInit = {},
+  label = url
+): Promise<T> {
+  return readJsonResponse<T>(await fetch(url, { credentials: 'omit', ...init }), label);
 }

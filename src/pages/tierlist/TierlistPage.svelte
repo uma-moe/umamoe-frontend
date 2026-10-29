@@ -183,10 +183,11 @@
         </Banner>
       {/if}
       {#if loading}
-        <div class="loading">
-          <Spinner size={30} />
-          <span>Calculating tierlist…</span>
-        </div>
+        <Spinner
+          centered
+          minHeight="300px"
+          label="Calculating tierlist…"
+        />
       {:else if !cards.length}
         <EmptyState
           icon="tierlist"

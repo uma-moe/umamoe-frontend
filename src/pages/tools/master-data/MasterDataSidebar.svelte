@@ -77,8 +77,8 @@
       <p class="table-empty">
         {#if loading}
           <Spinner
-            size={18}
-            showLabel
+            centered
+            minHeight="160px"
             label="Loading tables…"
           />
         {:else if populated.length}

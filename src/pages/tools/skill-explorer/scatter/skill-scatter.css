@@ -1,8 +1,7 @@
 .skill-scatter {
   display: grid;
-  grid-template-columns: auto 3rem minmax(0, 1fr);
-  grid-template-rows: auto minmax(0, 1fr) auto auto;
-  column-gap: 0.4rem;
+  grid-template-columns: minmax(0, 1fr);
+  width: 100%;
   margin: 0;
 }
 
@@ -27,7 +26,7 @@
   display: none;
 }
 
-@media (hover: none) {
+@media (hover: none), (max-width: 767px) {
   .with-hover {
     display: none;
   }
@@ -51,32 +50,49 @@
   text-align: center;
 }
 
-.y-title {
-  grid-row: 2;
-  grid-column: 1;
-  writing-mode: vertical-rl;
-  transform: rotate(180deg);
-  align-self: center;
-  color: var(--text-secondary);
-  font-size: 0.75rem;
-}
-
-.y-axis {
+.plot-area {
+  --plot-left: 60px;
+  --plot-right: 20px;
+  --plot-top: 56px;
+  --plot-bottom: 48px;
   position: relative;
-  grid-row: 2;
-  grid-column: 2;
+  width: 100%;
+  height: var(--chart-height, max(420px, calc(100dvh - 340px)));
+  overflow: hidden;
+  border: 1px solid var(--border-primary);
+  border-radius: 10px;
+  background: var(--bg-secondary);
 }
-
+.y-title {
+  position: absolute;
+  z-index: 3;
+  top: 10px;
+  left: 14px;
+  right: 14px;
+  overflow: hidden;
+  color: var(--text-secondary);
+  font-size: 0.72rem;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  pointer-events: none;
+}
+.y-axis {
+  position: absolute;
+  top: var(--plot-top);
+  bottom: var(--plot-bottom);
+  left: 5px;
+  width: calc(var(--plot-left) - 14px);
+  pointer-events: none;
+}
 .y-axis span {
   position: absolute;
   right: 0;
   transform: translateY(-50%);
-  color: var(--text-muted);
+  color: var(--text-secondary);
   font-size: 0.7rem;
   font-variant-numeric: tabular-nums;
   white-space: nowrap;
 }
-
 .y-axis .median {
   display: grid;
   justify-items: end;
@@ -84,26 +100,15 @@
   font-weight: 600;
   line-height: 1.1;
 }
-
 .y-axis .median small {
   color: var(--text-muted);
   font-size: 0.62rem;
   font-weight: 500;
 }
-
-.plot-area {
-  position: relative;
-  grid-row: 2;
-  grid-column: 3;
-}
-
 .viewport {
-  position: relative;
-  height: clamp(380px, 64vh, 680px);
+  position: absolute;
+  inset: var(--plot-top) var(--plot-right) var(--plot-bottom) var(--plot-left);
   overflow: hidden;
-  border: 1px solid var(--border-primary);
-  border-radius: 10px;
-  background: var(--bg-secondary);
   touch-action: pan-y;
   user-select: none;
 }
@@ -118,29 +123,31 @@
 }
 
 .x-axis {
-  position: relative;
-  grid-row: 3;
-  grid-column: 3;
-  height: 1.4rem;
+  position: absolute;
+  right: var(--plot-right);
+  bottom: 24px;
+  left: var(--plot-left);
+  height: 1.3rem;
+  pointer-events: none;
 }
-
 .x-axis span {
   position: absolute;
-  top: 0.35rem;
+  top: 0.25rem;
   transform: translateX(-50%);
   color: var(--text-secondary);
-  font-size: 0.75rem;
+  font-size: 0.72rem;
   font-variant-numeric: tabular-nums;
   white-space: nowrap;
 }
-
 .x-title {
-  grid-row: 4;
-  grid-column: 3;
-  padding-top: 0.3rem;
+  position: absolute;
+  right: 10px;
+  bottom: 6px;
+  left: 10px;
   color: var(--text-secondary);
-  font-size: 0.75rem;
+  font-size: 0.7rem;
   text-align: center;
+  pointer-events: none;
 }
 
 .quadrants {
@@ -171,26 +178,26 @@
 }
 
 .top-left {
-  top: 0.7rem;
+  top: 32px;
   left: 0.85rem;
   color: var(--accent-success);
 }
 
 .top-right {
-  top: 0.7rem;
+  top: 32px;
   right: 0.85rem;
   color: var(--accent-warning);
 }
 
 .bottom-left {
-  bottom: 0.7rem;
+  bottom: 52px;
   left: 0.85rem;
   color: var(--accent-error);
 }
 
 .bottom-right {
   right: 0.85rem;
-  bottom: 0.7rem;
+  bottom: 52px;
   color: var(--accent-warning);
 }
 
@@ -223,6 +230,10 @@
 }
 
 .name {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  max-width: 100%;
   position: absolute;
   z-index: 1;
   height: 18px;
@@ -238,15 +249,12 @@
   transform: translateY(-50%);
 }
 
-.name.dimmed {
-  opacity: 0.3;
-}
-
 .name.active {
   color: var(--accent-primary);
 }
 
 .skill-dot {
+  pointer-events: auto;
   position: absolute;
   z-index: 2;
   display: grid;
@@ -285,8 +293,7 @@
 }
 
 .skill-dot.active {
-  z-index: 4;
-  transform: translate(-50%, -50%) scale(1.3);
+  z-index: 6;
 }
 
 .skill-dot:focus-visible {
@@ -294,16 +301,10 @@
   outline-offset: 2px;
 }
 
-.skill-dot.dimmed {
-  opacity: 0.18;
-}
-
 .skill-dot.pinned {
-  z-index: 3;
+  z-index: 6;
   border: 2px solid var(--accent-primary);
-  box-shadow:
-    0 0 0 3px rgb(var(--accent-primary-rgb) / 0.3),
-    0 2px 6px rgb(0 0 0 / 0.5);
+  box-shadow: 0 2px 4px rgb(0 0 0 / 0.45);
   opacity: 1;
 }
 
@@ -313,49 +314,124 @@
   font-weight: 700;
 }
 
-.wheel-hint {
-  position: absolute;
-  bottom: 0.9rem;
-  left: 50%;
-  z-index: 5;
-  margin: 0;
-  padding: 0.35rem 0.75rem;
-  border-radius: 999px;
-  background: rgb(0 0 0 / 0.72);
-  color: #fff;
-  font-size: 0.78rem;
-  white-space: nowrap;
-  pointer-events: none;
-  transform: translateX(-50%);
-}
-
-.details {
-  position: absolute;
-  z-index: 10;
-  width: var(--card-width);
-  pointer-events: none;
-}
-
 @media (prefers-reduced-motion: reduce) {
   .skill-dot {
     transition: none;
   }
 }
 
-@media (max-width: 640px) {
-  .skill-scatter {
-    grid-template-columns: 0 2.6rem minmax(0, 1fr);
+@media (max-width: 767px) {
+  .plot-area {
+    --plot-left: 48px;
+    --plot-right: 18px;
+    --plot-top: 52px;
+    --plot-bottom: 46px;
   }
-
   .y-title {
-    visibility: hidden;
-  }
-
-  .viewport {
-    height: 440px;
-  }
-
-  .quadrant {
     font-size: 0.65rem;
   }
+  .quadrant {
+    font-size: 0.6rem;
+  }
+  .top-left,
+  .bottom-left {
+    left: var(--plot-left);
+  }
+}
+
+.label-name {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.name small {
+  flex: none;
+  font-size: 9px;
+  font-weight: 650;
+}
+.name.compared {
+  z-index: 4;
+  color: var(--accent-pink);
+  opacity: 1;
+}
+.skill-dot.compared {
+  z-index: 5;
+  border: 2px solid var(--accent-pink);
+  opacity: 1;
+}
+.name.search-match {
+  z-index: 8;
+  color: var(--accent-primary);
+  opacity: 1;
+  background: var(--component-bg);
+}
+.skill-dot.search-match {
+  z-index: 9;
+  border: 1px solid var(--accent-primary);
+  opacity: 1;
+}
+.skill-dot.search-match.active {
+  z-index: 10;
+}
+.name.search-match .compare-tag {
+  color: var(--accent-pink);
+}
+.marker-mark {
+  position: absolute;
+  top: -6px;
+  right: -6px;
+  display: grid;
+  place-items: center;
+  width: 12px;
+  height: 12px;
+  border: 0;
+  border-radius: 4px;
+  background: var(--component-bg);
+  pointer-events: none;
+}
+.search-mark {
+  color: var(--accent-primary);
+}
+.compare-mark {
+  color: var(--accent-pink);
+}
+.comparison-controls {
+  position: absolute;
+  z-index: 4;
+  top: 4px;
+  right: 8px;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-left: auto;
+}
+.comparison-controls > span {
+  color: var(--accent-pink);
+  font-size: 0.75rem;
+  font-variant-numeric: tabular-nums;
+}
+.comparing .y-title {
+  right: 160px;
+}
+.comparing .top-right {
+  top: 44px;
+}
+@media (max-width: 767px) {
+  .comparing .y-title {
+    white-space: normal;
+    line-height: 1.2;
+    max-height: 2.4em;
+  }
+}
+
+.skill-layer {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  pointer-events: none;
+}
+/* Composite the background once so overlapping nonmatches cannot accumulate opacity. */
+.skill-layer.dimmed {
+  z-index: 0;
+  opacity: 0.18;
 }

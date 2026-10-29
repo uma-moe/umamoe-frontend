@@ -13,15 +13,11 @@
     leftoverSp,
     ruledOutSkills,
     searchTally,
+    v5Tally,
     type TheorizedResult
   } from './build-result';
 
-  /**
-   * A theorized build, answer first: how many skills to buy, their SP and what they are worth to her. Under it the
-   * builds the theory found as cards of their skills, side by side, the most worth first (by her win rate in races of
-   * her real fields when races ranked them), each skill by what it adds; then every skill on offer by what it is worth
-   * on her own. How the theory valued them opens from the info button beside the builds.
-   */
+  /** Purchase recommendation first, then internal comparisons and expandable supporting detail. */
   let {
     result,
     theorized,
@@ -57,17 +53,24 @@
 
   /** The check races measured runners beaten in real CM fields, not seconds. */
   const field = $derived(result?.objective === 'field_place');
-  /** An older service answers without a theory, so the page says so instead of guessing. */
-  const outdated = $derived(result !== undefined && theorized === undefined);
+  /** Only report a compatibility problem when neither supported result format can be read. */
+  const unavailable = $derived(result !== undefined && theorized === undefined);
   const builds = $derived(theorized?.builds ?? []);
   const pickBuild = $derived(builds[0]);
   const pick = $derived(pickBuild?.finalist);
 
-  const inertSet = $derived(inertPurchases(outdated ? [] : result?.inert));
+  const inertSet = $derived(inertPurchases(unavailable ? [] : result?.inert));
   /** Skills on offer that can never fire for her here, so the theory never valued them. */
-  const ruledOut = $derived(ruledOutSkills(outdated ? [] : result?.inert, offers));
+  const ruledOut = $derived(ruledOutSkills(unavailable ? [] : result?.inert, offers));
   const leftover = $derived(
-    leftoverSp({ pick, budget, offers, inert: inertSet, skills: theorized?.skills ?? [] })
+    leftoverSp({
+      pick,
+      budget,
+      offers,
+      inert: inertSet,
+      skills: theorized?.skills ?? [],
+      skillUnit: theorized?.skillUnit
+    })
   );
   const buys = $derived(Boolean(pick?.build.purchases.length));
   const checkRaces = $derived(result?.validation_runs_per_finalist_per_scenario ?? 0);
@@ -94,6 +97,8 @@
   const about = $derived.by(() => {
     if (!result || !theorized) return THEORY_METHOD;
 
+    if (theorized.model) return [...where, v5Tally(result, theorized.model)].join(' ');
+    if (!theorized.theory) return '';
     return [
       THEORY_METHOD,
       fieldText(theorized.theory),
@@ -114,6 +119,30 @@
       </span>
     {/snippet}
     <p class="about-text">{about}</p>
+    {#if theorized?.model?.build}
+      <details>
+        <summary>Optimization rounds</summary>
+        {#each theorized.model.build.rounds as round, index}
+          <p class="about-text">
+            Round {index + 1}: {round.tested.length} moves tested;
+            {round.made.length ? round.made.join(', ') : 'no change accepted'}.
+            {round.races.toLocaleString('en-US')} cumulative search races. Feedback slope {round.slope.toFixed(
+              2
+            )}, trust {round.trust.toFixed(2)}.
+          </p>
+          <details>
+            <summary>Paired move results</summary>
+            {#each round.tested as move}
+              <p class="about-text">
+                {move.move}: measured {move.measured.toFixed(2)} ± {move.se.toFixed(2)} SE; posterior
+                {move.posterior.toFixed(2)} score, {(move.p * 100).toFixed(1)}% chance of
+                improvement.
+              </p>
+            {/each}
+          </details>
+        {/each}
+      </details>
+    {/if}
   </InspectPopover>
   {#if raw}
     <Button
@@ -134,14 +163,14 @@
 >
   <div
     class="answer"
-    class:bad={(!!error || outdated) && !busy}
+    class:bad={(!!error || unavailable) && !busy}
     role="status"
   >
     {#if busy}
-      <p class="headline">Theorizing builds…</p>
+      <p class="headline">Optimizing builds…</p>
       <p class="detail">
-        Working out where each skill fires on this course and what it adds, then racing the best
-        builds against each other in her real CM fields; this takes up to half a minute.
+        Building an initial skill set, testing changes in optimization rounds, and validating the
+        finalists in raced fields.
       </p>
     {:else if error}
       <p class="headline">
@@ -161,36 +190,38 @@
           Try again
         </Button>
       {/if}
-    {:else if outdated}
+    {:else if unavailable}
       <p class="headline">
         <Icon
           name="warning"
           size={20}
-        />Optimizer out of date
+        />Optimizer report unavailable
       </p>
       <p class="detail">
-        The simulator service answering this page is an older build: it can’t theorize what skills
-        are worth. Rebuild and restart it, then search again.
+        {result?.model?.error ??
+          'The simulator returned a report this page cannot display. Check the simulator build and search again.'}
       </p>
     {:else if result && pickBuild && pick}
       <BuildSummary
         count={pickBuild.count}
         spCost={pick.sp_cost}
         {budget}
-        lengths={pickBuild.lengths}
-        winRate={pickBuild.raced?.win_rate}
       />
+      <p class="result-note">
+        Scores and win rates are internal optimization results for comparing builds in the tested
+        fields. They do not predict your Uma’s performance or win rate in game.
+      </p>
       {#if buys && leftover && leftover.left > 0 && !leftover.all && leftover.useless.length}
         <p class="detail">
           {leftover.useless.join(', ')}
-          {leftover.useless.length === 1 ? 'adds' : 'add'} nothing here, so {leftover.left.toLocaleString(
+          {leftover.useless.length === 1 ? 'shows' : 'show'} no benefit in this optimization, so {leftover.left.toLocaleString(
             'en-US'
           )}
           SP stay unspent.
         </p>
       {/if}
       {#if !buys}
-        <p class="detail">No skill on offer gains her a length in these races.</p>
+        <p class="detail">The optimizer selected no additional skills for this setup.</p>
       {/if}
       {#if stale}
         <p class="stale-note">
@@ -220,7 +251,7 @@
     <div class="body">
       <BuildColumns
         {builds}
-        scale={theorized.scale}
+        skillUnit={theorized.skillUnit}
         phaseBounds={theorized.phaseBounds}
         {field}
         {checkRaces}
@@ -229,7 +260,7 @@
       <SkillScores
         skills={theorized.skills}
         {ruledOut}
-        scale={theorized.scale}
+        skillUnit={theorized.skillUnit}
         phaseBounds={theorized.phaseBounds}
       />
     </div>

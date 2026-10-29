@@ -119,6 +119,7 @@
               {item.label}{#if item.badge}
                 <small
                   class="navigation-badge section-badge"
+                  class:new-badge={item.badge === 'New'}
                   id={`${navigationId}-badge-${item.id}`}
                   aria-hidden="true"
                 >
@@ -154,6 +155,7 @@
             {#if item.badge}
               <small
                 class="navigation-badge"
+                class:new-badge={item.badge === 'New'}
                 id={`${navigationId}-badge-${item.id}`}
                 aria-hidden="true"
               >
@@ -199,6 +201,7 @@
               {#if child.badge}
                 <small
                   class="navigation-badge"
+                  class:new-badge={child.badge === 'New'}
                   id={`${navigationId}-badge-${item.id}-${child.id}`}
                   aria-hidden="true"
                 >
@@ -327,6 +330,10 @@
     font-weight: 700;
     line-height: 1.4;
     white-space: nowrap;
+  }
+  .navigation-tree .navigation-badge.new-badge {
+    background: rgb(var(--accent-success-rgb) / 0.12);
+    color: var(--accent-success);
   }
   .subsection-parent {
     font-weight: 600;

@@ -4,6 +4,8 @@ export interface LabelledIcon {
   x: number;
   y: number;
   labelWidth: number;
+  /** Search and comparison labels stay visible even in a crowded cluster. */
+  priority?: boolean;
 }
 
 /** A name placed beside its icon: `x` is the label's left edge, `y` its vertical centre. */
@@ -35,8 +37,8 @@ function overlap(a: Box, b: Box): boolean {
 }
 
 /**
- * Names for as many icons as fit, in the order given (the most valuable first): each to the right of its icon, else to
- * its left, never over another icon, another name or the plot's edge. Zoomed in, icons spread and more names fit.
+ * Fit names beside their icons in priority order. Ordinary labels avoid other icons and names; highlighted labels
+ * remain visible even when neither side is free. Zooming spreads icons so more names fit.
  */
 export function placeLabels(icons: LabelledIcon[], options: LabelLayoutOptions): PlacedLabel[] {
   const { width, height, iconSize, labelHeight, gap } = options;
@@ -70,6 +72,18 @@ export function placeLabels(icons: LabelledIcon[], options: LabelLayoutOptions):
       placed.push({ id: icon.id, x: left, y: icon.y, side });
       return;
     }
+
+    if (!icon.priority) return;
+
+    const left = Math.max(0, Math.min(icon.x + half + gap, width - icon.labelWidth));
+    const y = Math.max(labelHeight / 2, Math.min(icon.y, height - labelHeight / 2));
+    placed.push({ id: icon.id, x: left, y, side: 'right' });
+    taken.push({
+      left,
+      top: y - labelHeight / 2,
+      right: left + icon.labelWidth,
+      bottom: y + labelHeight / 2
+    });
   });
 
   return placed;

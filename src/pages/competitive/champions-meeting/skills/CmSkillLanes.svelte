@@ -710,7 +710,8 @@
           <CmSkillBreakdown
             {overview}
             {colors}
-            detail={lane.detail}
+            skills={[{ detail: lane.detail }]}
+            {skillName}
             {style}
             {range}
           />
@@ -718,6 +719,19 @@
       </section>
     {/each}
   </div>
+  {#if removable && lanes.some((lane) => lane.detail)}
+    <CmSkillBreakdown
+      {overview}
+      {colors}
+      skills={lineData.lines.flatMap((series) =>
+        series.detail ? [{ detail: series.detail, color: series.color, dash: series.dash }] : []
+      )}
+      {style}
+      {range}
+      {skillName}
+      comparison
+    />
+  {/if}
 </section>
 
 <style>

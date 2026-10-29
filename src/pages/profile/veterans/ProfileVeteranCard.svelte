@@ -27,6 +27,7 @@
   import SkillChip from '@/components/game/SkillChip.svelte';
   import ProfileVeteranQueryMatches from './ProfileVeteranQueryMatches.svelte';
   import type { VeteranQueryMatch } from '@/lib/profile/veterans/profile-veteran-query';
+  import SkillPoints, { LEARNED_SKILL_POINTS_NOTE } from '@/components/game/SkillPoints.svelte';
 
   let {
     veteran,
@@ -261,12 +262,10 @@
     <span class="stat-total">
       {statTotal.toLocaleString(undefined, { maximumFractionDigits: 1 })} Total Stats
     </span>
-    <span
-      class="sp-total"
-      title="Base cost of learned skills including prerequisites, before hint discounts"
-    >
-      {spTotal?.toLocaleString() ?? '-'} SP total
-    </span>
+    <SkillPoints
+      value={spTotal}
+      note={LEARNED_SKILL_POINTS_NOTE}
+    />
     {#if veteran.fans != null}
       <span>
         {veteran.fans.toLocaleString()} fans

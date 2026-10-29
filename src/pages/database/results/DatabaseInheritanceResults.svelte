@@ -103,7 +103,7 @@
     </div>
   {/if}
   {#if pendingSearch}
-    <div class="loading pending">
+    <div class="pending">
       <Spinner size={24} />
       <span>Filters changed. Results will refresh when you return to Database.</span>
     </div>
@@ -144,10 +144,11 @@
     {@render affinityFailure()}
   {/if}
   {#if loading && !appending}
-    <div class="loading">
-      <Spinner size={30} />
-      <span>Searching inheritance records…</span>
-    </div>
+    <Spinner
+      centered
+      minHeight="260px"
+      label="Searching inheritance records…"
+    />
   {:else if error && !appending}
     <div
       class="result-error"
@@ -238,13 +239,11 @@
     </EmptyState>
   {/if}
   {#if appending && loading}
-    <div
-      class="loading"
-      role="status"
-    >
-      <Spinner size={30} />
-      <span>Loading more records…</span>
-    </div>
+    <Spinner
+      centered
+      minHeight="96px"
+      label="Loading more records…"
+    />
   {:else if appending && error}
     <Banner
       title="More records could not be loaded"
@@ -269,6 +268,14 @@
     min-width: 0;
     display: grid;
     gap: var(--space-3);
+  }
+  .pending {
+    min-height: 64px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: var(--space-3);
+    color: var(--color-text-muted);
   }
   .result-error {
     min-width: 0;

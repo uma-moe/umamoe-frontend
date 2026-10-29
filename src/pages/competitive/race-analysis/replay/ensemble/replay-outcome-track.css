@@ -3,17 +3,6 @@
   padding-right: 16px;
   border-right: 1px solid var(--border-subtle);
 }
-.view-heading {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 8px;
-  min-height: 30px;
-}
-h3 {
-  font-size: 11px;
-  margin: 0;
-}
 .track-map {
   display: block;
   width: 100%;

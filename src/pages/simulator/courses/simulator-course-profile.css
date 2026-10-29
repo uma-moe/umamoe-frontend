@@ -320,6 +320,15 @@ h2 {
     font-size: 10px;
   }
 }
+/* "Final spurt window" needs more room than the other names before it is cut off. */
+@container course-segment (max-width:96px) {
+  .profile-row[data-band='final-spurt'] .segment-name {
+    display: none;
+  }
+  .profile-row[data-band='final-spurt'] .segment-short {
+    display: block;
+  }
+}
 @container course-segment (max-width:46px) {
   .segment-distance {
     display: none;
@@ -358,10 +367,12 @@ h2 {
     padding: 0 14px;
     gap: 0;
   }
+  /* Stacked, the breakdown leads and the map follows: a map above it would push the breakdown off a phone's screen. */
   .compact .outline {
+    order: 1;
     padding: 14px 0;
     border-right: 0;
-    border-bottom: 1px solid var(--border-subtle);
+    border-top: 1px solid var(--border-subtle);
   }
   .compact .outline :global(figure) {
     max-width: 360px;
@@ -369,7 +380,7 @@ h2 {
     margin: auto;
   }
   .compact .outline :global(svg) {
-    height: 180px;
+    height: 120px;
   }
   .compact .distance-profile {
     padding-block: 14px;
@@ -401,7 +412,8 @@ h2 {
     font-size: 8px;
   }
 }
-@container course-breakdown (max-width:350px) {
+/* Only the narrowest phones put each row's label above its band: beside it, the breakdown stays half as tall. */
+@container course-breakdown (max-width:280px) {
   .profile-row {
     grid-template-columns: minmax(0, 1fr);
     gap: 4px;

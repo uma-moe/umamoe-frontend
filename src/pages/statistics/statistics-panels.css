@@ -1,12 +1,3 @@
-.loading {
-  min-height: 300px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 12px;
-  color: var(--text-secondary);
-  font-size: 14px;
-}
 .stat-overview {
   max-width: 100%;
   margin: 12px 0;

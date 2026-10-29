@@ -203,10 +203,11 @@
     onclear={clearSearch}
   />
   {#if loading}
-    <div class="loading">
-      <Spinner size={28} />
-      <span>Loading rankings…</span>
-    </div>
+    <Spinner
+      centered
+      minHeight="220px"
+      label="Loading rankings…"
+    />
   {:else if error}
     <Banner
       title="Ranking data unavailable"
@@ -310,7 +311,6 @@
     color: var(--accent-warning);
     border-color: rgb(255 183 77/0.25);
   }
-  .loading,
   .no-results {
     min-height: 220px;
     display: flex;

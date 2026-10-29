@@ -103,9 +103,8 @@
     <div class="placeholder">
       {#if loading}
         <Spinner
-          size={36}
-          showLabel
-          label="Loading chart renderer…"
+          centered
+          label="Loading chart…"
         />
       {:else}
         <span>Chart renderer loads near the viewport.</span>

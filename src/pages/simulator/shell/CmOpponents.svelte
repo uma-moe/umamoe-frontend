@@ -107,7 +107,11 @@
       </a>{/if}
   </div>
   {#if loading && !benchmark}
-    <Spinner label="Loading the CM teams…" />
+    <Spinner
+      centered
+      minHeight="120px"
+      label="Loading CM teams…"
+    />
   {:else if error}
     <p
       class="note bad"

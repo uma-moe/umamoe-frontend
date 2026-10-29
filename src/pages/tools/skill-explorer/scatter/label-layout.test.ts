@@ -39,4 +39,20 @@ describe('placeLabels', () => {
     expect(placeLabels(close, options)).toHaveLength(1);
     expect(placeLabels(spread, options)).toHaveLength(2);
   });
+
+  it('keeps a highlighted name visible when both sides are crowded', () => {
+    const crowded = [
+      { id: 1, x: 40, y: 100, labelWidth: 120, priority: true },
+      { id: 2, x: 80, y: 100, labelWidth: 120 }
+    ];
+
+    expect(placeLabels(crowded, options).map((label) => label.id)).toContain(1);
+  });
+
+  it('keeps a highlighted label inside the plot near its vertical edge', () => {
+    const labels = placeLabels([{ id: 1, x: 390, y: 0, labelWidth: 120, priority: true }], options);
+
+    expect(labels[0]!.x + 120).toBeLessThanOrEqual(options.width);
+    expect(labels[0]!.y).toBe(options.labelHeight / 2);
+  });
 });

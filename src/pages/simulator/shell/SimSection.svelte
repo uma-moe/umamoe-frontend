@@ -107,6 +107,12 @@
     font-weight: 700;
   }
   @media (max-width: 767px) {
+    /* A phone stacks the fields, so the space between them adds up: sections sit closer. */
+    .hp-section {
+      gap: 8px;
+      padding-block: 10px;
+    }
+
     .actions :global(.ui-button),
     .actions :global(.menu > .trigger) {
       height: var(--control-height);

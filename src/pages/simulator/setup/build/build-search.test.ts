@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { restoreBuildSearch } from './build-search.svelte';
 
-describe('Skill planner setups from a code or this browser', () => {
+describe('Build optimizer setups from a code or this browser', () => {
   it('keeps what she can buy with hints and locks, the goal and the HP debuffs', () => {
     const saved = {
       uma: { name: 'Mihono Bourbon', trainee: { speed: '1564', runningStyle: 'Nige' }, skills: [] },

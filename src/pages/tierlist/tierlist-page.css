@@ -36,14 +36,6 @@
   min-width: 0;
   flex: 1;
 }
-.loading {
-  min-height: 300px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: var(--space-3);
-  color: var(--color-text-muted);
-}
 .chart {
   padding: 16px;
   border: 1px solid var(--border-primary);

@@ -69,8 +69,7 @@
         </div>
       </div>
       <p>
-        Uploads are automatically resimulated. Captures go to the simulator; mismatched replays go
-        to Sentry for debugging.
+        Uploads are resimulated on the uma.moe simulator. Mismatched replays are reported to Sentry.
       </p>
     </section>
 

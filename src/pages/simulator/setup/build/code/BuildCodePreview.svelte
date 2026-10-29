@@ -55,7 +55,7 @@
     stamina: () =>
       'Replaces the whole HP calculator: her build, the course, the HP plan and its race options.',
     build: () =>
-      'Replaces the whole Skill planner: her build, the course, the goal, what she can buy with hints and locks, and the HP debuffs she takes.'
+      'Replaces the whole Build optimizer: her build, the course, the goal, what she can buy with hints and locks, and the HP debuffs she takes.'
   };
 
   const dropped = $derived(runners.reduce((sum, runner) => sum + runner.dropped, 0));
@@ -86,11 +86,13 @@
       );
     }
 
+    // A career's final turn carries no course, so the course stays as it is.
+    const andCourse = course ? ', the course' : '';
     if (target === 'build') {
-      return 'Replaces her build, the course, the goal and what she can buy.';
+      return 'Replaces her build' + andCourse + ', the goal and what she can buy.';
     }
 
-    return 'Replaces her build and the course.';
+    return course ? 'Replaces her build and the course.' : 'Replaces her build.';
   });
 </script>
 

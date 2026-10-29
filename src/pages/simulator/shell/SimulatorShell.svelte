@@ -2,6 +2,7 @@
   import type { Snippet } from 'svelte';
   import { onMount } from 'svelte';
   import Button from '@/components/controls/Button.svelte';
+  import Banner from '@/components/feedback/Banner.svelte';
   import SelectField from '@/components/controls/SelectField.svelte';
   import Dialog from '@/components/overlays/Dialog.svelte';
   import RunnerSummary from '@/pages/competitive/runners/RunnerSummary.svelte';
@@ -9,8 +10,11 @@
   import { simulatorUmaSummary } from '../simulator-uma';
   import { simulatorRoster, ensureSimulatorRoster } from '../simulator-roster.svelte';
   import {
+    courseDataErrorVisible,
+    dismissCourseDataError,
     ensureSimulatorCourses,
     selectedCourse,
+    simulatorCourseData,
     simulatorSession
   } from '../simulator-session.svelte';
   import type { SimulatorMode, SimulatorPanel } from './types';
@@ -51,6 +55,17 @@
   });
 </script>
 
+{#if courseDataErrorVisible()}
+  <Banner
+    title="Race data unavailable"
+    tone="danger"
+    reportable={false}
+    dismissible
+    ondismiss={dismissCourseDataError}
+  >
+    {simulatorCourseData.error}
+  </Banner>
+{/if}
 <div class="workspace">
   {#if panels.length}
     <div class="setup-actions">

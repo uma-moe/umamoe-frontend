@@ -111,6 +111,7 @@
 </script>
 
 <dialog
+  {id}
   style:--dialog-max-width={maxWidth}
   style:--dialog-max-height={maxHeight}
   style:--dialog-mobile-max-height={mobileMaxHeight ?? maxHeight}

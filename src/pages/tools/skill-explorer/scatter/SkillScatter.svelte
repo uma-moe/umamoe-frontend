@@ -1,7 +1,11 @@
 <script lang="ts">
-  import type { Snippet } from 'svelte';
+  import { onDestroy, type Snippet } from 'svelte';
   import type { Attachment } from 'svelte/attachments';
   import IconButton from '@/components/controls/IconButton.svelte';
+  import Icon from '@/components/Icon.svelte';
+  import Button from '@/components/controls/Button.svelte';
+  import ToggleButton from '@/components/controls/ToggleButton.svelte';
+  import SkillDialog from './SkillDialog.svelte';
   import { placeIcons } from './icon-layout';
   import { placeLabels } from './label-layout';
   import {
@@ -37,6 +41,7 @@
     xLabel: string;
     /** Dimmed when a search leaves it out. */
     matches: boolean;
+    searchMatch: boolean;
   }
 
   export interface QuadrantLabels {
@@ -66,8 +71,11 @@
     quadrants: QuadrantLabels;
     /** Changes when the axes come to mean something else; the zoom then returns to the whole plot. */
     viewKey: string;
-    /** A skill's details, shown beside it while it is hovered, focused or tapped. */
+    /** A skill's details, opened beside the selected icon. */
     details: Snippet<[number]>;
+    comparedSkillIds: ReadonlySet<number>;
+    oncompare: (skillId: number) => void;
+    onclearcomparison: () => void;
   }
 
   let {
@@ -81,13 +89,13 @@
     format,
     quadrants,
     viewKey,
-    details
+    details,
+    comparedSkillIds,
+    oncompare,
+    onclearcomparison
   }: Props = $props();
 
   const detailsId = $props.id();
-  /** The card's widest, and the room kept between it and the icon it describes. */
-  const CARD_WIDTH = 300;
-  const CARD_GAP = 12;
   const LABEL_HEIGHT = 18;
   /** A quadrant's name shows only while this much of it is in view. */
   const QUADRANT_LABEL_ROOM = { width: 170, height: 40 };
@@ -100,12 +108,10 @@
   let viewportWidth = $state(0);
   let viewportHeight = $state(0);
   let plotWindow = $state<PlotWindow>(WHOLE_PLOT);
-  let hoveredId = $state<number>();
-  let focusedId = $state<number>();
   let pinnedId = $state<number>();
+  let previewId = $state<number>();
+  let selectedButton = $state<HTMLButtonElement>();
   let dragging = $state(false);
-  let wheelHint = $state(false);
-  let cardHeight = $state(0);
   let labelFont = $state('');
 
   let viewport: HTMLDivElement;
@@ -114,10 +120,9 @@
   const pointers = new Map<number, ViewPoint>();
   let pressTravel = 0;
   let pressOnIcon = false;
-  let wheelHintTimer: ReturnType<typeof setTimeout> | undefined;
+  let previewCloseTimer: ReturnType<typeof setTimeout> | undefined;
 
   const iconSize = $derived(viewportWidth < 600 ? 22 : 30);
-  const cardWidth = $derived(Math.min(CARD_WIDTH, viewportWidth));
   const zoom = $derived(zoomOf(plotWindow));
   const zoomed = $derived(isZoomed(plotWindow));
   const yAxis = $derived(valueAxis(points.map((point) => point.y)));
@@ -143,12 +148,15 @@
     labelFont === ''
       ? []
       : placeLabels(
-          placed.map((icon) => ({
-            id: icon.id,
-            x: icon.x,
-            y: icon.y,
-            labelWidth: labelWidth(pointsById.get(icon.id)?.name ?? '')
-          })),
+          placed
+            .map((icon) => ({
+              id: icon.id,
+              x: icon.x,
+              y: icon.y,
+              labelWidth: labelWidth(labelText(pointsById.get(icon.id))),
+              priority: highlighted(icon.id)
+            }))
+            .sort((left, right) => highlightRank(right.id) - highlightRank(left.id)),
           {
             width: viewportWidth,
             height: viewportHeight,
@@ -189,21 +197,37 @@
     bottomRight: roomFor(viewportWidth - splitX, viewportHeight - splitY)
   });
 
-  const activeId = $derived(hoveredId ?? focusedId ?? pinnedId);
+  const activeId = $derived(pinnedId ?? previewId);
   const activeIcon = $derived(
     activeId === undefined ? undefined : placed.find((icon) => icon.id === activeId)
   );
-  const card = $derived.by(() => {
-    if (activeIcon === undefined || dragging) return undefined;
 
-    const roomRight = viewportWidth - activeIcon.x - iconSize / 2 - CARD_GAP;
-    const onRight = roomRight >= cardWidth || activeIcon.x < viewportWidth / 2;
-    const left = onRight
-      ? activeIcon.x + iconSize / 2 + CARD_GAP
-      : activeIcon.x - iconSize / 2 - CARD_GAP - cardWidth;
-    const top = clamp(activeIcon.y - cardHeight / 2, 0, Math.max(0, viewportHeight - cardHeight));
-    return { id: activeIcon.id, left: clamp(left, 0, Math.max(0, viewportWidth - cardWidth)), top };
-  });
+  function highlightRank(skillId: number): number {
+    if (pointsById.get(skillId)?.searchMatch) return 2;
+    return comparedSkillIds.has(skillId) ? 1 : 0;
+  }
+
+  function highlighted(skillId: number): boolean {
+    return highlightRank(skillId) > 0;
+  }
+
+  function isDimmed(point: PlottedSkill): boolean {
+    return !point.matches && !highlighted(point.skillId);
+  }
+
+  // Keep the dialog anchored when comparison moves a marker into the foreground layer.
+  function followActiveMarker(skillId: number): Attachment<HTMLButtonElement> {
+    return (element) => {
+      if (skillId === activeId) selectedButton = element;
+    };
+  }
+
+  function labelText(point: PlottedSkill | undefined): string {
+    if (!point) return '';
+    const search = point.searchMatch ? ' · Search match' : '';
+    const compared = comparedSkillIds.has(point.skillId) ? ' · Compare' : '';
+    return point.name + search + compared;
+  }
 
   function clamp(value: number, low: number, high: number): number {
     return Math.min(Math.max(value, low), high);
@@ -253,10 +277,41 @@
   }
 
   function togglePinned(skillId: number, event: MouseEvent) {
+    event.preventDefault();
     // A press that moved the plot is a drag, not a tap on the icon under it; a key press (detail 0) always counts.
     if (event.detail > 0 && pressTravel > DRAG_THRESHOLD) return;
 
+    keepPreview();
+    previewId = undefined;
+    selectedButton = event.currentTarget as HTMLButtonElement;
     pinnedId = pinnedId === skillId ? undefined : skillId;
+  }
+
+  function previewSkill(skillId: number, event: PointerEvent) {
+    if (event.pointerType !== 'mouse' || pinnedId !== undefined || dragging) return;
+    if (!matchMedia('(min-width: 768px) and (hover: hover)').matches) return;
+
+    keepPreview();
+    selectedButton = event.currentTarget as HTMLButtonElement;
+    previewId = skillId;
+  }
+
+  function keepPreview() {
+    clearTimeout(previewCloseTimer);
+  }
+
+  function leavePreview() {
+    keepPreview();
+    if (pinnedId !== undefined) return;
+
+    // Leave time to cross the gap from the icon into its dialog.
+    previewCloseTimer = setTimeout(() => (previewId = undefined), 180);
+  }
+
+  function closeDetails() {
+    keepPreview();
+    pinnedId = undefined;
+    previewId = undefined;
   }
 
   function startPress(event: PointerEvent) {
@@ -266,6 +321,36 @@
     pressTravel = 0;
     pressOnIcon = event.target instanceof Element && event.target.closest('.skill-dot') !== null;
   }
+
+  /** Keep the chart in the remaining page height as controls and viewport size change. */
+  const fitAvailableHeight: Attachment<HTMLDivElement> = (element) => {
+    let frame = 0;
+
+    function fit() {
+      const pageTop = element.getBoundingClientRect().top + window.scrollY;
+      const minimum = matchMedia('(max-width: 767px)').matches ? 360 : 420;
+      const height = Math.max(minimum, window.innerHeight - pageTop - 24);
+      element.style.setProperty('--chart-height', height + 'px');
+    }
+
+    function scheduleFit() {
+      cancelAnimationFrame(frame);
+      frame = requestAnimationFrame(fit);
+    }
+
+    const observer = new ResizeObserver(scheduleFit);
+    const page = element.closest('figure')?.parentElement;
+    if (page) observer.observe(page);
+
+    window.addEventListener('resize', scheduleFit);
+    fit();
+
+    return () => {
+      cancelAnimationFrame(frame);
+      observer.disconnect();
+      window.removeEventListener('resize', scheduleFit);
+    };
+  };
 
   /** One pointer drags the zoomed plot; two pinch it. */
   function movePress(event: PointerEvent) {
@@ -292,6 +377,7 @@
     // Captured only once it is a drag: capturing a tap would take its click away from the icon under it.
     if (!dragging && pressTravel > DRAG_THRESHOLD) {
       dragging = true;
+      previewId = undefined;
       viewport.setPointerCapture(event.pointerId);
     }
   }
@@ -300,7 +386,7 @@
   function endPress(event: PointerEvent) {
     if (!pointers.delete(event.pointerId)) return;
 
-    if (!pressOnIcon && pressTravel <= DRAG_THRESHOLD) pinnedId = undefined;
+    if (!pressOnIcon && pressTravel <= DRAG_THRESHOLD) closeDetails();
     if (pointers.size === 0) dragging = false;
   }
 
@@ -311,27 +397,21 @@
   }
 
   function handleKeys(event: KeyboardEvent) {
+    if (event.target instanceof Element && event.target.closest('[popover], dialog')) return;
+
     if (event.key === '+' || event.key === '=') zoomBy(ZOOM_STEP);
     else if (event.key === '-') zoomBy(1 / ZOOM_STEP);
     else if (event.key === '0') showWholePlot();
-    else if (event.key === 'Escape') pinnedId = undefined;
     else return;
 
     event.preventDefault();
   }
 
-  /** Ctrl or ⌘ with the wheel zooms, as a trackpad pinch does; the wheel alone keeps scrolling the page. */
+  /** The wheel and trackpad pinch zoom around the pointer while it is over the plot. */
   const wheelZoom: Attachment<HTMLDivElement> = (element) => {
     labelFont = `600 11px ${getComputedStyle(element).fontFamily}`;
 
     function onWheel(event: WheelEvent) {
-      if (!event.ctrlKey && !event.metaKey) {
-        wheelHint = true;
-        clearTimeout(wheelHintTimer);
-        wheelHintTimer = setTimeout(() => (wheelHint = false), 1400);
-        return;
-      }
-
       event.preventDefault();
       const perStep = event.deltaMode === WheelEvent.DOM_DELTA_LINE ? 0.05 : 0.0025;
       zoomBy(Math.exp(-event.deltaY * perStep), viewPointOf(event));
@@ -340,7 +420,6 @@
     element.addEventListener('wheel', onWheel, { passive: false });
     return () => {
       element.removeEventListener('wheel', onWheel);
-      clearTimeout(wheelHintTimer);
     };
   };
 
@@ -348,20 +427,23 @@
   $effect(() => {
     void viewKey;
     plotWindow = WHOLE_PLOT;
-    pinnedId = undefined;
+    closeDetails();
   });
+
+  onDestroy(keepPreview);
 </script>
 
 <!-- svelte-ignore a11y_no_noninteractive_element_interactions -->
 <figure
   class="skill-scatter"
   style:--icon-size={`${iconSize}px`}
-  style:--card-width={`${cardWidth}px`}
   onkeydown={handleKeys}
 >
   <div class="toolbar">
     <p class="hint">
-      <span class="with-hover">Hover a skill for its details. Ctrl + scroll or pinch to zoom.</span>
+      <span class="with-hover">
+        Hover a skill to preview; click to keep it open. Scroll or pinch to zoom.
+      </span>
       <span class="with-touch">Tap a skill for its details. Pinch to zoom.</span>
       {#if zoomed}
         Drag to pan.
@@ -397,34 +479,75 @@
     </div>
   </div>
 
-  <div class="y-title">{yTitle}</div>
   <div
-    class="y-axis"
-    aria-hidden="true"
+    class="plot-area"
+    class:comparing={comparedSkillIds.size > 0}
+    style:--split-left={`calc(${splitX}px + var(--plot-left))`}
+    style:--split-top={`calc(${splitY}px + var(--plot-top))`}
+    {@attach fitAvailableHeight}
   >
-    {#each yTickLabels as tick (tick.value)}
-      <span style:top={`${tick.y}px`}>{format(tick.value)}</span>
-    {/each}
-    {#if medianVisible}
-      <span
-        class="median"
-        style:top={`${splitY}px`}
-      >
-        {format(ySplit)}
-        <small>median</small>
-      </span>
-    {/if}
-  </div>
+    <div
+      class="quadrants"
+      aria-hidden="true"
+    >
+      {#if quadrantShown.topLeft}
+        <span class="quadrant top-left">{quadrants.topLeft}</span>
+      {/if}
+      {#if quadrantShown.topRight}
+        <span class="quadrant top-right">{quadrants.topRight}</span>
+      {/if}
+      {#if quadrantShown.bottomLeft}
+        <span class="quadrant bottom-left">{quadrants.bottomLeft}</span>
+      {/if}
+      {#if quadrantShown.bottomRight}
+        <span class="quadrant bottom-right">{quadrants.bottomRight}</span>
+      {/if}
+    </div>
 
-  <div class="plot-area">
+    {#if comparedSkillIds.size > 0}
+      <div class="comparison-controls">
+        <span>{comparedSkillIds.size} compared</span>
+        <Button
+          variant="secondary"
+          size="sm"
+          icon="close"
+          ariaLabel="Clear comparison"
+          onclick={onclearcomparison}
+        >
+          Clear
+        </Button>
+      </div>
+    {/if}
+    <div
+      class="y-title"
+      title={yTitle}
+    >
+      {yTitle}
+    </div>
+    <div
+      class="y-axis"
+      aria-hidden="true"
+    >
+      {#each yTickLabels as tick (tick.value)}
+        <span style:top={`${tick.y}px`}>{format(tick.value)}</span>
+      {/each}
+      {#if medianVisible}
+        <span
+          class="median"
+          style:top={`${splitY}px`}
+        >
+          {format(ySplit)}
+          <small>median</small>
+        </span>
+      {/if}
+    </div>
+
     <div
       class="viewport"
       class:zoomed
       class:dragging
       role="group"
       aria-label={`${points.length} skills by ${xTitle.toLowerCase()} and ${yTitle.toLowerCase()}`}
-      style:--split-left={`${splitX}px`}
-      style:--split-top={`${splitY}px`}
       bind:this={viewport}
       bind:clientWidth={viewportWidth}
       bind:clientHeight={viewportHeight}
@@ -435,24 +558,6 @@
       ondblclick={zoomIntoPoint}
       {@attach wheelZoom}
     >
-      <div
-        class="quadrants"
-        aria-hidden="true"
-      >
-        {#if quadrantShown.topLeft}
-          <span class="quadrant top-left">{quadrants.topLeft}</span>
-        {/if}
-        {#if quadrantShown.topRight}
-          <span class="quadrant top-right">{quadrants.topRight}</span>
-        {/if}
-        {#if quadrantShown.bottomLeft}
-          <span class="quadrant bottom-left">{quadrants.bottomLeft}</span>
-        {/if}
-        {#if quadrantShown.bottomRight}
-          <span class="quadrant bottom-right">{quadrants.bottomRight}</span>
-        {/if}
-      </div>
-
       {#each yTicks as tick (tick.value)}
         <div
           class="grid-row"
@@ -478,94 +583,135 @@
         ></div>
       {/if}
 
-      {#each labels as label (label.id)}
-        {@const point = pointsById.get(label.id)}
-        {#if point}
-          <span
-            class="name"
-            class:dimmed={!point.matches}
-            class:active={label.id === activeId}
-            style:left={`${label.x}px`}
-            style:top={`${label.y}px`}
-            aria-hidden="true"
-          >
-            {point.name}
-          </span>
-        {/if}
-      {/each}
-
-      {#each placed as icon (icon.id)}
-        {@const point = pointsById.get(icon.id)}
-        {#if point}
-          <button
-            type="button"
-            class={`skill-dot tier-${point.tier}`}
-            class:dimmed={!point.matches}
-            class:active={icon.id === activeId}
-            class:pinned={icon.id === pinnedId}
-            style:left={`${icon.x}px`}
-            style:top={`${icon.y}px`}
-            aria-label={`${point.name}: ${format(point.y)}, ${point.xLabel}`}
-            aria-pressed={icon.id === pinnedId}
-            aria-describedby={card?.id === icon.id ? detailsId : undefined}
-            onpointerenter={(event) => {
-              if (event.pointerType === 'mouse') hoveredId = icon.id;
-            }}
-            onpointerleave={() => {
-              if (hoveredId === icon.id) hoveredId = undefined;
-            }}
-            onfocus={() => (focusedId = icon.id)}
-            onblur={() => (focusedId = undefined)}
-            onclick={(event) => togglePinned(icon.id, event)}
-          >
-            {#if point.image}
-              <img
-                src={point.image}
-                alt=""
-                loading="lazy"
-                decoding="async"
-                draggable="false"
-              />
-            {:else}
-              <span class="fallback">{point.name.slice(0, 1)}</span>
-            {/if}
-          </button>
-        {/if}
-      {/each}
-
-      {#if wheelHint && !zoomed}
-        <p
-          class="wheel-hint"
-          aria-hidden="true"
+      {#each [true, false] as dimmed (dimmed)}
+        <div
+          class="skill-layer"
+          class:dimmed
         >
-          Hold Ctrl (⌘ on a Mac) and scroll to zoom
-        </p>
-      {/if}
+          {#each labels as label (label.id)}
+            {@const point = pointsById.get(label.id)}
+            {#if point && isDimmed(point) === dimmed}
+              <span
+                class="name"
+                class:dimmed
+                class:search-match={point.searchMatch}
+                class:compared={comparedSkillIds.has(point.skillId)}
+                class:active={label.id === activeId}
+                style:left={`${label.x}px`}
+                style:top={`${label.y}px`}
+                aria-hidden="true"
+              >
+                <span class="label-name">{point.name}</span>
+                {#if point.searchMatch}
+                  <small class="search-tag">Search match</small>
+                {/if}
+                {#if comparedSkillIds.has(point.skillId)}
+                  <small class="compare-tag">Compare</small>
+                {/if}
+              </span>
+            {/if}
+          {/each}
+
+          {#each placed as icon (icon.id)}
+            {@const point = pointsById.get(icon.id)}
+            {#if point && isDimmed(point) === dimmed}
+              <button
+                type="button"
+                class={`skill-dot tier-${point.tier}`}
+                class:dimmed
+                class:search-match={point.searchMatch}
+                class:compared={comparedSkillIds.has(point.skillId)}
+                class:active={icon.id === activeId}
+                class:pinned={icon.id === pinnedId}
+                style:left={`${icon.x}px`}
+                style:top={`${icon.y}px`}
+                aria-label={`${point.name}: ${format(point.y)}, ${point.xLabel}${point.searchMatch ? ', search match' : ''}${comparedSkillIds.has(point.skillId) ? ', compared' : ''}`}
+                aria-haspopup="dialog"
+                aria-expanded={icon.id === activeId}
+                aria-controls={icon.id === activeId ? detailsId : undefined}
+                popovertarget={icon.id === activeId ? detailsId : undefined}
+                onpointerenter={(event) => previewSkill(icon.id, event)}
+                onpointerleave={leavePreview}
+                onclick={(event) => togglePinned(icon.id, event)}
+                {@attach followActiveMarker(icon.id)}
+              >
+                {#if point.image}
+                  <img
+                    src={point.image}
+                    alt=""
+                    loading="lazy"
+                    decoding="async"
+                    draggable="false"
+                  />
+                {:else}
+                  <span class="fallback">{point.name.slice(0, 1)}</span>
+                {/if}
+                {#if point.searchMatch}
+                  <span
+                    class="marker-mark search-mark"
+                    aria-hidden="true"
+                  >
+                    <Icon
+                      name="search"
+                      size={10}
+                    />
+                  </span>
+                {:else if comparedSkillIds.has(point.skillId)}
+                  <span
+                    class="marker-mark compare-mark"
+                    aria-hidden="true"
+                  >
+                    <Icon
+                      name="swap"
+                      size={10}
+                    />
+                  </span>
+                {/if}
+              </button>
+            {/if}
+          {/each}
+        </div>
+      {/each}
     </div>
 
-    {#if card}
-      <div
-        class="details"
-        id={detailsId}
-        role="tooltip"
-        style:left={`${card.left}px`}
-        style:top={`${card.top}px`}
-        bind:offsetHeight={cardHeight}
-      >
-        {@render details(card.id)}
-      </div>
+    {#if activeIcon && selectedButton}
+      {@const selectedId = activeIcon.id}
+      {#key selectedId}
+        <SkillDialog
+          id={detailsId}
+          label={`${pointsById.get(activeIcon.id)?.name ?? 'Skill'} details`}
+          anchor={selectedButton}
+          anchorPosition={activeIcon}
+          persistent={pinnedId === selectedId}
+          onpointerenter={keepPreview}
+          onpointerleave={leavePreview}
+          onclose={() => {
+            if (activeId === selectedId) closeDetails();
+          }}
+        >
+          {#snippet headerActions()}
+            <ToggleButton
+              label="Compare"
+              icon="swap"
+              size="sm"
+              pressed={comparedSkillIds.has(selectedId)}
+              onclick={() => oncompare(selectedId)}
+            />
+          {/snippet}
+          {@render details(activeIcon.id)}
+        </SkillDialog>
+      {/key}
     {/if}
+    <div
+      class="x-axis"
+      aria-hidden="true"
+    >
+      {#each xTicks as tick (tick.label)}
+        <span style:left={`${tick.x}px`}>{tick.label}</span>
+      {/each}
+    </div>
+    <div class="x-title">{xTitle}</div>
   </div>
-
-  <div
-    class="x-axis"
-    aria-hidden="true"
-  >
-    {#each xTicks as tick (tick.label)}
-      <span style:left={`${tick.x}px`}>{tick.label}</span>
-    {/each}
-  </div>
-  <figcaption class="x-title">{xTitle}</figcaption>
 </figure>
 
 <style>

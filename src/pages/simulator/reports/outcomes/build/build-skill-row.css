@@ -1,9 +1,7 @@
-/* One line a skill, every line the same height: icon, name, then SP and lengths (the cards say the units) in fixed
-   columns so they read down a card; a data bar behind it draws the lengths. */
 .skill-row {
   --tier: 148 163 184;
   --tier-text: var(--text-primary);
-  --fill: color-mix(in srgb, var(--text-muted) 24%, transparent);
+  --fill: color-mix(in srgb, var(--text-muted) 20%, transparent);
   position: relative;
   isolation: isolate;
   container: skill-row / inline-size;
@@ -13,7 +11,6 @@
   gap: 6px;
   height: 24px;
   min-width: 0;
-  box-sizing: border-box;
   padding: 0 5px 0 4px;
   overflow: hidden;
   border-radius: 4px;
@@ -21,37 +18,29 @@
   font-variant-numeric: tabular-nums;
 }
 .skill-row.helps {
-  --fill: rgb(var(--accent-success-rgb) / 0.3);
+  --fill: rgb(var(--accent-success-rgb) / 0.24);
 }
-/* A skill that costs her: no bar, but the whole row faintly orange. */
 .skill-row.loss {
-  background: rgb(var(--accent-warning-rgb) / 0.16);
+  --fill: rgb(var(--accent-warning-rgb) / 0.18);
 }
 .fill {
   position: absolute;
-  top: 0;
-  bottom: 0;
-  left: 0;
+  inset: 0 auto 0 0;
   z-index: -1;
   background: var(--fill);
 }
-/* A skill that adds nothing here, or never fires: its worth muted, and a skill that never fires dimmed whole. */
-.nothing .value {
+.nothing .value,
+.never .value {
   color: var(--text-muted);
 }
-.never {
-  opacity: 0.6;
-}
-/* A skill another build buys and the pick does not: outlined, as the fill already carries the worth. */
 .skill-row.differs {
-  box-shadow: inset 0 0 0 1px rgb(var(--accent-primary-rgb) / 0.5);
+  box-shadow: inset 0 0 0 1px rgb(var(--accent-primary-rgb) / 0.4);
 }
 img {
   width: 16px;
   height: 16px;
   object-fit: contain;
 }
-/* The name whole, then what an upgrade is bought with, which gives way first when the line runs out. */
 .name {
   display: flex;
   align-items: baseline;
@@ -60,7 +49,6 @@ img {
   overflow: hidden;
   white-space: nowrap;
 }
-/* The name keeps its width until the line is too narrow for it alone; the suffix takes what is left. */
 .name strong {
   flex: none;
   max-width: 100%;
@@ -74,7 +62,7 @@ img {
   min-width: 0;
   overflow: hidden;
   font-size: 11px;
-  color: var(--text-muted);
+  color: var(--text-secondary);
   text-overflow: ellipsis;
 }
 .cost {
@@ -83,7 +71,7 @@ img {
   justify-content: flex-end;
   gap: 3px;
   font-size: 11px;
-  color: var(--text-muted);
+  color: var(--text-secondary);
   white-space: nowrap;
 }
 .cost :global(svg) {
@@ -104,28 +92,8 @@ img {
   font-weight: 650;
   color: var(--accent-warning);
 }
-/* With the service's win estimate: a muted fifth column after the lengths. */
-.skill-row.with-win {
-  grid-template-columns: 16px minmax(0, 1fr) 32px 46px 40px;
-}
-.win {
-  font-size: 11px;
-  color: var(--text-muted);
-  text-align: right;
-  white-space: nowrap;
-}
-/* A narrow row keeps the whole name: what an upgrade is bought with gives way first, then shows on hover. */
 @container skill-row (max-width: 300px) {
   .name small {
-    display: none;
-  }
-}
-/* Narrower still, the estimate gives way too; it stays in the hover. */
-@container skill-row (max-width: 240px) {
-  .skill-row.with-win {
-    grid-template-columns: 16px minmax(0, 1fr) 32px 46px;
-  }
-  .win {
     display: none;
   }
 }

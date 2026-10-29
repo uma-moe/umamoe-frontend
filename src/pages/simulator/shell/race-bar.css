@@ -455,8 +455,8 @@
   }
 }
 /* Inside a form that already has a card: no card of its own, the ground and the form's fields on one row. */
-/* Bare: track, course and conditions as fields of a form section. Wide, they share one row; narrower, the
-   conditions go under the course and wrap; on a phone, one a row. */
+/* Bare: track, course and conditions as fields of a form section. Narrow forms keep the pickers and conditions
+   in pairs so the course setup stays in reach on a phone. */
 .bare {
   --control-height: var(--setup-control-height, 36px);
   padding: 0;
@@ -512,11 +512,28 @@
   }
 }
 @container race-fields (max-width:560px) {
-  .bare .course-row {
-    grid-template-columns: minmax(0, 1fr);
+  .bare .controls {
+    gap: 8px;
   }
-  .bare .conditions > div {
-    flex: 1 1 100%;
+  .bare .course-row {
+    grid-template-columns: minmax(0, 0.7fr) minmax(0, 1.3fr);
+    gap: 8px;
+  }
+  .bare .course-picker :global(input) {
+    padding-left: 8px;
+    padding-right: 24px;
+  }
+  .bare .selected-outline {
+    display: none;
+  }
+  .bare .picker-arrow {
+    right: 8px;
+    bottom: calc((var(--control-height) - 14px) / 2);
+  }
+  .bare .conditions {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 8px;
   }
   .bare .conditions :global(.segments) {
     width: 100%;
@@ -524,5 +541,15 @@
   .bare .conditions :global(.segments button) {
     flex: 1;
     min-width: 0;
+  }
+  .bare .ground :global(.segments button) {
+    padding-inline: 3px;
+    font-size: 10px;
+  }
+  /* The condition labels match the field labels' line height, so every label row is one height. */
+  .bare :global(.field label),
+  .bare .label {
+    font-size: 11px;
+    line-height: 1.2;
   }
 }

@@ -5,7 +5,7 @@
   import type { OptimizeResult } from '../../simulator-repository';
   import { bestSummary } from './build-run';
 
-  /** The Skill planner's run bar: what a search would plan with or what the last one found, then its buttons. */
+  /** The Build optimizer's run bar: what a search would plan with or what the last one found, then its buttons. */
   interface Props {
     blocked: string;
     busy: boolean;
@@ -24,7 +24,7 @@
 
   const status = $derived.by(() => {
     if (busy) {
-      return 'Theorizing builds…';
+      return 'Optimizing builds…';
     }
 
     if (error) {

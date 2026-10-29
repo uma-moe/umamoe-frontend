@@ -76,7 +76,11 @@
         title="Loading event details"
         onclose={closeDetails}
       >
-        <Spinner label="Loading event details" />
+        <Spinner
+          centered
+          minHeight="200px"
+          label="Loading event details…"
+        />
       </Dialog>
     {:then module}
       <module.default

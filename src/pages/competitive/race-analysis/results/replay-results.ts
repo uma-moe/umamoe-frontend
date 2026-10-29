@@ -25,6 +25,7 @@ export function raceResultRows(capture: ParsedRaceCapture, catalog: Map<number, 
           ? result.finishTimeRaw
           : result?.finishTime;
 
+      const flags = capture.detailed?.annotations.flags;
       const exhausted = capture.frames.find((f) => (f.horses[r.index]?.hp ?? 1) <= 0);
       const previousRunner = capture.runners.find(
           (other) => other.result?.finishOrder === (result?.finishOrder ?? 0) - 1
@@ -44,10 +45,25 @@ export function raceResultRows(capture: ParsedRaceCapture, catalog: Map<number, 
             )
           : undefined;
 
-      const spurtResult = lastSpurtResult(capture, r.index),
-        flags = capture.detailed?.annotations.flags;
+      const exhaustedDistance = h ? h.hpExhaustedDistance : exhausted?.horses[r.index]?.distance;
 
-      let startStatus = h ? 'Normal' : '';
+      const exhaustedBeforeFinish =
+        typeof exhaustedDistance === 'number' && capture.raceDistance
+          ? Math.max(0, capture.raceDistance - exhaustedDistance)
+          : undefined;
+
+      const downhill = modeDuration(h, flags, ['downhill']);
+      const downhillLate =
+        h && flags
+          ? [2, 3, 4].reduce(
+              (sum, phase) => sum + (modeDuration(h, flags, ['downhill'], phase) ?? 0),
+              0
+            )
+          : undefined;
+
+      const spurtResult = lastSpurtResult(capture, r.index);
+
+      let startStatus = result?.startDelayTime === undefined ? '' : 'Normal';
       if (h?.lostStartAccelerationFrame) startStatus = 'Lost acceleration frame';
       else if ((result?.startDelayTime ?? 0) >= 0.08) startStatus = 'Late start';
       return {
@@ -55,6 +71,8 @@ export function raceResultRows(capture: ParsedRaceCapture, catalog: Map<number, 
         place: result?.finishOrder ?? place + 1,
         gate: r.index + 1,
         name: r.name,
+        trainer: r.trainerName ?? '',
+        grade: Number(r.raw.final_grade ?? r.raw.finalGrade) || '—',
         time: end ?? '—',
         gap: h ? (h.finishDistanceToPrevious ?? '—') : (recordedGap ?? '—'),
         style: runningStyleName(result?.runningStyle),
@@ -63,18 +81,16 @@ export function raceResultRows(capture: ParsedRaceCapture, catalog: Map<number, 
         spurt: spurtResult.delay ?? '—',
         hp: hpResult.finish ?? '—',
         startHp: hpResult.start ?? '—',
+        maxHp: hpResult.max ?? '—',
         deficit: h?.hpDeficit ?? '—',
-        exhausted: h
-          ? (h.hpExhaustedDistance ?? '—')
-          : (exhausted?.horses[r.index]?.distance ?? '—'),
+        exhausted: exhaustedDistance ?? '—',
+        exhaustedBeforeFinish: exhaustedBeforeFinish ?? '—',
         duel: modeDuration(h, flags, ['dueling']) ?? '—',
-        downhill: modeDuration(h, flags, ['downhill']) ?? '—',
-        downhillLate:
-          h && flags
-            ? [2, 3, 4].reduce(
-                (sum, phase) => sum + (modeDuration(h, flags, ['downhill'], phase) ?? 0),
-                0
-              )
+        downhill: downhill ?? '—',
+        downhillLate: downhillLate ?? '—',
+        downhillEarly:
+          downhill !== undefined && downhillLate !== undefined
+            ? Math.max(0, downhill - downhillLate)
             : '—',
         paceUp:
           modeDuration(h, flags, [

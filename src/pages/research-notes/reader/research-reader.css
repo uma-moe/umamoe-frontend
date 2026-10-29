@@ -95,13 +95,14 @@
 }
 .markdown :global(code) {
   padding: 0.1em 0.4em;
-  border: 1px solid var(--border-subtle);
+  border: 1px solid rgb(var(--accent-primary-rgb) / 0.2);
   border-radius: var(--radius-xs);
-  background: rgb(var(--on-surface-rgb) / 0.06);
-  color: var(--text-primary);
+  background: var(--color-accent-soft);
+  color: var(--accent-primary);
   font-family: var(--font-mono);
   font-size: 0.86em;
   font-variant-ligatures: none;
+  font-variant-numeric: lining-nums tabular-nums;
 }
 .markdown :global(pre) {
   margin: 16px 0 20px;
@@ -118,6 +119,7 @@
   padding: 0;
   border: 0;
   background: none;
+  color: inherit;
   font-size: inherit;
   white-space: pre;
   overflow-wrap: normal;
@@ -157,9 +159,24 @@
   color: var(--accent-primary);
   text-underline-offset: 3px;
 }
+.markdown :global(.katex) {
+  color: var(--accent-primary);
+  font-size: 1.1em;
+  overflow-wrap: normal;
+}
 .markdown :global(.katex-display) {
-  overflow: auto;
-  padding: 12px 4px;
+  margin: 20px 0;
+  padding: 18px 20px;
+  overflow-x: auto;
+  overflow-y: hidden;
+  border: 1px solid rgb(var(--accent-primary-rgb) / 0.2);
+  border-radius: var(--radius-md);
+  background: rgb(var(--accent-primary-rgb) / 0.05);
+}
+.markdown :global(.katex-display > .katex) {
+  width: max-content;
+  min-width: 100%;
+  color: var(--text-primary);
 }
 .publication-note {
   margin: 28px 0 0;

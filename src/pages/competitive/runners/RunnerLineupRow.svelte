@@ -4,6 +4,7 @@
   import Artwork from '@/components/game/Artwork.svelte';
   import StatStrip from '@/components/game/StatStrip.svelte';
   import { identity, stats } from '../analysis-view';
+  import SkillPoints, { LEARNED_SKILL_POINTS_NOTE } from '@/components/game/SkillPoints.svelte';
 
   let {
     runner,
@@ -32,12 +33,10 @@
   {#if sp !== undefined || metadata}
     <div class="member-results">
       {#if sp !== undefined}
-        <span
-          class="sp"
-          title="Base cost of learned skills including prerequisites, before hint discounts"
-        >
-          {sp?.toLocaleString() ?? '—'} SP
-        </span>
+        <SkillPoints
+          value={sp}
+          note={LEARNED_SKILL_POINTS_NOTE}
+        />
       {/if}
       {@render metadata?.()}
     </div>
@@ -178,12 +177,6 @@
     font-size: 11px;
     color: var(--text-secondary);
     line-height: 1.4;
-  }
-  .sp {
-    font-size: 10px;
-    color: var(--text-secondary);
-    font-variant-numeric: tabular-nums;
-    white-space: nowrap;
   }
   .compact {
     grid-template-columns: 36px minmax(0, 1fr);

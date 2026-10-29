@@ -32,17 +32,6 @@
 .settings-page .card-body {
   padding: 1.25rem 1.5rem;
 }
-.settings-page .loading-row {
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-  color: var(--text-muted);
-  font-size: 0.85rem;
-}
-.settings-page .page-loading {
-  min-height: 240px;
-  justify-content: center;
-}
 .settings-page .empty-state {
   min-height: 88px;
   display: flex;

@@ -376,10 +376,11 @@
     </Banner>
   {/if}
   {#if loading}
-    <div class="loading">
-      <Spinner size={28} />
-      <span>Loading clubs…</span>
-    </div>
+    <Spinner
+      centered
+      minHeight="220px"
+      label="Loading clubs…"
+    />
   {:else if !error && visibleClubs.length === 0}
     <div class="no-results">
       <Icon

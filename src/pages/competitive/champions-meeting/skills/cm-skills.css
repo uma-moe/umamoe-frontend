@@ -1,38 +1,6 @@
 .toolbar {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: end;
-  gap: 16px;
-  margin: 0 0 16px;
-}
-.toolbar > :global(.field) {
-  flex: 1;
-  max-width: 290px;
-  min-width: 170px;
-}
-.toolbar p {
-  margin-left: auto;
-  font-size: 12px;
+  margin-bottom: 16px;
 }
 .usage-error {
   margin-bottom: 12px;
-}
-.skill-list {
-  min-width: 0;
-  padding: 12px;
-  border: 1px solid var(--card-surface-border);
-  border-radius: var(--radius-lg);
-  background: var(--card-surface-bg);
-}
-@media (max-width: 600px) {
-  .skill-list {
-    padding: 12px 8px;
-  }
-  .toolbar p {
-    margin: 0;
-    width: 100%;
-  }
-  .toolbar > :global(.field) {
-    max-width: none;
-  }
 }

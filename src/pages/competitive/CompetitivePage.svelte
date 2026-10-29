@@ -140,7 +140,7 @@
 <LandingPage
   routeId="competitive"
   title="Competitive"
-  description="Review your races. Explore CM results. Find your next team."
+  description="Review your races, explore CM results and find your next team."
 >
   {#snippet statistics()}
     <StatisticsStrip

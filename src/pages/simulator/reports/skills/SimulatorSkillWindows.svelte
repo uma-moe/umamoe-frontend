@@ -1,8 +1,7 @@
 <script lang="ts">
-  import { onMount } from 'svelte';
   import Icon from '@/components/Icon.svelte';
   import InspectPopover from '@/components/overlays/InspectPopover.svelte';
-  import { loadSkills, type SkillData } from '@/lib/game-data/skills/skills';
+  import { ReportSkillCatalog } from './report-skill-catalog.svelte';
   import { theme } from '@/stores/theme';
   import type { Course } from '@/pages/competitive/race-analysis/replay/replay-course';
   import SimulatorRunnerFace from '../SimulatorRunnerFace.svelte';
@@ -55,28 +54,11 @@
     onseek: (time: number) => void;
   } = $props();
 
-  let skillLookup = $state.raw(new Map<number, SkillData>());
-  let skillDataError = $state('');
   let tip = $state<WindowTip>();
 
-  onMount(() => {
-    let active = true;
-    void loadSkills()
-      .then((value) => {
-        if (active) skillLookup = value;
-      })
-      .catch((reason: unknown) => {
-        if (active)
-          skillDataError =
-            reason instanceof Error
-              ? reason.message
-              : 'Skill names could not be loaded. Observations remain available.';
-      });
-
-    return () => {
-      active = false;
-    };
-  });
+  const catalog = new ReportSkillCatalog(
+    'Skill names could not be loaded. Observations remain available.'
+  );
 
   const sections = $derived(windowSections(course, timeAt, startTime));
   const spurtTime = $derived(timeAt(finalSpurtSection(distanceMax).start));
@@ -85,7 +67,9 @@
   const at = (value: number) => grid.at(value);
 
   const owned = $derived([...new Set(umas[runner]?.skills.map((skill) => skill.skillId) ?? [])]);
-  const skills = $derived(windowSkills(result, runner, owned, skillLookup, grid, sections, ramp));
+  const skills = $derived(
+    windowSkills(result, runner, owned, catalog.lookup, grid, sections, ramp)
+  );
   const timed = $derived(
     skills
       .filter((skill) => !skill.passive)
@@ -125,8 +109,8 @@
   class="skill-windows"
   aria-label="Skills over the race"
 >
-  {#if skillDataError}
-    <p role="alert">{skillDataError}</p>
+  {#if catalog.error}
+    <p role="alert">{catalog.error}</p>
   {/if}
   <div class="line head">
     <div class="label">

@@ -46,33 +46,42 @@ p {
   color: var(--text-secondary);
 }
 .results :global(table) {
-  font-size: 12px;
+  font-size: 13px;
 }
+/* Every column centres under its heading, as in the game's own result table; only the runner reads left. */
 .results :global(th) {
   font-size: 11px;
-  text-transform: none;
-  letter-spacing: 0;
-  font-weight: 500;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  text-align: center;
+  vertical-align: middle;
+  color: var(--text-secondary);
 }
-/* Scoped to the compact table so these outrank its built-in cell padding. */
-.results :global(.table-wrap.compact th),
-.results :global(.table-wrap.compact td) {
-  padding: 4px 8px;
+.results :global(td) {
+  text-align: center;
+  vertical-align: middle;
 }
-.results :global(.table-wrap.compact th:first-child),
-.results :global(.table-wrap.compact td:first-child) {
-  width: 40px;
-  padding-inline: 6px 12px;
-}
-/* Headers are wider than the values below them, so a narrow table wraps the label text instead of
-   scrolling; the sort and help icons stay beside it. */
-.results :global(th) {
-  vertical-align: bottom;
+.results :global(th:nth-child(3)),
+.results :global(td:nth-child(3)) {
+  text-align: left;
 }
 .results :global(.sort) {
   gap: 3px;
-  white-space: normal;
+  white-space: nowrap;
   text-align: inherit;
+}
+/* Scoped to the compact table so these outrank its built-in cell padding. */
+.results :global(.table-wrap.compact th) {
+  padding: 8px 10px;
+}
+.results :global(.table-wrap.compact td) {
+  height: 60px;
+  padding: 6px 10px;
+}
+.results :global(.table-wrap.compact th:first-child),
+.results :global(.table-wrap.compact td:first-child) {
+  width: 56px;
 }
 .results :global(.column-help) {
   margin-left: 1px;
@@ -96,52 +105,52 @@ p {
 }
 small {
   display: block;
-  margin-top: 1px;
+  margin-top: 2px;
   color: var(--text-secondary);
-  font-size: 10px;
+  font-size: 11px;
   line-height: 1.35;
   font-variant-numeric: tabular-nums;
   white-space: nowrap;
 }
 .results :global(.spurt-result) {
   font-weight: 500;
-  line-height: 1.3;
+  line-height: 1.4;
 }
 .results :global(.spurt-result small) {
-  margin-top: 1px;
+  margin-top: 2px;
+  font-size: 11px;
   font-weight: 400;
 }
-.runner-cell {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-}
-.mood {
-  flex: none;
-  width: 20px;
-  height: 20px;
-}
 .runner-name {
-  flex: 1;
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 10px;
+  width: 100%;
   border: 0;
   padding: 0;
   background: none;
   color: var(--text-primary);
   cursor: pointer;
   text-align: left;
-  font-size: 12px;
-  min-width: 180px;
+  font-size: 14px;
 }
-.runner-name > span {
+.rank-slot {
+  flex: none;
+  display: grid;
+  place-items: center;
+  width: 30px;
+}
+.runner-name > span:not(.rank-slot) {
   flex: 1;
+  min-width: 0;
 }
 .runner-name strong {
   display: block;
-  white-space: normal;
+  white-space: nowrap;
   font-weight: 650;
+}
+.runner-name small {
+  margin-top: 1px;
 }
 .runner-name :global(svg) {
   opacity: 0;
@@ -160,21 +169,78 @@ small {
   outline: 2px solid var(--accent-primary);
   outline-offset: 4px;
 }
-.finish {
-  font-size: 14px;
-  font-weight: 600;
+.style-mood {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
 }
-.finish.winner {
-  color: var(--accent-primary);
+/* The game's style chip: a ring in the style colour around the short style name. */
+.style-pill {
+  display: inline-grid;
+  place-items: center;
+  min-width: 52px;
+  height: 34px;
+  padding: 0 8px;
+  border: 2px solid var(--style-color);
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: 800;
+  text-transform: uppercase;
+  color: var(--text-primary);
+  background: color-mix(in srgb, var(--style-color) 16%, transparent);
 }
-.warning {
+.mood {
+  flex: none;
+  width: 34px;
+  height: 34px;
+}
+.start-badge {
+  display: inline-block;
+  margin-top: 3px;
+  padding: 0 6px;
+  border-radius: var(--radius-sm);
+  color: var(--accent-success);
+  background: color-mix(in srgb, var(--accent-success) 16%, transparent);
+}
+.start-badge.late {
+  color: var(--accent-error);
+  background: color-mix(in srgb, var(--accent-error) 16%, transparent);
+}
+.died {
+  color: var(--accent-error);
+}
+.survived {
+  color: var(--accent-success);
+}
+.mode-active {
   color: var(--accent-warning);
 }
+.mode-time {
+  color: var(--accent-primary);
+}
+.pace-up {
+  color: var(--accent-success);
+}
+.pace-down {
+  color: var(--accent-primary);
+}
+.loss {
+  color: var(--text-secondary);
+}
+.finish {
+  font-size: 16px;
+  font-weight: 700;
+}
+.finish.winner {
+  color: var(--accent-warning);
+}
+.finish.podium {
+  color: var(--accent-primary);
+}
 .result-stats {
-  position: relative;
   display: inline-grid;
-  grid-template-columns: repeat(5, max-content);
-  gap: 8px;
+  grid-template-columns: repeat(3, max-content);
+  gap: 4px 12px;
   align-items: center;
   text-align: left;
 }
@@ -185,44 +251,42 @@ small {
 /* As in CM Data's lineup rows, a four-digit box per value keeps each stat in the same column on every row. */
 .result-stats :global(.values dd) {
   min-width: 4ch;
-  font-size: 11px;
+  font-size: 13px;
 }
 .result-stats :global(img) {
-  width: 12px;
-  height: 12px;
+  width: 16px;
+  height: 16px;
 }
-/* Labelled values in a grid of two lines, so their columns line up from runner to runner. */
+.result-sp {
+  display: flex;
+  justify-content: flex-end;
+  font-size: 12px;
+}
+/* Labelled values in two lines, so their columns line up from runner to runner. */
 .mode-values {
   display: inline-grid;
-  grid-template-columns: repeat(2, max-content max-content);
+  grid-template-columns: max-content max-content;
   align-items: baseline;
   gap: 0 6px;
   margin: 0;
   line-height: 1.35;
-}
-.mode-values.incidents {
-  grid-template-columns: max-content max-content;
+  text-align: left;
 }
 .mode-values > div {
   display: contents;
 }
 .mode-values dt {
   color: var(--text-secondary);
-  font-size: 10px;
-  text-align: left;
+  font-size: 11px;
 }
 .mode-values dd {
-  margin: 0 6px 0 0;
+  margin: 0;
   font-weight: 500;
   font-variant-numeric: tabular-nums;
 }
-.mode-values > div:nth-child(2n) dd,
-.mode-values.incidents dd {
-  margin-right: 0;
-}
 @media (max-width: 1500px) {
   .result-stats {
-    gap: 6px;
+    gap: 4px 8px;
   }
   .results :global(.table-wrap.compact th),
   .results :global(.table-wrap.compact td) {
@@ -233,13 +297,9 @@ small {
   .results-context {
     font-size: 10px;
   }
-  .results :global(.table-wrap.compact th),
-  .results :global(.table-wrap.compact td) {
-    padding: 5px 8px;
-  }
   .runner-name {
-    min-width: 130px;
     gap: 6px;
+    font-size: 13px;
   }
   .runner-name :global(svg) {
     display: none;

@@ -188,6 +188,8 @@
 </div>
 
 <style>
+  @import '@/components/charts/zoomable-plot.css';
+
   /* Fills whatever height its card has, so the scatter never leaves an empty band below it. */
   .uma-plot {
     display: flex;
@@ -198,32 +200,7 @@
     min-height: 0;
   }
   .plot {
-    position: relative;
-    flex: 1 1 auto;
-    min-width: 0;
     min-height: 280px;
-  }
-  svg {
-    position: absolute;
-    inset: 0;
-    display: block;
-    width: 100%;
-    height: 100%;
-    touch-action: pan-y;
-    user-select: none;
-  }
-  /* Once zoomed, a drag pans the plot instead of scrolling the page. */
-  svg.zoomed {
-    cursor: grab;
-    touch-action: none;
-  }
-  svg.zoomed:active {
-    cursor: grabbing;
-  }
-  svg:focus-visible {
-    outline: 2px solid var(--accent-primary);
-    outline-offset: 2px;
-    border-radius: var(--radius-sm);
   }
   line {
     stroke: var(--border-subtle);

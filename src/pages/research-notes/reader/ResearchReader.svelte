@@ -8,6 +8,7 @@
   import Icon from '@/components/Icon.svelte';
   import Disclosure from '@/components/overlays/Disclosure.svelte';
   import AppPage from '@/layouts/AppPage.svelte';
+  import { router } from '@/routes/router';
   import ResearchNoteCard from '../ResearchNoteCard.svelte';
   import { researchBlocks } from '../research-markdown';
   import {
@@ -94,6 +95,7 @@
         for (const heading of document.querySelectorAll('h2,h3')) {
           const id = 'section-' + index++;
           heading.id = id;
+          heading.setAttribute('tabindex', '-1');
           headings.push({
             id,
             title: heading.textContent ?? '',
@@ -105,6 +107,31 @@
     });
 
     return { blocks: prepared, outline: headings };
+  }
+
+  function scrollToSection(id: string) {
+    const target = document.getElementById(id);
+    if (!target || !article?.contains(target)) return;
+
+    target.scrollIntoView({ block: 'start' });
+    target.focus({ preventScroll: true });
+    active = target.id;
+    updateProgress();
+  }
+
+  async function jumpToSection(event: MouseEvent, id: string) {
+    if (event.button !== 0 || event.ctrlKey || event.metaKey || event.shiftKey || event.altKey)
+      return;
+
+    event.preventDefault();
+    await router.navigate('/research/:noteId', {
+      params: { noteId: note.id },
+      search: queryString,
+      hash: id,
+      scrollToTop: false
+    });
+    await tick();
+    scrollToSection(id);
   }
 
   function updateProgress() {
@@ -151,11 +178,17 @@
 
   $effect(() => {
     blocks;
+    const hash = router.route.hash;
+    if (loading || !article) return;
+
     let observer: IntersectionObserver | undefined,
       cancelled = false;
 
     void tick().then(() => {
       if (cancelled || !article) return;
+
+      // The note arrives after routing, so fragment targets must wait for its rendered headings.
+      scrollToSection(hash.slice(1));
 
       const headingObserver = new IntersectionObserver(
         (entries) => {
@@ -185,7 +218,8 @@
         class:active={active === item.id}
         class:subsection={item.level === 3}
         aria-current={active === item.id ? 'location' : undefined}
-        href={'#' + item.id}
+        href={noteHref(note) + '#' + item.id}
+        onclick={(event) => jumpToSection(event, item.id)}
       >
         {item.title}
       </a>
@@ -209,8 +243,20 @@
       </Button>
     {/snippet}
     <div class="article-byline">
+      {#if note.id === researchNotes[0]?.id}
+        <Badge tone="success">New</Badge>
+      {/if}
       {#if topic.name}
         <Badge tone={topic.tone}>{topic.name}</Badge>
+      {/if}
+      {#if note.pinned}
+        <span>
+          <Icon
+            name="pin"
+            size={14}
+          />
+          Pinned
+        </span>
       {/if}
       <span>
         <Icon
@@ -306,8 +352,9 @@
                 href={libraryHref}
                 variant="ghost"
                 size="sm"
+                icon="arrow-right"
               >
-                All {researchNotes.length} notes →
+                All {researchNotes.length} notes
               </Button>
             </div>
             <ol class="more-notes">

@@ -3,7 +3,6 @@
   import { formatRaceTime, ordinalPlace } from '@/lib/race/replay/race-display';
   import Button from '@/components/controls/Button.svelte';
   import Checkbox from '@/components/controls/Checkbox.svelte';
-  import Icon from '@/components/Icon.svelte';
   import Artwork from '@/components/game/Artwork.svelte';
   import RunnerBuildDetails from '@/pages/competitive/runners/RunnerBuildDetails.svelte';
   import { portrait } from '@/pages/competitive/analysis-view';
@@ -23,7 +22,6 @@
     simulation,
     onbuild,
     onpickrunner,
-    onswitchrunner,
     onreview,
     onretry,
     onseek,
@@ -36,7 +34,6 @@
     simulation: DetailedSimulation;
     onbuild: () => void;
     onpickrunner: () => void;
-    onswitchrunner: (index: number) => void;
     onreview: (event: BlockingSpan) => void;
     onretry?: () => void;
     onseek: (time: number) => void;
@@ -46,17 +43,6 @@
   let allBlocking = $state(false);
 
   let cardWidth = $state(0);
-
-  // The arrows step through the field in the order the runner picker lists it.
-  const fieldPosition = $derived(
-    replay.capture.runners.findIndex((entry) => entry.index === runner.index)
-  );
-  const previousRunner = $derived(
-    fieldPosition > 0 ? replay.capture.runners[fieldPosition - 1] : undefined
-  );
-  const nextRunner = $derived(
-    fieldPosition >= 0 ? replay.capture.runners[fieldPosition + 1] : undefined
-  );
 
   const visibleBlocking = $derived(
     allBlocking
@@ -69,22 +55,28 @@
       ...replay.capture.runners.flatMap((entry) => (entry.result ? [entry.result.finishTime] : []))
     )
   );
-
-  function showRunner(target: RaceRunner | undefined) {
-    if (target) onswitchrunner(target.index);
-  }
 </script>
 
 <header class="report-heading">
   <h2>Runner analysis</h2>
-  <Button
-    variant="secondary"
-    size="sm"
-    icon="clipboard"
-    onclick={onbuild}
-  >
-    Build details
-  </Button>
+  <div class="report-actions">
+    <Button
+      variant="ghost"
+      size="sm"
+      icon="users"
+      onclick={onpickrunner}
+    >
+      Change Uma
+    </Button>
+    <Button
+      variant="secondary"
+      size="sm"
+      icon="clipboard"
+      onclick={onbuild}
+    >
+      Build details
+    </Button>
+  </div>
 </header>
 {#snippet runnerOverview()}
   <!-- A card wide enough keeps the results beside the runner's name instead of on a row of their own. -->
@@ -104,43 +96,6 @@
         distance: course?.distance ?? replay.capture.raceDistance
       }}
     >
-      {#snippet headerActions()}
-        <div
-          class="gate-switch"
-          role="group"
-          aria-label="Runner"
-        >
-          <Button
-            variant="secondary"
-            size="sm"
-            icon="arrow-left"
-            ariaLabel="Previous runner"
-            disabled={!previousRunner}
-            onclick={() => showRunner(previousRunner)}
-          />
-          <Button
-            variant="secondary"
-            size="sm"
-            ariaLabel="Choose runner"
-            onclick={onpickrunner}
-          >
-            <span class="gate-label">
-              Gate {runner.index + 1}<Icon
-                name="chevron"
-                size={14}
-              />
-            </span>
-          </Button>
-          <Button
-            variant="secondary"
-            size="sm"
-            icon="arrow-right"
-            ariaLabel="Next runner"
-            disabled={!nextRunner}
-            onclick={() => showRunner(nextRunner)}
-          />
-        </div>
-      {/snippet}
       {#snippet metrics()}
         {#if runner.result}
           {@const won = runner.result.finishOrder === 1}

@@ -254,9 +254,6 @@
   padding-left: 4px;
   border-left: 1px solid var(--border-primary);
 }
-[hidden] {
-  display: none !important;
-}
 .fullscreen-target {
   grid-column: 1;
   grid-row: 2;

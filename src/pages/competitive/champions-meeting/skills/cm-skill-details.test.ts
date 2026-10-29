@@ -56,7 +56,7 @@ it('aborts a previous snapshot and discards its late response', async () => {
   store.destroy();
 });
 
-it('loads two visible timings at a time, replaces offscreen queued work and prioritizes inspection', async () => {
+it('loads six visible timings at a time, replaces offscreen queued work and prioritizes inspection', async () => {
   const responses: (() => void)[] = [];
   request.mockImplementation(
     (path: string) =>
@@ -67,21 +67,21 @@ it('loads two visible timings at a time, replaces offscreen queued work and prio
   const store = new CmSkillDetails();
   store.reset('test', 1200);
 
-  store.prefetch([1, 2, 3, 4]);
-  expect(request).toHaveBeenCalledTimes(2);
-  store.prefetch([5, 6]);
-  const inspected = store.load(7);
-  expect(request).toHaveBeenCalledTimes(3);
+  store.prefetch([1, 2, 3, 4, 5, 6, 7, 8]);
+  expect(request).toHaveBeenCalledTimes(6);
+  store.prefetch([9, 10]);
+  const inspected = store.load(11);
+  expect(request).toHaveBeenCalledTimes(7);
   responses[0]?.();
-  await vi.waitFor(() => expect(request).toHaveBeenCalledTimes(4));
-  expect(request.mock.calls[3]?.[0]).toContain('/details/5');
+  await vi.waitFor(() => expect(request).toHaveBeenCalledTimes(8));
+  expect(request.mock.calls[7]?.[0]).toContain('/details/9');
 
   store.reset('next', 1200);
   responses.forEach((respond) => respond());
   await inspected;
   await Promise.resolve();
 
-  expect(request).toHaveBeenCalledTimes(4);
+  expect(request).toHaveBeenCalledTimes(8);
   expect(store.values).toEqual({});
   store.destroy();
 });

@@ -19,6 +19,7 @@
     play: ['M7 4.5v15L19.5 12 7 4.5Z'],
     pause: ['M8 5v14', 'M16 5v14'],
     'skip-back': ['M6 5v14', 'M18 5 9 12l9 7V5Z'],
+    pin: ['M9 3h6', 'M10 3v5.5L7 12v2h10v-2l-3-3.5V3', 'M12 14v7'],
     'arrow-right': ['M4 12h16', 'm14 6 6 6-6 6'],
     gift: [
       'M3 8h18v4H3z',

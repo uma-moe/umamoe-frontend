@@ -109,10 +109,6 @@ h3 {
   white-space: nowrap;
   font-variant-numeric: tabular-nums;
 }
-.sp strong {
-  font-weight: 600;
-  color: var(--text-primary);
-}
 /* The skill count reads as text and opens the full list. */
 .skill-summary {
   --inspect-popover-width: 320px;

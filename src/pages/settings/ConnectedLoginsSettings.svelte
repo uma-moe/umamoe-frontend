@@ -2,6 +2,7 @@
   import { onMount } from 'svelte';
   import type { AuthIdentity } from '@/services/auth/auth-types';
   import Banner from '@/components/feedback/Banner.svelte';
+  import Spinner from '@/components/feedback/Spinner.svelte';
   import Button from '@/components/controls/Button.svelte';
   import Icon from '@/components/Icon.svelte';
   import { authRepository } from '@/services/auth/auth-repository';
@@ -76,12 +77,11 @@
   </header>
   <div class="card-body">
     {#if loading}
-      <div
-        class="loading-row"
-        role="status"
-      >
-        Loading…
-      </div>
+      <Spinner
+        centered
+        minHeight="120px"
+        label="Loading connected logins…"
+      />
     {:else if loadError}
       <Banner
         title="Connected logins unavailable"

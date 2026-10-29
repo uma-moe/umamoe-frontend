@@ -43,6 +43,12 @@
   line-height: 1.45;
   color: var(--text-secondary);
 }
+.result-note {
+  max-width: 85ch;
+  font-size: 12px;
+  line-height: 1.5;
+  color: var(--text-muted);
+}
 .answer :global(.ui-button) {
   margin-top: 6px;
 }

@@ -35,7 +35,11 @@
 </script>
 
 {#await import('./DatabaseUqlEditor.svelte')}
-  <Spinner label="Loading UQL editor…" />
+  <Spinner
+    centered
+    minHeight="180px"
+    label="Loading UQL editor…"
+  />
 {:then editor}
   <editor.default
     bind:value={() => value ?? '', (next) => (value = next)}

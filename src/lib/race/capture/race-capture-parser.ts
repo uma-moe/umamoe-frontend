@@ -178,6 +178,38 @@ function skillIds(source: Record<string, unknown>): number[] {
     .filter((value): value is number => value !== undefined);
 }
 
+/** Identifies a trained character by its trainer and record ids; zero ids mean "not a rental". */
+function trainedCharaKey(viewerId?: number, trainedCharaId?: number) {
+  if (!viewerId || !trainedCharaId) return undefined;
+
+  return viewerId + ':' + trainedCharaId;
+}
+
+/**
+ * API captures keep each runner's support deck, parents and sparks in a separate trained_chara_array.
+ * The race entry's own fields win, since they describe the runner on race day.
+ */
+function withTrainedChara(rawRunner: unknown, trainedCharas: unknown[]): unknown {
+  const horse = record(rawRunner);
+  const keys = [
+    trainedCharaKey(numeric(horse, 'viewer_id'), numeric(horse, 'trained_chara_id')),
+    trainedCharaKey(numeric(horse, 'owner_viewer_id'), numeric(horse, 'owner_trained_chara_id'))
+  ].filter((key) => key !== undefined);
+
+  if (keys.length === 0) return rawRunner;
+
+  const trained = trainedCharas.map(record).find((candidate) => {
+    const key = trainedCharaKey(
+      numeric(candidate, 'viewer_id'),
+      numeric(candidate, 'trained_chara_id')
+    );
+
+    return key !== undefined && keys.includes(key);
+  });
+
+  return trained ? { ...trained, ...horse } : rawRunner;
+}
+
 function normalizeRunner(
   rawValue: unknown,
   index: number,
@@ -646,8 +678,9 @@ export function parseRaceCapture(value: unknown, fileName = 'capture.json'): Par
     )
   );
 
+  const trainedCharas = array(first(input, 'trained_chara_array', 'trainedCharaArray'));
   const runners = rawRunners.map((runner, index) =>
-    normalizeRunner(runner, index, players, decoded.results[index])
+    normalizeRunner(withTrainedChara(runner, trainedCharas), index, players, decoded.results[index])
   );
 
   return {

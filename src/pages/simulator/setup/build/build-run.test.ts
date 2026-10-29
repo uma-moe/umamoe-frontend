@@ -12,7 +12,7 @@ const finalist: OptimizeFinalist = {
 
 const pick = (raced?: RacedWins): TheorizedBuild => ({
   finalist,
-  lengths: 5.65,
+  value: 5.65,
   raced,
   hpLeft: 120,
   count: 2,
@@ -21,13 +21,18 @@ const pick = (raced?: RacedWins): TheorizedBuild => ({
 });
 
 describe('the run bar’s pick', () => {
-  it('names her win rate in the races that ranked the builds', () => {
+  it('summarizes the purchases instead of promoting an internal win rate', () => {
     const summary = bestSummary(pick({ win_rate: 0.3663, over_pick: 0.0085, error: 0.0056 }));
 
-    expect(summary).toBe('36.6% win rate · 2,965 SP');
+    expect(summary).toBe('2 skills · 2,965 SP');
   });
 
-  it('names the lengths it gains her where no races ranked the builds', () => {
-    expect(bestSummary(pick())).toBe('+5.65 L · 2,965 SP');
+  it('uses the same summary when no comparison races ranked the builds', () => {
+    expect(bestSummary(pick())).toBe('2 skills · 2,965 SP');
+  });
+
+  it('handles a single recommendation and an empty recommendation', () => {
+    expect(bestSummary({ ...pick(), count: 1 })).toBe('1 skill · 2,965 SP');
+    expect(bestSummary({ ...pick(), count: 0 })).toBe('No additional skills recommended');
   });
 });

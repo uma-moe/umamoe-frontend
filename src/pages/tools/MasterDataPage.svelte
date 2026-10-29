@@ -131,7 +131,7 @@
 <AppPage
   routeId="master-data"
   title="Master Data"
-  description="Every table in the game’s master database. Pick a table, filter its rows, or write SQL."
+  description="Browse the game’s master database, or query it with SQL."
   width="wide"
 >
   {#snippet actions()}

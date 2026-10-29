@@ -1,5 +1,4 @@
 import type { CharacterNames } from '@/lib/game-data/characters';
-import type { SkillData } from '@/lib/game-data/skills/skills';
 import { fetchJsonResource } from '@/services/resources/json-response';
 import { finiteNumber, isRecord, numberList } from '../json-guards';
 
@@ -58,7 +57,7 @@ export function parseUmaSkills(value: unknown): UmaSkills[] {
 let umaSkillsPromise: Promise<UmaSkills[]> | undefined;
 
 export function loadUmaSkills(): Promise<UmaSkills[]> {
-  umaSkillsPromise ??= fetchJsonResource<unknown>('/skill-explorer/umas.json.gz')
+  umaSkillsPromise ??= fetchJsonResource<unknown>('/skill-explorer/umas.json.gz', {}, 'Uma skills')
     .then(parseUmaSkills)
     .catch((error: unknown) => {
       umaSkillsPromise = undefined;
@@ -152,35 +151,6 @@ export function skillsGivenBy(uma: UmaSkills): Set<number> {
   const skillIds = new Set(uma.skills);
   if (uma.unique !== undefined) skillIds.add(uma.unique);
   return skillIds;
-}
-
-/**
- * Uniques of umas still to come that the Global skill list cannot name yet, named after their uma so their values
- * still show. Their Japanese text is not translated, so they have no description or requirements.
- */
-export function upcomingUniques(
-  umas: readonly ExplorerUma[],
-  skills: ReadonlyMap<number, SkillData>
-): Map<number, SkillData> {
-  const unnamed = new Map<number, SkillData>();
-  for (const uma of umas) {
-    if (uma.unique === undefined || unnamed.has(uma.unique)) continue;
-
-    const known = skills.get(uma.unique);
-    if (known !== undefined && known.name !== '') continue;
-
-    const outfit = uma.outfit === undefined ? '' : ` (${uma.outfit})`;
-    unnamed.set(uma.unique, {
-      skill_id: uma.unique,
-      name: `${uma.name}${outfit} unique`,
-      rarity: 1,
-      icon: '',
-      unique: true,
-      inherited: true
-    });
-  }
-
-  return unnamed;
 }
 
 export function unvaluedSkills(

@@ -83,10 +83,10 @@ test('captured teams keep SP and win share visible together, including zero and 
 
   await page.goto('/competitive/cm-data?tab=archetypes');
   const card = page.locator('.team-row').first();
-  await expect(card.locator('.sp')).toHaveText(['0 SP', '4,430 SP', '— SP']);
+  await expect(card.locator('.skill-points')).toHaveText(['0 SP', '4,430 SP', '— SP']);
   await expect(card.locator('.member-share')).toHaveCount(3);
   await page.getByRole('checkbox', { name: 'Build stats', exact: true }).uncheck();
-  await expect(card.locator('.sp')).toHaveText(['0 SP', '4,430 SP', '— SP']);
+  await expect(card.locator('.skill-points')).toHaveText(['0 SP', '4,430 SP', '— SP']);
 });
 
 test('a full lobby stays compact and keeps all nine places available', async ({ page }, info) => {
@@ -302,16 +302,10 @@ test('skill details expand within the selected row and comparison stays independ
   await page.goto('/competitive/cm-data?tab=skills');
   const navigation = page.getByRole('tablist', { name: 'Champions Meeting views', exact: true });
   await expect(navigation.getByRole('tab')).toHaveCount(5);
-  for (const name of [
-    'Introduction',
-    'Strategy Analysis',
-    'Uma Analysis',
-    'Skill Analysis',
-    'Archetype Analysis'
-  ])
+  for (const name of ['Overview', 'Strategy', 'Umas', 'Skills', 'Archetypes'])
     await expect(navigation.getByRole('tab', { name, exact: true })).toHaveCount(1);
   const selectedBounds = await navigation
-    .getByRole('tab', { name: 'Skill Analysis', exact: true })
+    .getByRole('tab', { name: 'Skills', exact: true })
     .boundingBox();
 
   expect(selectedBounds!.x).toBeGreaterThanOrEqual(0);
@@ -593,8 +587,8 @@ test('skill details expand within the selected row and comparison stays independ
   await expect(comparison.locator('.comparison-table tbody tr')).toHaveCount(4);
   await expect(comparison.locator('.comparison-line')).toHaveCount(4);
   await expect(inspector.locator('.lane')).toHaveCount(1);
-  await navigation.getByRole('tab', { name: 'Uma Analysis', exact: true }).click();
-  await navigation.getByRole('tab', { name: 'Skill Analysis', exact: true }).click();
+  await navigation.getByRole('tab', { name: 'Umas', exact: true }).click();
+  await navigation.getByRole('tab', { name: 'Skills', exact: true }).click();
   await expect(search).toHaveValue('10071');
   await expect(inspect).toHaveAttribute('aria-expanded', 'true');
   await expect(comparison.locator('.comparison-table tbody tr')).toHaveCount(4);
@@ -731,9 +725,9 @@ test('skill outcomes distinguish repeated procs, variants and selected first-act
   await page.goto('/competitive/cm-data?tab=skills');
   await page.getByRole('button', { name: 'Inspect Skill 10071', exact: true }).waitFor();
   const mainRow = page.locator('.skill-list tr[data-virtual-index]').first();
-  await expect(mainRow.locator('.variant-alias')).toHaveText('Skill 10081');
+  await expect(mainRow.locator('.variant-alternatives')).toHaveText('1 alternative');
+  await expect(mainRow.locator('.variant-alternatives')).toHaveAttribute('title', 'Skill 10081');
   await expect(mainRow.locator('.skill-label .skill-chip')).toHaveCount(2);
-  await expect(mainRow.getByTitle('Skill upgrade', { exact: true })).toHaveCount(1);
   await expect(mainRow.locator('.style-procs')).toContainText(/Front\s+60\.0%/);
   await expect(mainRow.locator('.style-procs')).toContainText(/Pace\s+80\.0%/);
   await page.getByRole('button', { name: 'Inspect Skill 10071', exact: true }).click();
@@ -821,11 +815,153 @@ test('skill outcomes distinguish repeated procs, variants and selected first-act
   );
 });
 
+test('compared skills use a compact table with expandable outcomes and shared distance filtering', async ({
+  page
+}, info) => {
+  const snapshotId = fixture.summary.snapshotId;
+  const overview = {
+    ...fixture.skills,
+    rows: [
+      [10071, 'Nige', 2, 20, 12, 17, 5, 4, 1, 7, 2],
+      [10071, 'Senko', 2, 10, 8, 8, 0, 2, 1, 4, 1],
+      [10091, 'Nige', 2, 15, 6, 8, 2, 2, 1, 4, 2]
+    ],
+    allPlayerCounts: { 10071: 3, 10091: 2 },
+    variants: { 10071: [10071, 10081, 10082], 10091: [10091] },
+    populationByStyle: { Nige: [100, 20], Senko: [80, 12] }
+  };
+  const details = {
+    10071: {
+      snapshotId,
+      skillId: 10071,
+      bucketCount: 100,
+      courseDistance: overview.courseDistance,
+      styles: {
+        Nige: [
+          [0, 2, 2, 1, 1],
+          [70, 15, 10, 3, 6]
+        ],
+        Senko: [[70, 8, 8, 2, 4]]
+      },
+      variants: {
+        10071: {
+          rows: [overview.rows[0]],
+          styles: {
+            Nige: [
+              [0, 2, 2, 1, 1],
+              [70, 15, 10, 3, 6]
+            ]
+          }
+        },
+        10081: { rows: [overview.rows[1]], styles: { Senko: [[70, 8, 8, 2, 4]] } }
+      }
+    },
+    10091: {
+      snapshotId,
+      skillId: 10091,
+      bucketCount: 100,
+      courseDistance: overview.courseDistance,
+      styles: {
+        Nige: [
+          [0, 3, 3, 1, 2],
+          [70, 5, 3, 1, 2]
+        ]
+      }
+    }
+  };
+  await page.route('**/skills/overview', (route) =>
+    route.fulfill({ json: overview, headers: { 'access-control-allow-origin': '*' } })
+  );
+  await page.route('**/skills/details/*', (route) => {
+    const id = Number(route.request().url().split('/').at(-1)) as keyof typeof details;
+    return route.fulfill({ json: details[id], headers: { 'access-control-allow-origin': '*' } });
+  });
+
+  await page.goto('/competitive/cm-data?tab=skills');
+  await expect(page.locator('.variant-alternatives').first()).toHaveText('2 alternatives');
+  await expect(page.locator('.variant-alternatives').first()).toHaveAttribute(
+    'title',
+    'Skill 10081 · Skill 10082'
+  );
+  await page.getByRole('button', { name: 'Add Skill 10071 to comparison', exact: true }).click();
+  await page.getByRole('button', { name: 'Add Skill 10091 to comparison', exact: true }).click();
+  const comparison = page.getByRole('region', { name: 'Skill comparison', exact: true });
+  const breakdown = comparison.getByRole('region', {
+    name: 'Skill outcome breakdown',
+    exact: true
+  });
+  const firstSkill = breakdown.getByRole('rowgroup', { name: 'Skill 10071 outcomes', exact: true });
+  const secondSkill = breakdown.getByRole('rowgroup', {
+    name: 'Skill 10091 outcomes',
+    exact: true
+  });
+  const firstToggle = firstSkill.getByRole('button', {
+    name: 'Skill 10071 outcome details',
+    exact: true
+  });
+  await expect(breakdown).toHaveCount(1);
+  await expect(breakdown.locator('tbody tr')).toHaveCount(2);
+  await expect(firstToggle).toHaveAttribute('aria-expanded', 'false');
+  const measure = comparison.getByRole('combobox', { name: 'Outcome measure', exact: true });
+  await expect(measure).toHaveCount(1);
+  await expect(firstSkill.locator('.compared-main td.total')).toHaveText('30.0%');
+  await expect(secondSkill.locator('.compared-main td.total')).toHaveText('33.3%');
+  if (page.viewportSize()!.width > 600) {
+    expect((await comparison.locator('.breakdown').boundingBox())!.height).toBeLessThan(160);
+  }
+
+  await comparison.screenshot({ path: info.outputPath('cm-compact-skill-comparison.png') });
+  await measure.click();
+  await page.getByRole('option', { name: 'Runner entries', exact: true }).click();
+  await expect(firstSkill.locator('.compared-main td.total')).toHaveText('20');
+  await expect(secondSkill.locator('.compared-main td.total')).toHaveText('6');
+  await firstToggle.click();
+  await expect(firstToggle).toHaveAttribute('aria-expanded', 'true');
+  await expect(firstSkill.getByRole('row', { name: /Repeat activation rate/ })).toContainText(
+    '16.7%'
+  );
+  await expect(firstSkill.locator('.cohort-row')).toHaveCount(4);
+  await expect(secondSkill.locator('tr')).toHaveCount(1);
+  await secondSkill
+    .getByRole('button', { name: 'Skill 10091 outcome details', exact: true })
+    .click();
+  await expect(secondSkill.locator('.cohort-row')).toHaveCount(2);
+
+  const chart = comparison.getByRole('slider');
+  await chart.press('Home');
+  await chart.press('Shift+ArrowRight');
+  await expect(firstSkill.locator('.cohort-row')).toHaveCount(2);
+  await expect(secondSkill.locator('.cohort-row')).toHaveCount(0);
+  await expect(firstSkill.locator('.compared-main td.total')).toHaveText('2');
+  await expect(secondSkill.locator('.compared-main td.total')).toHaveText('3');
+  await chart.press('Escape');
+  await expect(firstSkill.getByRole('row', { name: /No variant learned/ })).toBeVisible();
+  await firstToggle.press('Enter');
+  await expect(firstToggle).toHaveAttribute('aria-expanded', 'false');
+  await expect(firstSkill.locator('tr')).toHaveCount(1);
+
+  await page.getByRole('combobox', { name: 'Running style', exact: true }).click();
+  await page.getByRole('option', { name: 'Front Runner', exact: true }).click();
+  await expect(breakdown.locator('thead th')).toHaveCount(3);
+  await expect(firstSkill.locator('.compared-main td.total')).toHaveText('12');
+  await comparison.screenshot({ path: info.outputPath('cm-compared-skill-details.png') });
+  expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(
+    page.viewportSize()!.width
+  );
+  await comparison
+    .getByRole('button', { name: 'Remove Skill 10071 from comparison', exact: true })
+    .click();
+  await expect(firstSkill).toHaveCount(0);
+  await expect(secondSkill).toHaveCount(1);
+  await expect(secondSkill.locator('.cohort-row')).toHaveCount(2);
+  await expect(measure).toContainText('Runner entries');
+});
+
 test('Uma running-style table replaces the separate explorer and keeps captured builds reachable', async ({
   page
 }, info) => {
   await page.goto('/competitive/cm-data?tab=explore&view=umas');
-  await expect(page.getByRole('tab', { name: 'Uma Analysis', exact: true })).toHaveAttribute(
+  await expect(page.getByRole('tab', { name: 'Umas', exact: true })).toHaveAttribute(
     'aria-selected',
     'true'
   );
@@ -849,7 +985,7 @@ test('Uma running-style table replaces the separate explorer and keeps captured 
   await map.locator('tbody').getByRole('button').first().click();
   await expect(page.getByRole('complementary', { name: 'Selected Uma insight' })).toBeVisible();
   await page.getByRole('button', { name: 'Find captured builds', exact: true }).click();
-  await expect(page.getByRole('tab', { name: 'Archetype Analysis', exact: true })).toHaveAttribute(
+  await expect(page.getByRole('tab', { name: 'Archetypes', exact: true })).toHaveAttribute(
     'aria-selected',
     'true'
   );
@@ -874,7 +1010,7 @@ test('Uma running-style table replaces the separate explorer and keeps captured 
   await lobby.getByRole('button', { name: 'Review lobby', exact: true }).click();
   await lobby.getByRole('button', { name: 'Clear lobby', exact: true }).click();
   await expect(lobby).toHaveCount(0);
-  await page.getByRole('tab', { name: 'Uma Analysis', exact: true }).click();
+  await page.getByRole('tab', { name: 'Umas', exact: true }).click();
   await page.getByRole('tab', { name: 'Performance ranges', exact: true }).click();
   await expect(page.locator('.ranking')).not.toHaveCount(0);
   await page.screenshot({ path: info.outputPath('cm-uma-ranges.png'), fullPage: true });
@@ -1031,7 +1167,7 @@ test('CM cards align, room rows stay compact, and standard tabs support keyboard
 }) => {
   await page.goto('/competitive/cm-data');
   const nav = page.getByRole('tablist', { name: 'Champions Meeting views', exact: true });
-  const intro = nav.getByRole('tab', { name: 'Introduction', exact: true });
+  const intro = nav.getByRole('tab', { name: 'Overview', exact: true });
   await expect(intro).toHaveAttribute('aria-selected', 'true');
   const totals = page
     .getByRole('region', { name: 'Dataset summary', exact: true })
@@ -1042,7 +1178,7 @@ test('CM cards align, room rows stay compact, and standard tabs support keyboard
   await expect(nav).toHaveClass(/navigation/);
   await intro.focus();
   await page.keyboard.press('ArrowRight');
-  await expect(nav.getByRole('tab', { name: 'Strategy Analysis', exact: true })).toHaveAttribute(
+  await expect(nav.getByRole('tab', { name: 'Strategy', exact: true })).toHaveAttribute(
     'aria-selected',
     'true'
   );

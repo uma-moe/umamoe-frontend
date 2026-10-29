@@ -1,6 +1,7 @@
 <script lang="ts">
   import { onMount } from 'svelte';
   import AppPage from '@/layouts/AppPage.svelte';
+  import Disclosure from '@/components/overlays/Disclosure.svelte';
   import Banner from '@/components/feedback/Banner.svelte';
   import EmptyState from '@/components/feedback/EmptyState.svelte';
   import Spinner from '@/components/feedback/Spinner.svelte';
@@ -21,6 +22,10 @@
   } from '@/lib/game-data/racing/courses';
   import { loadSkills, skillImage, type SkillData } from '@/lib/game-data/skills/skills';
   import {
+    loadSupportCards,
+    type SupportCardData
+  } from '@/lib/game-data/support-cards/support-cards';
+  import {
     courseSegments,
     loadReplayCourses
   } from '@/pages/competitive/race-analysis/replay/replay-course';
@@ -40,7 +45,6 @@
     loadUmaSkills,
     skillsGivenBy,
     unvaluedSkills,
-    upcomingUniques,
     type ExplorerUma,
     type FirstBanner,
     type UmaSkills,
@@ -53,6 +57,17 @@
     type TerrainSegment
   } from './skill-explorer/skill-card/SkillCard.svelte';
   import { countGate, describeRequirements } from './skill-explorer/skill-card/skill-requirements';
+  import {
+    loadSkillEffects,
+    releasedSkills,
+    skillEffectDetails,
+    type SkillEffectAlternative
+  } from './skill-explorer/skill-card/skill-effects';
+  import {
+    loadProviderCatalog,
+    skillProviders,
+    type ProviderCatalog
+  } from './skill-explorer/skill-card/skill-providers';
   import { formatWinPoints } from './skill-explorer/scatter/scatter-scale';
   import {
     SKILL_KINDS,
@@ -83,7 +98,9 @@
   const FEEDERS_SHOWN = 5;
 
   let index = $state.raw<ExplorerIndex>();
-  let gameSkills = $state.raw(new Map<number, SkillData>());
+  // Both a named skill and its Global mechanic entry are required; names include future translations.
+  let skills = $state.raw(new Map<number, SkillData>());
+  let skillEffects = $state.raw(new Map<number, SkillEffectAlternative[]>());
   let raceCourses = $state.raw(new Map<number, RaceCourse>());
   let pageError = $state('');
   let timelineMeetings = $state.raw<NumberedMeeting[]>([]);
@@ -93,6 +110,9 @@
   let characterNames = $state.raw<CharacterNames>({});
   let releasedCards = $state.raw<ReadonlySet<number>>(new Set());
   let banners = $state.raw<ReadonlyMap<number, FirstBanner>>(new Map());
+  let supportCards = $state.raw<SupportCardData[]>([]);
+  let providerCatalog = $state.raw<ProviderCatalog>({ umas: [], supports: [] });
+  let providerStatus = $state<'loading' | 'ready' | 'error'>('loading');
 
   let scopeData = $state.raw<ScopeData>();
   let scopeLoading = $state(false);
@@ -110,10 +130,11 @@
   let kinds = $state.raw<ReadonlySet<SkillKind>>(new Set(SKILL_KINDS));
   let search = $state('');
   let umaCardId = $state<number>();
-  let show = $state<ShowLimit>('50');
-  let bestOfFamily = $state(true);
+  let show = $state<ShowLimit>('100');
+  let bestOfFamily = $state(false);
   let showDayBound = $state(false);
-  let procScaled = $state(false);
+  let procScaled = $state(true);
+  let comparedSkillIds = $state.raw<ReadonlySet<number>>(new Set());
 
   const explorerCourses = $derived(index?.courses ?? []);
 
@@ -141,9 +162,14 @@
   );
   const selectedUma = $derived(umas.find((uma) => uma.cardId === umaCardId));
   const selectedUmaNote = $derived(selectedUma && umaNote(selectedUma));
-
-  // Umas still to come bring uniques the Global skill list cannot name yet; they are named after their uma.
-  const skills = $derived(new Map([...gameSkills, ...upcomingUniques(umas, gameSkills)]));
+  const providers = $derived(
+    skillProviders({
+      catalog: providerCatalog,
+      names: characterNames,
+      released: releasedCards,
+      supports: supportCards
+    })
+  );
 
   // A meeting picks its course, so a CM shows its course on its race day.
   const selectedCourse = $derived(
@@ -223,6 +249,7 @@
           rarities,
           kinds,
           search,
+          comparedSkillIds,
           umaSkillIds: selectedUma && skillsGivenBy(selectedUma),
           bestOfFamily,
           limit: limitOf(show),
@@ -337,7 +364,9 @@
     if (style === 'all') return [];
 
     const partners = scopeData?.partners?.[style]?.get(skillId) ?? [];
-    return partners.map((partner) => relatedSkill(partner.skillId, partner.win));
+    return partners
+      .filter((partner) => skills.has(partner.skillId))
+      .map((partner) => relatedSkill(partner.skillId, partner.win));
   }
 
   /** A count-gated skill's gate, and the scope's most valuable skills that mostly fire where it counts. */
@@ -376,17 +405,48 @@
     courseId = String(meeting.courseId);
   }
 
+  function toggleCompared(skillId: number) {
+    const next = new Set(comparedSkillIds);
+    if (next.has(skillId)) next.delete(skillId);
+    else next.add(skillId);
+
+    comparedSkillIds = next;
+  }
+
   onMount(() => {
-    Promise.all([loadExplorerIndex(), loadSkills(), loadCourses(), loadStatlines()])
-      .then(([nextIndex, nextSkills, nextCourses, nextStatlines]) => {
+    Promise.all([
+      loadExplorerIndex(),
+      loadSkills(),
+      loadCourses(),
+      loadStatlines(),
+      loadSkillEffects()
+    ])
+      .then(([nextIndex, nextSkills, nextCourses, nextStatlines, nextEffects]) => {
         index = nextIndex;
-        gameSkills = nextSkills;
+        skills = releasedSkills(nextSkills, nextEffects);
+        skillEffects = nextEffects;
         raceCourses = nextCourses;
         statlines = nextStatlines;
       })
       .catch((error: unknown) => {
-        pageError =
-          error instanceof Error ? error.message : 'The Skill Explorer data could not load.';
+        pageError = error instanceof Error ? error.message : 'Skill values could not be loaded.';
+      });
+
+    const umaIdentity = Promise.all([loadCharacterNames(), loadReleasedCharacters()]).then(
+      ([names, released]) => {
+        characterNames = names;
+        releasedCards = new Set(released.map((character) => Number(character.id)));
+      }
+    );
+
+    Promise.all([loadSupportCards(), loadProviderCatalog(), umaIdentity])
+      .then(([cards, catalog]) => {
+        supportCards = cards;
+        providerCatalog = catalog;
+        providerStatus = 'ready';
+      })
+      .catch(() => {
+        providerStatus = 'error';
       });
 
     // Meetings and umas' banner dates come from the timeline; without it no meeting can be picked, and umas not on
@@ -403,11 +463,9 @@
       });
 
     // The uma picker is an aid; without its data it stays empty and the rest of the explorer works.
-    Promise.all([loadUmaSkills(), loadCharacterNames(), loadReleasedCharacters()])
-      .then(([cards, names, released]) => {
+    Promise.all([loadUmaSkills(), umaIdentity])
+      .then(([cards]) => {
         umaCards = cards;
-        characterNames = names;
-        releasedCards = new Set(released.map((character) => Number(character.id)));
       })
       .catch(() => {
         umaCards = [];
@@ -427,7 +485,7 @@
       })
       .catch((error: unknown) => {
         if (controller.signal.aborted) return;
-        scopeError = error instanceof Error ? error.message : 'This scope could not load.';
+        scopeError = error instanceof Error ? error.message : 'This selection could not be loaded.';
       })
       .finally(() => {
         if (!controller.signal.aborted) scopeLoading = false;
@@ -465,9 +523,10 @@
 </svelte:head>
 
 <AppPage
+  compactHeading
   routeId="skill-explorer"
   title="Skill Explorer"
-  description="What each skill is worth and where it procs, on every course"
+  description="What each skill is worth and where it procs, on every course."
   width="wide"
 >
   {#if pageError}
@@ -524,14 +583,13 @@
         {#if scopeLoading}
           <Spinner size={18} />
         {/if}
+        {#if target}
+          <TargetStatline
+            {target}
+            selectedStyle={style}
+          />
+        {/if}
       </div>
-
-      {#if target}
-        <TargetStatline
-          {target}
-          selectedStyle={style}
-        />
-      {/if}
 
       {#if scopeError}
         <Banner
@@ -558,45 +616,56 @@
           format={formatWinPoints}
           quadrants={view.quadrants}
           {viewKey}
+          {comparedSkillIds}
+          oncompare={toggleCompared}
+          onclearcomparison={() => (comparedSkillIds = new Set())}
           details={skillDetails}
         />
       {/if}
 
-      <p class="method">
-        <strong>Win rate</strong>
-        comes from the model the optimizer builds with ({modelName(index.model.variant)}, checkpoint {index
-          .model.checkpoint}): on every course a reference runner per style, no particular uma, with
-        the statline forecast there, races a hundred real CM fields, the course's own recorded rooms
-        or the nearest CM's runners brought to it. Her races show where and how often each skill
-        fires; the model turns a proc there into seconds and win, so a value is what the skill adds
-        when it procs.
-        <strong>Scale by proc rate</strong>
-        weighs it by how often it procs, over all races. Values are for comparing skills with each other;
-        their exact size is an estimate.
-        {#if margin !== undefined}
-          Checked against full races, 80% of the skills here came within ±{Math.round(
-            margin * 100
-          )}% of their value.
-        {/if}
-        <strong>In build</strong>
-        is what a skill adds to, or takes from, a {index.buildSize}-skill reference build the model
-        picks, in place of its gold or ◎ version when the build holds that;
-        <strong>Alone</strong>
-        is what it adds to no skills.
-        <strong>Works best with</strong>
-        names the skills that raise its value most beside it, on log-odds, so a stronger build's flatter
-        win curve does not count as a combination. A CM shows its course. Over several courses, a value
-        is the median course's, so turf shows what a skill is worth on a typical turf course, and proc
-        points average the races it fired in. Strong and weaker split at the median shown skill. A skill
-        that never procs for her, for another style or distance, another day, the runners around her or
-        skills it waits on (such as Groundwork), is forced to proc wherever the course lets it, however
-        unlikely the build, and counts 0 when scaled by proc rate. Negative skills are left out; ground,
-        weather and season skills show on a CM whose day they hold on, and elsewhere only when asked.
-        <strong>Picking an uma</strong>
-        highlights her unique, as inherited, and the skills she starts with or unlocks by potential level:
-        from the Global game data for umas out on Global, from the Japanese for those still to come. Skills
-        from her training events are not included.
-      </p>
+      <Disclosure
+        id="skill-explorer-method"
+        title="How skill values are calculated"
+        compact
+      >
+        <p class="method">
+          <strong>Win rate</strong>
+          comes from the model the optimizer builds with ({modelName(index.model.variant)},
+          checkpoint {index.model.checkpoint}): on every course a reference runner per style, no
+          particular uma, with the statline forecast there, races a hundred real CM fields, the
+          course's own recorded rooms or the nearest CM's runners brought to it. Her races show
+          where and how often each skill fires; the model turns a proc there into seconds and win,
+          so a value is what the skill adds when it procs.
+          <strong>Scale by proc rate</strong>
+          weighs it by how often it procs, over all races. Values are for comparing skills with each other;
+          their exact size is an estimate.
+          {#if margin !== undefined}
+            Checked against full races, 80% of the skills here came within ±{Math.round(
+              margin * 100
+            )}% of their value.
+          {/if}
+          <strong>In build</strong>
+          is what a skill adds to, or takes from, a {index.buildSize}-skill reference build the
+          model picks, in place of its gold or ◎ version when the build holds that;
+          <strong>Alone</strong>
+          is what it adds to no skills.
+          <strong>Works best with</strong>
+          names the skills that raise its value most beside it, on log-odds, so a stronger build's flatter
+          win curve does not count as a combination. A CM shows its course. Over several courses, a value
+          is the median course's, so turf shows what a skill is worth on a typical turf course, and proc
+          points average the races it fired in. Strong and weaker split at the median shown skill. A skill
+          whose race-state conditions never hold for her, such as the runners around her or skills it
+          waits on, is valued as if it procs where its course, day and running style allow it. Impossible
+          combinations stay at 0. All styles averages only over styles where the skill can activate. Assumed
+          activations count 0 when scaled by proc rate. Negative skills are left out; ground, weather
+          and season skills show on a CM whose day they hold on, and elsewhere only when asked.
+          <strong>Picking an uma</strong>
+          highlights her unique, as inherited, and the skills she starts with or unlocks by potential
+          level: from the Global game data for umas out on Global, from the Japanese for those still to
+          come. Skills from her training events are not included. Only skills in the Global skill list
+          are displayed.
+        </p>
+      </Disclosure>
     </div>
   {/if}
 </AppPage>
@@ -612,6 +681,10 @@
       image={card === undefined ? skillImage(skill.icon) : characterImagePath(card)}
       badge={card === undefined ? undefined : skillImage(skill.icon)}
       description={skill.description}
+      effects={skillEffectDetails(skillEffects.get(skillId), selectedCourse?.distance)}
+      spCost={skill.baseCost}
+      providers={providers.get(skillId)}
+      {providerStatus}
       requirements={describeRequirements(skill.conditions ?? '', trackName)}
       partners={partnersOf(skillId)}
       gate={gateOf(skillId, skill.conditions ?? '')}

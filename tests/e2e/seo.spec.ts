@@ -197,7 +197,7 @@ test('metadata survives app startup and navigation without showing crawler copy'
   await mockDatabase(page);
   await context.addInitScript(() => {
     localStorage.setItem('page-introduction-audience-v1', 'existing');
-    localStorage.setItem('lastSeenUpdateVersion', '17');
+    localStorage.setItem('lastSeenUpdateVersion', '19');
   });
 
   await page.goto('/');
@@ -240,7 +240,7 @@ test('lazy public pages keep one consistent set of metadata', async ({ page, con
   await mockResources(context);
   await context.addInitScript(() => {
     localStorage.setItem('page-introduction-audience-v1', 'existing');
-    localStorage.setItem('lastSeenUpdateVersion', '17');
+    localStorage.setItem('lastSeenUpdateVersion', '19');
   });
 
   for (const path of ['/tools', '/privacy-policy', '/circles', '/timeline'] as const) {
@@ -270,7 +270,7 @@ test('timeline metadata stays available without showing crawler copy', async ({
   await mockResources(context);
   await context.addInitScript(() => {
     localStorage.setItem('page-introduction-audience-v1', 'existing');
-    localStorage.setItem('lastSeenUpdateVersion', '18');
+    localStorage.setItem('lastSeenUpdateVersion', '19');
   });
 
   await page.goto('/timeline');

@@ -15,21 +15,13 @@ export type SkillRarity = 'white' | 'gold' | 'unique';
 
 export const SKILL_RARITIES: readonly SkillRarity[] = ['white', 'gold', 'unique'];
 
-/**
- * A filter chip picked: with every type on, the pick narrows to it alone; otherwise it toggles, and taking the last
- * one off turns them all back on. So "the best gold speed skill" is Gold, then Speed.
- */
-export function pickTypes<Type>(
-  selected: ReadonlySet<Type>,
-  type: Type,
-  all: readonly Type[]
-): Set<Type> {
-  if (selected.size === all.length) return new Set([type]);
-
+/** Toggle one filter without changing any of the other selections. */
+export function toggleType<Type>(selected: ReadonlySet<Type>, type: Type): Set<Type> {
   const next = new Set(selected);
   if (next.has(type)) next.delete(type);
   else next.add(type);
-  return next.size === 0 ? new Set(all) : next;
+
+  return next;
 }
 
 /** How many of the most valuable skills to show. */
@@ -69,12 +61,14 @@ export interface PlotOptions {
   facts: Map<number, SkillFacts>;
   xMode: XMode;
   yMode: YMode;
-  /** The rarities and kinds to show; a skill must be of both. */
+  /** The rarities and kinds to show for skills outside the comparison. */
   rarities: ReadonlySet<SkillRarity>;
   kinds: ReadonlySet<SkillKind>;
   search: string;
   /** A picked uma's skills: only they match, along with the search. */
   umaSkillIds?: ReadonlySet<number>;
+  /** Compared skills bypass display filters, limits and best-version grouping. */
+  comparedSkillIds?: ReadonlySet<number>;
   showDayBound: boolean;
   /** A CM's race day: its ground, weather and season skills show when they hold, whatever `showDayBound` says. */
   day?: RaceDay;
@@ -107,6 +101,7 @@ interface Candidate {
   x: number;
   y: number;
   matches: boolean;
+  searchMatch: boolean;
 }
 
 function rarityOf(skill: SkillData): SkillRarity {
@@ -150,7 +145,7 @@ function plottedX(point: SkillPoint, skill: SkillData, xMode: XMode): number | u
 
 function dayBoundShown(skill: SkillData, options: PlotOptions): boolean {
   if (options.day !== undefined) return dayAllows(skill.conditions, options.day);
-  return options.showDayBound;
+  return options.showDayBound || options.comparedSkillIds?.has(skill.skill_id) === true;
 }
 
 function candidatesOf(options: PlotOptions): Candidate[] {
@@ -161,10 +156,12 @@ function candidatesOf(options: PlotOptions): Candidate[] {
     if (skill === undefined || skill.name === '') continue;
     if (isNegativeSkill(skill)) continue;
     if (isDayBound(skill) && !dayBoundShown(skill, options)) continue;
-    if (!options.rarities.has(rarityOf(skill))) continue;
+
+    const compared = options.comparedSkillIds?.has(point.skillId) === true;
+    if (!compared && !options.rarities.has(rarityOf(skill))) continue;
 
     const kind = options.facts.get(skill.skill_id)?.kind ?? 'other';
-    if (!options.kinds.has(kind)) continue;
+    if (!compared && !options.kinds.has(kind)) continue;
 
     const x = plottedX(point, skill, options.xMode);
     if (x === undefined) continue;
@@ -176,6 +173,7 @@ function candidatesOf(options: PlotOptions): Candidate[] {
       skill,
       x,
       y: plottedY(point, skill, options),
+      searchMatch: search !== '' && nameMatches,
       matches: nameMatches && umaGivesIt
     });
   }
@@ -184,7 +182,11 @@ function candidatesOf(options: PlotOptions): Candidate[] {
 }
 
 /** The most valuable version of each family; a search match stays beside it. */
-function bestOfFamilies(candidates: Candidate[], searching: boolean): Candidate[] {
+function bestOfFamilies(
+  candidates: Candidate[],
+  searching: boolean,
+  compared?: ReadonlySet<number>
+): Candidate[] {
   const best = new Map<number, Candidate>();
   for (const candidate of candidates) {
     const family = skillFamily(candidate.skill.skill_id);
@@ -193,7 +195,12 @@ function bestOfFamilies(candidates: Candidate[], searching: boolean): Candidate[
   }
 
   const kept = new Set(best.values());
-  return candidates.filter((candidate) => kept.has(candidate) || (searching && candidate.matches));
+  return candidates.filter(
+    (candidate) =>
+      kept.has(candidate) ||
+      (searching && (candidate.matches || candidate.searchMatch)) ||
+      compared?.has(candidate.point.skillId)
+  );
 }
 
 function median(values: number[]): number {
@@ -211,13 +218,19 @@ export function plotView(options: PlotOptions): PlotView {
   const searching = options.search.trim() !== '' || options.umaSkillIds !== undefined;
 
   const candidates = candidatesOf(options);
-  const deduplicated = options.bestOfFamily ? bestOfFamilies(candidates, searching) : candidates;
+  const deduplicated = options.bestOfFamily
+    ? bestOfFamilies(candidates, searching, options.comparedSkillIds)
+    : candidates;
   const ranked = deduplicated.sort((left, right) => right.y - left.y);
   const shown = ranked.filter(
-    (candidate, rank) => limit === undefined || rank < limit || (searching && candidate.matches)
+    (candidate, rank) =>
+      limit === undefined ||
+      rank < limit ||
+      (searching && (candidate.matches || candidate.searchMatch)) ||
+      options.comparedSkillIds?.has(candidate.point.skillId)
   );
 
-  const plotted: PlottedSkill[] = shown.map(({ point, skill, x, y, matches }) => ({
+  const plotted: PlottedSkill[] = shown.map(({ point, skill, x, y, matches, searchMatch }) => ({
     skillId: point.skillId,
     name: skill.name,
     image: imageOf(skill, options.facts.get(skill.skill_id)),
@@ -225,7 +238,8 @@ export function plotView(options: PlotOptions): PlotView {
     x,
     y,
     xLabel: xMode === 'position' ? positionLabel(x, courseDistance) : `${x} SP`,
-    matches
+    matches,
+    searchMatch
   }));
   const ySplit = median(plotted.map((point) => point.y));
 

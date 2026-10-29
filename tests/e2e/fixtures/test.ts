@@ -126,7 +126,7 @@ export const test = base.extend<{
           if (!localStorage.getItem('page-introduction-audience-v1'))
             localStorage.setItem('page-introduction-audience-v1', 'existing');
           if (!localStorage.getItem('lastSeenUpdateVersion'))
-            localStorage.setItem('lastSeenUpdateVersion', '18');
+            localStorage.setItem('lastSeenUpdateVersion', '19');
           if (useCachedProof)
             localStorage.setItem(
               'uma-browser-proof-v1',

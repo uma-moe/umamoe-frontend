@@ -5,6 +5,7 @@
   import { setAccountWorkspaces } from '@/lib/workspaces/workspace-state';
   import type { LinkedAccount } from '@/services/auth/auth-types';
   import Banner from '@/components/feedback/Banner.svelte';
+  import Spinner from '@/components/feedback/Spinner.svelte';
   import Button from '@/components/controls/Button.svelte';
   import Icon from '@/components/Icon.svelte';
   import { authRepository } from '@/services/auth/auth-repository';
@@ -186,12 +187,11 @@
   </header>
   <div class="card-body">
     {#if loading}
-      <div
-        class="loading-row"
-        role="status"
-      >
-        Loading…
-      </div>
+      <Spinner
+        centered
+        minHeight="120px"
+        label="Loading linked accounts…"
+      />
     {:else if loadError}
       <Banner
         title="Linked accounts unavailable"

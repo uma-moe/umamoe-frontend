@@ -50,7 +50,7 @@ describe('Skill Explorer data', () => {
     expect(front.winAlone).toBe(3.2);
     expect(front.sections[12]).toBeCloseTo(0.9);
     expect(scope.builds?.['1']).toEqual([200011]);
-    expect(scope.styles.all[0]!.win).toBeCloseTo(1.2);
+    expect(scope.styles.all[0]!.win).toBeCloseTo(4.8);
   });
 
   it('reads the partners of each skill on a single course', () => {
@@ -81,16 +81,46 @@ describe('Skill Explorer data', () => {
     expect(() => parseScope(file)).toThrow(/section count/);
   });
 
-  it('averages win points over every style but the proc point over races it fired in', () => {
-    const fires = point({ win: 8, rate: 1, mean: 0.8, sections: sections(19, 1) });
-    const neverFires = point({ rate: 0, mean: 0 });
+  it('normalizes a Front-only skill over its eligible style, including rates and sections', () => {
+    const fires = point({
+      win: 8,
+      winAlone: 4,
+      expected: 6,
+      rate: 0.75,
+      mean: 0.8,
+      sections: sections(19, 0.75)
+    });
+    const neverFires = point({ courses: 0 });
 
-    const [averaged] = averageStyles([[fires], [neverFires]]);
+    const [averaged] = averageStyles([[fires], [neverFires], [neverFires], [neverFires]]);
 
-    expect(averaged!.win).toBe(4);
-    expect(averaged!.rate).toBe(0.5);
-    expect(averaged!.mean).toBe(0.8);
-    expect(averaged!.sections[19]).toBe(0.5);
+    expect(averaged!.win).toBe(8);
+    expect(averaged!.winAlone).toBe(4);
+    expect(averaged!.expected).toBe(6);
+    expect(averaged!.rate).toBe(0.75);
+    expect(averaged!.mean).toBeCloseTo(0.8);
+    expect(averaged!.sections[19]).toBe(0.75);
+  });
+
+  it('averages equally over eligible styles and weights timing by their proc rates', () => {
+    const front = point({ win: 8, rate: 1, mean: 0.25, sections: sections(6, 1) });
+    const pace = point({ win: 4, rate: 0.5, mean: 0.75, sections: sections(18, 0.5) });
+
+    const [averaged] = averageStyles([[front], [pace], [], []]);
+
+    expect(averaged!.win).toBe(6);
+    expect(averaged!.rate).toBe(0.75);
+    expect(averaged!.mean).toBeCloseTo(5 / 12);
+    expect(averaged!.sections[6]).toBe(0.5);
+    expect(averaged!.sections[18]).toBe(0.25);
+  });
+
+  it('keeps a skill that cannot fire on the track as a finite zero in All styles', () => {
+    const impossible = point({ courses: 0 });
+
+    const [averaged] = averageStyles([[impossible], [impossible], [impossible], [impossible]]);
+
+    expect(averaged).toEqual(impossible);
   });
 
   it('finds a course under its own surface and length, as the simulator serves it', () => {

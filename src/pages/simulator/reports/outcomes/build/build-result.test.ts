@@ -9,6 +9,7 @@ import type {
 import { offerPurchases } from '../../../setup/build/skill-offers';
 import {
   compareRows,
+  contributionScale,
   fireText,
   fireWhere,
   gapText,
@@ -147,6 +148,19 @@ const result = (extra: Partial<OptimizeResult> = {}): OptimizeResult => ({
   ...extra
 });
 
+describe('contribution bar scale', () => {
+  it('scales each build to its own contributions, independent of another build’s larger scores', () => {
+    expect(contributionScale([{ value: 3.08 }, { value: 1.92 }])).toBe(3.08);
+    expect(contributionScale([{ value: 16.58 }, { value: 11.68 }])).toBe(16.58);
+  });
+
+  it('handles losses, missing scores and an empty build', () => {
+    expect(contributionScale([{ value: -5 }, { value: 2 }, { value: undefined }])).toBe(5);
+    expect(contributionScale([{ value: 0 }, { value: undefined }])).toBe(1);
+    expect(contributionScale([])).toBe(1);
+  });
+});
+
 describe('build comparison rows', () => {
   it('puts an upgrade and the skill it replaces in one row, the rows where builds differ first', () => {
     const rows = compareRows([pick, runnerUp], offers);
@@ -162,10 +176,23 @@ describe('build comparison rows', () => {
 });
 
 describe('theorized builds', () => {
+  it('includes losses when setting the shared contribution scale', () => {
+    const withLosses: OptimizeTheory = {
+      ...theory,
+      finalists: theory.finalists.map((build) => ({
+        ...build,
+        skills: build.skills.map((skill, index) => ({ ...skill, lengths: index === 0 ? -12 : -6 }))
+      }))
+    };
+    const view = theorizedResult({ result: result({ theory: withLosses }), offers })!;
+
+    expect(view.scale).toBe(12);
+  });
+
   it('scores each build by its own theorized worth, in the theory order', () => {
     const theorized = theorizedResult({ result: result(), offers });
 
-    const worths = theorized?.builds.map((build) => [build.finalist, build.lengths, build.count]);
+    const worths = theorized?.builds.map((build) => [build.finalist, build.value, build.count]);
     expect(worths).toEqual([
       [pick, 1.6, 2],
       [runnerUp, 1.2, 3]
@@ -177,7 +204,7 @@ describe('theorized builds', () => {
 
     const lines = runnerUpCard!.cells.map((cell) => [
       cell.skill.offer.skill.name,
-      cell.lengths,
+      cell.value,
       cell.differs
     ]);
     expect(lines).toEqual([
@@ -203,7 +230,7 @@ describe('theorized builds', () => {
 
     const listed = theorized?.skills.map((skill) => [
       skill.offer.skill.name,
-      skill.lengths,
+      skill.value,
       skill.bought
     ]);
     expect(listed).toEqual([
@@ -313,7 +340,11 @@ describe('worth in words', () => {
   });
 
   it('tells a skill that helps from one that adds nothing or costs her', () => {
-    expect([0.4, 0.01, -0.2].map(worthState)).toEqual(['helps', 'nothing', 'costs']);
+    expect([0.4, 0.01, -0.2].map((value) => worthState(value))).toEqual([
+      'helps',
+      'nothing',
+      'costs'
+    ]);
   });
 
   it('says where a skill first fires: the gate, then the race’s phases', () => {

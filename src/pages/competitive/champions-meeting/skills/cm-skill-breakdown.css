@@ -6,6 +6,9 @@
   border-top: 1px solid var(--border-subtle);
   min-width: 0;
 }
+.breakdown.comparison {
+  border-top: 0;
+}
 .measure-select {
   display: flex;
   align-items: center;
@@ -27,6 +30,46 @@
 .outcome-skill {
   display: inline-flex;
   vertical-align: middle;
+}
+.skill-toggle {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: var(--text-secondary);
+  cursor: pointer;
+  text-align: left;
+}
+.skill-toggle:focus-visible {
+  outline: 2px solid var(--accent-primary);
+  outline-offset: 2px;
+}
+.chevron {
+  display: flex;
+  flex: none;
+  transform: rotate(-90deg);
+}
+.chevron.open {
+  transform: none;
+}
+.series-swatch {
+  flex: none;
+  width: 28px;
+  height: 10px;
+}
+.series-swatch path {
+  fill: none;
+  stroke-width: 2;
+}
+.comparison .cohort-row th,
+.comparison .activation-row th {
+  padding-left: 22px;
+}
+.compared-skill + .compared-skill tr:first-child > * {
+  border-top: 1px solid var(--border-primary);
 }
 .rates-help {
   font-size: 12px;

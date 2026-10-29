@@ -388,28 +388,27 @@
               {@render replayTitle()}{@render replayTools()}
             </div>
           {/if}
-          <ReplayPositionStage
-            {replay}
-            {course}
-            {toggles}
-            {callouts}
-            shape={shapes?.[trackId]}
-            {mapPrimary}
-            laneMax={displayedLaneMax}
-            laneTarget={viewport.laneMax}
-            {positionViewport}
-            {visibility}
-            bind:selected
-          />
-          {#if shapes}
+          <!-- Only the chosen view is mounted: a hidden one would still redraw every playback frame. -->
+          {#if !mapPrimary}
+            <ReplayPositionStage
+              {replay}
+              {course}
+              {toggles}
+              {callouts}
+              shape={shapes?.[trackId]}
+              laneMax={displayedLaneMax}
+              laneTarget={viewport.laneMax}
+              {positionViewport}
+              {visibility}
+              bind:selected
+            />
+          {:else if shapes}
             <ReplayCourseMap
               toolbarStart={replayTitle}
               toolbarEnd={replayTools}
               viewDistance={toggles.cone ? courses?.baseViewDistance : undefined}
               blockerIndex={toggles.blocked ? replay.blocker : -1}
               blocking={toggles.blocked ? replay.blockingNow : []}
-              onexpand={() => (focusView = 'map')}
-              primary={mapPrimary}
               skillEvents={toggles.skills ? replay.recentSkills : []}
               runnerLabels={callouts}
               timers={toggles.skillTimers}
@@ -433,11 +432,7 @@
               acceleration={replay.acceleration}
             />
           {:else}
-            <div
-              class="map-loading fullscreen-target"
-              class:primary={mapPrimary}
-              hidden={!mapPrimary}
-            >
+            <div class="map-loading fullscreen-target">
               {#if geometryError}
                 <div role="status">
                   <EmptyState
@@ -525,7 +520,6 @@
             onretry={onretrysimulation}
             onbuild={() => (buildOpen = true)}
             onpickrunner={() => (runnerPickerOpen = true)}
-            onswitchrunner={(index) => (selected = String(index))}
             onreview={reviewBlocking}
             onseek={reviewTime}
             onselect={reviewRunner}

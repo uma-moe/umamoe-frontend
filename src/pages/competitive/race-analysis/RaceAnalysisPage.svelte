@@ -280,7 +280,7 @@
   <AppPage
     routeId="race-analysis"
     title="Race Analysis"
-    description={captures.length ? undefined : 'Follow the race. Understand the result.'}
+    description={captures.length ? undefined : 'Replay and analyse your races.'}
     width="wide"
   >
     {#snippet actions()}

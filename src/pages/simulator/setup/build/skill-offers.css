@@ -187,16 +187,9 @@
   gap: 3px;
   font-variant-numeric: tabular-nums;
 }
-.cost strong {
-  font-size: 13px;
-  color: var(--text-primary);
-}
-.cost s,
-.cost small {
+.cost s {
   font-size: 10px;
   color: var(--text-secondary);
-}
-.cost s {
   opacity: 0.75;
 }
 /* A labelled toggle, so a locked skill reads as locked without hovering. */

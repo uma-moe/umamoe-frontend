@@ -10,7 +10,12 @@ h2 {
   font-size: 17px;
   font-weight: 650;
 }
-.report-heading > :global(.ui-button) {
+.report-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.report-actions > :global(.ui-button) {
   min-height: 28px;
   padding-inline: 12px;
   font-size: 11px;
@@ -26,38 +31,6 @@ p {
 .runner-card {
   min-width: 0;
   container-type: inline-size;
-}
-/* One joined control: the arrows step through the field and the gate in the middle opens the picker.
-   The card scope outranks the race page's own rule for small buttons. */
-.gate-switch {
-  display: inline-flex;
-  flex: none;
-}
-.runner-card .gate-switch > :global(.ui-button.ui-button--sm) {
-  min-height: 30px;
-  padding-inline: 8px;
-  border-radius: 0;
-  font-size: 11px;
-}
-.runner-card .gate-switch > :global(.ui-button.ui-button--sm:first-child) {
-  border-radius: var(--radius-md) 0 0 var(--radius-md);
-}
-.runner-card .gate-switch > :global(.ui-button.ui-button--sm:last-child) {
-  border-radius: 0 var(--radius-md) var(--radius-md) 0;
-}
-.gate-switch > :global(.ui-button + .ui-button) {
-  margin-left: -1px;
-}
-.gate-switch > :global(.ui-button:hover),
-.gate-switch > :global(.ui-button:focus-visible) {
-  position: relative;
-  z-index: 1;
-}
-.gate-label {
-  display: inline-flex;
-  align-items: center;
-  gap: 4px;
-  white-space: nowrap;
 }
 /* A wide card puts the stats beside the aptitudes, which keep the width their labels need. */
 @container (min-width: 660px) {
@@ -178,6 +151,9 @@ p {
     flex-wrap: wrap;
     gap: 10px;
     margin-bottom: 8px;
+  }
+  .report-actions > :global(.ui-button) {
+    min-height: var(--touch-target);
   }
 }
 @media (max-width: 700px) {

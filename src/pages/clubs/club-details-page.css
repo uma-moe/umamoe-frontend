@@ -59,14 +59,6 @@ h2 {
 .members-section {
   min-width: 0;
 }
-.loading {
-  min-height: 220px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 10px;
-  color: var(--text-muted);
-}
 .no-members {
   padding: 24px 0;
   color: var(--text-muted);

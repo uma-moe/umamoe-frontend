@@ -1333,10 +1333,8 @@ test('race uploads keep replay and session sections together, retaining valid fi
     'true'
   );
 
-  await expect(page.locator('.race-stage')).toBeHidden();
-  await expect(page.locator('.race-stage .replay-marker .art')).toHaveCount(9);
-  await expect(page.locator('.race-stage .distance-dot')).toHaveCount(0);
-  await expect(page.locator('.race-stage .track-plane')).toHaveCSS('background-image', 'none');
+  // The hidden view is unmounted so playback only redraws the one on screen.
+  await expect(page.locator('.race-stage')).toHaveCount(0);
   await focus.getByRole('radio', { name: 'Race positions', exact: true }).click();
   expect(
     await page.locator('.race-stage').evaluate((stage) => {
@@ -2566,14 +2564,13 @@ test('CM uses Hakuraku charts and captured teams without inventing a replay cata
   });
 
   await page.goto('/competitive/cm-data');
-  await expect(page.getByRole('tab', { name: 'Introduction', exact: true })).toHaveAttribute(
+  await expect(page.getByRole('tab', { name: 'Overview', exact: true })).toHaveAttribute(
     'aria-selected',
     'true',
     { timeout: 15000 }
   );
 
   await expect(page.getByRole('tab', { name: 'Replays', exact: true })).toHaveCount(0);
-  await expect(page.getByRole('tab', { name: 'Overview', exact: true })).toHaveCount(0);
   await expect(page.getByRole('region', { name: 'Dataset summary' })).toContainText('10,000,000');
   await expect(
     page.getByRole('heading', { name: 'The meeting at a glance', exact: true })
@@ -2590,7 +2587,7 @@ test('CM uses Hakuraku charts and captured teams without inventing a replay cata
   );
 
   await page.getByRole('radio', { name: 'All styles', exact: true }).click();
-  await page.getByRole('tab', { name: 'Introduction', exact: true }).click();
+  await page.getByRole('tab', { name: 'Overview', exact: true }).click();
   await page
     .locator('figure')
     .filter({ has: page.locator('#cm-overview-umas-title') })
@@ -2598,12 +2595,12 @@ test('CM uses Hakuraku charts and captured teams without inventing a replay cata
     .first()
     .click();
 
-  await expect(page.getByRole('tab', { name: 'Uma Analysis', exact: true })).toHaveAttribute(
+  await expect(page.getByRole('tab', { name: 'Umas', exact: true })).toHaveAttribute(
     'aria-selected',
     'true'
   );
 
-  await page.getByRole('tab', { name: 'Strategy Analysis', exact: true }).click();
+  await page.getByRole('tab', { name: 'Strategy', exact: true }).click();
   await expect(
     page.getByRole('heading', { name: 'Effects of style saturation', exact: true })
   ).toBeVisible();
@@ -2662,7 +2659,7 @@ test('CM uses Hakuraku charts and captured teams without inventing a replay cata
     expect(cards[0]).toBeLessThan(700);
     expect(
       await page
-        .getByRole('tab', { name: 'Strategy Analysis', exact: true })
+        .getByRole('tab', { name: 'Strategy', exact: true })
         .evaluate((e) => e.getBoundingClientRect().height)
     ).toBeLessThanOrEqual(30);
   }
@@ -2711,7 +2708,7 @@ test('CM uses Hakuraku charts and captured teams without inventing a replay cata
     page.getByRole('img', { name: 'Debuffer win rate versus styles in the field', exact: true })
   ).toBeVisible();
 
-  await page.getByRole('tab', { name: 'Uma Analysis', exact: true }).click();
+  await page.getByRole('tab', { name: 'Umas', exact: true }).click();
   await expect(
     page.getByRole('heading', { name: 'Individual vs. team win rate', exact: true })
   ).toBeVisible();
@@ -2765,19 +2762,19 @@ test('CM uses Hakuraku charts and captured teams without inventing a replay cata
     page.getByRole('button', { name: 'Expand Individual vs. team win rate', exact: true })
   ).toBeFocused();
 
-  await page.getByRole('tab', { name: 'Strategy Analysis', exact: true }).click();
+  await page.getByRole('tab', { name: 'Strategy', exact: true }).click();
   await expect(page.getByRole('radio', { name: 'Other styles', exact: true })).toHaveAttribute(
     'aria-checked',
     'true'
   );
 
-  await page.getByRole('tab', { name: 'Uma Analysis', exact: true }).click();
+  await page.getByRole('tab', { name: 'Umas', exact: true }).click();
   await expect(page.getByRole('searchbox', { name: 'Find an Uma', exact: true })).toHaveValue(
     'Kitasan Black'
   );
 
   await page.screenshot({ path: info.outputPath('cm-uma.png'), fullPage: true });
-  await page.getByRole('tab', { name: 'Skill Analysis', exact: true }).click();
+  await page.getByRole('tab', { name: 'Skills', exact: true }).click();
   await expect(page.getByRole('table', { name: 'CM Skill Analysis', exact: true })).toBeVisible();
   await page.getByRole('searchbox', { name: 'Search skills', exact: true }).fill('no such skill');
   await expect(page.getByText('No skills match these filters.', { exact: true })).toBeVisible();
@@ -2865,9 +2862,9 @@ test('CM uses Hakuraku charts and captured teams without inventing a replay cata
     .click();
 
   await expect(comparison.locator('.lane.card')).toHaveCount(1);
-  await page.getByRole('tab', { name: 'Uma Analysis', exact: true }).click();
+  await page.getByRole('tab', { name: 'Umas', exact: true }).click();
   await page.getByRole('button', { name: 'Find teams', exact: true }).click();
-  await expect(page.getByRole('tab', { name: 'Archetype Analysis', exact: true })).toHaveAttribute(
+  await expect(page.getByRole('tab', { name: 'Archetypes', exact: true })).toHaveAttribute(
     'aria-selected',
     'true'
   );
@@ -3357,7 +3354,7 @@ test('CM uses Hakuraku charts and captured teams without inventing a replay cata
   await expect(openTeam).toBeFocused();
   const lobby = page.getByRole('complementary', { name: 'Lobby', exact: true });
   await expect(lobby).toContainText('3/9 Uma');
-  await expect(page.getByRole('tab', { name: 'Archetype Analysis', exact: true })).toHaveAttribute(
+  await expect(page.getByRole('tab', { name: 'Archetypes', exact: true })).toHaveAttribute(
     'aria-selected',
     'true'
   );
@@ -3464,10 +3461,15 @@ test('research opens original notes with math, attachments, and mobile layouts i
   await expect(
     page.getByRole('heading', { level: 1, name: 'Research', exact: true })
   ).toBeVisible();
+  const featured = page.locator('#research-notes li.featured').first();
+  await expect(featured).toContainText('New');
+  await expect(featured).toContainText('Pinned');
+  await expect(featured).toContainText('A new age for Umamusume data');
   await page.screenshot({ path: info.outputPath('research-library.png'), fullPage: true });
   await page.getByRole('combobox', { name: 'Sort notes', exact: true }).click();
   await page.getByRole('option', { name: 'Oldest first', exact: true }).click();
-  await expect(page.locator('#research-notes a').first()).toContainText(
+  await expect(page.locator('#research-notes a').first()).toContainText('Pinned');
+  await expect(page.locator('#research-notes a').nth(1)).toContainText(
     'SingleModeUtils.CalcRelationPoint'
   );
   await page.getByRole('combobox', { name: 'Sort notes', exact: true }).click();
@@ -3487,29 +3489,42 @@ test('research opens original notes with math, attachments, and mobile layouts i
   await expect(page.locator('#research-notes a')).toHaveCount(1);
   await page.locator('#research-notes a').click();
   await expect(page.locator('.markdown .katex').first()).toBeVisible();
-  if (info.project.name === 'chromium') {
-    await page
-      .getByRole('navigation', { name: 'Article outline' })
-      .getByRole('link', { name: 'Baseline mechanics', exact: true })
-      .click();
-
-    await expect(page).toHaveURL(/spot-struggle\?.*#section-0/);
-    await expect(
-      page.getByRole('heading', { name: 'Baseline mechanics', exact: true })
-    ).toBeVisible();
-  }
-
-  if (info.project.name !== 'chromium') {
+  if (info.project.name !== 'chromium')
     await page.getByRole('button', { name: 'In this note', exact: true }).click();
-    await page
-      .getByRole('navigation', { name: 'Article outline' })
-      .getByRole('link', { name: 'Baseline mechanics', exact: true })
-      .click();
 
-    await expect(
-      page.getByRole('heading', { name: 'Baseline mechanics', exact: true })
-    ).toBeVisible();
-  }
+  await page
+    .getByRole('navigation', { name: 'Article outline' })
+    .filter({ visible: true })
+    .getByRole('link', { name: 'Aptitude appears to scale duration', exact: true })
+    .click();
+
+  await expect(page).toHaveURL(/spot-struggle\?.*#section-2/);
+  const targetHeading = page.getByRole('heading', {
+    name: 'Aptitude appears to scale duration',
+    exact: true
+  });
+  await expect(targetHeading).toBeFocused();
+  await expect(targetHeading).toBeInViewport();
+  await expect
+    .poll(() => targetHeading.evaluate((element) => element.getBoundingClientRect().top))
+    .toBeGreaterThanOrEqual(60);
+
+  await page.evaluate(() => window.scrollTo(0, 0));
+  await page
+    .getByRole('navigation', { name: 'Article outline' })
+    .filter({ visible: true })
+    .getByRole('link', { name: 'Aptitude appears to scale duration', exact: true })
+    .click();
+  await expect(targetHeading).toBeFocused();
+  await expect(targetHeading).toBeInViewport();
+
+  await page.reload();
+  await expect(targetHeading).toBeFocused();
+  await expect(targetHeading).toBeInViewport();
+  await expect(page.locator('.markdown .katex-display').first()).toHaveCSS(
+    'border-left-width',
+    '3px'
+  );
 
   for (const image of await page.locator('.markdown img').all()) {
     await image.evaluate((element) => element.scrollIntoView({ block: 'center' }));
@@ -3535,9 +3550,9 @@ test('research opens original notes with math, attachments, and mobile layouts i
     await page.screenshot({ path: info.outputPath(`research-${theme}.png`) });
   }
 
-  await expect(
-    page.getByRole('navigation', { name: 'More research notes', exact: true })
-  ).toContainText('Dueling mechanics');
+  await expect(page.getByRole('region', { name: 'Keep reading', exact: true })).toContainText(
+    'Dueling mechanics'
+  );
 
   if (info.project.name === 'chromium')
     await expect(page.getByRole('link', { name: 'Race Analysis', exact: true })).toBeVisible();
@@ -3892,6 +3907,19 @@ test('automatic resimulation falls back on failure and exposes simulator decisio
   );
 
   await expect(results.getByRole('columnheader')).toHaveCount(11);
+  const buildCell = results.locator('.result-stats').first();
+  const statBounds = await buildCell.locator('[data-stat]').evaluateAll((stats) =>
+    stats.map((stat) => {
+      const { x, y, width, height } = stat.getBoundingClientRect();
+      return { x, y, width, height };
+    })
+  );
+  const spBounds = (await buildCell.locator('.result-sp').boundingBox())!;
+  expect(statBounds).toHaveLength(5);
+  expect(statBounds[0]!.y).toBe(statBounds[2]!.y);
+  expect(statBounds[3]!.y).toBeGreaterThanOrEqual(statBounds[0]!.y + statBounds[0]!.height);
+  expect(Math.abs(statBounds[3]!.y - spBounds.y)).toBeLessThan(2);
+  expect(statBounds[0]!.x).toBe(statBounds[3]!.x);
   await expect(results).toContainText('3.25');
   await expect(results).toContainText('1.25');
   await expect(results).toContainText('Downhill');
@@ -3965,7 +3993,7 @@ test('automatic resimulation falls back on failure and exposes simulator decisio
     .locator('.runner-overview')
     .screenshot({ path: info.outputPath('runner-cm-overview.png') });
 
-  await analysis.getByRole('button', { name: 'Choose runner', exact: true }).click();
+  await analysis.getByRole('button', { name: 'Change Uma', exact: true }).click();
   const picker = page.getByRole('dialog', { name: 'Choose runner', exact: true });
   await expect(picker.locator('.runner-choice .build.compact')).toHaveCount(2);
   await expect(
@@ -4170,7 +4198,7 @@ test('automatic resimulation falls back on failure and exposes simulator decisio
       .getByRole('button', { name: /Review .*blocked by/ })
   ).toHaveCount(1);
 
-  await page.getByRole('button', { name: 'Choose runner', exact: true }).click();
+  await page.getByRole('button', { name: 'Change Uma', exact: true }).click();
   await page
     .getByRole('dialog', { name: 'Choose runner', exact: true })
     .getByRole('button', { name: 'Gate 2 · Blocker Suzuka', exact: true })
@@ -4193,7 +4221,7 @@ test('automatic resimulation falls back on failure and exposes simulator decisio
     'No front blocking recorded'
   );
 
-  await page.getByRole('button', { name: 'Choose runner', exact: true }).click();
+  await page.getByRole('button', { name: 'Change Uma', exact: true }).click();
   await page
     .getByRole('dialog', { name: 'Choose runner', exact: true })
     .getByRole('button', { name: 'Gate 1 · Inspected Special Week', exact: true })
@@ -4215,7 +4243,11 @@ test('automatic resimulation falls back on failure and exposes simulator decisio
     0
   );
 
-  await expect(runnerBuild.locator('.race-build-card')).toHaveCSS('border-top-width', '0px');
+  await expect(runnerBuild.locator('.build-card')).toHaveClass(/framed/);
+  await expect(runnerBuild.locator('.build-card')).toHaveCSS('border-top-width', '2px');
+  const skillsBounds = (await runnerBuild.locator('.skills-section').boundingBox())!;
+  const trainingBounds = (await runnerBuild.locator('.training').boundingBox())!;
+  expect(trainingBounds.y).toBeGreaterThanOrEqual(skillsBounds.y + skillsBounds.height);
   if (info.project.name === 'mobile-chromium')
     await runnerBuild.getByRole('button', { name: 'Training setup', exact: true }).click();
   await expect(runnerBuild).toContainText('Support deck');

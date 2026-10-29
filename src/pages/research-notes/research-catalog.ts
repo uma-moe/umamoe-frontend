@@ -3,7 +3,7 @@ import type Badge from '@/components/Badge.svelte';
 import type { IconName } from '@/components/icon-types';
 import manifest from '../../../public/hakuraku/notes/manifest.json';
 
-export type ResearchNote = (typeof manifest)[number];
+export type ResearchNote = (typeof manifest)[number] & { pinned?: boolean };
 export type ResearchTopic = 'Race mechanics' | 'Inheritance' | 'Training' | 'Data & analysis';
 export type ResearchSort = 'newest' | 'oldest' | 'title';
 type BadgeTone = NonNullable<ComponentProps<typeof Badge>['tone']>;
@@ -107,9 +107,11 @@ export function filterNotes(query: LibraryQuery): ResearchNote[] {
     return inTopic && searchable.includes(search);
   });
 
-  if (query.sort === 'title') return matching.sort((a, b) => a.title.localeCompare(b.title));
-  if (query.sort === 'oldest') return matching.reverse();
-  return matching;
+  if (query.sort === 'title') matching.sort((a, b) => a.title.localeCompare(b.title));
+  else if (query.sort === 'oldest') matching.reverse();
+
+  // Stable sorting keeps the selected order within pinned and unpinned notes.
+  return matching.sort((a, b) => Number(Boolean(b.pinned)) - Number(Boolean(a.pinned)));
 }
 
 export function countNotes(topic: string): number {

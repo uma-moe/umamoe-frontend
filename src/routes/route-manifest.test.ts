@@ -50,12 +50,24 @@ describe('Application route manifest', () => {
     )!;
 
     expect(tools.children?.map((child) => child.href)).toEqual([
-      '/tools/statistics',
-      '/tools/lineage-planner',
+      '/simulator/race',
       '/tools/skill-explorer',
-      '/tools/master-data',
+      '/simulator/hp',
       '/simulator/skills',
-      '/timeline?tab=carat-planner'
+      '/tools/lineage-planner',
+      '/timeline?tab=carat-planner',
+      '/tools/statistics',
+      '/tools/master-data'
+    ]);
+    expect(tools.children?.map((child) => child.badge)).toEqual([
+      'New',
+      'New',
+      'New',
+      'New',
+      undefined,
+      undefined,
+      undefined,
+      'New'
     ]);
     expect(tools.expanded).toBe(true);
     expect(tools.children?.filter((child) => child.current).map((child) => child.id)).toEqual([
@@ -80,19 +92,35 @@ describe('Application route manifest', () => {
       'cm-data'
     ]);
     expect(competitive.children?.map((item) => item.id)).toEqual(['race-analysis', 'cm-data']);
+    expect(competitive.badge).toBe('New');
+    expect(competitive.children?.map((item) => item.badge)).toEqual(['New', 'New']);
+    expect(navigation.find((item) => item.id === 'research')?.badge).toBe('New');
     expect(routeDefinitionForPath('/research/spot-struggle')?.id).toBe('research');
   });
 
-  it('keeps the Build Optimizer selected under Tools at its simulator URL', () => {
-    const navigation = navigationForPath('/simulator/skills');
+  it('retires badges from the previous usability release', () => {
+    const navigation = navigationForPath('/timeline', '?tab=carat-planner').main;
+    const timeline = navigation.find((item) => item.id === 'timeline');
+
+    expect(navigation.find((item) => item.id === 'database')?.badge).toBeUndefined();
+    expect(timeline?.badge).toBeUndefined();
+    expect(timeline?.children?.every((item) => item.badge === undefined)).toBe(true);
+  });
+
+  it.each([
+    ['/simulator/race', 'race-simulator'],
+    ['/simulator/hp', 'hp-calculator'],
+    ['/simulator/skills', 'build-optimizer']
+  ])('keeps %s selected under Tools', (path, id) => {
+    const navigation = navigationForPath(path);
     const tools = navigation.main.find((item) => item.id === 'tools');
 
     expect(tools?.current).toBe(true);
     expect(tools?.expanded).toBe(true);
     expect(tools?.children?.filter((child) => child.current).map((child) => child.id)).toEqual([
-      'build-optimizer'
+      id
     ]);
-    expect(routeDefinitionForPath('/simulator/skills')?.id).toBe('build-optimizer');
+    expect(routeDefinitionForPath(path)?.id).toBe(id);
   });
 
   it('excludes the support card tierlist from all product routes and navigation', () => {

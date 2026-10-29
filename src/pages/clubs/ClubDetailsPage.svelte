@@ -283,7 +283,11 @@
         </Banner>
       {/if}
       {#if loading}
-        <div class="loading"><Spinner size={30} />Loading club…</div>
+        <Spinner
+          centered
+          minHeight="220px"
+          label="Loading club…"
+        />
       {:else if details}
         <ClubDetailsOverview
           {details}

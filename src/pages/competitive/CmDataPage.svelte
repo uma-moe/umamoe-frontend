@@ -69,13 +69,11 @@
 
   const colors = $derived(colorblind ? accessibleColors : styleColors);
   const tabs: TabItem[] = $derived([
-    { id: 'introduction', label: 'Introduction', icon: 'info' },
-    { id: 'strategy', label: 'Strategy Analysis', icon: 'chart' },
-    { id: 'character', label: 'Uma Analysis', icon: 'users' },
-    ...(snapshot?.skillAnalysis
-      ? [{ id: 'skills', label: 'Skill Analysis', icon: 'star' as const }]
-      : []),
-    { id: 'archetypes', label: 'Archetype Analysis', icon: 'grid' }
+    { id: 'introduction', label: 'Overview', icon: 'info' },
+    { id: 'strategy', label: 'Strategy', icon: 'chart' },
+    { id: 'character', label: 'Umas', icon: 'users' },
+    ...(snapshot?.skillAnalysis ? [{ id: 'skills', label: 'Skills', icon: 'star' as const }] : []),
+    { id: 'archetypes', label: 'Archetypes', icon: 'grid' }
   ]);
 
   $effect(() => {
@@ -150,20 +148,12 @@
 <AppPage
   routeId="cm-data"
   title="CM Data"
-  description="Champions Meeting statistics · Hakuraku × uma.moe"
+  description="Champions Meeting statistics from Hakuraku."
   width="wide"
   compactHeading
 >
   {#snippet actions()}
     {#if snapshot}
-      <Button
-        variant="secondary"
-        size="sm"
-        icon="veterans"
-        href={'/simulator/race?team-search=1&cm-snapshot=' + encodeURIComponent(snapshotId)}
-      >
-        Find my best team
-      </Button>
       <div class="dataset-picker">
         <SelectField
           id="cm-snapshot"

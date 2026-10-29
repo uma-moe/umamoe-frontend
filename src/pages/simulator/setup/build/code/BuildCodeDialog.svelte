@@ -21,7 +21,6 @@
     buildCodeOffers,
     buildCodeUma,
     codePage,
-    decodeBuildCode,
     encodeBuildCode,
     looksLikeBuildCode,
     sameRunner,
@@ -29,21 +28,26 @@
     type BuildCodePage
   } from './build-code';
   import BuildCodePreview from './BuildCodePreview.svelte';
+  import { decodeBuildImport } from './final-turn';
 
   /**
    * Build codes in and out. Pasting one loads the runner (stats, style, mood, aptitudes, skills, fans), the course and
    * its conditions, and for Build search her skill points, Fast Learner, the goal and the skills on offer with their
    * hints. Copying writes the whole tab as a code; a code copied from this tab restores all of it here. A code pasted
-   * anywhere on the page opens this with it.
+   * anywhere on the page opens this with it. A career's final turn, saved as JSON by honse_act or UmaExporter, loads
+   * the same way, as a runner with her fans, skill points and hinted skills.
    */
   let {
     open = $bindable(false),
+    text = $bindable(''),
     target,
     current,
     onimport,
     onrestore
   }: {
     open?: boolean;
+    /** The code in the field; a page can hand one in, such as a code from its link. */
+    text?: string;
     /** What the page takes: the race field takes both runners, Build search also what she can buy. */
     target: 'race' | 'stamina' | 'build';
     /** The page's setup as a code, for copying. */
@@ -59,12 +63,15 @@
   } = $props();
 
   const uid = $props.id();
-  let text = $state(''),
-    code = $state.raw<BuildCode>(),
+  let code = $state.raw<BuildCode>(),
     error = $state(''),
     applyError = $state(''),
     pasteError = $state(''),
     copied = $state('');
+
+  /** A final turn opened from a file; a code typed or pasted into the field wins over it. */
+  let file = $state.raw<{ name: string; text: string }>();
+  let fileInput = $state<HTMLInputElement>();
 
   let gameDataError = $state('');
   let skills = $state.raw(new Map<number, SkillData>()),
@@ -102,17 +109,21 @@
     };
   });
 
-  // Read the code as it is typed or pasted; a later edit wins over a slower earlier read.
+  const source = $derived(text.trim() ? text : (file?.text ?? ''));
+
+  // Read the code as it is typed or pasted; a later edit wins over a slower earlier read. A final turn is read again
+  // once the skills load, since its hints name skill groups.
   let reading = 0;
   $effect(() => {
-    const value = text,
+    const value = source,
+      skillLookup = skills,
       attempt = ++reading;
 
     code = undefined;
     error = '';
     pasteError = '';
     if (!value.trim()) return;
-    decodeBuildCode(value)
+    decodeBuildImport(value, skillLookup)
       .then((result) => {
         if (attempt === reading) code = result;
       })
@@ -200,7 +211,21 @@
     }
 
     text = '';
+    file = undefined;
     open = false;
+  }
+
+  async function openFile(files: FileList | null) {
+    const chosen = files?.[0];
+    if (!chosen) return;
+
+    pasteError = '';
+    try {
+      file = { name: chosen.name, text: await chosen.text() };
+      text = '';
+    } catch {
+      pasteError = 'This file can’t be read.';
+    }
   }
 
   async function copy() {
@@ -243,9 +268,7 @@
 <Dialog
   bind:open
   title="Build code"
-  description="Load a runner, her course and its conditions from a code{current
-    ? ', or copy this setup as one'
-    : ''}."
+  description="Load a code or a career’s final turn."
   icon="clipboard"
   maxWidth="640px"
   maxHeight="88dvh"
@@ -286,7 +309,11 @@
           autocomplete="off"
           bind:value={text}
           error={error || field?.error || pasteError || ''}
-          help={error ? undefined : 'A code pasted anywhere on the page opens this with it.'}
+          help={error
+            ? undefined
+            : file && !text.trim()
+              ? 'Loaded from ' + file.name + '.'
+              : 'A code pasted anywhere on the page opens this with it.'}
         />
       </div>
       <Button
@@ -296,6 +323,25 @@
       >
         Paste
       </Button>
+      <Button
+        variant="secondary"
+        icon="upload"
+        onclick={() => fileInput?.click()}
+      >
+        Open final turn
+      </Button>
+      <input
+        bind:this={fileInput}
+        class="sr-only"
+        type="file"
+        accept=".json,application/json"
+        tabindex="-1"
+        aria-hidden="true"
+        onchange={(event) => {
+          void openFile(event.currentTarget.files);
+          event.currentTarget.value = '';
+        }}
+      />
     </div>
     {#if code && runners.length}
       <BuildCodePreview
@@ -309,7 +355,7 @@
         {skills}
         whole={page !== undefined}
       />
-    {:else if !text.trim()}
+    {:else if !source.trim()}
       <div class="holds">
         <strong>A code holds</strong>
         <ul>
@@ -317,6 +363,14 @@
           <li>The course with its ground, weather, season and time of day</li>
           {#if target === 'build'}
             <li>Her skill points, the goal and the skills on offer with their hints</li>
+          {/if}
+        </ul>
+        <strong>A career’s final turn</strong>
+        <ul>
+          <li>The JSON honse_act or UmaExporter save on the last turn of a career</li>
+          <li>Her stats, style, mood, aptitudes, skills and fans</li>
+          {#if target === 'build'}
+            <li>Her skill points and every hinted skill at its hint level</li>
           {/if}
         </ul>
       </div>
@@ -341,10 +395,10 @@
         </span>
       {:else if error || field?.error}
         <span class="blocked">This code can’t be loaded.</span>
-      {:else if text.trim()}
+      {:else if source.trim()}
         <span>Reading the code…</span>
       {:else}
-        <span>Paste a code to see what it loads.</span>
+        <span>Paste a code or open a career’s final turn to see what it loads.</span>
       {/if}
     </DialogStatus>
     <Button
@@ -373,7 +427,7 @@
   .code-row {
     --control-height: 36px;
     display: grid;
-    grid-template-columns: minmax(0, 1fr) auto;
+    grid-template-columns: minmax(0, 1fr) auto auto;
     align-items: start;
     gap: 8px;
   }

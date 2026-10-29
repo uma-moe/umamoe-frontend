@@ -147,14 +147,6 @@
     animation: none;
   }
 }
-.loading {
-  min-height: 220px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: var(--space-3);
-  color: var(--color-text-muted);
-}
 .no-results {
   min-height: 230px;
   display: grid;

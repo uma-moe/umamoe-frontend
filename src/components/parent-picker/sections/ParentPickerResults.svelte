@@ -57,7 +57,7 @@
     class="empty"
     role="status"
   >
-    <Spinner />
+    <Spinner size={48} />
     <h3>
       {sources.partnerPhase === 'queued'
         ? 'Request queued…'
@@ -80,14 +80,13 @@
     <p>{sources.lookupError}</p>
   </div>
 {:else if loading}
-  <div
-    class="empty"
-    role="status"
-  >
-    <Spinner />{pickerState.tab === 'saved'
-      ? 'Loading saved partners...'
-      : `Loading ${pickerState.tab === 'veterans' ? 'veterans' : 'bookmarks'}…`}
-  </div>
+  <Spinner
+    centered
+    minHeight="200px"
+    label={pickerState.tab === 'saved'
+      ? 'Loading saved partners…'
+      : `Loading ${pickerState.tab === 'veterans' ? 'Veterans' : 'bookmarks'}…`}
+  />
 {:else if error}
   <Banner
     title="Parents could not be loaded"

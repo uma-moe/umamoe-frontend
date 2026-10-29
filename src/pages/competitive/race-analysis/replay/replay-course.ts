@@ -2,6 +2,7 @@ import type { ParsedRaceCapture } from '@/lib/race/capture/race-capture-parser';
 import { appHttp } from '@/services/http/app-http';
 import { resourceCache } from '@/services/resources/resource-cache';
 import { finalSpurtSection } from '@/lib/race/final-spurt';
+import { TRACK_NAMES } from '@/lib/game-data/racing/courses';
 
 export type Course = {
   raceTrackId: number;
@@ -35,25 +36,6 @@ type GeometryResource = {
   position_z: number[];
 };
 
-// Track labels; course dimensions and geometry come from the resource manifest.
-const names: CourseData['names'] = {
-  10001: 'Sapporo',
-  10002: 'Hakodate',
-  10003: 'Niigata',
-  10004: 'Fukushima',
-  10005: 'Nakayama',
-  10006: 'Tokyo',
-  10007: 'Chukyo',
-  10008: 'Kyoto',
-  10009: 'Hanshin',
-  10010: 'Kokura',
-  10101: 'Oi',
-  10103: 'Kawasaki',
-  10104: 'Funabashi',
-  10105: 'Morioka',
-  10201: 'Longchamp'
-};
-
 export function loadReplayCourses(): Promise<CourseData> {
   return resourceCache.load('simulator_courses', false, (value) => {
     const data = value as {
@@ -84,7 +66,8 @@ export function loadReplayCourses(): Promise<CourseData> {
     const range = data.race_parameters?.around_horse?.visible_distance_m;
     return {
       courses,
-      names,
+      // Course dimensions and geometry come from the resource manifest; it carries no track names.
+      names: TRACK_NAMES,
       baseViewDistance:
         typeof range === 'number' && Number.isFinite(range) && range > 0 ? range : undefined
     };

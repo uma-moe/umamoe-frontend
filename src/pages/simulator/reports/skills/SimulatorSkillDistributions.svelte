@@ -1,6 +1,6 @@
 <script lang="ts">
-  import { onMount } from 'svelte';
-  import { loadSkills, resolveEncodedSkill, type SkillData } from '@/lib/game-data/skills/skills';
+  import { resolveEncodedSkill } from '@/lib/game-data/skills/skills';
+  import { ReportSkillCatalog } from './report-skill-catalog.svelte';
   import ChartFrame from '@/components/charts/ChartFrame.svelte';
   import SelectField from '@/components/controls/SelectField.svelte';
   import StatStrip from '@/components/game/StatStrip.svelte';
@@ -34,29 +34,11 @@
     focusOnly?: boolean;
   } = $props();
 
-  let expanded = $state(false),
-    skillLookup = $state.raw(new Map<number, SkillData>());
+  let expanded = $state(false);
 
-  let skillDataError = $state('');
-
-  onMount(() => {
-    let active = true;
-    void loadSkills()
-      .then((value) => {
-        if (active) skillLookup = value;
-      })
-      .catch((reason: unknown) => {
-        if (active)
-          skillDataError =
-            reason instanceof Error
-              ? reason.message
-              : 'Skill names could not be loaded. Observations remain available.';
-      });
-
-    return () => {
-      active = false;
-    };
-  });
+  const catalog = new ReportSkillCatalog(
+    'Skill names could not be loaded. Observations remain available.'
+  );
 
   const data = $derived(
     skillDistributions(
@@ -234,8 +216,8 @@
   class="skill-analysis"
   aria-label="Skill distributions"
 >
-  {#if skillDataError}
-    <p role="alert">{skillDataError}</p>
+  {#if catalog.error}
+    <p role="alert">{catalog.error}</p>
   {/if}
   {#if !result.skill_procs}
     <p class="unavailable">Run a new batch to capture skill timings and duration distributions.</p>
@@ -330,7 +312,7 @@
                 options={data.rows.map((skill) => ({
                   value: String(skill.id),
                   label:
-                    resolveEncodedSkill(skillLookup, skill.id).skill?.name ?? 'Skill ' + skill.id
+                    resolveEncodedSkill(catalog.lookup, skill.id).skill?.name ?? 'Skill ' + skill.id
                 }))}
               />
             </div>

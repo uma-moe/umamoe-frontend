@@ -2,16 +2,22 @@ import type { IconName } from '@/components/icon-types';
 import type { NavigationItem, NavigationSubItem } from '@/components/navigation/navigation-types';
 import type { PageWidth } from '@/layouts/breakpoints';
 import featureManifest from '../../contracts/features.json';
+import { toolLinks } from './tool-links';
 
 export type RouteGroup = 'main' | 'community' | 'competitive' | 'research' | 'tools' | 'system';
 
-export const updatedNavigationHrefs = new Set([
-  '/database',
-  '/timeline',
-  '/timeline?tab=carat-planner',
-  '/tools',
-  '/tools/lineage-planner'
-]);
+export const navigationBadges: Readonly<Record<string, 'New' | 'Updated' | undefined>> = {
+  '/competitive': 'New',
+  '/competitive/race-analysis': 'New',
+  '/competitive/cm-data': 'New',
+  '/research': 'New',
+  '/tools': 'New',
+  '/simulator/race': 'New',
+  '/tools/skill-explorer': 'New',
+  '/simulator/hp': 'New',
+  '/simulator/skills': 'New',
+  '/tools/master-data': 'New'
+};
 
 export interface AppRouteDefinition {
   id: string;
@@ -56,7 +62,7 @@ function directItem(definition: AppRouteDefinition, pathname: string): Navigatio
     label: definition.title,
     href: definition.path,
     icon: definition.icon,
-    badge: updatedNavigationHrefs.has(definition.path) ? 'Updated' : undefined,
+    badge: navigationBadges[definition.path],
     current: pathMatches(definition.path, pathname)
   };
 }
@@ -95,23 +101,32 @@ export function navigationForPath(
     label: 'Carat Planner',
     href: plannerHref,
     current: plannerActive,
-    badge: updatedNavigationHrefs.has(plannerHref) ? 'Updated' : undefined
+    badge: navigationBadges[plannerHref]
   };
 
   const main = routesByIds(mainRouteIds).map((route) => {
     const item = directItem(route, pathname);
-    const children: NavigationSubItem[] = appRoutes
-      .filter(
-        (child) =>
-          child.navigation === 'secondary' &&
-          (child.path.startsWith(`${route.path}/`) ||
-            (route.id === 'tools' && child.group === 'tools'))
-      )
-      .map((child) => directItem(child, pathname));
+    const children: NavigationSubItem[] =
+      route.id === 'tools'
+        ? toolLinks.map((tool) => {
+            if (tool.id === 'carat-planner') return planner;
+
+            return {
+              id: tool.id,
+              label: tool.title,
+              href: tool.href,
+              badge: navigationBadges[tool.href],
+              current: pathMatches(tool.href, pathname)
+            };
+          })
+        : appRoutes
+            .filter(
+              (child) => child.navigation === 'secondary' && child.path.startsWith(`${route.path}/`)
+            )
+            .map((child) => directItem(child, pathname));
 
     if (children.some((child) => child.current)) item.current = true;
 
-    if (route.id === 'tools') children.push(planner);
     if (route.id === 'timeline')
       children.push(
         {

@@ -84,4 +84,5 @@ export type IconName =
   | 'flag'
   | 'play'
   | 'pause'
-  | 'skip-back';
+  | 'skip-back'
+  | 'pin';

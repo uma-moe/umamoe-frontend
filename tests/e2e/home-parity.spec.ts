@@ -26,18 +26,31 @@ test('Home and Tools fill all four Angular counters through the shared statistic
         .poll(() => page.evaluate(() => document.documentElement.scrollWidth))
         .toBeLessThanOrEqual(width);
       const background = await page.locator('.hero').evaluate((element) => {
-        const body = document.querySelector('[data-page-frame]')!.getBoundingClientRect(),
+        const body = document.querySelector('.route-view')!.getBoundingClientRect(),
           hero = element.getBoundingClientRect();
 
         return { left: hero.left - body.left, right: body.right - hero.right };
       });
 
       expect(background).toEqual({ left: 0, right: 0 });
+      if (path === '/tools') {
+        const heroHeight = await page.locator('.hero').evaluate((element) => {
+          const headerHeight = document
+            .querySelector('[data-shell-utility]')!
+            .getBoundingClientRect().height;
+          return {
+            actual: element.getBoundingClientRect().height,
+            expected: innerHeight - headerHeight
+          };
+        });
+
+        expect(heroHeight.actual).toBeGreaterThanOrEqual(heroHeight.expected);
+      }
     }
   }
 });
 
-test('Home and Tools keep source link order, disabled tools and the Angular theme preference', async ({
+test('Home and Tools keep link order, tool badges and the Angular theme preference', async ({
   page
 }) => {
   await page.route('**/api/stats?days=30', (route) => route.fulfill({ json: homeStats }));
@@ -56,13 +69,14 @@ test('Home and Tools keep source link order, disabled tools and the Angular them
     await cards
       .getByRole('link')
       .evaluateAll((links) => links.map((link) => link.getAttribute('href')))
-  ).toEqual(['/database', '/circles', '/rankings', '/timeline', '/tools']);
+  ).toEqual(['/database', '/competitive', '/tools', '/timeline', '/circles', '/rankings']);
   await expect(cards.locator('strong')).toHaveText([
-    'DatabaseUpdated',
+    'Database',
+    'CompetitiveNew',
+    'Tools & AnalyticsNew',
+    'Timeline',
     'Clubs',
-    'Rankings',
-    'TimelineUpdated',
-    'Tools & AnalyticsUpdated'
+    'Rankings'
   ]);
   expect(
     await cards
@@ -100,34 +114,31 @@ test('Home and Tools keep source link order, disabled tools and the Angular them
   await toolsLink.press('Enter');
   await expect(page).toHaveURL(/\/tools$/);
   await expect(cards.locator('strong')).toHaveText([
-    'Master Data',
-    'Skill Explorer',
+    'Race SimulatorNew',
+    'Skill ExplorerNew',
+    'HP CalculatorNew',
+    'Build OptimizerNew',
+    'Lineage Planner',
+    'Carat Planner',
     'Team Stadium Statistics',
-    'Carat PlannerUpdated',
-    'Lineage PlannerUpdated',
-    'HP Calculator',
-    'Race Simulator',
-    'Build Optimizer'
+    'Master DataNew'
   ]);
   expect(
     await cards
       .getByRole('link')
       .evaluateAll((links) => links.map((link) => link.getAttribute('href')))
   ).toEqual([
-    '/tools/master-data',
-    '/tools/skill-explorer',
-    '/tools/statistics',
-    '/timeline?tab=carat-planner',
-    '/tools/lineage-planner',
-    '/simulator/hp',
     '/simulator/race',
-    '/simulator/skills'
+    '/tools/skill-explorer',
+    '/simulator/hp',
+    '/simulator/skills',
+    '/tools/lineage-planner',
+    '/timeline?tab=carat-planner',
+    '/tools/statistics',
+    '/tools/master-data'
   ]);
   await expect(cards.locator('[aria-disabled="true"]')).toHaveCount(0);
-  await expect(cards.locator('.updated-feature')).toContainText([
-    'Carat Planner',
-    'Lineage Planner'
-  ]);
+  await expect(cards.locator('.updated-feature')).toHaveCount(0);
   for (const width of [1536, 768, 390, 320]) {
     await page.setViewportSize({ width, height: 844 });
     await expect

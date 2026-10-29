@@ -1,3 +1,5 @@
+@import './runner-results-stacked.css';
+
 /* A team's build dialog, shared by CM Data and the race session: its result beside the actions in
    the header, then one framed build card per member. */
 .team-details-dialog {
@@ -54,37 +56,6 @@
   font-weight: 650;
   font-variant-numeric: tabular-nums;
   white-space: nowrap;
-}
-/* On the identity line: two short figures stacked beside the Uma's name, each read as "23.8% win rate". */
-.runner-results {
-  grid-template-columns: auto;
-  gap: 2px;
-}
-.runner-results > div {
-  display: flex;
-  flex-direction: row-reverse;
-  justify-content: flex-end;
-  align-items: baseline;
-  gap: 5px;
-}
-.runner-results > div + div {
-  padding-left: 0;
-  border-left: 0;
-}
-.runner-results dt {
-  font-size: 10px;
-  white-space: nowrap;
-}
-.runner-results dd {
-  margin: 0;
-  font-size: 13px;
-}
-/* A narrow card wraps the figures under the name (see runner-build.css), where they have room to share one line. */
-@container (max-width: 315px) {
-  .runner-results {
-    grid-template-columns: repeat(2, max-content);
-    column-gap: var(--space-4);
-  }
 }
 @media (max-width: 1000px) {
   .header-overview {

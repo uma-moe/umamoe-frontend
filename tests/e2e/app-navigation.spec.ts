@@ -42,14 +42,14 @@ test('Tools and Timeline subsections navigate and track the active page in both 
     const nav = page.getByRole('navigation', { name: 'Main navigation', exact: true });
     await expect(
       nav.getByRole('link', { name: 'Database', exact: true })
-    ).toHaveAccessibleDescription('Updated');
+    ).not.toHaveAccessibleDescription('Updated');
 
     await expect(
       nav.getByRole('link', { name: 'Veterans', exact: true })
     ).not.toHaveAccessibleDescription('Updated');
 
     const tools = nav.getByRole('button', { name: /(?:Open|Collapse) Tools subsections/ });
-    await expect(tools).toHaveAccessibleDescription('Updated');
+    await expect(tools).toHaveAccessibleDescription('New');
     const indicator = tools.locator('.navigation-badge');
     if (width === 1920) await expect(indicator).toBeVisible();
     else {
@@ -76,19 +76,28 @@ test('Tools and Timeline subsections navigate and track the active page in both 
     await expand('Tools');
     await expect(
       nav.getByRole('link', { name: 'Carat Planner', exact: true })
-    ).toHaveAccessibleDescription('Updated');
+    ).not.toHaveAccessibleDescription('Updated');
 
     await expect(
       nav.getByRole('link', { name: 'Lineage Planner', exact: true })
-    ).toHaveAccessibleDescription('Updated');
+    ).not.toHaveAccessibleDescription('Updated');
 
-    await nav.getByRole('link', { name: 'Statistics', exact: true }).click();
+    for (const name of [
+      'Race Simulator',
+      'Skill Explorer',
+      'HP Calculator',
+      'Build Optimizer',
+      'Master Data'
+    ]) {
+      await expect(nav.getByRole('link', { name, exact: true })).toHaveAccessibleDescription('New');
+    }
+
+    await nav.getByRole('link', { name: 'Team Stadium Statistics', exact: true }).click();
     await expect(page.locator('[data-route-id="statistics"]')).toBeVisible();
     await expand('Tools');
-    await expect(nav.getByRole('link', { name: 'Statistics', exact: true })).toHaveAttribute(
-      'aria-current',
-      'page'
-    );
+    await expect(
+      nav.getByRole('link', { name: 'Team Stadium Statistics', exact: true })
+    ).toHaveAttribute('aria-current', 'page');
 
     await page.screenshot({ path: testInfo.outputPath(`navigation-${width}.png`) });
     await nav.getByRole('link', { name: 'Carat Planner', exact: true }).click();
@@ -148,19 +157,25 @@ test('Mobile header stays visible and its menu supports subsections, dismissal a
     await button.click();
     const nav = page.getByRole('navigation', { name: 'Mobile navigation', exact: true });
     await expect(nav).toBeVisible();
-    await expect(nav.locator('.navigation-link')).toHaveCount(8);
+    await expect(nav.locator('.navigation-link')).toHaveCount(9);
     await expect(
       nav.getByRole('link', { name: 'Database', exact: true }).locator('.navigation-badge')
-    ).toBeVisible();
+    ).toHaveCount(0);
 
     await expect(
       nav.getByRole('link', { name: 'Carat Planner', exact: true }).locator('.navigation-badge')
-    ).toBeVisible();
+    ).toHaveCount(0);
 
     await expect(nav.getByRole('link', { name: 'Lineage Planner', exact: true })).toBeVisible();
     await expect(
       nav.getByRole('link', { name: 'Lineage Planner', exact: true }).locator('.navigation-badge')
-    ).toBeVisible();
+    ).toHaveCount(0);
+    await expect(
+      nav.getByRole('link', { name: 'Research', exact: true })
+    ).toHaveAccessibleDescription('New');
+    await expect(
+      nav.getByRole('link', { name: 'Race Simulator', exact: true })
+    ).toHaveAccessibleDescription('New');
 
     const menuBox = (await page.locator('#app-mobile-navigation').boundingBox())!,
       headerBox = (await header.boundingBox())!;

@@ -22,7 +22,7 @@ export interface IconLayoutOptions {
   /** Icon edge and the space kept between icons, in pixels. */
   size: number;
   gap: number;
-  /** How far an icon may move from its point, in icon sizes. */
+  /** How far an icon may move from its point, in icon footprints; defaults to one. */
   reach?: number;
 }
 
@@ -41,11 +41,11 @@ function offsetsWithin(rings: number): { dx: number; dy: number }[] {
 const GRID_STEPS_PER_ICON = 4;
 
 /**
- * Places icons without overlap, in the order given: earlier icons keep their exact point, later ones take the nearest
- * free spot within reach, preferring sideways moves. An icon with no free spot in reach stays on its point.
+ * Earlier icons keep their point; later ones take a nearby free spot, preferring sideways moves. Crowded icons with
+ * no free spot in reach stack at their point instead of pushing farther away.
  */
 export function placeIcons(targets: IconTarget[], options: IconLayoutOptions): PlacedIcon[] {
-  const { width, height, size, gap, reach = 3 } = options;
+  const { width, height, size, gap, reach = 1 } = options;
   const footprint = size + gap;
   const half = size / 2;
   const step = footprint / GRID_STEPS_PER_ICON;

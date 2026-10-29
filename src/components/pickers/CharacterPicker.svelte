@@ -140,7 +140,11 @@
     </Banner>
   {/if}
   {#if loading}
-    <Spinner label="Loading characters…" />
+    <Spinner
+      centered
+      minHeight="160px"
+      label="Loading characters…"
+    />
   {/if}
   <div
     class="character-grid"

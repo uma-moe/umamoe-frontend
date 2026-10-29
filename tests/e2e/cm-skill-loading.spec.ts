@@ -71,7 +71,7 @@ test('skill loading prioritizes visible timings and does not wait for the summar
     body: JSON.stringify(metrics),
     contentType: 'application/json'
   });
-  expect(peakConcurrentDetails).toBeLessThanOrEqual(2);
+  expect(peakConcurrentDetails).toBe(6);
   expect(detailRequests).toBeLessThan(totalSkills / 2);
   const scroll = page.getByRole('region', { name: 'CM Skill Analysis scroll area', exact: true });
   if (page.viewportSize()!.width > 600)

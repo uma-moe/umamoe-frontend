@@ -112,6 +112,9 @@
       radial-gradient(circle at 80% 20%, rgb(129 199 132/0.1), transparent 50%),
       radial-gradient(circle at 40% 80%, rgb(255 183 77/0.1), transparent 50%);
   }
+  .tools .hero {
+    min-height: calc(100dvh - var(--utility-height));
+  }
   .hero-content {
     min-width: 0;
     width: 100%;

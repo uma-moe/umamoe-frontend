@@ -3,11 +3,3 @@
   display: grid;
   gap: 7px;
 }
-.loading {
-  min-height: 260px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: var(--space-3);
-  color: var(--color-text-muted);
-}
