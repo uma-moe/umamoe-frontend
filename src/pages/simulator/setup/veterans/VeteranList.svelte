@@ -4,6 +4,7 @@
   import Checkbox from '@/components/controls/Checkbox.svelte';
   import SegmentedControl from '@/components/controls/SegmentedControl.svelte';
   import SelectFieldSlim from '@/components/controls/SelectFieldSlim.svelte';
+  import SkillPoints, { LEARNED_SKILL_POINTS_NOTE } from '@/components/game/SkillPoints.svelte';
   import StatStrip, { type StatStripItem } from '@/components/game/StatStrip.svelte';
   import TextField from '@/components/controls/TextField.svelte';
   import EmptyState from '@/components/feedback/EmptyState.svelte';
@@ -14,8 +15,8 @@
   import { STYLES, SORTS, STATS, shownVeterans } from './veteran-list';
 
   /**
-   * A collection of Veterans to choose from, drawn like the Veterans table: search, filter by running style and sort,
-   * with each one's stats, learned skills and her aptitudes on this course. One is chosen with a click, or several are
+   * A collection of Veterans to choose from, drawn like CM Data's runner cards: search, filter by running style and
+   * sort, with each one's stats, learned skills and her aptitudes on this course. One is chosen with a click, or several are
    * ticked.
    */
   let {
@@ -75,17 +76,16 @@
     selected = next;
   }
 
-  /** Her five stats, then what she learned and the sum, as the Veterans table lists them. */
+  /** Her five stats and their sum, three to a line as CM Data's runner cards show them. */
   function statItems(entry: VeteranEntry): StatStripItem[] {
     return [
       ...STATS.map(([key, icon, label]) => ({
         id: key,
         label,
         value: entry.uma.trainee[key].toLocaleString(),
+        tone: icon,
         icon: '/assets/images/icon/stats/' + icon + '.webp'
       })),
-      { id: 'skills', label: 'Skills', value: entry.learnedSkills },
-      { id: 'sp', label: 'SP', value: entry.skillPoints?.toLocaleString() ?? '-' },
       { id: 'total', label: 'Total', value: entry.total.toLocaleString() }
     ];
   }
@@ -105,8 +105,18 @@
       <StatStrip
         label={entry.uma.name + ' stats'}
         items={statItems(entry)}
+        presentation="inline"
         compact
-        presentation="icons"
+      />
+    </span>
+    <span class="learned">
+      <span>
+        <strong>{entry.learnedSkills}</strong>
+        {entry.learnedSkills === 1 ? 'skill' : 'skills'}
+      </span>
+      <SkillPoints
+        value={entry.skillPoints}
+        note={LEARNED_SKILL_POINTS_NOTE}
       />
     </span>
   {/if}
@@ -119,14 +129,18 @@
       <span
         class="course-aptitude"
         role="listitem"
+        style:--aptitude-color="var(--aptitude-{aptitude.grade.toLowerCase()})"
         title={aptitude.group + ': ' + aptitude.label + ' ' + aptitude.grade}
       >
+        <span class="aptitude-label">
+          <small>{aptitude.group}</small>
+          {aptitude.label}
+        </span>
         <AptitudeGrade
           grade={aptitude.grade}
           label={aptitude.group + ' ' + aptitude.label}
           size="sm"
         />
-        <small>{aptitude.label}</small>
       </span>
     {/each}
   </span>
@@ -211,6 +225,7 @@
         <span class="identity-head">Veteran</span>
         {#if !compact}
           <span class="stats-head">Stats</span>
+          <span class="learned-head">Learned</span>
         {/if}
         <span class="fit-head">{course ? 'On this course' : 'Aptitudes'}</span>
       </div>

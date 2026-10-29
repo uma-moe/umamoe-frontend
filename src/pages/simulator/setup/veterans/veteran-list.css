@@ -1,8 +1,9 @@
 .veteran-list {
   --tick: 0px;
   --go: 0px;
-  --stats: 300px;
-  --fit: 168px;
+  --stats: 264px;
+  --learned: 76px;
+  --fit: 150px;
   display: grid;
   gap: 8px;
   min-width: 0;
@@ -83,7 +84,9 @@
 .head,
 .row {
   display: grid;
-  grid-template-columns: var(--tick) minmax(0, 1fr) var(--stats) var(--fit) var(--go);
+  grid-template-columns:
+    var(--tick) minmax(0, 1fr) var(--stats) var(--learned) var(--fit)
+    var(--go);
   column-gap: 12px;
   align-items: center;
 }
@@ -108,9 +111,11 @@
 .stats-head {
   grid-column: 3;
 }
+.learned-head {
+  grid-column: 4;
+}
 .fit-head {
   grid-column: -3;
-  text-align: center;
   white-space: nowrap;
 }
 .rows {
@@ -184,60 +189,91 @@
 .stats {
   min-width: 0;
 }
-/* The Veterans table's stat cell: four to a line, the icons leading their values. */
-.stats :global(.stats) {
-  grid-template-columns: repeat(4, minmax(0, 1fr));
-  gap: 4px 8px;
-  border: 0;
-  background: transparent;
-}
-.stats :global(.stats > div) {
-  flex-direction: row;
-  justify-content: flex-start;
-  align-items: center;
+/* CM Data's runner-card stats: a tinted tile per stat, three to a line with the total closing the second. */
+.stats :global(.inline-stats) {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 4px;
-  padding: 0;
-  border: 0;
 }
-.stats :global(.stats img) {
+.stats :global(.inline-stats > div) {
+  min-height: 0;
+  gap: 2px 4px;
+  padding: 3px 2px;
+  border: 1px solid color-mix(in srgb, var(--stat-color) 22%, var(--border-subtle));
+  border-radius: var(--radius-sm);
+  background: color-mix(in srgb, var(--stat-color) 9%, var(--surface-2));
+}
+.stats :global(.inline-stats img) {
   width: 13px;
   height: 13px;
 }
-.stats :global(.stats dd) {
-  font-size: 12px;
-  line-height: 1.4;
+.stats :global(.inline-stats dd) {
+  font-size: 13px;
+  line-height: 1.2;
   font-variant-numeric: tabular-nums;
 }
-.stats :global(.stats > [data-stat='total']) {
-  background: transparent;
-}
-.stats :global(.stats > :is([data-stat='skills'], [data-stat='sp'], [data-stat='total']) dt) {
-  color: var(--color-text-muted);
+.stats :global(.inline-stats dt) {
   font-size: 9px;
-  font-weight: 600;
-  letter-spacing: 0;
-  text-transform: none;
+  line-height: 1.2;
 }
+.stats :global(.inline-stats > [data-stat='total'] dd) {
+  grid-column: 1 / -1;
+}
+/* Learned skills sit apart from the stats: how many, and what they cost. */
+.learned {
+  display: grid;
+  gap: 2px;
+  min-width: 0;
+  color: var(--text-secondary);
+  font-size: 11px;
+  line-height: 1.3;
+  white-space: nowrap;
+}
+.learned strong {
+  color: var(--text-primary);
+  font-size: 13px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+.learned :global(.skill-points) {
+  font-size: 12px;
+}
+/* CM Data's race aptitude cells: tinted by the grade, the category above what it was read for. */
 .fit {
   display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 6px;
+  gap: 3px;
   min-width: 0;
 }
 .course-aptitude {
-  display: grid;
-  justify-items: center;
-  gap: 2px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 4px;
   min-width: 0;
-}
-.course-aptitude small {
-  max-width: 100%;
-  overflow: hidden;
-  color: var(--color-text-subtle);
-  font-size: 10px;
+  padding: 2px 4px 2px 8px;
+  border: 1px solid color-mix(in srgb, var(--aptitude-color) 18%, var(--border-subtle));
+  border-radius: var(--radius-sm);
+  background: color-mix(in srgb, var(--aptitude-color) 6%, var(--surface-2));
+  color: var(--text-primary);
+  font-size: 11px;
+  font-weight: 600;
   line-height: 1.2;
-  text-overflow: ellipsis;
+}
+.aptitude-label {
+  display: flex;
+  align-items: baseline;
+  gap: 5px;
+  min-width: 0;
+  overflow: hidden;
   white-space: nowrap;
+}
+.aptitude-label small {
+  color: var(--text-secondary);
+  font-size: 9px;
+  font-weight: 400;
+}
+.course-aptitude :global(.aptitude) {
+  width: 20px;
+  height: 20px;
 }
 .go {
   display: grid;
@@ -252,18 +288,22 @@
 .more {
   justify-self: center;
 }
-/* Narrow: name and aptitudes share the first line, her stats run under them. */
-@container veteran-list (max-width: 720px) {
+/* Narrow: name and aptitudes share the first line, her stats and skills run under them. */
+@container veteran-list (max-width: 760px) {
   .head,
   .row {
     grid-template-columns: var(--tick) minmax(0, 1fr) var(--fit) var(--go);
     row-gap: 6px;
   }
-  .head .stats-head {
+  .head :is(.stats-head, .learned-head) {
     display: none;
   }
   .stats {
-    grid-column: 2 / -1;
+    grid-column: 2;
+    grid-row: 2;
+  }
+  .learned {
+    grid-column: 3 / -1;
     grid-row: 2;
   }
 }
@@ -284,12 +324,21 @@
   .fit {
     grid-column: 2 / -1;
     grid-row: 2;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+  /* Three cells to a line leave room for what each grade was read for, not its category. */
+  .aptitude-label small {
+    display: none;
   }
   .stats {
+    grid-column: 2 / -1;
     grid-row: 3;
   }
-  .stats :global(.stats) {
-    grid-template-columns: repeat(4, minmax(0, 1fr));
+  .learned {
+    grid-column: 2 / -1;
+    grid-row: 4;
+    display: flex;
+    gap: 12px;
   }
   .go {
     opacity: 1;
