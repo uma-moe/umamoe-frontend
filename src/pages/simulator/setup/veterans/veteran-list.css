@@ -1,17 +1,30 @@
 .veteran-list {
+  --tick: 0px;
+  --go: 0px;
+  --stats: 300px;
+  --fit: 168px;
   display: grid;
   gap: 8px;
   min-width: 0;
   container: veteran-list / inline-size;
 }
+.veteran-list.multi {
+  --tick: 22px;
+}
+.veteran-list:not(.multi) {
+  --go: 16px;
+}
+.veteran-list.compact {
+  --stats: 0px;
+}
+/* Pinned flush to the scroller's top edge: the owner moves its top padding here through the inset variable. */
 .controls {
   position: sticky;
   top: var(--veteran-list-sticky-top, 0);
-  z-index: 2;
+  z-index: 3;
   display: grid;
-  gap: 8px;
-  padding-block: 2px 6px;
-  border-bottom: 1px solid var(--border-subtle);
+  gap: 6px;
+  padding-top: var(--veteran-list-inset-top, 0);
   background: var(--veteran-list-bg, var(--dialog-surface-bg));
 }
 .tools {
@@ -22,19 +35,12 @@
   align-items: center;
 }
 .search {
-  flex: 1 1 140px;
+  flex: 1 1 160px;
   min-width: 0;
 }
-.search :global(input) {
-  font-size: 13px;
-}
 .sort {
-  flex: 0 1 132px;
-  min-width: 112px;
-}
-.sort :global(button.select-control) {
-  min-height: 34px;
-  font-size: 12px;
+  flex: 0 1 140px;
+  min-width: 120px;
 }
 /* Narrow: search and sort share a row, the styles take the next. */
 @container veteran-list (max-width: 520px) {
@@ -54,147 +60,184 @@
     flex: 1;
   }
 }
-.head,
-.row {
-  display: grid;
-  grid-template-columns: var(--tick, 0) 36px minmax(0, 1fr) var(--stats, 290px) 62px var(--go, 0);
-  column-gap: 10px;
-  align-items: center;
-}
-.veteran-list:has(input[type='checkbox']) .head,
-.veteran-list:has(input[type='checkbox']) .row {
-  --tick: 18px;
-}
-.veteran-list:has(.go) .head,
-.veteran-list:has(.go) .row {
-  --go: 20px;
-}
-.compact .head,
-.compact .row {
-  --stats: 0;
-  grid-template-columns: var(--tick, 0) 30px minmax(0, 1fr) 62px var(--go, 0);
-}
-.head {
-  padding: 0 8px;
-  font-size: 11px;
-  color: var(--text-secondary);
-}
-.head .count {
-  grid-column: 1 / 4;
+.summary-line {
   display: flex;
-  align-items: baseline;
+  align-items: center;
   gap: 10px;
+  min-height: 24px;
+  color: var(--text-secondary);
+  font-size: 11px;
   white-space: nowrap;
-}
-.compact .head .count {
-  grid-column: 1 / 4;
 }
 .room.full {
   color: var(--accent-warning);
 }
-/* A text action on the header's count line, at its size. */
-.head .count :global(.ui-button) {
+/* A text action on the count line, at its size. */
+.summary-line :global(.ui-button) {
   min-height: 24px;
+  margin-left: auto;
   padding-inline: 6px;
   color: var(--accent-primary);
   font-size: 11px;
 }
+.head,
+.row {
+  display: grid;
+  grid-template-columns: var(--tick) minmax(0, 1fr) var(--stats) var(--fit) var(--go);
+  column-gap: 12px;
+  align-items: center;
+}
+.compact .head,
+.compact .row {
+  grid-template-columns: var(--tick) minmax(0, 1fr) var(--fit) var(--go);
+}
+/* The table's head row: the first cell of the bordered table below, joined to it. */
+.head {
+  padding: 6px 10px;
+  border: 1px solid var(--border-primary);
+  border-bottom-color: var(--border-subtle);
+  border-radius: var(--radius-lg) var(--radius-lg) 0 0;
+  background: var(--card-surface-bg);
+  color: var(--color-text-muted);
+  font-size: 11px;
+  font-weight: 500;
+}
+.identity-head {
+  grid-column: 2;
+}
 .stats-head {
-  grid-column: 4;
+  grid-column: 3;
 }
 .fit-head {
   grid-column: -3;
+  text-align: center;
   white-space: nowrap;
 }
 .rows {
   display: grid;
-  gap: 2px;
-  margin: 0;
+  margin: -8px 0 0;
   padding: 0;
+  overflow: hidden;
+  border: 1px solid var(--border-primary);
+  border-top: 0;
+  border-radius: 0 0 var(--radius-lg) var(--radius-lg);
+  background: var(--card-surface-bg);
   list-style: none;
 }
 .row {
-  width: 100%;
-  min-height: 44px;
-  padding: 4px 8px;
-  border: 1px solid transparent;
-  border-radius: 8px;
-  background: transparent;
-  color: var(--text-primary);
-  font: inherit;
-  text-align: left;
+  position: relative;
+  min-width: 0;
+  padding: 8px 10px;
+  color: var(--color-text);
   cursor: pointer;
+}
+.row + .row {
+  border-top: 1px solid var(--border-subtle);
 }
 .row:hover {
   background: var(--surface-2);
 }
-.row:focus-visible,
-.row:has(input:focus-visible) {
+.row.on {
+  background: rgb(var(--accent-primary-rgb) / 0.07);
+}
+.row.off {
+  cursor: default;
+}
+.row.off > :not(.tick) {
+  opacity: 0.5;
+}
+/* The checkbox's own input stretches over the row, so a click anywhere on it ticks her. */
+.tick :global(.checkbox) {
+  position: static;
+}
+/* One choose button covers the row; the rows' contents are read-only. */
+.choose {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  cursor: pointer;
+}
+.choose:focus-visible {
   outline: 2px solid var(--accent-primary);
   outline-offset: -2px;
 }
-.row.on {
-  background: color-mix(in srgb, var(--accent-primary) 7%, transparent);
-}
-.row.off {
-  opacity: 0.5;
-  cursor: default;
-}
-.row input {
-  width: 16px;
-  height: 16px;
-  margin: 0;
-  accent-color: var(--accent-primary);
-}
-.who {
-  display: grid;
+.identity {
+  grid-column: 2;
   min-width: 0;
-  line-height: 1.25;
 }
-.who strong {
-  overflow: hidden;
+.identity :global(.veteran-identity) {
+  grid-template-columns: 44px minmax(0, 1fr);
+  gap: 10px;
+}
+.identity :global(.portrait) {
+  height: 48px;
+}
+.identity :global(.identity) {
+  gap: 4px;
+}
+.identity :global(.identity h3) {
   font-size: 13px;
-  font-weight: 650;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-.meta {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  font-size: 11px;
-  color: var(--text-secondary);
-}
-.rank {
-  padding: 0 4px;
-  border: 1px solid var(--rank);
-  border-radius: 4px;
-  color: var(--rank);
-  font-size: 10px;
-  font-weight: 700;
-  line-height: 14px;
 }
 .stats {
-  display: grid;
-  grid-template-columns: repeat(5, minmax(0, 1fr));
-  gap: 8px;
+  min-width: 0;
+}
+/* The Veterans table's stat cell: four to a line, the icons leading their values. */
+.stats :global(.stats) {
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 4px 8px;
+  border: 0;
+  background: transparent;
+}
+.stats :global(.stats > div) {
+  flex-direction: row;
+  justify-content: flex-start;
+  align-items: center;
+  gap: 4px;
+  padding: 0;
+  border: 0;
+}
+.stats :global(.stats img) {
+  width: 13px;
+  height: 13px;
+}
+.stats :global(.stats dd) {
   font-size: 12px;
-  font-weight: 650;
+  line-height: 1.4;
   font-variant-numeric: tabular-nums;
 }
-.stats span {
-  display: inline-flex;
-  align-items: center;
-  gap: 3px;
+.stats :global(.stats > [data-stat='total']) {
+  background: transparent;
 }
-.stats img {
-  width: 14px;
-  height: 14px;
-  object-fit: contain;
+.stats :global(.stats > :is([data-stat='skills'], [data-stat='sp'], [data-stat='total']) dt) {
+  color: var(--color-text-muted);
+  font-size: 9px;
+  font-weight: 600;
+  letter-spacing: 0;
+  text-transform: none;
 }
 .fit {
-  display: flex;
-  gap: 3px;
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 6px;
+  min-width: 0;
+}
+.course-aptitude {
+  display: grid;
+  justify-items: center;
+  gap: 2px;
+  min-width: 0;
+}
+.course-aptitude small {
+  max-width: 100%;
+  overflow: hidden;
+  color: var(--color-text-subtle);
+  font-size: 10px;
+  line-height: 1.2;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 .go {
   display: grid;
@@ -203,77 +246,52 @@
   opacity: 0;
 }
 .row:hover .go,
-.row:focus-visible .go {
+.row:has(.choose:focus-visible) .go {
   opacity: 1;
 }
 .more {
   justify-self: center;
 }
-/* Phone: the stats go under her name. */
-@media (max-width: 640px) {
+/* Narrow: name and aptitudes share the first line, her stats run under them. */
+@container veteran-list (max-width: 720px) {
+  .head,
+  .row {
+    grid-template-columns: var(--tick) minmax(0, 1fr) var(--fit) var(--go);
+    row-gap: 6px;
+  }
   .head .stats-head {
     display: none;
   }
-  .head,
-  .row {
-    grid-template-columns: var(--tick, 0) 36px minmax(0, 1fr) 62px var(--go, 0);
-  }
-  .row .stats {
-    grid-column: 3 / -1;
+  .stats {
+    grid-column: 2 / -1;
     grid-row: 2;
   }
-  .compact .row .stats {
+}
+/* Phone: each part takes its own line. */
+@container veteran-list (max-width: 460px) {
+  .head {
     display: none;
   }
+  .rows {
+    margin-top: 0;
+    border-top: 1px solid var(--border-primary);
+    border-radius: var(--radius-lg);
+  }
+  .head,
   .row {
-    row-gap: 2px;
+    grid-template-columns: var(--tick) minmax(0, 1fr) var(--go);
+  }
+  .fit {
+    grid-column: 2 / -1;
+    grid-row: 2;
+  }
+  .stats {
+    grid-row: 3;
+  }
+  .stats :global(.stats) {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
   }
   .go {
     opacity: 1;
   }
-}
-/* Dense at every width: the forms' compact controls, and rows only as tall as name and stats need. */
-.veteran-list {
-  gap: 6px;
-}
-.controls {
-  gap: 6px;
-  padding-block: 0 4px;
-}
-.tools {
-  --control-height: 32px;
-  gap: 6px;
-}
-.search :global(input) {
-  font-size: 12px;
-}
-.sort :global(button.select-control) {
-  min-height: 32px;
-  font-size: 11px;
-}
-.head {
-  padding: 0 6px;
-  font-size: 10px;
-}
-.head,
-.row {
-  column-gap: 8px;
-}
-.row {
-  min-height: 36px;
-  padding: 3px 6px;
-}
-.who strong {
-  font-size: 12px;
-}
-.meta {
-  font-size: 10px;
-}
-.stats {
-  gap: 4px;
-  font-size: 11px;
-}
-.stats img {
-  width: 12px;
-  height: 12px;
 }

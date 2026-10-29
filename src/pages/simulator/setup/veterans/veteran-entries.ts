@@ -1,22 +1,42 @@
 import { getAuthToken } from '@/services/auth/auth-token';
-import { loadCharacters } from '@/lib/game-data/characters';
-import type { RaceCourse } from '@/lib/game-data/racing/courses';
+import type { AptitudeGradeValue } from '@/components/game/AptitudeGrade.svelte';
+import type { AptitudeItem } from '@/components/game/AptitudeGrid.svelte';
+import type { VeteranUiRecord } from '@/components/game/veteran-ui-types';
+import { characterImagePath, loadCharacters } from '@/lib/game-data/characters';
+import { loadSkills, skillPointTotal } from '@/lib/game-data/skills/skills';
+import { DISTANCE_NAMES, SURFACE_NAMES, type RaceCourse } from '@/lib/game-data/racing/courses';
 import { getRankInfoFromScore } from '@/lib/rank';
+import { encodedSkills } from '@/lib/profile/veterans/profile-veterans';
 import { mergeVeterans } from '@/lib/veterans/records/veteran-profile';
 import { profileRepository, type ProfileVeteran } from '@/pages/profile/profile-repository';
+import { scenarios } from '@/pages/veterans/collection/veteran-adapter';
 import { deviceVeteranParents } from '@/pages/veterans/collection/veteran-library';
 import { simulatorUmaFromVeteran, type SimulatorUma } from '../../simulator-uma';
 import { RUNNING_STYLES } from '../trainee';
+
+const STYLE_NAMES: Record<string, string> = {
+  Nige: 'Front',
+  Senko: 'Pace',
+  Sashi: 'Late',
+  Oikomi: 'End',
+  Oonige: 'Runaway'
+};
 
 /** A Veteran ready for the simulator: its build, and what the pickers sort and filter by. */
 export interface VeteranEntry {
   key: string;
   uma: SimulatorUma;
+  /** Portrait, name, scenario and running style, as the Veterans page shows them. */
+  summary: VeteranUiRecord;
+  rarity?: number;
   /** Rank label, such as UG8, from the rank score. */
   rank?: string;
   score?: number;
   /** Speed to wit, summed. */
   total: number;
+  learnedSkills: number;
+  /** Base SP of the learned skills; missing when a skill can't be priced. */
+  skillPoints: number | null;
   /** When it was trained, for newest first. */
   created: number;
 }
@@ -29,10 +49,11 @@ export async function loadVeteranEntries(
   accountId: string
 ): Promise<{ entries: VeteranEntry[]; missing: number }> {
   const token = getAuthToken();
-  const [local, remote, characters] = await Promise.all([
+  const [local, remote, characters, skills] = await Promise.all([
     deviceVeteranParents(),
     accountId ? profileRepository.load(accountId) : Promise.resolve(undefined),
-    loadCharacters()
+    loadCharacters(),
+    loadSkills()
   ]);
 
   if (token !== getAuthToken()) throw new Error('Your sign-in session changed. Open this again.');
@@ -52,13 +73,34 @@ export async function loadVeteranEntries(
       continue;
     }
 
+    const key = String(veteran.trained_chara_id ?? veteran.id);
     const name = characters.get(veteran.card_id ?? 0)?.name ?? 'Veteran';
+    const uma = simulatorUmaFromVeteran(veteran, name);
+    const rank =
+      veteran.rank_score != null ? getRankInfoFromScore(veteran.rank_score).label : undefined;
+    const learned = encodedSkills(veteran);
+
     entries.push({
-      key: String(veteran.trained_chara_id ?? veteran.id),
-      uma: simulatorUmaFromVeteran(veteran, name),
-      rank: veteran.rank_score != null ? getRankInfoFromScore(veteran.rank_score).label : undefined,
+      key,
+      uma,
+      summary: {
+        id: key,
+        name,
+        image: veteran.card_id ? characterImagePath(veteran.card_id) : undefined,
+        rank: rank ?? '',
+        scenario: veteran.scenario_id
+          ? (scenarios[veteran.scenario_id] ?? 'Scenario ' + veteran.scenario_id)
+          : undefined,
+        detail: STYLE_NAMES[uma.trainee.runningStyle],
+        affinity: Number.NaN,
+        sparks: []
+      },
+      rarity: veteran.rarity ?? undefined,
+      rank,
       score: veteran.rank_score ?? undefined,
       total: stats.reduce<number>((sum, value) => sum + (value ?? 0), 0),
+      learnedSkills: learned.length,
+      skillPoints: skillPointTotal(skills, learned),
       created: Date.parse(veteran.creation_time ?? '') || 0
     });
   }
@@ -77,6 +119,30 @@ export function courseAptitudes(uma: SimulatorUma, course?: RaceCourse): string[
     uma.trainee.groundAptitudes[(course?.surface ?? 1) - 1] ?? 'A',
     uma.trainee.styleAptitudes[style === 4 ? 0 : Math.max(0, style)] ?? 'A'
   ];
+}
+
+const isGrade = (grade: string): grade is AptitudeGradeValue =>
+  grade.length === 1 && GRADES.includes(grade);
+
+/** Her course aptitudes as the Veterans page draws them, each under the distance, surface or style it grades. */
+export function courseAptitudeItems(uma: SimulatorUma, course?: RaceCourse): AptitudeItem[] {
+  const [distance, surface, style] = courseAptitudes(uma, course);
+  const items = [
+    {
+      id: 'distance',
+      group: 'Distance',
+      label: DISTANCE_NAMES[course?.distance_type ?? 3],
+      grade: distance
+    },
+    { id: 'surface', group: 'Track', label: SURFACE_NAMES[course?.surface ?? 1], grade: surface },
+    { id: 'style', group: 'Style', label: STYLE_NAMES[uma.trainee.runningStyle], grade: style }
+  ];
+
+  return items.map((item) => ({
+    ...item,
+    label: item.label ?? item.group,
+    grade: item.grade !== undefined && isGrade(item.grade) ? item.grade : 'G'
+  }));
 }
 
 /** How far her course aptitudes fall below A: 0 when all three are A or better. */

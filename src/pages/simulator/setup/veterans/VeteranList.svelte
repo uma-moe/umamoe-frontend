@@ -1,20 +1,22 @@
 <script lang="ts">
+  import AptitudeGrade from '@/components/game/AptitudeGrade.svelte';
   import Button from '@/components/controls/Button.svelte';
+  import Checkbox from '@/components/controls/Checkbox.svelte';
   import SegmentedControl from '@/components/controls/SegmentedControl.svelte';
   import SelectFieldSlim from '@/components/controls/SelectFieldSlim.svelte';
+  import StatStrip, { type StatStripItem } from '@/components/game/StatStrip.svelte';
   import TextField from '@/components/controls/TextField.svelte';
-  import AptitudeGrade, { type AptitudeGradeValue } from '@/components/game/AptitudeGrade.svelte';
   import EmptyState from '@/components/feedback/EmptyState.svelte';
   import Icon from '@/components/Icon.svelte';
   import type { RaceCourse } from '@/lib/game-data/racing/courses';
-  import { getRankInfoFromLabel } from '@/lib/rank';
-  import SimulatorRunnerFace from '../../reports/SimulatorRunnerFace.svelte';
-  import { courseAptitudes, type VeteranEntry } from './veteran-entries';
-  import { STYLES, STYLE_NAMES, SORTS, STATS, shownVeterans } from './veteran-list';
+  import ProfileVeteranIdentity from '@/pages/profile/veterans/ProfileVeteranIdentity.svelte';
+  import { courseAptitudeItems, type VeteranEntry } from './veteran-entries';
+  import { STYLES, SORTS, STATS, shownVeterans } from './veteran-list';
 
   /**
-   * A collection of Veterans to choose from: search, filter by running style and sort, with each one's stats and her
-   * aptitudes on this course. One is chosen with a click, or several are ticked.
+   * A collection of Veterans to choose from, drawn like the Veterans table: search, filter by running style and sort,
+   * with each one's stats, learned skills and her aptitudes on this course. One is chosen with a click, or several are
+   * ticked.
    */
   let {
     entries,
@@ -46,6 +48,7 @@
   const shown = $derived(shownVeterans(entries, query, style, sort, course));
   const ticked = $derived(new Set(selected));
   const full = $derived(max !== undefined && selected.length >= max);
+  const allShown = $derived(shown.length > 0 && shown.every((entry) => ticked.has(entry.key)));
 
   function toggle(entry: VeteranEntry, on: boolean) {
     if (!on) {
@@ -56,7 +59,6 @@
     if (!ticked.has(entry.key) && !full) selected = [...selected, entry.key];
   }
 
-  const allShown = $derived(shown.length > 0 && shown.every((entry) => ticked.has(entry.key)));
   function tickShown() {
     if (allShown) {
       const drop = new Set(shown.map((entry) => entry.key));
@@ -73,71 +75,78 @@
     selected = next;
   }
 
-  const rankColor = (rank: string) => getRankInfoFromLabel(rank).colorToken;
+  /** Her five stats, then what she learned and the sum, as the Veterans table lists them. */
+  function statItems(entry: VeteranEntry): StatStripItem[] {
+    return [
+      ...STATS.map(([key, icon, label]) => ({
+        id: key,
+        label,
+        value: entry.uma.trainee[key].toLocaleString(),
+        icon: '/assets/images/icon/stats/' + icon + '.webp'
+      })),
+      { id: 'skills', label: 'Skills', value: entry.learnedSkills },
+      { id: 'sp', label: 'SP', value: entry.skillPoints?.toLocaleString() ?? '-' },
+      { id: 'total', label: 'Total', value: entry.total.toLocaleString() }
+    ];
+  }
 </script>
 
 {#snippet details(entry: VeteranEntry)}
-  {@const grades = courseAptitudes(entry.uma, course)}
-  <SimulatorRunnerFace
-    cardId={entry.uma.cardId}
-    size={compact ? 30 : 36}
-  />
-  <span class="who">
-    <strong>{entry.uma.name}</strong>
-    <span class="meta">
-      {STYLE_NAMES[entry.uma.trainee.runningStyle] ?? ''}
-      {#if entry.rank}<span
-          class="rank"
-          style:--rank={rankColor(entry.rank)}
-        >
-          {entry.rank}
-        </span>{/if}
-    </span>
+  <span class="identity">
+    <ProfileVeteranIdentity
+      summary={entry.summary}
+      rarity={entry.rarity}
+      score={entry.score}
+      rankPlacement="details"
+    />
   </span>
   {#if !compact}
-    <span
-      class="stats"
-      aria-label="Stats"
-    >
-      {#each STATS as [key, icon]}
-        <span>
-          <img
-            src="/assets/images/icon/stats/{icon}.webp"
-            alt=""
-            width="14"
-            height="14"
-          />
-          {entry.uma.trainee[key]}
-        </span>
-      {/each}
+    <span class="stats">
+      <StatStrip
+        label={entry.uma.name + ' stats'}
+        items={statItems(entry)}
+        compact
+        presentation="icons"
+      />
     </span>
   {/if}
   <span
     class="fit"
-    aria-label="Distance {grades[0]}, surface {grades[1]}, style {grades[2]}"
+    role="list"
+    aria-label={course ? 'Aptitudes on this course' : 'Aptitudes'}
   >
-    {#each grades as grade, index}
-      <AptitudeGrade
-        grade={grade as AptitudeGradeValue}
-        label={['Distance', 'Surface', 'Style'][index]}
-        size="xs"
-      />
+    {#each courseAptitudeItems(entry.uma, course) as aptitude (aptitude.id)}
+      <span
+        class="course-aptitude"
+        role="listitem"
+        title={aptitude.group + ': ' + aptitude.label + ' ' + aptitude.grade}
+      >
+        <AptitudeGrade
+          grade={aptitude.grade}
+          label={aptitude.group + ' ' + aptitude.label}
+          size="sm"
+        />
+        <small>{aptitude.label}</small>
+      </span>
     {/each}
   </span>
-  {#if mode === 'single'}<span
+  {#if mode === 'single'}
+    <span
       class="go"
       aria-hidden="true"
     >
       <Icon
-        name="add"
+        name="arrow-right"
         size={16}
       />
-    </span>{/if}
+    </span>
+  {/if}
 {/snippet}
 
 <div
   class="veteran-list"
   class:compact
+  class:multi={mode === 'multi'}
 >
   <!-- Search, filters and the column heads stay in view while the list scrolls. -->
   <div class="controls">
@@ -169,40 +178,43 @@
       </div>
     </div>
 
-    <div class="head">
+    <div class="summary-line">
       <span class="count">
         {shown.length === entries.length
           ? entries.length + (entries.length === 1 ? ' Veteran' : ' Veterans')
           : shown.length + ' of ' + entries.length}
-        {#if mode === 'multi' && shown.length}
-          <Button
-            variant="ghost"
-            size="sm"
-            onclick={tickShown}
-          >
-            {allShown ? 'Untick all' : 'Tick all'}
-          </Button>
-        {/if}
-        {#if mode === 'multi' && max !== undefined && max < entries.length}<span
-            class="room"
-            class:full
-          >
-            {selected.length} of {max} ticked
-          </span>{/if}
       </span>
-      {#if !compact}<span
-          class="stats-head"
-          aria-hidden="true"
+      {#if mode === 'multi' && max !== undefined && max < entries.length}
+        <span
+          class="room"
+          class:full
         >
-          Stats
-        </span>{/if}
-      <span
-        class="fit-head"
+          {selected.length} of {max} ticked
+        </span>
+      {/if}
+      {#if mode === 'multi' && shown.length}
+        <Button
+          variant="ghost"
+          size="sm"
+          onclick={tickShown}
+        >
+          {allShown ? 'Untick all' : 'Tick all'}
+        </Button>
+      {/if}
+    </div>
+
+    {#if shown.length}
+      <div
+        class="head"
         aria-hidden="true"
       >
-        {course ? 'On this course' : 'Aptitudes'}
-      </span>
-    </div>
+        <span class="identity-head">Veteran</span>
+        {#if !compact}
+          <span class="stats-head">Stats</span>
+        {/if}
+        <span class="fit-head">{course ? 'On this course' : 'Aptitudes'}</span>
+      </div>
+    {/if}
   </div>
 
   {#if shown.length}
@@ -212,33 +224,31 @@
     >
       {#each shown.slice(0, limit) as entry (entry.key)}
         {@const on = ticked.has(entry.key)}
-        <li>
+        <li
+          class="row"
+          class:on
+          class:off={mode === 'multi' && !on && full}
+        >
           {#if mode === 'multi'}
-            <label
-              class="row"
-              class:on
-              class:off={!on && full}
-            >
-              {#if mode === 'multi'}
-                <input
-                  type="checkbox"
-                  checked={on}
-                  disabled={!on && full}
-                  aria-label={entry.uma.name}
-                  onchange={(event) => toggle(entry, event.currentTarget.checked)}
-                />
-              {/if}
-              {@render details(entry)}
-            </label>
+            <span class="tick">
+              <Checkbox
+                id="{uid}-{entry.key}"
+                label={'Tick ' + entry.uma.name}
+                hideLabel
+                checked={on}
+                disabled={!on && full}
+                onchange={(checked) => toggle(entry, checked)}
+              />
+            </span>
+            {@render details(entry)}
           {:else}
+            {@render details(entry)}
             <button
               type="button"
-              class="row"
+              class="choose"
               aria-label={'Choose ' + entry.uma.name}
               onclick={() => onchoose?.(entry)}
-            >
-              {@render details(entry)}
-            </button>
+            ></button>
           {/if}
         </li>
       {/each}

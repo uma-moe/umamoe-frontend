@@ -110,39 +110,32 @@
       ' first'
     : undefined}
   icon="veterans"
-  maxWidth="860px"
+  maxWidth="1040px"
   maxHeight="88dvh"
   height={entries.length > 8 ? 'min(760px, 88dvh)' : undefined}
   mobileFill
   compact
+  contentPadding="0 20px 16px"
+  mobileContentPadding="0 12px 12px"
   mobileMaxHeight="96dvh"
 >
   {#snippet headerActions()}
-    <span class="manage">
-      <Button
-        href="/veterans"
-        variant="ghost"
-        size="sm"
-        icon="veterans"
-      >
-        Manage veterans
-      </Button>
-    </span>
+    {#if $workspaces.length > 1}
+      <div class="collection">
+        <SelectFieldSlim
+          id="{uid}-account"
+          label="Collection"
+          hideLabel
+          value={accountId}
+          onchange={(value) => (accountId = value)}
+          options={$workspaces.map((workspace) => ({
+            value: workspace.accountId ?? '',
+            label: workspace.label
+          }))}
+        />
+      </div>
+    {/if}
   {/snippet}
-  {#if $workspaces.length > 1}
-    <div class="collection">
-      <SelectFieldSlim
-        id="{uid}-account"
-        label="Collection"
-        value={accountId}
-        onchange={(value) => (accountId = value)}
-        options={$workspaces.map((workspace) => ({
-          value: workspace.accountId ?? '',
-          label: workspace.label
-        }))}
-      />
-    </div>
-  {/if}
   {#if loading}
     <Spinner
       centered
@@ -177,14 +170,16 @@
       </Button>
     </div>
   {:else}
-    <VeteranList
-      {entries}
-      course={fitCourse}
-      mode={multi ? 'multi' : 'single'}
-      bind:selected
-      max={room}
-      onchoose={choose}
-    />
+    <div class="list">
+      <VeteranList
+        {entries}
+        course={fitCourse}
+        mode={multi ? 'multi' : 'single'}
+        bind:selected
+        max={room}
+        onchoose={choose}
+      />
+    </div>
     {#if missing}
       <p class="note">
         {missing}
@@ -218,6 +213,17 @@
         <span>Choose one to use her build.</span>
       {/if}
     </DialogStatus>
+    {#if entries.length}
+      <span class="manage">
+        <Button
+          href="/veterans"
+          variant="ghost"
+          icon="veterans"
+        >
+          Manage veterans
+        </Button>
+      </span>
+    {/if}
     <Button
       variant="secondary"
       onclick={() => (open = false)}
@@ -243,7 +249,7 @@
     white-space: nowrap;
   }
   /* A phone: the link keeps its name for assistive tech and shows only its icon. */
-  @media (max-width: 520px) {
+  @media (max-width: 640px) {
     .manage :global(.ui-button > span) {
       position: absolute;
       width: 1px;
@@ -254,8 +260,12 @@
     }
   }
   .collection {
-    max-width: 260px;
-    margin-bottom: 8px;
+    --control-height: 32px;
+    width: clamp(140px, 24vw, 240px);
+  }
+  /* The dialog's top padding moves into the sticky toolbar, so rows never show above it while scrolling. */
+  .list {
+    --veteran-list-inset-top: 12px;
   }
   .note {
     margin: 8px 0 0;

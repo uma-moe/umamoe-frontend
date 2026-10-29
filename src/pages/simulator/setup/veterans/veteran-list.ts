@@ -9,14 +9,6 @@ export const STYLES = [
   { value: 'Oikomi', label: 'End' }
 ];
 
-export const STYLE_NAMES: Record<string, string> = {
-  Nige: 'Front',
-  Senko: 'Pace',
-  Sashi: 'Late',
-  Oikomi: 'End',
-  Oonige: 'Runaway'
-};
-
 export const SORTS = [
   { value: 'fit', label: 'Course fit' },
   { value: 'rank', label: 'Rank' },
@@ -24,12 +16,13 @@ export const SORTS = [
   { value: 'newest', label: 'Newest' }
 ];
 
+/** Each trained stat: its key on the trainee, its icon and its name. */
 export const STATS = [
-  ['speed', 'speed'],
-  ['stamina', 'stamina'],
-  ['power', 'power'],
-  ['guts', 'guts'],
-  ['wisdom', 'wit']
+  ['speed', 'speed', 'Speed'],
+  ['stamina', 'stamina', 'Stamina'],
+  ['power', 'power', 'Power'],
+  ['guts', 'guts', 'Guts'],
+  ['wisdom', 'wit', 'Wit']
 ] as const;
 
 /** The Veterans matching the name search and running style, in the chosen order. */

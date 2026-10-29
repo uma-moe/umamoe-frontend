@@ -5,6 +5,8 @@
   interface Props {
     id: string;
     label: string;
+    /** Keeps the label for assistive tech only, for a box that sits beside what it names. */
+    hideLabel?: boolean;
     icon?: IconName;
     ariaLabel?: string;
     description?: string;
@@ -18,6 +20,7 @@
   let {
     id,
     label,
+    hideLabel = false,
     icon,
     ariaLabel,
     description,
@@ -33,6 +36,7 @@
   class="checkbox"
   class:field={variant === 'field'}
   class:active={variant === 'field' && (checked || indeterminate)}
+  class:box-only={hideLabel}
   for={id}
 >
   <input
@@ -60,7 +64,10 @@
       />
     {/if}
   </span>
-  <span class="copy">
+  <span
+    class="copy"
+    class:sr-only={hideLabel}
+  >
     <strong class:with-icon={Boolean(icon)}>
       {#if icon}
         <Icon
@@ -84,6 +91,10 @@
     align-items: center;
     gap: var(--space-3);
     cursor: pointer;
+  }
+  .box-only {
+    grid-template-columns: 22px;
+    min-height: 0;
   }
   input {
     position: absolute;
