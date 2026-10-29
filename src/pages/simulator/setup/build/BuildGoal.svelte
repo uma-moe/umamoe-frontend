@@ -98,18 +98,6 @@
       options={TIME_OPTIONS}
       bind:value={simulatorSession.startTime}
     />
-    {#if teamTrials}
-      <div class="pool">
-        <TrackPool
-          mode={buildSearch.mode as TeamTrialsMode}
-          courseLookup={simulatorCourseData.courses}
-          bind:picked={
-            () => buildSearch.tracks[buildSearch.mode as TeamTrialsMode],
-            (value) => (buildSearch.tracks[buildSearch.mode as TeamTrialsMode] = value)
-          }
-        />
-      </div>
-    {/if}
     {#if budgetHere}<BuildBudget />{/if}
     <SelectField
       id="build-mode"
@@ -152,6 +140,18 @@
         onclick={() => (buildSearch.seed = String(Math.floor(Math.random() * 2 ** 31)))}
       />
     </div>
+    {#if teamTrials}
+      <div class="pool">
+        <TrackPool
+          mode={buildSearch.mode as TeamTrialsMode}
+          courseLookup={simulatorCourseData.courses}
+          bind:picked={
+            () => buildSearch.tracks[buildSearch.mode as TeamTrialsMode],
+            (value) => (buildSearch.tracks[buildSearch.mode as TeamTrialsMode] = value)
+          }
+        />
+      </div>
+    {/if}
   </div>
 </SimSection>
 

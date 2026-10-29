@@ -34,9 +34,11 @@ export function buildRaces(options: {
   course?: RaceCourse;
   /** Team Trials: the courses the game draws from, in place of `course`. */
   pool?: ReadonlyArray<RaceCourse>;
+  /** How much each pool course counts, by course id; each counts the same when absent. */
+  weights?: ReadonlyMap<number, number>;
   setup: RaceSetupInput;
 }): BuildRaces | undefined {
-  const { her, seed, setup } = options;
+  const { her, seed, setup, weights } = options;
   const pool = options.pool?.length ? options.pool : undefined;
   const course = pool?.[0] ?? options.course;
   if (!course) return undefined;
@@ -44,7 +46,7 @@ export function buildRaces(options: {
 
   const scenario = (course: RaceCourse, name: string, setup: RaceSetupInput) => ({
     name,
-    weight: 1,
+    weight: weights?.get(course.course_id) ?? 1,
     courseId: course.course_id,
     seed,
     setup,
