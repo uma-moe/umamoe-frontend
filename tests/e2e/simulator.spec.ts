@@ -2201,8 +2201,8 @@ test('Build codes load the runner, the course, the goal and what she can buy on 
   await expect(offers.getByRole('listitem').first()).toContainText(/Corner Recovery.*85 SP/);
   // Team Trials draws its course per race, so she races the distance's pool of tracks, one per race.
   const tracks = page.getByRole('group', { name: 'Tracks', exact: true });
-  await expect(tracks).toContainText('1 of 1 on');
-  await expect(tracks.getByRole('button', { name: '2,500 m', exact: true })).toHaveAttribute(
+  await expect(tracks).toContainText('1 of 1 courses');
+  await expect(tracks.getByRole('button', { name: /2,500 m$/ })).toHaveAttribute(
     'aria-pressed',
     'true'
   );
@@ -2221,10 +2221,10 @@ test('Build codes load the runner, the course, the goal and what she can buy on 
   expect(sent!.scenarios[0]!.input.setup).toMatchObject({ race_instance_id: 0, race_type: 14 });
   expect(sent!.scenarios.every((scenario) => scenario.input.runners.length === 1)).toBe(true);
   // Switching the only track off leaves nothing to race.
-  await tracks.getByRole('button', { name: '2,500 m', exact: true }).click();
+  await tracks.getByRole('button', { name: /2,500 m$/ }).click();
   await expectBuildBlocked(page, 'Pick at least one track for Team Trials.');
-  await tracks.getByRole('button', { name: 'JRA only', exact: true }).click();
-  await expect(tracks).toContainText('1 of 1 on');
+  await tracks.getByRole('button', { name: 'All', exact: true }).click();
+  await expect(tracks).toContainText('1 of 1 courses');
   // Copying writes the setup as a code that loads the same build.
   await openBuildCode(page);
   await dialog.getByRole('button', { name: 'Copy this setup', exact: true }).click();

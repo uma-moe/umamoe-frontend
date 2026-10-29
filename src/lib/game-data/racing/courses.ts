@@ -42,6 +42,12 @@ export const DISTANCE_NAMES: Record<number, string> = {
 
 export const TURN_NAMES: Record<number, string> = { 1: 'Right', 2: 'Left', 4: 'Straight' };
 
+/**
+ * The `course` variant as the game names the layout: Kyoto's 1400m runs inner (2) and outer (3), Hanshin's 3200m outer
+ * to inner (4). 1 is a track's only layout and has no name.
+ */
+export const LAYOUT_NAMES: Record<number, string> = { 2: 'Inner', 3: 'Outer', 4: 'Outer to inner' };
+
 /** `race_track_id` to English track name, matching the game's own ids. The resource carries no names. */
 export const TRACK_NAMES: Record<number, string> = {
   10001: 'Sapporo',

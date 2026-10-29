@@ -1,6 +1,7 @@
 /* The race on the first row and the settings on the second, on the runner's ten columns: track and course, ground,
    then weather, season and time of day a column each; her SP, fans and Fast Learner, then the mode, debuffs and seed
-   under them. Team Trials draws its course per race, so its conditions lead and its pool of tracks takes a row of its own.
+   under them. Team Trials draws its course per race, so its conditions lead and its pool of tracks, which the mode
+   decides, closes the form on a row of its own.
    The ten columns start at the width BuildGoal's TEN_COLUMNS names. */
 .goal {
   --control-height: var(--setup-control-height);
@@ -20,6 +21,10 @@
 .goal :global(.course-picker:has(#sim-course)) {
   grid-column: span 3;
 }
+.pool {
+  grid-column: 1 / -1;
+  min-width: 0;
+}
 .goal :global(.field) {
   gap: 4px;
 }
@@ -30,10 +35,6 @@
 .goal :global(input),
 .goal :global(.select-control) {
   font-size: 13px;
-}
-.pool {
-  grid-column: 1 / -1;
-  min-width: 0;
 }
 .pair {
   display: grid;
