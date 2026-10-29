@@ -13,6 +13,13 @@
 /patch-notes/
 /.angular-storage.json
 
+# ===== AGENT TOOLING =====
+# Local assistant setup (skills, agents, launch configs, caches); AGENTS.md stays tracked.
+/.claude/
+/.agents/
+/.codex/
+/.impeccable/
+
 # ===== NODE.JS =====
 /node_modules
 .sentryclirc
