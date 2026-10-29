@@ -22,6 +22,13 @@ export const MIN_FIELD_RUNNERS = 2;
 export const MAX_FIELD_RUNNERS = 18;
 export const MAX_MONTE_CARLO_RUNS = 1000;
 
+/**
+ * Fans that reach the simulator's top fan-count tier (×1.2 from 160,000 up). Imports such as CM builds don't
+ * carry fans, and the simulator rejects a fan-scaling skill without them, so a runner without a count races
+ * with the most her fans could give. Fans affect nothing else.
+ */
+export const MAX_TIER_FAN_COUNT = 160_000;
+
 export interface MonteCarloSkillInput {
   skillId: number;
   /** 1 … 6, defaults to 1. */
@@ -63,7 +70,7 @@ export interface FieldRunner {
   has_viewer_id: boolean;
   team_id: number;
   team_member_id?: number;
-  fan_count?: number;
+  fan_count: number;
   single_mode_win_count: number;
   skills: Array<MonteCarloSkill>;
 }
@@ -119,9 +126,7 @@ export function buildFieldRunners(
     has_viewer_id: runner.hasViewerId ?? false,
     team_id: clampInt(runner.teamId ?? 0, 0, 255, 0),
     ...(runner.teamId ? { team_member_id: index + 1 } : {}),
-    ...(runner.fanCount !== undefined
-      ? { fan_count: clampInt(runner.fanCount, 0, Number.MAX_SAFE_INTEGER, 0) }
-      : {}),
+    fan_count: clampInt(runner.fanCount ?? MAX_TIER_FAN_COUNT, 0, Number.MAX_SAFE_INTEGER, 0),
     single_mode_win_count: clampInt(runner.singleModeWinCount ?? 0, 0, Number.MAX_SAFE_INTEGER, 0),
     skills: buildSkills(runner.skills ?? [])
   }));

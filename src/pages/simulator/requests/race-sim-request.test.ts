@@ -1,5 +1,9 @@
 import { describe, expect, it } from 'vitest';
-import { buildMonteCarloRequest, type MonteCarloRunnerInput } from './race-sim-request';
+import {
+  buildMonteCarloRequest,
+  MAX_TIER_FAN_COUNT,
+  type MonteCarloRunnerInput
+} from './race-sim-request';
 import type { RaceSetupInput } from './stamina-request';
 import { createTrainee } from '../setup/trainee';
 
@@ -86,6 +90,18 @@ describe('monte carlo request', () => {
     expect(runner?.single_mode_win_count).toBe(0);
     expect(runner?.has_viewer_id).toBe(true);
     expect(runner?.skills).toEqual([{ skill_id: 200012, level: 6 }]);
+  });
+
+  it('gives a runner without fans the top fan tier and keeps a known count', () => {
+    const body = buildMonteCarloRequest({
+      courseId: 1,
+      seed: 1,
+      setup: SETUP,
+      runners: [{ trainee: createTrainee() }, { trainee: createTrainee(), fanCount: 0 }]
+    });
+
+    const fanCounts = body.input.runners.map((runner) => runner.fan_count);
+    expect(fanCounts).toEqual([MAX_TIER_FAN_COUNT, 0]);
   });
 
   it('rejects a field with fewer than two runners', () => {
