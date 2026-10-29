@@ -3453,6 +3453,124 @@ test('master data browses the published database, follows columns and shares que
   );
 });
 
+const INITIAL_MASTER_HASH = 'e0013366d059b091bb2a6b05275033d6b2302fb3297fc9227cc022d871ac0bfb';
+const NEXT_MASTER_HASH = 'a866b847996fd773c918a7b5192bbac3874d56fc84b3a44a6f4912e92b9ef426';
+
+/** Two releases and the diff between them, as the resources service publishes them. */
+async function routeMasterHistory(page: Page): Promise<void> {
+  const summary = { tables_changed: 2, added: 1, removed: 1, modified: 1 };
+  const diff = {
+    from_hash: INITIAL_MASTER_HASH,
+    to_hash: NEXT_MASTER_HASH,
+    date: '2026-10-07',
+    summary,
+    tables: {
+      text_data: {
+        columns: ['id', 'category', 'index', 'text'],
+        added: [[6, 6, 1003, 'Tokai Teio']],
+        removed: [],
+        modified: [
+          {
+            key: [63, 157],
+            before: [63, 63, 157, 'The event starts on MM/DD.'],
+            after: [63, 63, 157, 'The event starts on Oct 15, 2026.']
+          }
+        ]
+      },
+      chara_data: {
+        columns: ['id', 'birth_year', 'start_date'],
+        added: [],
+        removed: [[1003, 1998, 1609513200]],
+        modified: []
+      }
+    }
+  };
+
+  await page.route('**/resources/masterdata/versions.json', (route) =>
+    route.fulfill({
+      json: [
+        {
+          hash: INITIAL_MASTER_HASH,
+          short_hash: 'e0013366d059',
+          date: '2026-09-28',
+          previous_hash: null,
+          summary: null
+        },
+        {
+          hash: NEXT_MASTER_HASH,
+          short_hash: 'a866b847996f',
+          date: '2026-10-07',
+          previous_hash: INITIAL_MASTER_HASH,
+          summary
+        }
+      ]
+    })
+  );
+  await page.route('**/resources/masterdata/diffs/a866b847996f.json.gz', (route) =>
+    route.fulfill({ body: gzipSync(JSON.stringify(diff)), contentType: 'application/json' })
+  );
+}
+
+test('master data history opens shared table diffs without downloading the database', async ({
+  page
+}, info) => {
+  const databaseRequests: string[] = [];
+  page.on('request', (request) => {
+    if (request.url().includes('master.mdb.gz')) databaseRequests.push(request.url());
+  });
+  await page.addInitScript(() => {
+    Object.defineProperty(navigator, 'clipboard', {
+      configurable: true,
+      value: {
+        writeText: async (value: string) => sessionStorage.setItem('test-copied-text', value)
+      }
+    });
+  });
+  await routeMasterDatabase(page);
+  await routeMasterHistory(page);
+
+  await page.goto('/tools/master-data?diff=a866b847996f&table=text_data');
+
+  const history = page.getByRole('tabpanel', { name: 'Version history', exact: true });
+  const textData = history.getByRole('table', { name: 'Changed rows in text_data', exact: true });
+  const charaToggle = history.getByRole('button', { name: /^chara_data/ });
+  await expect(textData).toContainText('The event starts on Oct 15, 2026.', { timeout: 30000 });
+  await expect(textData).toContainText('The event starts on MM/DD.');
+  await expect(textData).toContainText('Tokai Teio');
+  await expect(history.getByText('Initial version', { exact: true })).toBeVisible();
+  await expect(charaToggle).toHaveAttribute('aria-expanded', 'false');
+  await page.screenshot({ path: info.outputPath('master-data-history.png'), fullPage: true });
+  expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(
+    page.viewportSize()!.width
+  );
+  expect(databaseRequests).toEqual([]);
+
+  await charaToggle.click();
+  const charaData = history.getByRole('table', { name: 'Changed rows in chara_data', exact: true });
+  await expect(charaData).toContainText('removed');
+  await history.getByRole('button', { name: 'Copy link to chara_data', exact: true }).click();
+  await expect(page).toHaveURL(/\?diff=a866b847996f&table=chara_data$/);
+  expect(await page.evaluate(() => sessionStorage.getItem('test-copied-text'))).toMatch(
+    /\/tools\/master-data\?diff=a866b847996f&table=chara_data$/
+  );
+
+  await history.getByRole('button', { name: 'Collapse all', exact: true }).click();
+  await expect(textData).toBeHidden();
+  await history.getByRole('button', { name: 'Hide diff', exact: true }).click();
+  await expect(page).toHaveURL(/\?tab=history$/);
+
+  await page.getByRole('tab', { name: 'Table browser', exact: true }).click();
+  const results = page.getByRole('table', { name: 'SQL query results', exact: true });
+  await expect(results).toContainText('Silence Suzuka', { timeout: 30000 });
+  await expect(page).toHaveURL(/\?q=SELECT/);
+
+  await page.getByRole('tab', { name: 'Version history', exact: true }).click();
+  await history.getByRole('button', { name: 'View diff', exact: true }).click();
+  await expect(history.getByRole('button', { name: /^text_data/ })).toBeVisible();
+  await expect(textData).toBeHidden();
+  await expect(page).toHaveURL(/\?diff=a866b847996f$/);
+});
+
 test('research opens original notes with math, attachments, and mobile layouts in both themes', async ({
   page
 }, info) => {

@@ -1,0 +1,48 @@
+.table-diff {
+  border-top: 1px solid var(--border-subtle);
+}
+.table-diff :global(.table-wrap) {
+  margin: 0;
+  padding-inline-end: 0;
+}
+/* SQL names are case-sensitive identifiers; show them as written. */
+.table-diff :global(th) {
+  font-family: var(--font-mono);
+  text-transform: none;
+  letter-spacing: 0;
+}
+.table-diff :global(th:not(:last-child)) {
+  width: 1%;
+}
+.table-diff :global(td) {
+  font-family: var(--font-mono);
+  font-size: 12px;
+  vertical-align: top;
+}
+/* Anchors the visually hidden label inside the scrolling table, so it cannot widen the page. */
+.changed {
+  position: relative;
+}
+.unchanged {
+  color: var(--text-muted);
+}
+.before,
+.after {
+  display: inline-block;
+  padding: 0 4px;
+  border-radius: var(--radius-sm);
+}
+.before {
+  background: rgb(var(--accent-error-rgb) / 0.1);
+  color: var(--accent-error);
+  text-decoration: line-through;
+  text-decoration-color: rgb(var(--accent-error-rgb) / 0.5);
+}
+.after {
+  background: rgb(var(--accent-success-rgb) / 0.12);
+  color: var(--text-primary);
+}
+.before :global(.text),
+.after :global(.text) {
+  max-width: 40ch;
+}
