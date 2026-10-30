@@ -381,6 +381,10 @@
         if (point.skillId === skillId || skill === undefined || isNegativeSkill(skill))
           return false;
 
+        const countsForGate =
+          gate.counted === 'any' || index?.skills.get(point.skillId)?.kind === 'recovery';
+        if (!countsForGate) return false;
+
         const inWindow = point.sections.slice(from, to).reduce((sum, share) => sum + share, 0);
         return inWindow > point.rate / 2;
       })

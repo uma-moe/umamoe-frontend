@@ -56,9 +56,19 @@ describe('countGate', () => {
   it('finds how many skills must fire first, and where', () => {
     expect(countGate('activate_count_middle>=3')).toEqual({
       count: 3,
+      counted: 'any',
       sections: [4, 16],
       where: 'in the middle leg'
     });
     expect(countGate('phase==1&corner==0')).toBeUndefined();
+  });
+
+  it('counts only recovery skills for a recovery gate', () => {
+    expect(countGate('activate_count_heal>=3&phase>=2')).toEqual({
+      count: 3,
+      counted: 'recovery',
+      sections: [0, 24],
+      where: 'so far'
+    });
   });
 });

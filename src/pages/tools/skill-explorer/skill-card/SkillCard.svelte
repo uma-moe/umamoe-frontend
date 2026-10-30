@@ -85,6 +85,8 @@
 
   /** A passive (or a gate skill) takes hold at the start: its proc point says nothing, so no chart is drawn. */
   const fromGate = $derived(point.rate > 0 && point.mean * SECTIONS < 0.05);
+  /** Forced on every course: `rate` is how often it fires when forced, not in her build, where it never does. */
+  const neverFires = $derived(point.forced > 0 && point.forced >= point.courses);
   const peak = $derived(Math.max(0.05, ...point.sections));
   const meanLabel = $derived(placeLabel(point.mean));
 
@@ -152,6 +154,9 @@
         {#if fromGate}
           {point.rate >= 0.995 ? 'Always' : `${Math.round(point.rate * 100)}%`}
           <small>from the gate</small>
+        {:else if neverFires}
+          Never
+          <small>{Math.round(point.rate * 100)}% if forced</small>
         {:else}
           {Math.round(point.rate * 100)}%
           <small>mean {meanLabel}</small>
@@ -187,7 +192,8 @@
     <p class="forced">
       Never procs for her{point.courses > 1
         ? ` on ${point.forced} of ${point.courses} courses`
-        : ''}: valued forced to proc where the course lets it.
+        : ''}: valued forced to proc where the course lets it. Scaled by proc rate, it counts 0
+      there.
     </p>
   {/if}
 
@@ -212,7 +218,8 @@
       <h4>Fed by</h4>
       <p class="gate">
         <span class="number">{gate.gate.count}</span>
-        of her skills must fire {gate.gate.where} first. Skills that fire there:
+        of her {gate.gate.counted === 'recovery' ? 'recovery skills' : 'skills'} must fire {gate
+          .gate.where} first. Skills that fire there:
       </p>
       {@render relatedList(gate.feeders)}
     </section>

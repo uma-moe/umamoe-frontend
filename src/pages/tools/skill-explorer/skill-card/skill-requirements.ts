@@ -34,12 +34,14 @@ const COUNT_WINDOWS: Record<string, string> = {
   activate_count_later_half: 'in the second half',
   activate_count_end_after: 'from the late leg on',
   activate_count_all: 'so far',
-  activate_count_heal: 'recovery skills so far'
+  activate_count_heal: 'so far'
 };
 
 /** A skill gated on other skills' activations: how many, and where they must fire. */
 export interface CountGate {
   count: number;
+  /** Which activations count: any of her skills, or only her recovery skills. */
+  counted: 'any' | 'recovery';
   /** The share of the race the counted activations fall in, as 24-section bounds. */
   sections: [number, number];
   where: string;
@@ -303,7 +305,12 @@ export function countGate(conditions: string): CountGate | undefined {
   for (const term of conditions.split('@').flatMap(parseAlternative)) {
     const sections = GATE_SECTIONS[term.key];
     if (sections !== undefined && term.op.startsWith('>')) {
-      return { count: term.value, sections, where: COUNT_WINDOWS[term.key]! };
+      return {
+        count: term.value,
+        counted: term.key === 'activate_count_heal' ? 'recovery' : 'any',
+        sections,
+        where: COUNT_WINDOWS[term.key]!
+      };
     }
   }
 
