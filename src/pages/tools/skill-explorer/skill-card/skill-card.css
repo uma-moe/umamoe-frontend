@@ -152,7 +152,7 @@ h4 {
 /* A skill that never procs for her, valued forced to. */
 .forced {
   margin: 0;
-  color: var(--text-muted);
+  color: var(--accent-warning);
   font-size: 0.72rem;
 }
 

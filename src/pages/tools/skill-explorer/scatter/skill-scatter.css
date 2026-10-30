@@ -349,6 +349,13 @@
   font-size: 9px;
   font-weight: 650;
 }
+/* Never fires for her: valued as if forced to. */
+.forced-tag {
+  color: var(--accent-warning);
+}
+.skill-dot.forced {
+  border: 1px dashed var(--accent-warning);
+}
 .name.compared {
   z-index: 4;
   color: var(--accent-pink);

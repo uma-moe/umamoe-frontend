@@ -127,13 +127,15 @@ function positionLabel(share: number, courseDistance: number | undefined): strin
 }
 
 /**
- * The value plotted: per firing, or scaled by its proc rate. Scaled, a skill forced to fire is worth 0 where it never
- * fired, except a ground, weather or season skill on a CM whose day it holds on: there it fires at its forced rate.
+ * The value plotted: per firing, or scaled by its proc rate. A skill forced to fire somewhere, or a ground, weather or
+ * season skill on a CM whose day it holds on, is scaled by the rate it fires at when forced; the chart marks it forced.
  */
 function plottedY(point: SkillPoint, skill: SkillData, options: PlotOptions): number {
   const perFiring = options.yMode === 'value' ? point.win : point.winAlone;
   if (!options.procScaled) return perFiring;
-  if (options.day !== undefined && isDayBound(skill)) return perFiring * point.rate;
+
+  const firesAtForcedRate = point.forced > 0 || (options.day !== undefined && isDayBound(skill));
+  if (firesAtForcedRate) return perFiring * point.rate;
   if (point.win === 0) return 0;
   return perFiring * (point.expected / point.win);
 }
@@ -239,7 +241,8 @@ export function plotView(options: PlotOptions): PlotView {
     y,
     xLabel: xMode === 'position' ? positionLabel(x, courseDistance) : `${x} SP`,
     matches,
-    searchMatch
+    searchMatch,
+    forced: point.forced > 0
   }));
   const ySplit = median(plotted.map((point) => point.y));
 

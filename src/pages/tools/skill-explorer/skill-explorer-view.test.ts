@@ -102,9 +102,9 @@ describe('Skill Explorer plot view', () => {
     expect(shownIds({ day: heavyDay, showDayBound: true })).not.toContain(200151);
   });
 
-  it('scales by proc rate when asked: a skill forced to proc counts 0, on her own too', () => {
+  it('scales by proc rate when asked: a skill forced to proc by its forced rate, on her own too', () => {
     const rare = { ...point(200341, 0.8, 0.6), expected: 0.08, rate: 0.1 };
-    const forced = { ...point(200011, 0.5, 0), expected: 0, forced: 1 };
+    const forced = { ...point(200011, 0.5, 0), expected: 0, rate: 0.9, forced: 1 };
     const scaled = (yMode: PlotOptions['yMode']) =>
       view({ points: [rare, forced], procScaled: true, yMode }).plotted.map((p) => [
         p.skillId,
@@ -113,12 +113,22 @@ describe('Skill Explorer plot view', () => {
 
     expect(view({ points: [rare, forced] }).plotted.map((p) => p.y)).toEqual([0.8, 0.5]);
     expect(scaled('value')).toEqual([
-      [200341, 0.08],
-      [200011, 0]
+      [200011, 0.45],
+      [200341, 0.08]
     ]);
     expect(scaled('alone')).toEqual([
-      [200341, 0.04],
-      [200011, 0]
+      [200011, 0.225],
+      [200341, 0.04]
+    ]);
+  });
+
+  it('marks a skill forced to proc', () => {
+    const forced = { ...point(200011, 0.5, 0), forced: 1 };
+    const plotted = view({ points: [point(200341, 0.8, 0.6), forced] }).plotted;
+
+    expect(plotted.map((p) => [p.skillId, p.forced])).toEqual([
+      [200341, false],
+      [200011, true]
     ]);
   });
 

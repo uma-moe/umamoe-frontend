@@ -42,6 +42,8 @@
     /** Dimmed when a search leaves it out. */
     matches: boolean;
     searchMatch: boolean;
+    /** Never fires for her somewhere, so it is valued forced to fire there. */
+    forced: boolean;
   }
 
   export interface QuadrantLabels {
@@ -224,9 +226,10 @@
 
   function labelText(point: PlottedSkill | undefined): string {
     if (!point) return '';
+    const forced = point.forced ? ' · Forced' : '';
     const search = point.searchMatch ? ' · Search match' : '';
     const compared = comparedSkillIds.has(point.skillId) ? ' · Compare' : '';
-    return point.name + search + compared;
+    return point.name + forced + search + compared;
   }
 
   function clamp(value: number, low: number, high: number): number {
@@ -602,6 +605,9 @@
                 aria-hidden="true"
               >
                 <span class="label-name">{point.name}</span>
+                {#if point.forced}
+                  <small class="forced-tag">Forced</small>
+                {/if}
                 {#if point.searchMatch}
                   <small class="search-tag">Search match</small>
                 {/if}
@@ -621,11 +627,12 @@
                 class:dimmed
                 class:search-match={point.searchMatch}
                 class:compared={comparedSkillIds.has(point.skillId)}
+                class:forced={point.forced}
                 class:active={icon.id === activeId}
                 class:pinned={icon.id === pinnedId}
                 style:left={`${icon.x}px`}
                 style:top={`${icon.y}px`}
-                aria-label={`${point.name}: ${format(point.y)}, ${point.xLabel}${point.searchMatch ? ', search match' : ''}${comparedSkillIds.has(point.skillId) ? ', compared' : ''}`}
+                aria-label={`${point.name}: ${format(point.y)}, ${point.xLabel}${point.forced ? ', forced to proc' : ''}${point.searchMatch ? ', search match' : ''}${comparedSkillIds.has(point.skillId) ? ', compared' : ''}`}
                 aria-haspopup="dialog"
                 aria-expanded={icon.id === activeId}
                 aria-controls={icon.id === activeId ? detailsId : undefined}
