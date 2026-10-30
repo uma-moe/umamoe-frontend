@@ -45,7 +45,6 @@
   let skillLookup = $state.raw(new Map<number, SkillData>());
   let run = $state<{
     result: OptimizeResult;
-    raw: string;
     offers: PricedOffer[];
     budget: number;
     key: string;
@@ -250,7 +249,6 @@
       const response = await simulatorRepository.optimize({ body: { ...body } });
       run = {
         result: response.result,
-        raw: response.raw,
         offers: priced,
         budget,
         key,
@@ -320,7 +318,6 @@
       <BuildResult
         result={run?.result}
         {theorized}
-        raw={run?.raw}
         offers={run?.offers}
         budget={run?.budget}
         where={run?.where}

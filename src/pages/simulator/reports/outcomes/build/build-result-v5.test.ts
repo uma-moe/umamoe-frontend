@@ -86,19 +86,9 @@ function result(): OptimizeResult {
       ranker_sha256: 'ranker-hash',
       course_prior: true,
       seconds: 5,
-      first_steps: [{ add: 2, cost: 160, predicted: 1, beaten: 0.1, win: 0.01, time: 0.2 }],
-      rounds: [
-        {
-          races: 8000,
-          slope: 0.5,
-          trust: 1,
-          made: ['swap'],
-          tested: [{ move: 'swap', prior: 1, measured: 2, se: 0.5, posterior: 1.5, p: 0.9 }]
-        }
-      ],
       explanation: {
         phase_bounds: [0, 200, 800, 1000, 1200],
-        initial: {
+        runner_up: {
           purchases: [0, 1, 2],
           timing_races: 64,
           skills: [{ ...skill(1, 3), measured: { gain: 3.2, standard_error: 0.4 } }, skill(2, 1)]
@@ -137,12 +127,12 @@ function result(): OptimizeResult {
 describe('V5 in the existing optimizer', () => {
   it('keeps negative contributions distinct even when every score is a loss', () => {
     const response = result();
-    const explanation = response.model!.build!.explanation!;
-    for (const report of [explanation.initial, explanation.optimized]) {
+    const explanation = response.model!.build!.explanation;
+    for (const report of [explanation.runner_up!, explanation.optimized]) {
       for (const part of report.skills) part.score = -Math.abs(part.score);
     }
 
-    explanation.initial.skills[0]!.score = -12;
+    explanation.runner_up!.skills[0]!.score = -12;
     const view = theorizedResult({ result: response, offers })!;
 
     expect(view.scale).toBe(12);
@@ -171,7 +161,7 @@ describe('V5 in the existing optimizer', () => {
 
   it('keeps absent scores and paired evidence unknown instead of claiming zero benefit', () => {
     const response = result();
-    response.model!.build!.explanation!.initial.skills.pop();
+    response.model!.build!.explanation.runner_up!.skills.pop();
     const view = theorizedResult({ result: response, offers })!;
     const missing = view.builds[0]!.cells.find((c) => c.skill.offer.skillId === 201601)!;
     expect(missing.value).toBeUndefined();
@@ -193,31 +183,25 @@ describe('V5 in the existing optimizer', () => {
     expect(worthState(0.01, 'score')).toBe('helps');
   });
 
-  it("scores the first build's purchases when the simulator sends no explanation", () => {
-    const response = result();
-    delete response.model!.build!.explanation;
-    expect(isOptimizeModel(response.model)).toBe(true);
-    const view = theorizedResult({ result: response, offers })!;
-    expect(view.builds.map((b) => b.finalist)).toEqual(response.report.finalists);
-    expect(view.builds[0]!.value).toBe(11);
-    expect(
-      view.builds[0]!.cells.map((c) => [c.skill.offer.skill.name, c.value, c.valuation.source])
-    ).toEqual([
-      ['Groundwork', 1, 'v5'],
-      ['Swinging Maestro', undefined, 'unknown']
-    ]);
-    expect(view.skills.map((s) => [s.key, s.value, s.bought])).toEqual([[2, 1, true]]);
-  });
-
-  it('rejects malformed or mismatched V5 explanation data', () => {
+  it('rejects missing, malformed or mismatched V5 explanation data', () => {
     const response = result();
     const model = response.model!;
     expect(isOptimizeModel(model)).toBe(true);
-    model.build!.explanation!.initial.skills[0]!.measured!.standard_error = -1;
+    model.build!.explanation.runner_up!.skills[0]!.measured!.standard_error = -1;
     expect(isOptimizeModel(model)).toBe(false);
     expect(theorizedResult({ result: response, offers })).toBeUndefined();
     const mismatch = result();
-    mismatch.model!.build!.explanation!.initial.purchases = [999];
+    mismatch.model!.build!.explanation.runner_up!.purchases = [999];
     expect(theorizedResult({ result: mismatch, offers })).toBeUndefined();
+    const unexplained = result();
+    delete (unexplained.model!.build as Partial<NonNullable<OptimizeModel['build']>>).explanation;
+    expect(isOptimizeModel(unexplained.model)).toBe(false);
+  });
+
+  it('reads a reply whose V5 had no runner-up', () => {
+    const response = result();
+    delete response.model!.build!.explanation.runner_up;
+    response.report.finalists = [response.report.finalists[1]!];
+    expect(theorizedResult({ result: response, offers })!.builds).toHaveLength(1);
   });
 });

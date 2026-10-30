@@ -35,7 +35,7 @@
     aria-label={title}
   >
     <BuildColumnHead
-      title={index === 0 ? 'Recommended build' : 'Alternative ' + index}
+      title={index === 0 ? 'Recommended build' : 'Runner-up'}
       spCost={build.finalist.sp_cost}
       count={build.count}
       value={build.value}

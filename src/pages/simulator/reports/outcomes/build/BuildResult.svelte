@@ -2,7 +2,6 @@
   import InfoBadge from '@/components/feedback/InfoBadge.svelte';
   import Button from '@/components/controls/Button.svelte';
   import Icon from '@/components/Icon.svelte';
-  import Dialog from '@/components/overlays/Dialog.svelte';
   import InspectPopover from '@/components/overlays/InspectPopover.svelte';
   import type { OptimizeResult, OptimizeTheory } from '../../../simulator-repository';
   import type { PricedOffer } from '../../../setup/build/skill-offers';
@@ -22,7 +21,6 @@
   let {
     result,
     theorized,
-    raw = '',
     offers = [],
     budget,
     where = [],
@@ -34,7 +32,6 @@
     result?: OptimizeResult;
     /** The result as the theory valued it, its builds the most worth first: the pick. */
     theorized?: TheorizedResult;
-    raw?: string;
     /** The skills on offer the search ran with, in purchase order. */
     offers?: PricedOffer[];
     budget?: number;
@@ -49,8 +46,6 @@
 
   const THEORY_METHOD =
     'Every skill is valued by theory before any race: where its conditions let it fire on this course and how often for her, what its effect does there in her race by the game’s own speed, HP and last-spurt rules, and how her skills combine, such as a skill that waits for others to fire, a heal that only counts once her HP runs short, or two that do the same. Skills that act on the field (the start, lanes, vision, debuffs on others) are valued from recorded CM races instead. Worth is in lengths of 2.5 m over her build as it is: a build’s is its own, its skills’ synergies included, and a skill’s is what the build loses without it.';
-
-  let rawOpen = $state(false);
 
   /** The check races measured runners beaten in real CM fields, not seconds. */
   const field = $derived(result?.objective === 'field_place');
@@ -115,40 +110,7 @@
       <InfoBadge />
     {/snippet}
     <p class="about-text">{about}</p>
-    {#if theorized?.model?.build}
-      <details>
-        <summary>Optimization rounds</summary>
-        {#each theorized.model.build.rounds as round, index}
-          <p class="about-text">
-            Round {index + 1}: {round.tested.length} moves tested;
-            {round.made.length ? round.made.join(', ') : 'no change accepted'}.
-            {round.races.toLocaleString('en-US')} cumulative search races. Feedback slope {round.slope.toFixed(
-              2
-            )}, trust {round.trust.toFixed(2)}.
-          </p>
-          <details>
-            <summary>Paired move results</summary>
-            {#each round.tested as move}
-              <p class="about-text">
-                {move.move}: measured {move.measured.toFixed(2)} ± {move.se.toFixed(2)} SE; posterior
-                {move.posterior.toFixed(2)} score, {(move.p * 100).toFixed(1)}% chance of
-                improvement.
-              </p>
-            {/each}
-          </details>
-        {/each}
-      </details>
-    {/if}
   </InspectPopover>
-  {#if raw}
-    <Button
-      size="sm"
-      variant="ghost"
-      onclick={() => (rawOpen = true)}
-    >
-      Raw data
-    </Button>
-  {/if}
 {/snippet}
 
 <section
@@ -262,23 +224,6 @@
     </div>
   {/if}
 </section>
-
-<Dialog
-  bind:open={rawOpen}
-  title="Raw optimizer response"
-  maxWidth="900px"
-  maxHeight="90dvh"
->
-  <pre>{raw}</pre>
-  {#snippet actions()}
-    <Button
-      variant="secondary"
-      onclick={() => (rawOpen = false)}
-    >
-      Close
-    </Button>
-  {/snippet}
-</Dialog>
 
 <style>
   @import './build-result.css';

@@ -84,13 +84,6 @@
   align-items: start;
   min-width: 0;
 }
-pre {
-  max-height: 60dvh;
-  overflow: auto;
-  font-size: 11px;
-  white-space: pre-wrap;
-  overflow-wrap: anywhere;
-}
 @media (max-width: 767px) {
   .answer {
     padding: 10px 12px;

@@ -430,37 +430,16 @@ export interface OptimizeModel {
     ranker_sha256?: string;
     course_prior: boolean;
     seconds: number;
-    first_steps: {
-      add: number;
-      cost: number;
-      predicted: number;
-      beaten: number;
-      win: number;
-      time: number;
-    }[];
-    rounds: {
-      races: number;
-      slope: number;
-      trust: number;
-      tested: {
-        move: string;
-        prior: number;
-        measured: number;
-        se: number;
-        posterior: number;
-        p: number;
-      }[];
-      made: string[];
-    }[];
-    explanation?: {
+    /** What each skill is worth in V5's two end builds: its optimized build and its runner-up, when it had one. */
+    explanation: {
       phase_bounds: number[];
-      initial: V5BuildValues;
       optimized: V5BuildValues;
+      runner_up?: V5BuildValues;
     };
   };
 }
 
-/** Validate the V5 report before reading it into the optimizer. Older V5 builds omit the explanation. */
+/** Validate the V5 report before reading it into the optimizer. */
 export function isOptimizeModel(value: unknown): value is OptimizeModel {
   const index = (v: unknown) => isNumber(v) && Number.isSafeInteger(v) && v >= 0;
   const optionalNumber = (v: unknown) => v === undefined || isNumber(v);
@@ -506,46 +485,17 @@ export function isOptimizeModel(value: unknown): value is OptimizeModel {
     typeof b.model_sha256 !== 'string' ||
     (b.ranker_sha256 !== undefined && typeof b.ranker_sha256 !== 'string') ||
     typeof b.course_prior !== 'boolean' ||
-    !isNumber(b.seconds) ||
-    !Array.isArray(b.first_steps) ||
-    !b.first_steps.every(
-      (s) =>
-        isRecord(s) &&
-        index(s.add) &&
-        isNumber(s.cost) &&
-        isNumber(s.predicted) &&
-        isNumber(s.beaten) &&
-        isNumber(s.win) &&
-        isNumber(s.time)
-    ) ||
-    !Array.isArray(b.rounds) ||
-    !b.rounds.every(
-      (r) =>
-        isRecord(r) &&
-        index(r.races) &&
-        isNumber(r.slope) &&
-        isNumber(r.trust) &&
-        Array.isArray(r.made) &&
-        r.made.every((m) => typeof m === 'string') &&
-        Array.isArray(r.tested) &&
-        r.tested.every(
-          (t) =>
-            isRecord(t) &&
-            typeof t.move === 'string' &&
-            [t.prior, t.measured, t.se, t.posterior, t.p].every(isNumber)
-        )
-    )
+    !isNumber(b.seconds)
   )
     return false;
   const e = b.explanation;
   return (
-    e === undefined ||
-    (isRecord(e) &&
-      Array.isArray(e.phase_bounds) &&
-      e.phase_bounds.length === 5 &&
-      e.phase_bounds.every((n, i, a) => isNumber(n) && (i === 0 || n > a[i - 1])) &&
-      values(e.initial) &&
-      values(e.optimized))
+    isRecord(e) &&
+    Array.isArray(e.phase_bounds) &&
+    e.phase_bounds.length === 5 &&
+    e.phase_bounds.every((n, i, a) => isNumber(n) && (i === 0 || n > a[i - 1])) &&
+    values(e.optimized) &&
+    (e.runner_up === undefined || values(e.runner_up))
   );
 }
 

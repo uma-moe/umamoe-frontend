@@ -287,7 +287,7 @@ export interface TheorizedResult {
  * How many builds the result compares: the service returns this many, its best by her win rate in races of her real CM
  * fields (or by theorized worth where it raced none), and the page keeps to it for a service that returns more.
  */
-export const COMPARED_BUILDS = 3;
+export const COMPARED_BUILDS = 2;
 
 /** The response's theory, when it has one the page can read. */
 export function theoryOf(result: OptimizeResult | undefined): OptimizeTheory | undefined {
@@ -576,31 +576,18 @@ function v5Result(result: OptimizeResult, offers: PricedOffer[]): TheorizedResul
   const model = result.model;
   if (!isOptimizeModel(model)) return undefined;
   const explanation = model.build!.explanation;
-  // Without an explanation, skills carry the score V5 gave each purchase of its first build as it bought it.
-  const firstSteps = model.build!.first_steps.map((step): V5PurchaseValue => ({
-    purchase: step.add,
-    held: true,
-    score: step.predicted,
-    source: 'v5',
-    win: step.win,
-    fire: { races: 0, rate: 0, mean_m: null }
-  }));
   const finalists = result.report.finalists.slice(0, COMPARED_BUILDS);
   const same = (a: number[], b: number[]) => a.length === b.length && a.every((p) => b.includes(p));
   const reports = finalists.map((f) =>
-    explanation
-      ? [explanation.optimized, explanation.initial].find((e) =>
-          same(e.purchases, f.build.purchases)
-        )
-      : undefined
+    [explanation.optimized, explanation.runner_up].find(
+      (e) => e && same(e.purchases, f.build.purchases)
+    )
   );
-  if (explanation && reports.some((r) => r === undefined)) return undefined;
+  if (reports.some((r) => r === undefined)) return undefined;
   const rows = compareRows(finalists, offers);
   const baseline = measuredMean(result.report.baseline, 'finish_time_seconds');
   const builds = finalists.map((finalist, index): TheorizedBuild => {
-    const worth = new Map(
-      (reports[index]?.skills ?? firstSteps).filter((s) => s.held).map((s) => [s.purchase, s])
-    );
+    const worth = new Map(reports[index]!.skills.filter((s) => s.held).map((s) => [s.purchase, s]));
     const cells = [...rows.shared, ...rows.differ]
       .flatMap((row): BuildCell[] => {
         const held = row.held[index]!;
@@ -635,8 +622,7 @@ function v5Result(result: OptimizeResult, offers: PricedOffer[]): TheorizedResul
     };
   });
   const picked = new Set(finalists[0]?.build.purchases ?? []);
-  const pickReport = reports[0];
-  const skills: ListedSkill[] = (pickReport?.skills ?? firstSteps)
+  const skills: ListedSkill[] = (reports[0]?.skills ?? [])
     .flatMap((part) => {
       const offer = offers[part.purchase];
       if (!offer) return [];
@@ -661,7 +647,7 @@ function v5Result(result: OptimizeResult, offers: PricedOffer[]): TheorizedResul
     skills,
     skillUnit: 'score',
     model,
-    phaseBounds: explanation?.phase_bounds ?? [],
+    phaseBounds: explanation.phase_bounds,
     scale:
       Math.max(
         0,
@@ -685,20 +671,12 @@ export function valueText(
 
 export function v5Tally(result: OptimizeResult, model: OptimizeModel): string {
   const build = model.build!;
-  const rounds = build.rounds;
-  const moves = rounds.reduce((n, r) => n + r.tested.length, 0);
   const checked = result.report.simulations;
   return (
     build.model +
     (build.ranker_sha256 ? ' with the trained move ranker' : '') +
     (build.course_prior ? ' and course skill weights' : '') +
-    ' bought the initial build in ' +
-    build.first_steps.length +
-    ' steps, then tested ' +
-    moves +
-    ' moves over ' +
-    rounds.length +
-    ' optimization rounds. ' +
+    ' bought an initial build, optimized it with paired race tests and kept its best alternative. ' +
     model.races.toLocaleString('en-US') +
     ' search races + ' +
     checked.toLocaleString('en-US') +
