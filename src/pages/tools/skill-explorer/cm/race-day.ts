@@ -3,11 +3,13 @@ export interface RaceDay {
   season: number;
   weather: number;
   ground: number;
+  /** Time of day: 2 by day, 4 at night. */
+  time: number;
 }
 
 /**
- * Whether a skill's conditions can hold on `day`: some alternative (split by `@`) whose season, weather and ground
- * terms (joined by `&`) all match. Terms about anything else are left to the race.
+ * Whether a skill's conditions can hold on `day`: some alternative (split by `@`) whose season, weather, ground and
+ * time terms (joined by `&`) all match. Terms about anything else are left to the race.
  */
 export function dayAllows(conditions: string | undefined, day: RaceDay): boolean {
   if (conditions === undefined || conditions.trim() === '') return true;
@@ -15,11 +17,12 @@ export function dayAllows(conditions: string | undefined, day: RaceDay): boolean
   const actual: Record<string, number> = {
     season: day.season,
     weather: day.weather,
-    ground_condition: day.ground
+    ground_condition: day.ground,
+    time: day.time
   };
   return conditions.split('@').some((alternative) =>
     alternative.split('&').every((term) => {
-      const match = /^(season|weather|ground_condition)(==|!=)(\d+)$/.exec(term.trim());
+      const match = /^(season|weather|ground_condition|time)(==|!=)(\d+)$/.exec(term.trim());
       if (match === null) return true;
 
       const [, key, operator, expected] = match;

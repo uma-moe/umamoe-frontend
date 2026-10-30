@@ -139,11 +139,12 @@ describe('Skill Explorer data', () => {
 
 describe('race days', () => {
   it('holds a skill when some alternative matches the day', () => {
-    const springFirm = { season: 1, weather: 1, ground: 1 };
+    const springFirm = { season: 1, weather: 1, ground: 1, time: 2 };
 
     expect(dayAllows('season==1@season==5', springFirm)).toBe(true);
     expect(dayAllows('ground_condition==3', springFirm)).toBe(false);
     expect(dayAllows('weather!=3&distance_rate>=50', springFirm)).toBe(true);
     expect(dayAllows('', springFirm)).toBe(true);
+    expect(dayAllows('time==4', springFirm)).toBe(false);
   });
 });

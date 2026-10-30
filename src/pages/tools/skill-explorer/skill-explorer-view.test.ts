@@ -28,6 +28,7 @@ const skills = new Map<number, SkillData>([
   [200341, skill(200341, 'Corner Connoisseur', { rarity: 2, baseCost: 180 })],
   [200013, skill(200013, 'Right-Handed ×', { icon: 'utx_ico_skill_10014.webp' })],
   [200151, skill(200151, 'Firm Conditions ◎', { conditions: 'ground_condition==1' })],
+  [202231, skill(202231, 'Night Races ◎', { conditions: 'time==4' })],
   [900011, skill(900011, 'Inherited')]
 ]);
 
@@ -37,6 +38,7 @@ const facts = new Map<number, SkillFacts>([
   [200341, { kind: 'speed' }],
   [200013, { kind: 'stat' }],
   [200151, { kind: 'stat' }],
+  [202231, { kind: 'stat' }],
   [900011, { kind: 'speed', card: 100101 }]
 ]);
 
@@ -46,6 +48,7 @@ const points = [
   point(200341, 0.8, 0.6),
   point(200013, -0.3, 0),
   point(200151, 0.9, 0),
+  { ...point(202231, 0.7, 0), forced: 1 },
   point(900011, 0.1, 0.9)
 ];
 
@@ -91,15 +94,18 @@ describe('Skill Explorer plot view', () => {
 
   it('leaves out negative skills and, unless asked, day-bound ones', () => {
     expect(shownIds()).toEqual([200341, 200011, 200012, 900011]);
-    expect(shownIds({ showDayBound: true })).toContain(200151);
+    expect(shownIds({ showDayBound: true })).toEqual(expect.arrayContaining([200151, 202231]));
   });
 
-  it('shows a day-bound skill on a CM whose day it holds on', () => {
-    const firmDay = { season: 1, weather: 1, ground: 1 };
-    const heavyDay = { season: 1, weather: 3, ground: 4 };
+  it('on a CM shows a day-bound skill only where its day holds, and not as forced', () => {
+    const firmDay = { season: 1, weather: 1, ground: 1, time: 2 };
+    const heavyDay = { season: 1, weather: 3, ground: 4, time: 2 };
+    const forcedFirm = { ...point(200151, 0.9, 0), forced: 1 };
+    const onDay = view({ points: [forcedFirm, points[5]!], day: firmDay }).plotted;
 
-    expect(shownIds({ day: firmDay })).toContain(200151);
+    expect(onDay.map((p) => [p.skillId, p.forced])).toEqual([[200151, false]]);
     expect(shownIds({ day: heavyDay, showDayBound: true })).not.toContain(200151);
+    expect(shownIds({ day: { ...firmDay, time: 4 } })).toContain(202231);
   });
 
   it('scales by proc rate when asked: a skill forced to proc by its forced rate, on her own too', () => {
@@ -168,7 +174,10 @@ describe('Skill Explorer plot view', () => {
 
   it('does not reintroduce unavailable or negative skills through comparison', () => {
     const comparedSkillIds = new Set([999991, 200013, 200151]);
-    const shown = shownIds({ comparedSkillIds, day: { season: 1, weather: 3, ground: 4 } });
+    const shown = shownIds({
+      comparedSkillIds,
+      day: { season: 1, weather: 3, ground: 4, time: 2 }
+    });
 
     expect(shown).not.toContain(999991);
     expect(shown).not.toContain(200013);

@@ -16,10 +16,18 @@ export interface MeetingOption {
   day?: RaceDay;
 }
 
+/** Champions Meetings race by day: Night Races never fires in one. */
+const MEETING_TIME = 2;
+
 function dayOf(preset: ReturnType<typeof cmPreset>): RaceDay | undefined {
   const { season, weather, ground } = preset;
   if (season === undefined || weather === undefined || ground === undefined) return undefined;
-  return { season: Number(season), weather: Number(weather), ground: Number(ground) };
+  return {
+    season: Number(season),
+    weather: Number(weather),
+    ground: Number(ground),
+    time: MEETING_TIME
+  };
 }
 
 /**

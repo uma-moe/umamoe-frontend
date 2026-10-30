@@ -39,7 +39,7 @@ describe('meeting options', () => {
     expect(options[0]).toMatchObject({
       courseId: 10808,
       timing: 'upcoming',
-      day: { season: 3, weather: 1, ground: 1 }
+      day: { season: 3, weather: 1, ground: 1, time: 2 }
     });
     expect(options[1]).toMatchObject({ courseId: 10808, timing: 'past' });
   });

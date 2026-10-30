@@ -183,6 +183,8 @@
 
   /** The meeting's race day, from the timeline's announced conditions. */
   const raceDay = $derived<RaceDay | undefined>(selectedMeeting?.day);
+  /** On a CM with a known day, a day-bound skill shows only where its day holds: nothing is assumed. */
+  const dayFromMeeting = $derived(selectedMeeting !== undefined && raceDay !== undefined);
 
   const target = $derived(
     statlines
@@ -564,6 +566,7 @@
         bind:show
         bind:bestOfFamily
         bind:showDayBound
+        {dayFromMeeting}
         bind:procScaled
         {umas}
         {surfaceOptions}
@@ -658,11 +661,13 @@
           win curve does not count as a combination. A CM shows its course. Over several courses, a value
           is the median course's, so turf shows what a skill is worth on a typical turf course, and proc
           points average the races it fired in. Strong and weaker split at the median shown skill. A skill
-          whose race-state conditions never hold for her, such as the runners around her or skills it
-          waits on, is valued as if it procs where its course, day and running style allow it. Impossible
-          combinations stay at 0. All styles averages only over styles where the skill can activate. Assumed
-          activations count 0 when scaled by proc rate. Negative skills are left out; ground, weather
-          and season skills show on a CM whose day they hold on, and elsewhere only when asked.
+          that waits on her own activations, such as a count of her skills or recoveries, is raced again
+          with the skills that feed it bought beside her build and valued there. One that needs a ground,
+          weather, season or night the explorer's day lacks is valued as if that day held, marked Forced.
+          Any other skill that never procs for her is left out. All styles averages only over styles where
+          the skill can activate. Forced skills scale by the rate they proc at once their day holds. Negative
+          skills are left out; ground, weather, season and night skills show on a CM whose day they hold
+          on, and elsewhere only when asked.
           <strong>Picking an uma</strong>
           highlights her unique, as inherited, and the skills she starts with or unlocks by potential
           level: from the Global game data for umas out on Global, from the Japanese for those still to
@@ -680,7 +685,7 @@
   {#if point && skill}
     {@const card = index?.skills.get(skillId)?.card}
     <SkillCard
-      {point}
+      point={dayFromMeeting ? { ...point, forced: 0 } : point}
       name={skill.name}
       image={card === undefined ? skillImage(skill.icon) : characterImagePath(card)}
       badge={card === undefined ? undefined : skillImage(skill.icon)}

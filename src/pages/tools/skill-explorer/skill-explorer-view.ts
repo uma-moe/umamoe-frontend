@@ -34,8 +34,8 @@ export function limitOf(show: ShowLimit): number | undefined {
 /** Inherited uniques are numbered from 900000. */
 const INHERITED_UNIQUE_FROM = 900_000;
 
-/** Ground, weather and season conditions: the theory values these skills as if their day holds. */
-const DAY_CONDITION = /\b(?:ground_condition|weather|season)==/;
+/** Ground, weather, season and time-of-day conditions: the explorer values these skills as if their day holds. */
+const DAY_CONDITION = /\b(?:ground_condition|weather|season|time)==/;
 
 /** Negative skills (×, Paddock Fright, Defeatist…) all use the purple icon variants, numbered …4. */
 const NEGATIVE_ICON = /_\d{4}4\.(?:png|webp)$/i;
@@ -70,7 +70,7 @@ export interface PlotOptions {
   /** Compared skills bypass display filters, limits and best-version grouping. */
   comparedSkillIds?: ReadonlySet<number>;
   showDayBound: boolean;
-  /** A CM's race day: its ground, weather and season skills show when they hold, whatever `showDayBound` says. */
+  /** A CM's race day: its day-bound skills show when their day holds, unforced, whatever `showDayBound` says. */
   day?: RaceDay;
   /** Values over all races, scaled by how often each skill fires, rather than in the races it fires in. */
   procScaled: boolean;
@@ -242,8 +242,9 @@ export function plotView(options: PlotOptions): PlotView {
     xLabel: xMode === 'position' ? positionLabel(x, courseDistance) : `${x} SP`,
     matches,
     searchMatch,
-    // Forced on at least half the courses it is valued on: its value there is mostly an assumed day.
-    forced: point.forced > 0 && point.forced * 2 >= point.courses
+    // Forced on at least half the courses it is valued on: its value there is mostly an assumed day. On a CM the day
+    // is the meeting's, and a skill shows only where it holds.
+    forced: options.day === undefined && point.forced > 0 && point.forced * 2 >= point.courses
   }));
   const ySplit = median(plotted.map((point) => point.y));
 

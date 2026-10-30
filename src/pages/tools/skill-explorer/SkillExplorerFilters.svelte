@@ -34,6 +34,8 @@
     show: ShowLimit;
     bestOfFamily: boolean;
     showDayBound: boolean;
+    /** A CM with a known day: its day decides which day-bound skills show. */
+    dayFromMeeting: boolean;
     procScaled: boolean;
     umas: ExplorerUma[];
     surfaceOptions: SelectOption[];
@@ -58,6 +60,7 @@
     show = $bindable(),
     bestOfFamily = $bindable(),
     showDayBound = $bindable(),
+    dayFromMeeting,
     procScaled = $bindable(),
     umas,
     surfaceOptions,
@@ -319,9 +322,12 @@
               <Checkbox
                 variant="field"
                 id="skill-explorer-day-bound"
-                label="Ground, weather and season skills"
-                ariaLabel="Ground, weather and season skills"
-                description="Valued as if their day held, marked Forced"
+                label="Ground, weather, season and night skills"
+                ariaLabel="Ground, weather, season and night skills"
+                description={dayFromMeeting
+                  ? "Set by the CM's day: shown where it holds"
+                  : 'Valued as if their day held, marked Forced'}
+                disabled={dayFromMeeting}
                 bind:checked={showDayBound}
               />
             </div>
