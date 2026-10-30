@@ -1,8 +1,8 @@
 <script lang="ts">
+  import InfoBadge from '@/components/feedback/InfoBadge.svelte';
   import type { Snippet } from 'svelte';
   import Button from '@/components/controls/Button.svelte';
   import SelectField from '@/components/controls/SelectField.svelte';
-  import Icon from '@/components/Icon.svelte';
   import InspectPopover from '@/components/overlays/InspectPopover.svelte';
   import { formatRaceTime } from '@/lib/race/replay/race-display';
   import type { ReplayBounds } from '@/lib/race/replay/race-replay';
@@ -152,12 +152,7 @@
       align="end"
     >
       {#snippet trigger()}
-        <span class="timeline-help">
-          <Icon
-            name="info"
-            size={16}
-          />
-        </span>
+        <InfoBadge />
       {/snippet}
       <ReplayTelemetryGuide ensemble={minimal} />
       <h3>Course and skill timeline</h3>

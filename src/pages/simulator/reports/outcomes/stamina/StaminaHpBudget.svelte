@@ -47,7 +47,6 @@
 <ChartFrame
   id="simulation-hp-budget"
   title="Where the HP goes"
-  slim
   state={budgets.length ? 'ready' : 'empty'}
   emptyTitle="HP use unavailable"
   emptyDetail="This batch has no per-race telemetry. Run it again to see where the HP goes."

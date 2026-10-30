@@ -1,11 +1,11 @@
 <script lang="ts">
+  import InfoBadge from '@/components/feedback/InfoBadge.svelte';
   import { resolveEncodedSkill } from '@/lib/game-data/skills/skills';
   import { ReportSkillCatalog } from './report-skill-catalog.svelte';
   import ChartFrame from '@/components/charts/ChartFrame.svelte';
   import SelectField from '@/components/controls/SelectField.svelte';
   import StatStrip from '@/components/game/StatStrip.svelte';
   import InspectPopover from '@/components/overlays/InspectPopover.svelte';
-  import Icon from '@/components/Icon.svelte';
   import LazyEChartsSurface from '@/components/charts/LazyEChartsSurface.svelte';
   import RaceSkill from '@/pages/competitive/runners/RaceSkill.svelte';
   import { theme } from '@/stores/theme';
@@ -281,12 +281,7 @@
         {#snippet titleActions()}
           <InspectPopover label="How to read skill distributions">
             {#snippet trigger()}
-              <span class="guide">
-                <Icon
-                  name="info"
-                  size={16}
-                />
-              </span>
+              <InfoBadge />
             {/snippet}
             <h3>Model and observations</h3>
             <p>
@@ -494,10 +489,6 @@
     line-height: 1.5;
     color: var(--text-secondary);
     padding-top: 8px;
-  }
-  .guide {
-    display: flex;
-    color: var(--text-secondary);
   }
   .unavailable {
     padding: 16px;

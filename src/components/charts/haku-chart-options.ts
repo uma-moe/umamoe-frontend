@@ -1,4 +1,5 @@
 import type { EChartsCoreOption } from 'echarts/core';
+import { insideZoom } from '@/components/charts/echarts-zoom';
 
 export function hakuBarChartOption(
   name: string,
@@ -17,6 +18,7 @@ export function hakuBarChartOption(
       textStyle: { color: '#fff' }
     },
     grid: { left: 44, right: 18, top: 22, bottom: labels.length > 6 ? 76 : 42 },
+    dataZoom: insideZoom(),
     xAxis: {
       type: 'category',
       data: labels,

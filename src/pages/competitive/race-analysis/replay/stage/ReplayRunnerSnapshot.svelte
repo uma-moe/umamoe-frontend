@@ -160,12 +160,7 @@
         align="end"
       >
         {#snippet trigger()}
-          <span class="snapshot-details-trigger">
-            <Icon
-              name="info"
-              size={14}
-            />Details
-          </span>
+          <span class="snapshot-details-trigger">Details</span>
         {/snippet}
         <div class="snapshot-details">
           <h3>{runner.name}</h3>

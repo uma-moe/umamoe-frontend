@@ -1,9 +1,9 @@
 <script lang="ts">
+  import InfoBadge from '@/components/feedback/InfoBadge.svelte';
   import { onDestroy, untrack } from 'svelte';
   import Button from '@/components/controls/Button.svelte';
   import Spinner from '@/components/feedback/Spinner.svelte';
   import IconButton from '@/components/controls/IconButton.svelte';
-  import Icon from '@/components/Icon.svelte';
   import InspectPopover from '@/components/overlays/InspectPopover.svelte';
   import { pct, number } from '../cm-data';
   import { activationBins, centralActivationWindow, type SkillOverview } from '../cm-exploration';
@@ -347,10 +347,7 @@
             label="How to read activation distances"
             align="end"
           >
-            {#snippet trigger()}<Icon
-                name="info"
-                size={16}
-              />{/snippet}
+            {#snippet trigger()}<InfoBadge />{/snippet}
             {#if !removable}<div class="lane-reading">
                 <span>
                   Mean / median <strong>

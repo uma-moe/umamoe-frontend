@@ -128,7 +128,6 @@
 <ChartFrame
   id="simulation-skill-activation"
   title="Skill activation"
-  slim
   description={'How often each learned skill activates over the ' +
     result.runs +
     ' races, least reliable first. Each cell is the share of races in which that runner activated the skill at least once. Skills that fire almost every race stay grey; the less often one fires, the stronger its amber, and red means it never fired. “—” means she has not learned it. Hover a cell for the exact count, its 95% interval and how long the skill lasts. Where each skill fires is on the heatmap under the race timeline; what it is worth is in the ranking below.'}

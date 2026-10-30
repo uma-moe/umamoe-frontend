@@ -199,7 +199,6 @@
   <ChartFrame
     id="simulation-gap-course"
     title={'Gap to ' + name(reference) + ' along the course'}
-    slim
     state={!others.length ? 'empty' : gapChart ? 'ready' : error ? 'error' : 'loading'}
     emptyTitle="Pick a second runner"
     emptyDetail={'Pick another runner to see where she gains or loses ground on ' +
@@ -222,7 +221,6 @@
   <ChartFrame
     id="simulation-move-course"
     title="Along the course"
-    slim
     description={metrics[metric]!.title +
       ' at every point of the course, for each runner’s average race: compare where one runner is quicker, still accelerating or wider out than another. The followed runner’s middle 80% of races is shaded; the coloured bands are the race phases.'}
   >

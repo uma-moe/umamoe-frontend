@@ -1,6 +1,5 @@
 <script lang="ts">
   import Button from '@/components/controls/Button.svelte';
-  import Icon from '@/components/Icon.svelte';
   import InspectPopover from '@/components/overlays/InspectPopover.svelte';
 
   let {
@@ -35,10 +34,6 @@
     >
       {#snippet trigger()}
         <span class="guide-trigger">
-          <Icon
-            name="info"
-            size={15}
-          />
           <span class="tool-label">Guide</span>
         </span>
       {/snippet}

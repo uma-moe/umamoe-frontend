@@ -75,7 +75,6 @@
 <ChartFrame
   id="simulation-behaviour"
   title="Race behaviour"
-  slim
   state={rows.length ? 'ready' : 'empty'}
   emptyTitle="Race behaviour unavailable"
   emptyDetail="This batch did not collect race diagnostics. Run it again to see them."

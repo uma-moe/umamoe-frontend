@@ -2,6 +2,7 @@
   module
   lang="ts"
 >
+  import InfoBadge from '@/components/feedback/InfoBadge.svelte';
   const fullDate = new Intl.DateTimeFormat('en-US', {
     month: 'short',
     day: 'numeric',
@@ -359,10 +360,7 @@
                 {#if group.breakdownTooltip}
                   <InspectPopover label={'Show reward breakdown for ' + group.title}>
                     {#snippet trigger()}
-                      <Icon
-                        name="info"
-                        size={15}
-                      />
+                      <InfoBadge />
                     {/snippet}
                     <div class="breakdown">{group.breakdownTooltip}</div>
                   </InspectPopover>

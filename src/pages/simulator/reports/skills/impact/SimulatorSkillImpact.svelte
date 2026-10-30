@@ -1,11 +1,11 @@
 <script lang="ts">
+  import InfoBadge from '@/components/feedback/InfoBadge.svelte';
   import type { Snippet } from 'svelte';
   import Banner from '@/components/feedback/Banner.svelte';
   import Button from '@/components/controls/Button.svelte';
   import ChartFrame from '@/components/charts/ChartFrame.svelte';
   import EmptyState from '@/components/feedback/EmptyState.svelte';
   import InspectPopover from '@/components/overlays/InspectPopover.svelte';
-  import Icon from '@/components/Icon.svelte';
   import SegmentedControl from '@/components/controls/SegmentedControl.svelte';
   import { resolveEncodedSkill, skillPointTotal, skillRarity } from '@/lib/game-data/skills/skills';
   import { ReportSkillCatalog } from '../report-skill-catalog.svelte';
@@ -150,12 +150,7 @@
         label="How skill impact is measured"
         align="end"
       >
-        {#snippet trigger()}<span class="help">
-            <Icon
-              name="info"
-              size={15}
-            />
-          </span>{/snippet}
+        {#snippet trigger()}<InfoBadge />{/snippet}
         <h3>Skill effect comparisons</h3>
         <p>
           Each measurement reruns this batch’s seeds with one skill’s effects suppressed while the
@@ -199,7 +194,6 @@
     <ChartFrame
       id="skill-impact-runner"
       title="Learned skills"
-      slim
       description={impacts.available
         ? 'What each of ' +
           umas[active]!.name +
@@ -289,13 +283,6 @@
 </section>
 
 <style>
-  .help {
-    width: 24px;
-    height: 24px;
-    display: grid;
-    place-items: center;
-    color: var(--text-secondary);
-  }
   .report-section > :global(.chart-frame) + :global(.chart-frame) {
     margin-top: 8px;
   }

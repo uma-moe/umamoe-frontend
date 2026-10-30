@@ -143,7 +143,7 @@
       surface
       id="session-style-breakdown"
       title="Style breakdown"
-      description="Share of wins against share of the field · select a style for its teams"
+      description="A style’s win share exceeding its popularity means its win rate is above average."
     >
       <div class="breakdown">
         <div class="breakdown-key">
@@ -211,7 +211,6 @@
       surface
       id="session-rooms"
       title="Room compositions"
-      description="Runners of each style per race, and which style won"
     >
       <div
         class="rooms"
@@ -280,9 +279,9 @@
       maximize
       id="style-saturation"
       title="Style saturation"
-      description={'Per-Uma win rate by how many shared the style · counts seen in fewer than ' +
+      description={'Per-uma win rate by how many of that style appear in a race. Buckets only appear when they account for at least ' +
         SATURATION_MIN_RACES +
-        ' races are hidden'}
+        ' races.'}
     >
       <CmSaturationChart
         series={saturation}
@@ -298,9 +297,7 @@
       compact
       id="session-compositions"
       title="Team compositions"
-      description={baseline.team === undefined
-        ? 'Races won by any member of a lineup'
-        : 'Races won by any member · mark at the even ' + formatRate(baseline.team)}
+      description="Win rate of 3-uma teams grouped by running style trio."
     >
       <DataTable
         plain
@@ -374,9 +371,6 @@
     surface
     id="session-representatives"
     title="Style representatives"
-    description={'Most entered Umas per style · neutral is ' +
-      formatRate(baseline.uma) +
-      ' · select one for its teams'}
   >
     <div class="representatives">
       {#each shares as row (row.style)}

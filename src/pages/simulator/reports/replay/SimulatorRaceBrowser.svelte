@@ -69,7 +69,6 @@
 <ChartFrame
   id="simulation-sample-races"
   title="Watch a race"
-  slim
   description={'Replay any of the ' +
     result.runs +
     ' sampled races. Quick picks are each picked runner’s typical race (closest to her median finish), her fastest and her slowest. All races lists every race with its finishing order, left to right, and where the picked runners finished.'}

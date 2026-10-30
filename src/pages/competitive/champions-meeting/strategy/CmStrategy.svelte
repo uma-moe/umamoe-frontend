@@ -99,7 +99,6 @@
           ? 'Style Breakdown'
           : styleNames[Number(scope)] + ' · style overview'}
         description="A style’s win share exceeding its simulated field share means its win rate is above average."
-        slim
       >
         {#snippet actions()}
           {#if scope === 'all'}
@@ -196,7 +195,6 @@
         id="cm-saturation"
         title="Effects of style saturation"
         description="Per-uma win rate by how many of that style appear in a race. Buckets only appear when they account for at least 1% of total races."
-        slim
         expandable
       >
         {#snippet actions()}
@@ -314,7 +312,6 @@
         description={'Top performers per style ranked by ' +
           (metric === 'individual' ? 'personal' : 'team') +
           ' win rate.'}
-        slim
       >
         {#snippet actions()}
           <div class="rep-controls">
@@ -426,7 +423,6 @@
       id="cm-compositions"
       title="Team compositions"
       description="Win rate of 3-uma teams grouped by running style trio."
-      slim
     >
       {#snippet actions()}
         <div class="composition-filter">

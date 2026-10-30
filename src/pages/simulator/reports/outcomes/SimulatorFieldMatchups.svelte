@@ -42,7 +42,6 @@
 <ChartFrame
   id="simulation-head-to-head"
   title="Head-to-head"
-  slim
   description={'How often the runner on the left finishes ahead of the runner at the top, in the same races. Blue means she usually beats her, red means she usually loses, and the stronger the colour the clearer the result; pale cells are close to even. Runners are in win-rate order. Hover a cell for the 95% interval and the average finish-time difference.'}
 >
   <div class="scroll">
@@ -132,7 +131,6 @@
     <ChartFrame
       id="simulation-teams"
       title="Teams"
-      slim
       description="How often each team wins the race, with any of its runners, and its best finishing place on average. The bar shows the win rate; the line is its 95% interval."
     >
       {#each teams as team (team.id)}

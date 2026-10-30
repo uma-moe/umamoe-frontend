@@ -182,7 +182,6 @@
 <ChartFrame
   id="simulation-build-comparison"
   title={'Try a different build · ' + current.name}
-  slim
   description={'Change ' +
     current.name +
     '’s stats, aptitudes, style or skills and rerun the exact same races: opponents, gates, conditions and seeds stay fixed, so the difference comes from the build. Each row shows the stats and the three aptitudes this race applies, with changes from the current build highlighted. Gained is how far ahead of her current build the alternative finishes on average, with its 95% range; wins and full spurt show the change in percentage points and the current and alternative rate. Native random draws can diverge once a build changes, so small differences are noise.'}

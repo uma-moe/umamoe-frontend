@@ -1,19 +1,15 @@
 <script lang="ts">
   interface Props {
     title: string;
-    description?: string;
     context?: string;
   }
 
-  let { title, description, context }: Props = $props();
+  let { title, context }: Props = $props();
 </script>
 
 <header class="section-heading">
   <div>
     <h2>{title}</h2>
-    {#if description}
-      <p>{description}</p>
-    {/if}
   </div>
   {#if context}
     <span class="context-label">{context}</span>
@@ -26,21 +22,14 @@
     align-items: center;
     justify-content: space-between;
     gap: 12px;
-    margin-bottom: 12px;
+    margin-bottom: 8px;
   }
   .section-heading h2 {
     margin: 0;
-    font-size: 19px;
+    font-size: 16px;
     font-weight: 700;
     letter-spacing: -0.025em;
     line-height: 1.2;
-  }
-  .section-heading p {
-    max-width: 70ch;
-    margin: 3px 0 0;
-    color: var(--text-secondary);
-    font-size: 12px;
-    line-height: 1.55;
   }
   .context-label {
     display: flex;
@@ -62,9 +51,6 @@
     }
     .section-heading h2 {
       font-size: 18px;
-    }
-    .section-heading p {
-      font-size: 11px;
     }
   }
 </style>

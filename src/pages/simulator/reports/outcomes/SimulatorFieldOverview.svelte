@@ -87,7 +87,6 @@
 >
   <ChartFrame
     id="simulation-field-overview-card"
-    slim
     title="The field"
     description={'Pick a baseline to measure everyone against, then tick up to ' +
       LIMIT +

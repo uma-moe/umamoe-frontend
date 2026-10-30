@@ -119,7 +119,6 @@
 <ChartFrame
   id="simulation-stamina-table"
   title="Stamina & last spurt"
-  slim
   description="Stamina needed is the stamina at which a race would have allowed her full last spurt from the start of the late race and still reached the finish with HP left. It changes from race to race with skills, recovery, debuffs from other runners and rushing, so each lane shows the middle 80% of her races as a bar, the median race as a dot and her own stamina as a line: when the line sits right of the bar, nearly every race has enough. Full spurt splits her races into a full spurt from the late-race start, a slower or later spurt because HP was short, and no spurt."
 >
   <div class="scroll">

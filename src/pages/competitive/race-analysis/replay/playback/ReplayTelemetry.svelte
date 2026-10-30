@@ -1,9 +1,9 @@
 <script lang="ts">
+  import InfoBadge from '@/components/feedback/InfoBadge.svelte';
   import type { RaceRunner } from '@/lib/race/capture/race-capture-parser';
   import { hpRemainingColor } from '@/lib/race/replay/race-display';
   import { detailedSample } from '@/lib/race/capture/race-diagnostics';
   import { meanTrajectorySignal } from '@/lib/race/replay/race-ensemble';
-  import Icon from '@/components/Icon.svelte';
   import InspectPopover from '@/components/overlays/InspectPopover.svelte';
   import ChartFrame from '@/components/charts/ChartFrame.svelte';
   import LazyEChartsSurface from '@/components/charts/LazyEChartsSurface.svelte';
@@ -125,12 +125,7 @@
 {#snippet telemetryHelp()}
   <InspectPopover label="How to read race telemetry">
     {#snippet trigger()}
-      <span class="guide-trigger">
-        <Icon
-          name="info"
-          size={15}
-        />
-      </span>
+      <InfoBadge />
     {/snippet}
     <ReplayTelemetryGuide ensemble={Boolean(replay.ensemble)} />
   </InspectPopover>

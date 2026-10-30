@@ -2,6 +2,7 @@ import type { EChartsCoreOption } from 'echarts/core';
 import { histogram, type ChartDatum } from '@/lib/statistics/statistics';
 import type { StatDistribution } from './statistics-repository';
 import { compact, statColors } from './statistics-format';
+import { insideZoom } from '@/components/charts/echarts-zoom';
 
 export interface StatisticsChartStyle {
   text: { color: string; fontFamily: string };
@@ -48,6 +49,7 @@ export function barChart(
   return {
     ...baseChart(style),
     grid: { left: 48, right: 18, top: 32, bottom: 52 },
+    dataZoom: insideZoom(),
     xAxis: {
       type: 'category',
       data: items.map((item) => item.name),
@@ -163,6 +165,7 @@ export function groupedChart(
     ...baseChart(style),
     legend: { top: 0, textStyle: style.text },
     grid: { left: 48, right: 18, top: 48, bottom: 24 },
+    dataZoom: insideZoom(),
     xAxis: {
       type: 'category',
       data: categories,

@@ -1,6 +1,6 @@
 <script lang="ts">
+  import InfoBadge from '@/components/feedback/InfoBadge.svelte';
   import { raceMetricHelp } from '@/lib/race/capture/race-diagnostics';
-  import Icon from '@/components/Icon.svelte';
   import InspectPopover from '@/components/overlays/InspectPopover.svelte';
 
   let { label }: { label: string } = $props();
@@ -15,10 +15,7 @@
       openOnHover
     >
       {#snippet trigger()}
-        <Icon
-          name="info"
-          size={12}
-        />
+        <InfoBadge />
       {/snippet}
       <p>{help}</p>
     </InspectPopover>

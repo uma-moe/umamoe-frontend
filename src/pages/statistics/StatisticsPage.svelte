@@ -309,7 +309,6 @@
           <section id="skills">
             <StatisticsSectionHeading
               title="Explore the skill pool"
-              description="Find familiar picks and discover what else trainers are taking."
               context="{view.skillData.length} recorded skills"
             />
             <div class="explanation">
@@ -333,10 +332,7 @@
           </section>
         {:else if activeSection === 'stats'}
           <section id="distributions">
-            <StatisticsSectionHeading
-              title="Look beyond the averages"
-              description="Explore the full spread of training stats, one stat at a time."
-            />
+            <StatisticsSectionHeading title="Look beyond the averages" />
             <div class="stat-overview">
               <StatStrip
                 items={statStrip(view.averageStats)}
@@ -371,7 +367,6 @@
             {#if !character.id}
               <StatisticsSectionHeading
                 title="Find your Uma"
-                description="Choose a character to explore its training stats, distances, and support decks."
                 context="{availableCharacters.length} Umas in this dataset"
               />
               <StatisticsRanking

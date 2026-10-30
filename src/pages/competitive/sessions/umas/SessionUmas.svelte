@@ -132,7 +132,7 @@
       surface
       id="session-umas"
       title="Uma breakdown"
-      description={'Neutral is ' + formatRate(baseline.uma) + ' · select an Uma to inspect it'}
+      description={formatRate(baseline.uma) + ' win% is average.'}
     >
       {#snippet actions()}
         <SegmentedControl
@@ -219,7 +219,6 @@
       maximize
       id="uma-popularity"
       title="Popularity vs. performance"
-      description="Entries against wins · above the dashed line won more than an even share"
     >
       <SessionUmaPlot
         {characters}
@@ -277,7 +276,7 @@
         surface
         id="session-opponents"
         title="Best-placed opponents"
-        description="The opponent that finished first among the rest, in races with your runners"
+        description={formatRate(baseline.uma) + ' win% is average.'}
       >
         <div class="column-head opponents">
           <span>Opponent</span>
@@ -334,7 +333,7 @@
         compact
         id="session-partners"
         title={'Teams with ' + inspected.name}
-        description={'Its teammates, by team wins · under ' + SMALL_SAMPLE + ' races muted'}
+        description="Highest win rate team compositions for a specific Uma."
       >
         <DataTable
           plain

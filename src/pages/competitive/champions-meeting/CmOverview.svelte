@@ -43,7 +43,6 @@
     id="cm-overview-styles"
     title="Running styles"
     description="A style’s win share exceeding its simulated field share means its win rate is above average."
-    slim
   >
     {#snippet actions()}
       <Button

@@ -1,6 +1,7 @@
 import type { EChartsCoreOption } from 'echarts/core';
 import type { ActivityReport } from '@/lib/activity/activity-types';
 import { compactNumber, formatDuration } from '@/lib/activity/activity';
+import { insideZoom } from '@/components/charts/echarts-zoom';
 
 export function activityDailyChartOption(
   daily: NonNullable<ActivityReport['daily']>
@@ -19,6 +20,7 @@ export function activityDailyChartOption(
       borderColor: color('--border-primary'),
       textStyle: { color: color('--text-primary') }
     },
+    dataZoom: insideZoom(),
     xAxis: {
       type: 'category',
       data: points.map((point) =>

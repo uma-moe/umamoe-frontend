@@ -68,8 +68,7 @@
 .stale .body {
   opacity: 0.5;
 }
-/* How it was measured, from the info button at the end of the builds' header. */
-.about {
+/* How it was measured {
   display: flex;
 }
 .about-text {

@@ -29,13 +29,6 @@ p {
   color: var(--text-secondary);
   line-height: 1.6;
 }
-.help {
-  width: 24px;
-  height: 24px;
-  display: grid;
-  place-items: center;
-  color: var(--text-secondary);
-}
 .results-title {
   flex-wrap: wrap;
   margin-bottom: 6px;

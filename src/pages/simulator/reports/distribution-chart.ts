@@ -1,6 +1,7 @@
 import type { EChartsCoreOption } from 'echarts/core';
 import { hakuBarChartOption } from '@/components/charts/haku-chart-options';
 import { baseChartOption, chartTheme } from '@/components/charts/chart-theme';
+import { insideZoom } from '@/components/charts/echarts-zoom';
 
 /** `flip` labels the axis with the opposite sign, e.g. seconds ahead read as a finish-time difference. */
 export function distributionChart(
@@ -57,6 +58,7 @@ export function distributionChart(
         }
       }
     },
+    dataZoom: insideZoom(),
     xAxis: {
       type: 'value',
       min: discrete ? min - 0.5 : min,

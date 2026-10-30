@@ -1,4 +1,5 @@
 import type { TeamDistributionResponse, TeamRate } from '../../hakuraku-types';
+import { insideZoom } from '@/components/charts/echarts-zoom';
 
 export function fieldChart(
   distribution: TeamDistributionResponse | undefined,
@@ -13,6 +14,7 @@ export function fieldChart(
     textStyle: { color: ink },
     grid: { top: 38, right: 12, bottom: 42, left: 46 },
     tooltip: { trigger: 'axis' },
+    dataZoom: insideZoom(),
     xAxis: {
       type: 'value',
       min: 0,
@@ -86,6 +88,7 @@ export function inlineFieldChart(chart: ReturnType<typeof fieldChart>) {
   return {
     ...chart,
     grid: { top: 22, right: 8, bottom: 32, left: 38 },
+    dataZoom: insideZoom(),
     xAxis: {
       ...chart.xAxis,
       interval: 20,

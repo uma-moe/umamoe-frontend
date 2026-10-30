@@ -2,6 +2,7 @@ import type { RaceRunner } from '@/lib/race/capture/race-capture-parser';
 import type { MultiRaceAnalysis } from '@/lib/race/multi-race-analysis';
 import { chartTheme } from '@/components/charts/chart-theme';
 import { rate, teamBuilds } from '../analysis-view';
+import { insideZoom } from '@/components/charts/echarts-zoom';
 
 export type SessionEntry = { runner: RaceRunner; race: number };
 
@@ -43,17 +44,7 @@ export function sessionChart(
     textStyle: { color: ink },
     tooltip: { trigger: 'axis' },
     grid: { left: 40, right: 12, top: 18, bottom: 36 },
-    // Ctrl or ⌘ with the wheel zooms like the hand-drawn charts; a drag pans and two fingers pinch.
-    dataZoom: [
-      {
-        type: 'inside',
-        xAxisIndex: 0,
-        filterMode: 'none',
-        zoomOnMouseWheel: 'ctrl',
-        moveOnMouseMove: true,
-        moveOnMouseWheel: false
-      }
-    ],
+    dataZoom: insideZoom(0),
     xAxis: {
       nameLocation: 'middle',
       nameGap: 26,

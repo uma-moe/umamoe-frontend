@@ -53,7 +53,6 @@
     id="cm-uma-breakdown"
     title="Uma Breakdown"
     description="11.11% win% is average."
-    slim
   >
     {#snippet actions()}
       <SegmentedControl

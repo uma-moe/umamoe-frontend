@@ -1,7 +1,7 @@
 <script lang="ts">
+  import InfoBadge from '@/components/feedback/InfoBadge.svelte';
   import type { Snippet } from 'svelte';
   import ChartFrame from '@/components/charts/ChartFrame.svelte';
-  import Icon from '@/components/Icon.svelte';
   import InspectPopover from '@/components/overlays/InspectPopover.svelte';
   import SegmentedControl from '@/components/controls/SegmentedControl.svelte';
   import { STAMINA_THRESHOLDS, SPURT_THRESHOLDS, type MarginUnit } from '../simulation-comparison';
@@ -118,12 +118,7 @@
         align="end"
       >
         {#snippet trigger()}
-          <span class="help">
-            <Icon
-              name="info"
-              size={15}
-            />
-          </span>
+          <InfoBadge />
         {/snippet}
         <h3>Reading the outcomes</h3>
         <p>
@@ -153,7 +148,6 @@
       id="simulation-finish-chart"
       title="Who finishes ahead"
       description={finishDescription}
-      slim
     >
       {#snippet actions()}
         <SegmentedControl
@@ -202,13 +196,6 @@
 </section>
 
 <style>
-  .help {
-    width: 24px;
-    height: 24px;
-    display: grid;
-    place-items: center;
-    color: var(--text-secondary);
-  }
   .finish-card {
     min-width: 0;
   }

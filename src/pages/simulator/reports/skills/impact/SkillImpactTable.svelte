@@ -1,6 +1,6 @@
 <script lang="ts">
+  import InfoBadge from '@/components/feedback/InfoBadge.svelte';
   import InspectPopover from '@/components/overlays/InspectPopover.svelte';
-  import Icon from '@/components/Icon.svelte';
   import RaceSkill from '@/pages/competitive/runners/RaceSkill.svelte';
   import { formatMarginValue, type MarginUnit, type SkillValue } from '../../simulation-comparison';
   import {
@@ -74,10 +74,7 @@
       openOnHover
       align="end"
     >
-      {#snippet trigger()}<Icon
-          name="info"
-          size={12}
-        />{/snippet}
+      {#snippet trigger()}<InfoBadge />{/snippet}
       <p>{text}</p>
     </InspectPopover>
   </span>{/snippet}

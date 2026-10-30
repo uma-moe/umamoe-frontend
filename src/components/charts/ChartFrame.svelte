@@ -5,6 +5,7 @@
   import Button from '../controls/Button.svelte';
   import Spinner from '../feedback/Spinner.svelte';
   import InspectPopover from '../overlays/InspectPopover.svelte';
+  import InfoBadge from '../feedback/InfoBadge.svelte';
 
   export interface ChartLegendItem {
     label: string;
@@ -30,8 +31,6 @@
     compact?: boolean;
     maximize?: boolean;
     showHeader?: boolean;
-    /** One-row header: the description opens from an info button beside the title instead of taking its own line. */
-    slim?: boolean;
   }
 
   let {
@@ -52,8 +51,7 @@
     surface = false,
     compact = false,
     maximize = false,
-    showHeader = true,
-    slim = false
+    showHeader = true
   }: Props = $props();
 
   async function restoreExpandFocus() {
@@ -100,22 +98,19 @@
             >
               {title}
             </h3>
-            {#if slim && description}
+            {#if description}
               <InspectPopover
                 label={'About ' + title}
                 openOnHover
               >
                 {#snippet trigger()}
-                  <span class="about">Info</span>
+                  <InfoBadge />
                 {/snippet}
                 <p class="about-text">{description}</p>
               </InspectPopover>
             {/if}
             {@render titleActions?.()}
           </div>
-          {#if description && !slim}
-            <p>{description}</p>
-          {/if}
         </div>
         <div class="chart-tools">
           {#if legend.length}
@@ -292,12 +287,6 @@
     font-weight: 650;
     letter-spacing: -0.02em;
   }
-  .plain p {
-    font-size: 11px;
-    line-height: 1.5;
-    margin-top: 3px;
-    max-width: 68ch;
-  }
   .plain .legend {
     justify-content: flex-start;
   }
@@ -345,25 +334,6 @@
   .compact h3 {
     font-size: 15px;
   }
-  .compact p {
-    font-size: 11px;
-    margin-top: 3px;
-  }
-  /* A small labelled badge, matching Hakuraku's info buttons. */
-  .about {
-    display: inline-flex;
-    align-items: center;
-    padding: 1px 5px;
-    border: 1px solid currentColor;
-    border-radius: var(--radius-sm);
-    color: var(--color-text-muted);
-    font-size: 10px;
-    font-weight: 600;
-    line-height: 1.1;
-  }
-  .about:hover {
-    color: var(--color-text);
-  }
   .about-text {
     max-width: 44ch;
     margin: 0;
@@ -396,17 +366,9 @@
     justify-content: space-between;
     gap: 8px;
   }
-  h3,
-  p {
-    margin: 0;
-  }
   h3 {
+    margin: 0;
     font-size: var(--font-md);
-  }
-  p {
-    margin-top: 2px;
-    color: var(--color-text-muted);
-    font-size: 10px;
   }
   figcaption button {
     min-height: 34px;

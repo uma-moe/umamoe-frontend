@@ -88,7 +88,6 @@
     id="cm-uma-bubble"
     title="Individual vs. team win rate"
     description="Bubble size represents total simulated corpus share."
-    slim
     expandable
     bind:expanded
   >

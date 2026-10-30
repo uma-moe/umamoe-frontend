@@ -1,4 +1,5 @@
 <script lang="ts">
+  import InfoBadge from '@/components/feedback/InfoBadge.svelte';
   import Button from '@/components/controls/Button.svelte';
   import Icon from '@/components/Icon.svelte';
   import Dialog from '@/components/overlays/Dialog.svelte';
@@ -111,12 +112,7 @@
 {#snippet tools()}
   <InspectPopover label="About the result">
     {#snippet trigger()}
-      <span class="about">
-        <Icon
-          name="info"
-          size={14}
-        />
-      </span>
+      <InfoBadge />
     {/snippet}
     <p class="about-text">{about}</p>
     {#if theorized?.model?.build}

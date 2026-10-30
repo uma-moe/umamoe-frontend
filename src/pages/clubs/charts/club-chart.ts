@@ -2,6 +2,7 @@ import type { EChartsCoreOption } from 'echarts/core';
 import type { ClubChartMember, ClubChartMode } from '@/lib/clubs/club-progression';
 import type { Theme } from '@/stores/theme';
 import './club-chart.css';
+import { insideZoom } from '@/components/charts/echarts-zoom';
 
 function tooltip(labels: string[], members: ClubChartMember[], mode?: ClubChartMode) {
   return (params: unknown) => {
@@ -51,6 +52,7 @@ function axes(labels: string[], theme: Theme) {
   return {
     animation: false,
     grid: { left: 0, right: 4, top: 12, bottom: 8, containLabel: true },
+    dataZoom: insideZoom(),
     xAxis: {
       type: 'category',
       boundaryGap: false,

@@ -219,7 +219,6 @@
   compact
   id="session-hp"
   title="Your Umas"
-  description="Expand a row for what changed the result"
 >
   <DataTable
     plain

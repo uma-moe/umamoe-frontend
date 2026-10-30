@@ -156,9 +156,11 @@
     background: var(--factor-field-bg);
     border-color: var(--border-secondary);
   }
+  /* Ghost stays quiet but keeps a border, so a text action still reads as a button. */
   .ui-button--ghost {
     color: var(--color-text-muted);
     background: transparent;
+    border-color: var(--factor-field-border);
   }
   .ui-button--danger {
     color: var(--color-danger);

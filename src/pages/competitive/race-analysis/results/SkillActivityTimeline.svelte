@@ -1,9 +1,9 @@
 <script lang="ts">
+  import InfoBadge from '@/components/feedback/InfoBadge.svelte';
   import type { ParsedRaceCapture } from '@/lib/race/capture/race-capture-parser';
   import { diagnosticHorse } from '@/lib/race/capture/race-diagnostics';
   import { skillActivityRows, skillIconGroups, type SkillPeriod } from './skill-activity';
   import RaceSkill from '@/pages/competitive/runners/RaceSkill.svelte';
-  import Icon from '@/components/Icon.svelte';
   import InspectPopover from '@/components/overlays/InspectPopover.svelte';
   import Button from '@/components/controls/Button.svelte';
   import Checkbox from '@/components/controls/Checkbox.svelte';
@@ -143,12 +143,7 @@
     <span>Skill activity</span>
     <InspectPopover label="Skill activity details">
       {#snippet trigger()}
-        <span class="help">
-          <Icon
-            name="info"
-            size={15}
-          />
-        </span>
+        <InfoBadge />
       {/snippet}
       <h3>Gate {index + 1} · {runner?.name ?? 'Selected runner'}</h3>
       <p>
@@ -314,13 +309,6 @@
     min-height: 36px;
     z-index: 4;
     background: var(--surface-1);
-  }
-  .help {
-    display: grid;
-    place-items: center;
-    width: 24px;
-    height: 28px;
-    color: var(--text-secondary);
   }
   .period-track {
     position: relative;
@@ -502,9 +490,6 @@
     .strip-label {
       position: sticky;
       left: 0;
-    }
-    .help {
-      width: 20px;
     }
     .strip-label :global(.trigger) {
       min-width: 24px;

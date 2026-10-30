@@ -6,6 +6,7 @@ import {
   type DiagnosticsSampleRow,
   type DiagnosticsSectionRow
 } from '../diagnostics-format';
+import { insideZoom } from '@/components/charts/echarts-zoom';
 
 export function sectionChartOption(
   sectionRows: DiagnosticsSectionRow[],
@@ -55,6 +56,7 @@ export function sectionChartOption(
           : '';
       }
     },
+    dataZoom: insideZoom(),
     xAxis: [
       xAxis,
       {
@@ -153,6 +155,7 @@ export function paceChartOption(
       trigger: 'axis',
       valueFormatter: (value: unknown) => (typeof value === 'number' ? value.toFixed(2) : '—')
     },
+    dataZoom: insideZoom(),
     xAxis: {
       type: 'value',
       min: 0,

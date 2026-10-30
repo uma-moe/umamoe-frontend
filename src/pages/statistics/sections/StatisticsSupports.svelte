@@ -40,7 +40,6 @@
 <section id="support-cards">
   <StatisticsSectionHeading
     title="Build your support deck"
-    description="See which cards are used, and how support types fit together."
     context="{view.supportData.length} cards · {view.deckData.length} builds"
   />
   <div

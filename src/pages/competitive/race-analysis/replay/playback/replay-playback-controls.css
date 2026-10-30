@@ -81,17 +81,6 @@
   padding-block: 4px;
   padding-inline: 8px 4px;
 }
-.timeline-help {
-  display: grid;
-  place-items: center;
-  width: 32px;
-  height: 32px;
-  color: var(--text-secondary);
-  border: 1px solid var(--factor-field-border);
-  border-radius: var(--radius-md);
-  background: var(--factor-field-bg);
-  box-sizing: border-box;
-}
 p {
   font-size: 12px;
   line-height: 1.6;
@@ -166,13 +155,9 @@ h3 {
     padding-inline: 8px;
   }
   .speed-select :global(.field select),
-  .speed-select :global(.field button),
-  .timeline-help {
+  .speed-select :global(.field button) {
     min-height: 36px;
     height: 36px;
-  }
-  .timeline-help {
-    width: 36px;
   }
   .speed-select :global(.field) {
     width: 58px;

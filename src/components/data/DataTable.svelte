@@ -1,7 +1,7 @@
 <script lang="ts">
+  import InfoBadge from '@/components/feedback/InfoBadge.svelte';
   import { untrack, type Snippet } from 'svelte';
   import InspectPopover from '../overlays/InspectPopover.svelte';
-  import Icon from '../Icon.svelte';
   import { virtualScroll, type VirtualRange } from '@/lib/virtual-scroll';
 
   export interface TableColumn {
@@ -176,10 +176,7 @@
                   align={column.numeric ? 'end' : 'start'}
                 >
                   {#snippet trigger()}
-                    <Icon
-                      name="info"
-                      size={12}
-                    />
+                    <InfoBadge />
                   {/snippet}
                   <p>{columnHelp[column.label]}</p>
                 </InspectPopover>

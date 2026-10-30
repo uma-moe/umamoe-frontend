@@ -92,7 +92,6 @@
     <ChartFrame
       id="simulation-hp-course"
       title="HP over the race"
-      slim
       state={chart ? 'ready' : 'empty'}
       emptyTitle="HP by distance unavailable"
       emptyDetail="This batch has no per-race telemetry. Run it again to see HP over the race."

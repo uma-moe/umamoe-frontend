@@ -168,7 +168,6 @@
   });
 
   const gates = $derived(gateRecords(entries));
-  const gateStarts = $derived(Math.max(1, ...gates.map((gate) => gate.starts)));
   const bestGate = $derived(
     [...gates].sort((a, b) => b.wins - a.wins || a.gate - b.gate).find((gate) => gate.wins > 0)
   );
@@ -214,7 +213,7 @@
       surface
       id="session-overview-styles"
       title="Running styles"
-      description="Wins against field share"
+      description="A style’s win share exceeding its popularity means its win rate is above average."
     >
       {#snippet actions()}
         {@render viewLink('Strategy', 'strategy')}
@@ -260,7 +259,6 @@
       surface
       id="session-overview-umas"
       title="Most entered Umas"
-      description="Share of runner entries"
     >
       {#snippet actions()}
         {@render viewLink('All Umas', 'umas')}
@@ -309,9 +307,6 @@
       surface
       id="session-overview-teams"
       title="Common team styles"
-      description={baseline.team === undefined
-        ? 'Most raced lineups'
-        : 'Most raced lineups · even is ' + formatRate(baseline.team)}
     >
       {#snippet actions()}
         {@render viewLink('All teams', 'teams')}
@@ -362,9 +357,6 @@
       compact
       id="session-races"
       title="Race by race"
-      description={player
-        ? 'Winner, your best finish and the margin · select a winner for the build'
-        : 'Winner and margin · select a winner for the build'}
     >
       <DataTable
         plain
@@ -442,7 +434,6 @@
         maximize
         id="score-distribution"
         title="Training score"
-        description="Winners against the whole field"
         legend={[
           { label: 'Field', color: colors.muted },
           { label: 'Winners', color: colors.accent }
@@ -493,7 +484,6 @@
         maximize
         id="gate-results"
         title="Starting gate"
-        description={'Win rate by gate · one win moves a gate ' + formatRate(100 / gateStarts)}
       >
         {#if bestGate}
           <p class="takeaway"><FindingSentence parts={gateTakeaway} /></p>
