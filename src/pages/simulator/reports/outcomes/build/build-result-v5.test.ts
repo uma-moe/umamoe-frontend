@@ -193,18 +193,20 @@ describe('V5 in the existing optimizer', () => {
     expect(worthState(0.01, 'score')).toBe('helps');
   });
 
-  it('shows the finalists unscored when the simulator sends no explanation', () => {
+  it("scores the first build's purchases when the simulator sends no explanation", () => {
     const response = result();
     delete response.model!.build!.explanation;
     expect(isOptimizeModel(response.model)).toBe(true);
     const view = theorizedResult({ result: response, offers })!;
     expect(view.builds.map((b) => b.finalist)).toEqual(response.report.finalists);
     expect(view.builds[0]!.value).toBe(11);
-    expect(view.builds[0]!.cells.map((c) => [c.value, c.valuation.source])).toEqual([
-      [undefined, 'unknown'],
-      [undefined, 'unknown']
+    expect(
+      view.builds[0]!.cells.map((c) => [c.skill.offer.skill.name, c.value, c.valuation.source])
+    ).toEqual([
+      ['Groundwork', 1, 'v5'],
+      ['Swinging Maestro', undefined, 'unknown']
     ]);
-    expect(view.skills).toEqual([]);
+    expect(view.skills.map((s) => [s.key, s.value, s.bought])).toEqual([[2, 1, true]]);
   });
 
   it('rejects malformed or mismatched V5 explanation data', () => {
