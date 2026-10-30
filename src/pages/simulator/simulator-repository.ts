@@ -537,12 +537,13 @@ export function isOptimizeModel(value: unknown): value is OptimizeModel {
     return false;
   const e = b.explanation;
   return (
-    isRecord(e) &&
-    Array.isArray(e.phase_bounds) &&
-    e.phase_bounds.length === 5 &&
-    e.phase_bounds.every((n, i, a) => isNumber(n) && (i === 0 || n > a[i - 1])) &&
-    values(e.initial) &&
-    values(e.optimized)
+    e === undefined ||
+    (isRecord(e) &&
+      Array.isArray(e.phase_bounds) &&
+      e.phase_bounds.length === 5 &&
+      e.phase_bounds.every((n, i, a) => isNumber(n) && (i === 0 || n > a[i - 1])) &&
+      values(e.initial) &&
+      values(e.optimized))
   );
 }
 

@@ -575,18 +575,24 @@ function measuredMean(
 function v5Result(result: OptimizeResult, offers: PricedOffer[]): TheorizedResult | undefined {
   const model = result.model;
   if (!isOptimizeModel(model)) return undefined;
-  const explanation = model.build!.explanation!;
+  // Without an explanation the finalists show their measured gains and skills unscored.
+  const explanation = model.build!.explanation;
   const finalists = result.report.finalists.slice(0, COMPARED_BUILDS);
   const same = (a: number[], b: number[]) => a.length === b.length && a.every((p) => b.includes(p));
   const reports = finalists.map((f) =>
-    [explanation.optimized, explanation.initial].find((e) => same(e.purchases, f.build.purchases))
+    explanation
+      ? [explanation.optimized, explanation.initial].find((e) =>
+          same(e.purchases, f.build.purchases)
+        )
+      : undefined
   );
-  if (reports.some((r) => r === undefined)) return undefined;
+  if (explanation && reports.some((r) => r === undefined)) return undefined;
   const rows = compareRows(finalists, offers);
   const baseline = measuredMean(result.report.baseline, 'finish_time_seconds');
   const builds = finalists.map((finalist, index): TheorizedBuild => {
-    const report = reports[index]!;
-    const worth = new Map(report.skills.filter((s) => s.held).map((s) => [s.purchase, s]));
+    const worth = new Map(
+      (reports[index]?.skills ?? []).filter((s) => s.held).map((s) => [s.purchase, s])
+    );
     const cells = [...rows.shared, ...rows.differ]
       .flatMap((row): BuildCell[] => {
         const held = row.held[index]!;
@@ -647,7 +653,7 @@ function v5Result(result: OptimizeResult, offers: PricedOffer[]): TheorizedResul
     skills,
     skillUnit: 'score',
     model,
-    phaseBounds: explanation.phase_bounds,
+    phaseBounds: explanation?.phase_bounds ?? [],
     scale:
       Math.max(
         0,
