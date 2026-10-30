@@ -42,11 +42,12 @@
     surface
     id="cm-overview-styles"
     title="Running styles"
-    description="Share of simulated entries and share of race wins."
+    description="A style’s win share exceeding its simulated field share means its win rate is above average."
+    slim
   >
     {#snippet actions()}
       <Button
-        variant="ghost"
+        variant="secondary"
         size="sm"
         icon="arrow-right"
         onclick={() => onview('strategy')}
@@ -81,21 +82,16 @@
         </button>
       {/if}
     {/each}
-    <p class="footnote">
-      Debuffers have their own build classification; their wins don’t measure their effect on
-      teammates.
-    </p>
   </ChartFrame>
   <ChartFrame
     plain
     surface
     id="cm-overview-umas"
     title="Most represented Umas"
-    description="Outfits ranked by share of simulated entries across all styles."
   >
     {#snippet actions()}
       <Button
-        variant="ghost"
+        variant="secondary"
         size="sm"
         icon="arrow-right"
         onclick={() => onview('character')}
@@ -135,18 +131,16 @@
         </span>
       </button>
     {/each}
-    <p class="footnote">Bar colours identify each outfit’s running styles.</p>
   </ChartFrame>
   <ChartFrame
     plain
     surface
     id="cm-overview-teams"
     title="Common team compositions"
-    description="Ranked by share of simulated team appearances."
   >
     {#snippet actions()}
       <Button
-        variant="ghost"
+        variant="secondary"
         size="sm"
         icon="arrow-right"
         onclick={() => onview('archetypes')}
@@ -183,9 +177,6 @@
         </span>
       </button>
     {/each}
-    <p class="footnote">
-      95% intervals appear below win rates. Select a composition to inspect its captured builds.
-    </p>
   </ChartFrame>
 </div>
 
@@ -339,12 +330,6 @@
     margin-top: 4px;
     font-size: 9px;
     white-space: nowrap;
-  }
-  .footnote {
-    font-size: 10px;
-    line-height: 1.6;
-    color: var(--text-secondary);
-    margin: 12px 0 0;
   }
   @media (max-width: 1200px) {
     .meeting-overview {

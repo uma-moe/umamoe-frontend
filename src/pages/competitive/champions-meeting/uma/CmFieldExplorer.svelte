@@ -122,14 +122,7 @@
     class="canvas"
     bind:this={canvas}
   >
-    <header>
-      <h2>{view === 'field' ? 'Results by running style' : 'Uma performance ranges'}</h2>
-      <p>
-        {view === 'field'
-          ? 'Published results for each outfit and role. Select an entry for its sample size, intervals, and captured builds.'
-          : 'Ranked by the lower end of the published 95% interval. These intervals describe the simulated sample.'}
-      </p>
-    </header>
+    <h2>{view === 'field' ? 'Results by running style' : 'Uma performance ranges'}</h2>
     <div class="filters">
       <TextField
         id="trial-uma-search"
@@ -222,7 +215,7 @@
               items: rows,
               key: (r) => r.card,
               root: 'closest',
-              estimate: 65,
+              estimate: 38,
               searchText: (r) => r.name + ' ' + r.outfit,
               onrange: (r) => (range = r)
             }}
@@ -372,10 +365,6 @@
           {/each}
         </div>
       </div>
-      <p class="caption">
-        Dashed line = {pct(baseline)} neutral rate. Dots show observed rates; whiskers show published
-        intervals. Narrow intervals do not remove player or build selection bias.
-      </p>
       {#if !ranked.length}
         <EmptyState
           icon="search"
@@ -403,7 +392,7 @@
     >
       <div class="back-to-chart">
         <Button
-          variant="ghost"
+          variant="secondary"
           size="sm"
           onclick={() => canvas?.scrollIntoView({ block: 'start', behavior: 'instant' })}
         >
@@ -470,13 +459,6 @@
           Share of the whole field <strong>{pct(current.pop)}</strong>
         </p>
       </div>
-      <p class="reading">
-        {current.individual < 1 / 9 && current.team > 1 / 3
-          ? 'Teams containing this Uma perform above the neutral team rate while the Uma’s own rate is below neutral. Inspect its teammates to understand the result.'
-          : current.individual > 1 / 9 && current.team > 1 / 3
-            ? 'Both the individual and associated team rates sit above their neutral baselines in this sample. Inspect the captured builds behind the result.'
-            : 'Read the individual and team results together. Role, teammates, and captured builds all affect the observed result.'}
-      </p>
       <div class="inspector-actions">
         <Button
           size="sm"
@@ -486,9 +468,6 @@
           Find captured builds
         </Button>
       </div>
-      <p class="caption">
-        Associated team performance is not an isolated measure of this Uma’s contribution.
-      </p>
     </aside>
   {/if}
 </div>

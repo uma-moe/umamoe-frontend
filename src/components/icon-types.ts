@@ -85,4 +85,5 @@ export type IconName =
   | 'play'
   | 'pause'
   | 'skip-back'
-  | 'pin';
+  | 'pin'
+  | 'stopwatch';

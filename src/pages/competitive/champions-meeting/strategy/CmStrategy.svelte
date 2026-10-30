@@ -48,12 +48,6 @@
     scopedStyles.map((id) => data.styles.find((s) => s.style === id)).filter((s) => s != null)
   );
 
-  const fieldInsight = $derived(
-    [...breakdown]
-      .filter((row) => row.owners >= 30 && row.pop > 0)
-      .sort((a, b) => b.winShare - b.pop - (a.winShare - a.pop))[0]
-  );
-
   const barMax = $derived(Math.max(0.01, ...breakdown.flatMap((s) => [s.winShare, s.pop])));
   const rows = $derived(
     data.archetypes.filter(
@@ -104,12 +98,13 @@
         title={scope === 'all'
           ? 'Style Breakdown'
           : styleNames[Number(scope)] + ' · style overview'}
-        description="Win share and simulated field share."
+        description="A style’s win share exceeding its simulated field share means its win rate is above average."
+        slim
       >
         {#snippet actions()}
           {#if scope === 'all'}
             <Button
-              variant="ghost"
+              variant="secondary"
               size="sm"
               onclick={() => (showRates = !showRates)}
             >
@@ -192,29 +187,6 @@
             </div>
           {/each}
         </div>
-        {#if scope === 'all' && fieldInsight && fieldInsight.winShare > fieldInsight.pop}
-          <p class="field-insight">
-            <i style:background={colors[fieldInsight.style]}></i>
-            <span>
-              <strong>{styleNames[fieldInsight.style]}</strong>
-              entries account for
-              <strong>{pct(fieldInsight.winShare)}</strong>
-              of wins from
-              <strong>{pct(fieldInsight.pop)}</strong>
-              of the field.
-              <small>
-                +{((fieldInsight.winShare - fieldInsight.pop) * 100).toFixed(1)} percentage points ·
-                {number(fieldInsight.owners)} players
-              </small>
-            </span>
-          </p>
-        {/if}
-        {#if scope === '6'}
-          <p class="role-note">
-            Debuffers are grouped by Hakuraku’s build classification. Their individual win rate does
-            not measure their effect on teammates.
-          </p>
-        {/if}
       </ChartFrame>
     </section>
     <section class="saturation">
@@ -223,7 +195,8 @@
         surface
         id="cm-saturation"
         title="Effects of style saturation"
-        description="Per-Uma win rate by style count in a room. Buckets need at least 1% of races."
+        description="Per-uma win rate by how many of that style appear in a race. Buckets only appear when they account for at least 1% of total races."
+        slim
         expandable
       >
         {#snippet actions()}
@@ -338,7 +311,10 @@
         surface
         id="cm-representatives"
         title="Style Representatives"
-        description="Team% counts wins by any teammate; Uma% counts this runner’s own wins. Select an Uma to inspect its captured builds."
+        description={'Top performers per style ranked by ' +
+          (metric === 'individual' ? 'personal' : 'team') +
+          ' win rate.'}
+        slim
       >
         {#snippet actions()}
           <div class="rep-controls">
@@ -439,9 +415,6 @@
             {/if}
           {/each}
         </div>
-        <p class="room-average">
-          Each list scrolls independently · Player counts can overlap between Umas.
-        </p>
       </ChartFrame>
     </section>
   </div>
@@ -452,6 +425,8 @@
       compact
       id="cm-compositions"
       title="Team compositions"
+      description="Win rate of 3-uma teams grouped by running style trio."
+      slim
     >
       {#snippet actions()}
         <div class="composition-filter">

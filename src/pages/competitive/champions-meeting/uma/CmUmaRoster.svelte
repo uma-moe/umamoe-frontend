@@ -52,7 +52,8 @@
     surface
     id="cm-uma-breakdown"
     title="Uma Breakdown"
-    description="Select a runner to connect its results, role, and team compositions."
+    description="11.11% win% is average."
+    slim
   >
     {#snippet actions()}
       <SegmentedControl

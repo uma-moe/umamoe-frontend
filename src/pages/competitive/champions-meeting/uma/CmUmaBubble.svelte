@@ -1,9 +1,11 @@
 <script lang="ts">
-  import { onDestroy } from 'svelte';
   import type { Pair, Requirement } from '../../hakuraku-types';
   import { pct, number, styleNames, styleOrder } from '../cm-data';
   import { portrait } from '../../analysis-view';
   import ChartFrame from '@/components/charts/ChartFrame.svelte';
+  import PlotZoomControls from '@/components/charts/PlotZoomControls.svelte';
+  import { PlotSize } from '@/components/charts/plot-size.svelte';
+  import { axisTicks, PlotZoom, tickDecimals } from '@/components/charts/plot-zoom.svelte';
   import SelectField from '@/components/controls/SelectField.svelte';
   import Artwork from '@/components/game/Artwork.svelte';
   import Button from '@/components/controls/Button.svelte';
@@ -34,6 +36,15 @@
     onteams
   }: Props = $props();
 
+  /** The largest portrait radius; the clip leaves this much room so points on an edge stay whole. */
+  const MAX_RADIUS = 27;
+  const MARGIN = { left: 50, right: 20, top: 24, bottom: 40 };
+
+  const plotId = $props.id();
+  const clipId = plotId + '-plot';
+  const zoom = new PlotZoom();
+  const size = new PlotSize({ width: 620, height: 360 });
+
   let expanded = $state(false),
     hovered = $state('');
 
@@ -49,19 +60,25 @@
   const yMin = $derived(Math.min(1 / 3, ...visible.map((p) => p.team)) * 0.85),
     yMax = $derived(Math.max(1 / 3, ...visible.map((p) => p.team)) * 1.15);
 
-  let chartWidth = $state(620),
-    resizeFrame = 0;
+  const area = $derived({
+    left: MARGIN.left,
+    right: size.width - MARGIN.right,
+    top: MARGIN.top,
+    bottom: size.height - MARGIN.bottom
+  });
 
-  function resizeChart(next: number) {
-    if (next <= 0 || next === chartWidth) return;
-    cancelAnimationFrame(resizeFrame);
-    resizeFrame = requestAnimationFrame(() => (chartWidth = next));
-  }
+  const xRange = $derived(zoom.visible('x', xMin, xMax));
+  const yRange = $derived(zoom.visible('y', yMin, yMax));
+  // tickDecimals reads percent spans; at least one decimal keeps neighbouring rate labels distinct.
+  const xDecimals = $derived(Math.max(1, tickDecimals(xRange.min * 100, xRange.max * 100)));
+  const yDecimals = $derived(Math.max(1, tickDecimals(yRange.min * 100, yRange.max * 100)));
 
-  onDestroy(() => cancelAnimationFrame(resizeFrame));
+  const x = (value: number) =>
+    area.left + ((value - xRange.min) / (xRange.max - xRange.min)) * (area.right - area.left);
+  const y = (value: number) =>
+    area.bottom - ((value - yRange.min) / (yRange.max - yRange.min)) * (area.bottom - area.top);
 
-  const x = (n: number) => 55 + ((n - xMin) / (xMax - xMin)) * (chartWidth - 80),
-    y = (n: number) => 345 - ((n - yMin) / (yMax - yMin)) * 300;
+  const ordered = $derived([...visible].sort((a, b) => b.pop - a.pop));
 </script>
 
 <div class="bubble-panel">
@@ -70,7 +87,8 @@
     surface
     id="cm-uma-bubble"
     title="Individual vs. team win rate"
-    description="Own win rate (horizontal) · Team win rate (vertical) · Circle size: field share."
+    description="Bubble size represents total simulated corpus share."
+    slim
     expandable
     bind:expanded
   >
@@ -91,134 +109,146 @@
         />
       </div>
     {/snippet}
-    <div class="legend">
-      {#each styleOrder as id}
-        <button
-          aria-pressed={!hidden.includes(id)}
-          class:muted={hidden.includes(id)}
-          onclick={() =>
-            (hidden = hidden.includes(id) ? hidden.filter((x) => x !== id) : [...hidden, id])}
-        >
-          <i style:background={colors[id]}></i>
-          {styleNames[id]}
-        </button>
-      {/each}
-    </div>
-    {#if expanded}
-      <p class="pan-hint">Scroll horizontally to explore the full chart.</p>
-    {/if}
-    <!-- svelte-ignore a11y_no_noninteractive_tabindex (Keyboard users need to scroll the expanded chart.) -->
-    <div
-      class="chart-scroll"
-      bind:clientWidth={() => chartWidth, resizeChart}
-      class:expanded
-      tabindex={expanded ? 0 : undefined}
-      role="region"
-      aria-label="Uma chart; scroll horizontally in expanded view"
-    >
+    <div class="bubble-body">
+      <div class="legend">
+        {#each styleOrder as id}
+          <button
+            aria-pressed={!hidden.includes(id)}
+            class:muted={hidden.includes(id)}
+            onclick={() =>
+              (hidden = hidden.includes(id) ? hidden.filter((x) => x !== id) : [...hidden, id])}
+          >
+            <i style:background={colors[id]}></i>
+            {styleNames[id]}
+          </button>
+        {/each}
+      </div>
       {#if visible.length}
-        <svg
-          viewBox={`0 0 ${chartWidth} 410`}
-          class="bubble"
-          role="group"
-          aria-label="Individual versus team win rate. Select an Uma to inspect its data."
+        <PlotZoomControls {zoom} />
+        <div
+          class="plot"
+          class:expanded
+          {@attach size.observe}
         >
-          {#each [0, 0.25, 0.5, 0.75, 1] as f}
-            <line
-              x1="50"
-              x2={chartWidth - 20}
-              y1={y(yMin + f * (yMax - yMin))}
-              y2={y(yMin + f * (yMax - yMin))}
-              class="grid"
-            />
+          <!-- svelte-ignore a11y_no_noninteractive_tabindex (The plot takes keyboard zoom and pan.) -->
+          <svg
+            viewBox={`0 0 ${size.width} ${size.height}`}
+            role="group"
+            tabindex="0"
+            aria-label="Individual versus team win rate. Select an Uma to inspect its data. Plus and minus zoom, arrow keys pan, Home shows the whole plot."
+            class:zoomed={zoom.zoomed}
+            {@attach zoom.gestures(() => area)}
+          >
+            <defs>
+              <clipPath id={clipId}>
+                <rect
+                  x={area.left - MAX_RADIUS}
+                  y={area.top - MAX_RADIUS}
+                  width={area.right - area.left + MAX_RADIUS * 2}
+                  height={area.bottom - area.top + MAX_RADIUS * 2}
+                />
+              </clipPath>
+            </defs>
+            {#each axisTicks(yRange.min, yRange.max) as tick (tick)}
+              <line
+                x1={area.left}
+                x2={area.right}
+                y1={y(tick)}
+                y2={y(tick)}
+                class="grid"
+              />
+              <text
+                x={area.left - 6}
+                y={y(tick) + 4}
+                text-anchor="end"
+              >
+                {pct(tick, yDecimals)}
+              </text>
+            {/each}
+            {#each axisTicks(xRange.min, xRange.max) as tick (tick)}
+              <text
+                x={x(tick)}
+                y={area.bottom + 16}
+                text-anchor="middle"
+              >
+                {pct(tick, xDecimals)}
+              </text>
+            {/each}
             <text
-              x="44"
-              y={y(yMin + f * (yMax - yMin)) + 4}
-              text-anchor="end"
-            >
-              {pct(yMin + f * (yMax - yMin))}
-            </text>
-            <text
-              x={x(xMin + f * (xMax - xMin))}
-              y="383"
+              x={(area.left + area.right) / 2}
+              y={size.height - 6}
               text-anchor="middle"
             >
-              {pct(xMin + f * (xMax - xMin))}
+              Individual win rate
             </text>
-          {/each}
-          <line
-            x1={x(1 / 9)}
-            x2={x(1 / 9)}
-            y1="25"
-            y2="365"
-            class="baseline"
-          />
-          <line
-            x1="50"
-            x2={chartWidth - 20}
-            y1={y(1 / 3)}
-            y2={y(1 / 3)}
-            class="baseline"
-          />
-          <text
-            class="baseline-label"
-            x={x(1 / 9) + 5}
-            y="30"
-          >
-            11.1% neutral Uma
-          </text>
-          <text
-            class="baseline-label"
-            x={chartWidth - 22}
-            y={y(1 / 3) - 7}
-            text-anchor="end"
-          >
-            33.3% neutral team
-          </text>
-          <text
-            x={chartWidth / 2}
-            y="403"
-            text-anchor="middle"
-          >
-            Individual win rate
-          </text>
-          <text
-            transform="translate(12 195) rotate(-90)"
-            text-anchor="middle"
-          >
-            Team win rate
-          </text>
-          {#each [...visible].sort((a, b) => b.pop - a.pop) as p}
-            {@const r = 10 + 17 * Math.sqrt(p.pop / maxPop)}
-            <UmaChartPoint
-              x={x(p.individual)}
-              y={y(p.team)}
-              {r}
-              image={portrait(p.card)}
-              color={colors[p.style] ?? '#69b7ee'}
-              selected={pair?.key === p.key}
-              onselect={() => onselect(p.key)}
-              onhover={(active) => (hovered = active ? p.key : '')}
-              label={'Inspect ' +
-                p.name +
-                ' ' +
-                p.outfit +
-                ' ' +
-                styleNames[p.style] +
-                ': individual ' +
-                pct(p.individual) +
-                ', team ' +
-                pct(p.team) +
-                ', corpus share ' +
-                pct(p.pop) +
-                ', style share ' +
-                pct(p.stylePop) +
-                ', ' +
-                number(p.owners) +
-                ' players'}
-            />
-          {/each}
-        </svg>
+            <text
+              transform={`translate(12 ${(area.top + area.bottom) / 2}) rotate(-90)`}
+              text-anchor="middle"
+            >
+              Team win rate
+            </text>
+            <g clip-path={`url(#${clipId})`}>
+              <line
+                x1={x(1 / 9)}
+                x2={x(1 / 9)}
+                y1={area.top}
+                y2={area.bottom}
+                class="baseline"
+              />
+              <line
+                x1={area.left}
+                x2={area.right}
+                y1={y(1 / 3)}
+                y2={y(1 / 3)}
+                class="baseline"
+              />
+              <text
+                class="baseline-label"
+                x={x(1 / 9) + 5}
+                y={area.top + 8}
+              >
+                11.1% neutral Uma
+              </text>
+              <text
+                class="baseline-label"
+                x={area.right - 2}
+                y={y(1 / 3) - 6}
+                text-anchor="end"
+              >
+                33.3% neutral team
+              </text>
+              {#each ordered as p (p.key)}
+                <UmaChartPoint
+                  x={x(p.individual)}
+                  y={y(p.team)}
+                  r={10 + (MAX_RADIUS - 10) * Math.sqrt(p.pop / maxPop)}
+                  image={portrait(p.card)}
+                  color={colors[p.style] ?? '#69b7ee'}
+                  selected={pair?.key === p.key}
+                  onselect={() => onselect(p.key)}
+                  onhover={(active) => (hovered = active ? p.key : '')}
+                  label={'Inspect ' +
+                    p.name +
+                    ' ' +
+                    p.outfit +
+                    ' ' +
+                    styleNames[p.style] +
+                    ': individual ' +
+                    pct(p.individual) +
+                    ', team ' +
+                    pct(p.team) +
+                    ', corpus share ' +
+                    pct(p.pop) +
+                    ', style share ' +
+                    pct(p.stylePop) +
+                    ', ' +
+                    number(p.owners) +
+                    ' players'}
+                />
+              {/each}
+            </g>
+          </svg>
+        </div>
       {:else}
         <EmptyState
           icon="search"
@@ -240,70 +270,70 @@
           {/snippet}
         </EmptyState>
       {/if}
+      {#if inspected}
+        <section
+          class="inspection"
+          aria-label="Uma chart details"
+        >
+          <div class="inspection-heading">
+            <Artwork
+              src={portrait(inspected.card)}
+              alt=""
+              size="sm"
+            />
+            <div>
+              <strong>{inspected.name}</strong>
+              <small>
+                {inspected.outfit} ·
+                <span style:color={colors[inspected.style]}>{styleNames[inspected.style]}</span>
+              </small>
+            </div>
+            <Button
+              variant="secondary"
+              size="sm"
+              onclick={() => {
+                expanded = false;
+                onteams([
+                  { card: inspected.card, chara: inspected.chara, style: inspected.style },
+                  {},
+                  {}
+                ]);
+              }}
+            >
+              Find teams
+            </Button>
+          </div>
+          <dl>
+            <div>
+              <dt>Individual win rate</dt>
+              <dd>{pct(inspected.individual)}</dd>
+              <small>
+                {pct(inspected.individualCI[0])}–{pct(inspected.individualCI[1])} estimate
+              </small>
+            </div>
+            <div>
+              <dt>Team win rate</dt>
+              <dd>{pct(inspected.team)}</dd>
+              <small>{pct(inspected.teamCI[0])}–{pct(inspected.teamCI[1])} CI</small>
+            </div>
+            <div>
+              <dt>Players</dt>
+              <dd>{number(inspected.owners)}</dd>
+              <small>{pct(inspected.stylePop)} of this style</small>
+            </div>
+            <div>
+              <dt>Corpus share</dt>
+              <dd>{pct(inspected.pop)}</dd>
+              <small>{number(inspected.runnerExposures)} entries</small>
+            </div>
+          </dl>
+        </section>
+      {/if}
     </div>
-    {#if inspected}
-      <section
-        class="inspection"
-        aria-label="Uma chart details"
-      >
-        <div class="inspection-heading">
-          <Artwork
-            src={portrait(inspected.card)}
-            alt=""
-            size="sm"
-          />
-          <div>
-            <strong>{inspected.name}</strong>
-            <small>
-              {inspected.outfit} ·
-              <span style:color={colors[inspected.style]}>{styleNames[inspected.style]}</span>
-            </small>
-          </div>
-          <Button
-            variant="secondary"
-            size="sm"
-            onclick={() => {
-              expanded = false;
-              onteams([
-                { card: inspected.card, chara: inspected.chara, style: inspected.style },
-                {},
-                {}
-              ]);
-            }}
-          >
-            Find teams
-          </Button>
-        </div>
-        <dl>
-          <div>
-            <dt>Individual win rate</dt>
-            <dd>{pct(inspected.individual)}</dd>
-            <small>
-              {pct(inspected.individualCI[0])}–{pct(inspected.individualCI[1])} estimate
-            </small>
-          </div>
-          <div>
-            <dt>Team win rate</dt>
-            <dd>{pct(inspected.team)}</dd>
-            <small>{pct(inspected.teamCI[0])}–{pct(inspected.teamCI[1])} CI</small>
-          </div>
-          <div>
-            <dt>Players</dt>
-            <dd>{number(inspected.owners)}</dd>
-            <small>{pct(inspected.stylePop)} of this style</small>
-          </div>
-          <div>
-            <dt>Corpus share</dt>
-            <dd>{pct(inspected.pop)}</dd>
-            <small>{number(inspected.runnerExposures)} entries</small>
-          </div>
-        </dl>
-      </section>
-    {/if}
   </ChartFrame>
 </div>
 
 <style>
-  @import './uma-text.css';
+  @import '@/components/charts/zoomable-plot.css';
   @import './cm-uma-bubble.css';
 </style>

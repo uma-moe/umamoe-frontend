@@ -25,7 +25,7 @@
     },
     {
       href: '/simulator/race',
-      icon: 'gauge' as const,
+      icon: 'stopwatch' as const,
       accent: 'pink',
       title: 'Race Simulator',
       description: 'Race any team or build'

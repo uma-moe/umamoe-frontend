@@ -39,7 +39,7 @@ export const UPDATE_LOG: UpdateEntry[] = [
       {
         category: 'major',
         label: 'Race Simulator',
-        icon: 'race',
+        icon: 'stopwatch',
         preview: {
           image: '/updates/2.1/race-simulator.jpg',
           alt: 'Race simulator setup with race options, course conditions and an interactive track breakdown.',

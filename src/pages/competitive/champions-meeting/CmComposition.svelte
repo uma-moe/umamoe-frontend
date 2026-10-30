@@ -1,7 +1,5 @@
 <script lang="ts">
   import DataTable from '@/components/data/DataTable.svelte';
-  import InspectPopover from '@/components/overlays/InspectPopover.svelte';
-  import Icon from '@/components/Icon.svelte';
   import type { TeamRate } from '../hakuraku-types';
   import { pct, number, styleNames } from './cm-data';
 
@@ -53,22 +51,6 @@
             33.3% · one win in three
           </span>
         </div>
-      {:else if column.key === 'lower'}
-        <InspectPopover
-          label="About the estimated win range"
-          align="end"
-        >
-          {#snippet trigger()}
-            <Icon
-              name="info"
-              size={13}
-            />
-          {/snippet}
-          <p class="range-help">
-            Estimated win range shows uncertainty in the win rate; a narrower range means a more
-            precise estimate. Calculated with 95% confidence intervals.
-          </p>
-        </InspectPopover>
       {/if}
     {/snippet}
     {#snippet cell(row, column)}
@@ -231,12 +213,6 @@
     white-space: nowrap;
     font-variant-numeric: tabular-nums;
   }
-  p {
-    font-size: 10px;
-    color: var(--text-secondary);
-    margin: 8px 0 0;
-    line-height: 1.5;
-  }
   @media (max-width: 600px) {
     .composition-table :global(td) {
       padding-inline: 8px;
@@ -269,19 +245,6 @@
     content: '';
     height: 5px;
     border-left: 2px solid var(--text-primary);
-  }
-  .range-help {
-    margin: 0;
-    max-width: 36ch;
-    font-size: 12px;
-    line-height: 1.6;
-    text-transform: none;
-    letter-spacing: normal;
-    font-weight: 400;
-  }
-  .composition-table :global(th:nth-child(3) .inspect) {
-    margin-left: 4px;
-    vertical-align: middle;
   }
   @container chart-frame (min-width:1000px) {
     .rate-scale {

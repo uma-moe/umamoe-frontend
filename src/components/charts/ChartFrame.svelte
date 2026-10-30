@@ -101,14 +101,12 @@
               {title}
             </h3>
             {#if slim && description}
-              <InspectPopover label={'About ' + title}>
+              <InspectPopover
+                label={'About ' + title}
+                openOnHover
+              >
                 {#snippet trigger()}
-                  <span class="about">
-                    <Icon
-                      name="info"
-                      size={14}
-                    />
-                  </span>
+                  <span class="about">Info</span>
                 {/snippet}
                 <p class="about-text">{description}</p>
               </InspectPopover>
@@ -280,24 +278,24 @@
     border-radius: 0;
     background: transparent;
     padding: 0;
-    gap: 18px;
+    gap: 10px;
   }
   .plain figcaption {
-    gap: 16px;
+    gap: 10px;
     flex-wrap: wrap;
   }
   .plain .title-row {
-    gap: 12px;
+    gap: 6px;
   }
   .plain h3 {
-    font-size: 17px;
+    font-size: 15px;
     font-weight: 650;
     letter-spacing: -0.02em;
   }
   .plain p {
-    font-size: 12px;
-    line-height: 1.6;
-    margin-top: 7px;
+    font-size: 11px;
+    line-height: 1.5;
+    margin-top: 3px;
     max-width: 68ch;
   }
   .plain .legend {
@@ -317,15 +315,15 @@
     border: 0;
     border-radius: var(--radius-lg);
     background: var(--surface-1);
-    padding: 20px;
+    padding: 12px 14px;
   }
   .surface figcaption {
-    padding-bottom: 12px;
+    padding-bottom: 8px;
     border-bottom: 1px solid var(--border-subtle);
   }
   @media (max-width: 600px) {
     .surface {
-      padding: 14px;
+      padding: 10px;
     }
   }
   .compact {
@@ -336,7 +334,7 @@
     gap: 0;
   }
   .surface.compact {
-    padding: 12px 16px;
+    padding: 10px 14px;
   }
   .compact figcaption {
     align-items: center;
@@ -351,12 +349,20 @@
     font-size: 11px;
     margin-top: 3px;
   }
+  /* A small labelled badge, matching Hakuraku's info buttons. */
   .about {
-    width: 22px;
-    height: 22px;
-    display: grid;
-    place-items: center;
+    display: inline-flex;
+    align-items: center;
+    padding: 1px 5px;
+    border: 1px solid currentColor;
+    border-radius: var(--radius-sm);
     color: var(--color-text-muted);
+    font-size: 10px;
+    font-weight: 600;
+    line-height: 1.1;
+  }
+  .about:hover {
+    color: var(--color-text);
   }
   .about-text {
     max-width: 44ch;

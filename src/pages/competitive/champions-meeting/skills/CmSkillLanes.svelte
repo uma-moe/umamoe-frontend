@@ -630,7 +630,7 @@
               <div class="inspection-action">
                 {#if range}<Button
                     size="sm"
-                    variant="ghost"
+                    variant="secondary"
                     onclick={clearRange}
                   >
                     Clear distance range
@@ -695,7 +695,7 @@
                 {#if range}
                   <Button
                     size="sm"
-                    variant="ghost"
+                    variant="secondary"
                     onclick={clearRange}
                   >
                     Clear distance range

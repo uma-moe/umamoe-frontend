@@ -507,8 +507,37 @@
   font-weight: 600;
 }
 @container race-fields (min-width:1240px) {
-  .bare .controls {
+  .bare:not(.has-extra) .controls {
     grid-template-columns: minmax(0, 5fr) minmax(0, 7fr);
+  }
+}
+/* With more fields: the course, the conditions, then the fields, each a row; a wide form puts the fields beside the
+   course and the conditions under both. */
+.has-extra .controls {
+  grid-template-areas: 'course' 'conditions' 'extra';
+}
+.has-extra .course-row {
+  grid-area: course;
+}
+.has-extra .conditions {
+  grid-area: conditions;
+}
+.extra {
+  grid-area: extra;
+  min-width: 0;
+}
+@container race-fields (min-width:1000px) {
+  .has-extra .controls {
+    grid-template-columns: minmax(0, 1fr) auto;
+    grid-template-areas: 'course extra' 'conditions conditions';
+    align-items: end;
+  }
+}
+/* Too narrow for the four conditions on one line: two by two, rather than three and one left over. */
+@container race-fields (min-width:561px) and (max-width:779px) {
+  .has-extra .conditions {
+    display: grid;
+    grid-template-columns: repeat(2, max-content);
   }
 }
 @container race-fields (max-width:560px) {

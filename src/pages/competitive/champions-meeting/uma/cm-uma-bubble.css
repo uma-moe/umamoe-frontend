@@ -1,11 +1,12 @@
 .legend {
   display: flex;
-  gap: 6px 12px;
+  gap: 4px;
   flex-wrap: wrap;
 }
 .legend button {
-  border: 0;
-  background: transparent;
+  border: 1px solid var(--factor-field-border);
+  border-radius: var(--radius-md);
+  background: var(--factor-field-bg);
   color: var(--color-text);
   font: inherit;
   font-size: 10px;
@@ -13,8 +14,11 @@
   gap: 5px;
   align-items: center;
   cursor: pointer;
-  padding: 3px 0;
-  min-height: 26px;
+  padding: 0 8px;
+  min-height: 24px;
+}
+.legend button:hover {
+  border-color: var(--border-primary);
 }
 .legend i {
   width: 6px;
@@ -63,14 +67,6 @@
   grid-row: 1;
   flex-wrap: nowrap;
 }
-.bubble-panel :global(.chart-frame.surface .chart-heading > p) {
-  grid-column: 1 / -1;
-  grid-row: 2;
-  max-width: none;
-  margin: 0;
-  font-size: 11px;
-  line-height: 1.5;
-}
 .bubble-panel :global(.chart-tools > .ui-button) {
   min-height: 32px;
   padding-inline: 8px;
@@ -88,30 +84,27 @@
     grid-row: 2;
     justify-content: space-between;
   }
-  .bubble-panel :global(.chart-frame.surface .chart-heading > p) {
-    grid-row: 3;
-  }
 }
-.chart-scroll {
-  overflow: auto;
-  min-width: 0;
+.bubble-body {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  height: 100%;
+  min-height: 0;
 }
-.chart-scroll.expanded .bubble {
-  min-width: 620px;
+.plot {
+  min-height: 360px;
 }
-.bubble {
-  display: block;
-  width: 100%;
-  height: auto;
-  max-height: 410px;
+.plot.expanded {
+  min-height: min(70dvh, 720px);
 }
-.bubble .baseline-label {
-  font-size: 9px;
-}
-.bubble text {
+.plot text {
   font-family: inherit;
-  font-size: 11px;
+  font-size: 10px;
   fill: var(--text-secondary);
+}
+.plot .baseline-label {
+  font-size: 9px;
 }
 .grid {
   stroke: var(--border-subtle);
@@ -124,12 +117,12 @@
 }
 .inspection {
   background: var(--cm-tint);
-  padding: 14px;
+  padding: 8px 10px;
   border-radius: var(--radius-md);
 }
 .inspection-heading {
   display: flex;
-  gap: 12px;
+  gap: 8px;
   align-items: center;
 }
 .inspection-heading > div {
@@ -144,30 +137,27 @@
   display: block;
   font-size: 10px;
   color: var(--text-secondary);
-  margin-top: 5px;
+  margin-top: 2px;
 }
 .inspection dl {
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));
-  gap: 12px;
-  margin: 14px 0 0;
+  gap: 8px;
+  margin: 6px 0 0;
 }
 .inspection dt {
   font-size: 10px;
   color: var(--text-secondary);
 }
 .inspection dd {
-  font-size: 21px;
+  font-size: 17px;
   font-weight: 600;
   letter-spacing: -0.04em;
   font-variant-numeric: tabular-nums;
-  margin: 7px 0 0;
+  margin: 2px 0 0;
 }
 .inspection dl small {
   font-size: 9px;
-}
-.pan-hint {
-  display: none;
 }
 @media (max-width: 1300px) {
   .inspection dl {
@@ -181,7 +171,7 @@
 }
 @media (max-width: 600px) {
   .inspection {
-    padding: 18px 14px;
+    padding: 8px 10px;
   }
   .inspection dl {
     grid-template-columns: 1fr 1fr;
@@ -190,12 +180,9 @@
     flex-wrap: wrap;
   }
   .inspection dd {
-    font-size: 24px;
+    font-size: 17px;
   }
-  .pan-hint {
-    display: block;
-  }
-  .bubble {
-    min-height: 240px;
+  .plot {
+    min-height: 260px;
   }
 }

@@ -142,7 +142,7 @@
         {/if}
         <Button
           size="sm"
-          variant="ghost"
+          variant="secondary"
           icon={copied ? 'check' : 'copy'}
           ariaLabel={copied ? 'Link copied' : 'Copy link'}
           onclick={copyLink}

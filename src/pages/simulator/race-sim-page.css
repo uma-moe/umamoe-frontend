@@ -19,19 +19,26 @@
 .race-form:focus {
   outline: none;
 }
-/* Sampled races, seed and gates continue the race conditions' row. */
-.run-field {
+/* Sampled races, seed and gates: a row of their own beside or under the course, see RaceBar's `extra`. */
+.run-fields {
   --control-height: var(--setup-control-height);
+  display: grid;
+  grid-template-columns: 120px 200px 150px;
+  grid-template-areas: 'samples seed gates';
+  gap: 10px 16px;
+  align-items: end;
+}
+.run-field {
   min-width: 0;
 }
 .run-field.samples {
-  width: 120px;
+  grid-area: samples;
 }
 .run-field.seed-setting {
-  width: 200px;
+  grid-area: seed;
 }
 .run-field.gates {
-  width: 150px;
+  grid-area: gates;
 }
 .run-field :global(.field) {
   gap: 4px;
@@ -67,12 +74,12 @@
 .race-form :global(section.profile.compact .outline) {
   padding-block: 8px;
 }
-/* A phone: the conditions become a two-column grid, and these fields fill its cells. */
+/* A phone: the sample count and gates in the conditions' two columns, the seed and its long number on a row of its own. */
 @container race-form (max-width:560px) {
-  .run-field.samples,
-  .run-field.seed-setting,
-  .run-field.gates {
-    width: auto;
+  .run-fields {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    grid-template-areas: 'samples gates' 'seed seed';
+    gap: 8px;
   }
 }
 @media (max-width: 767px) {

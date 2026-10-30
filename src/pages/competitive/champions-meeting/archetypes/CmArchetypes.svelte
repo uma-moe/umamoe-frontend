@@ -215,12 +215,6 @@
         />
       </div>
     </div>
-    <p class="ranking-help">
-      {sort === 'lower'
-        ? 'Reliable ranking uses the lower end of the estimated win range.'
-        : 'Ranked by simulated team win rate.'} Add teams or single Uma to build a lobby, then open it
-      in the simulator.
-    </p>
     {#if skillCatalogError}
       <p
         class="ranking-help"

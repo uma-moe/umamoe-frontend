@@ -93,7 +93,7 @@
               <span role="alert">{details.errors[row.id]}</span>
               <Button
                 size="sm"
-                variant="ghost"
+                variant="secondary"
                 onclick={() => details.load(row.id)}
               >
                 Retry {skillName(row.id)}

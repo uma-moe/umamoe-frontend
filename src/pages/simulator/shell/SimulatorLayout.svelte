@@ -16,7 +16,7 @@
       id: 'race',
       path: '/simulator/race',
       label: 'Race sim',
-      icon: 'race',
+      icon: 'stopwatch',
       title: 'Race simulator',
       blurb: 'Race your runners, compare builds and test changes.',
       load: () => import('../RaceSimPage.svelte')

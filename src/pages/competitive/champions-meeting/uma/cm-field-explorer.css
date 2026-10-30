@@ -1,7 +1,7 @@
 .explorer {
   display: grid;
   grid-template-columns: minmax(0, 1fr);
-  gap: 16px;
+  gap: 10px;
   align-items: start;
 }
 .explorer.inspecting {
@@ -17,15 +17,12 @@
   min-width: 0;
   scroll-margin-top: 80px;
   background: var(--surface-1);
-  padding: 12px 16px;
+  padding: 10px 14px;
   border-radius: var(--radius-lg);
   --control-height: 28px;
 }
 .back-to-chart {
   display: none;
-}
-header {
-  margin-bottom: 10px;
 }
 .eyebrow {
   font-size: 9px;
@@ -37,7 +34,7 @@ h2 {
   font-size: 14px;
   font-weight: 650;
   letter-spacing: -0.02em;
-  margin: 0 0 8px;
+  margin: 0 0 6px;
 }
 h3 {
   font-size: 17px;
@@ -50,17 +47,12 @@ p {
   color: var(--text-secondary);
   margin: 8px 0;
 }
-header p {
-  max-width: none;
-  margin: 4px 0;
-  font-size: 11px;
-}
 .filters {
   display: flex;
   gap: 8px;
   flex-wrap: wrap;
   align-items: end;
-  margin-bottom: 10px;
+  margin-bottom: 6px;
 }
 .filters > :global(.field) {
   flex: 1;
@@ -76,7 +68,7 @@ header p {
   flex-wrap: wrap;
   font-size: 10px;
   color: var(--text-secondary);
-  margin: 0 0 16px;
+  margin: 0 0 4px;
 }
 .map-key span {
   display: flex;
@@ -115,7 +107,8 @@ th .sort i {
   color: inherit;
   font: inherit;
   cursor: pointer;
-  min-height: 32px;
+  min-height: 24px;
+  padding: 0;
   white-space: nowrap;
 }
 .sort i {
@@ -132,7 +125,7 @@ th[aria-sort='descending'] {
 }
 .field-map {
   border-collapse: separate;
-  border-spacing: 4px 5px;
+  border-spacing: 2px;
   width: 100%;
   font-size: 11px;
   min-width: 710px;
@@ -140,7 +133,7 @@ th[aria-sort='descending'] {
 .field-map th {
   font-weight: 500;
   text-align: left;
-  padding: 6px 4px;
+  padding: 0 4px;
   white-space: nowrap;
 }
 .field-map thead th {
@@ -152,17 +145,17 @@ th[aria-sort='descending'] {
   text-align: left;
 }
 .field-map tbody th {
-  width: 190px;
+  width: 170px;
 }
 .identity {
   display: flex;
   align-items: center;
-  gap: 9px;
+  gap: 6px;
   min-width: 0;
 }
 .identity > span {
   min-width: 0;
-  line-height: 1.5;
+  line-height: 1.25;
 }
 .identity small {
   display: block;
@@ -183,16 +176,19 @@ th[aria-sort='descending'] {
   display: flex;
   flex-direction: column;
   justify-content: center;
-  gap: 4px;
+  gap: 0;
   border: 0;
-  min-height: 55px;
+  border-radius: var(--radius-sm);
+  min-height: 34px;
+  padding: 2px 4px;
+  line-height: 1.2;
   width: 100%;
   color: var(--color-text);
   cursor: pointer;
   overflow: hidden;
 }
 .field-map td strong {
-  font-size: 13px;
+  font-size: 12px;
   font-weight: 600;
 }
 .field-map td small {
@@ -219,7 +215,7 @@ th[aria-sort='descending'] {
   scroll-margin-top: 80px;
   position: sticky;
   top: 80px;
-  padding: 14px;
+  padding: 10px 12px;
   min-width: 0;
   background: var(--surface-1);
   border-radius: var(--radius-lg);
@@ -241,7 +237,7 @@ th[aria-sort='descending'] {
   display: flex;
   gap: 10px;
   align-items: center;
-  margin: 12px 0 16px;
+  margin: 6px 0 8px;
 }
 .selected-identity h3 {
   font-size: 16px;
@@ -271,17 +267,17 @@ th[aria-sort='descending'] {
 .readout {
   display: grid;
   grid-template-columns: 1fr 1fr;
-  gap: 12px;
-  margin: 16px 0;
+  gap: 8px;
+  margin: 8px 0;
 }
 .readout dt {
   font-size: 10px;
   color: var(--text-secondary);
 }
 .readout dd {
-  font-size: 24px;
+  font-size: 20px;
   letter-spacing: -0.04em;
-  margin: 5px 0 4px;
+  margin: 2px 0;
   font-variant-numeric: tabular-nums;
 }
 .readout small {
@@ -290,7 +286,7 @@ th[aria-sort='descending'] {
 }
 .evidence {
   border-top: 1px solid var(--border-subtle);
-  padding-top: 12px;
+  padding-top: 8px;
 }
 .evidence > span {
   font-size: 10px;
@@ -301,31 +297,21 @@ th[aria-sort='descending'] {
   justify-content: space-between;
   gap: 10px;
   font-size: 11px;
-  margin: 7px 0;
+  margin: 3px 0;
 }
 .evidence strong {
   font-weight: 500;
   color: var(--color-text);
   font-variant-numeric: tabular-nums;
 }
-.reading {
-  margin: 12px 0;
-  font-size: 11px;
-}
 .inspector-actions {
   display: flex;
-  margin-top: 12px;
+  margin-top: 8px;
 }
 .inspector-actions :global(button) {
   min-height: 30px;
   font-size: 11px;
   padding-inline: 10px;
-}
-.caption {
-  font-size: 10px;
-  line-height: 1.7;
-  margin: 15px 0;
-  color: var(--text-secondary);
 }
 .range-axis,
 .ranking {
@@ -349,7 +335,7 @@ th[aria-sort='descending'] {
 }
 .ranking {
   width: 100%;
-  min-height: 40px;
+  min-height: 34px;
   padding: 3px 5px;
   border: 0;
   border-bottom: 1px solid var(--border-subtle);
@@ -372,8 +358,8 @@ th[aria-sort='descending'] {
   gap: 8px;
 }
 .identity :global(.art) {
-  width: 28px;
-  height: 34px;
+  width: 24px;
+  height: 30px;
   border: 0;
   background: transparent;
 }
@@ -437,30 +423,28 @@ th[aria-sort='descending'] {
   .back-to-chart {
     display: block;
     grid-column: 1/-1;
-    margin-bottom: 12px;
+    margin-bottom: 6px;
   }
   .explorer.inspecting {
     grid-template-columns: 1fr;
-    gap: 12px;
+    gap: 8px;
   }
   .inspector {
     position: static;
     display: grid;
     grid-template-columns: 1fr 1fr;
-    gap: 0 24px;
-    padding: 16px;
+    gap: 0 16px;
+    padding: 10px 12px;
   }
   .inspector-heading,
-  .inspector-actions,
-  .reading,
-  .inspector > .caption {
+  .inspector-actions {
     grid-column: 1/-1;
   }
   .selected-identity {
-    margin: 12px 0;
+    margin: 6px 0;
   }
   .readout {
-    margin: 12px 0;
+    margin: 6px 0;
   }
   .evidence {
     grid-column: 1/-1;
@@ -474,7 +458,7 @@ th[aria-sort='descending'] {
 }
 @media (max-width: 600px) {
   .filters {
-    gap: 12px;
+    gap: 6px;
   }
   .filters > :global(.field) {
     min-width: 130px;
@@ -516,6 +500,6 @@ th[aria-sort='descending'] {
     height: 40px;
   }
   .readout dd {
-    font-size: 24px;
+    font-size: 20px;
   }
 }

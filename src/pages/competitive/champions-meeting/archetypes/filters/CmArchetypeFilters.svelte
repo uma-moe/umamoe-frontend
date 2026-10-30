@@ -90,7 +90,7 @@
     </button>
     <span class="filter-note">Match runners in any order</span>
     <Button
-      variant="ghost"
+      variant="secondary"
       size="sm"
       disabled={!query}
       onclick={() => (query = '')}

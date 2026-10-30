@@ -114,6 +114,8 @@
     compact
     id="cm-synergy"
     title="Teams with this Uma"
+    description="Team compositions for a specific Uma, compared with the 33.3% team win-rate baseline. Counts are distinct players, not simulation appearances. Compositions require at least five players."
+    slim
   >
     {#snippet actions()}
       <SelectField

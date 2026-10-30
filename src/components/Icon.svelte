@@ -20,6 +20,16 @@
     pause: ['M8 5v14', 'M16 5v14'],
     'skip-back': ['M6 5v14', 'M18 5 9 12l9 7V5Z'],
     pin: ['M9 3h6', 'M10 3v5.5L7 12v2h10v-2l-3-3.5V3', 'M12 14v7'],
+    // The race simulator: a stopwatch running against speed lines.
+    stopwatch: [
+      'M14 21a7.5 7.5 0 1 0 0-15 7.5 7.5 0 0 0 0 15Z',
+      'M12 2.5h4',
+      'M14 2.5V6',
+      'm14 13.5 2.6-2.6',
+      'M2.5 10h3',
+      'M1.5 14h3.5',
+      'M2.5 18h3'
+    ],
     'arrow-right': ['M4 12h16', 'm14 6 6 6-6 6'],
     gift: [
       'M3 8h18v4H3z',

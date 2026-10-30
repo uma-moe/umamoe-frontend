@@ -311,47 +311,49 @@
           {#snippet actions()}<CourseButtons details={false} />{/snippet}
           <RaceBar bare>
             {#snippet extra()}
-              <div class="run-field samples">
-                <TextField
-                  id="race-samples"
-                  type="number"
-                  min={1}
-                  max={MAX_MONTE_CARLO_RUNS}
-                  label="Sampled races"
-                  error={runsInvalid
-                    ? 'Enter 1–' + MAX_MONTE_CARLO_RUNS.toLocaleString('en-US') + ' races.'
-                    : undefined}
-                  bind:value={runs}
-                />
-              </div>
-              <div class="run-field seed-setting">
-                <TextField
-                  id="race-seed"
-                  label="Seed"
-                  type="number"
-                  min={-2147483648}
-                  max={2147483647}
-                  error={seedInvalid
-                    ? 'Enter a whole number from −2,147,483,648 to 2,147,483,647.'
-                    : undefined}
-                  bind:value={simulatorSession.seed}
-                />
-                <Button
-                  variant="secondary"
-                  size="sm"
-                  icon="dice"
-                  ariaLabel="Random seed"
-                  onclick={() =>
-                    (simulatorSession.seed = String(Math.floor(Math.random() * 2 ** 31)))}
-                />
-              </div>
-              <div class="run-field gates">
-                <ToggleField
-                  id="race-gates"
-                  label="Gates"
-                  options={GATE_OPTIONS}
-                  bind:value={gateOrder}
-                />
+              <div class="run-fields">
+                <div class="run-field samples">
+                  <TextField
+                    id="race-samples"
+                    type="number"
+                    min={1}
+                    max={MAX_MONTE_CARLO_RUNS}
+                    label="Sampled races"
+                    error={runsInvalid
+                      ? 'Enter 1–' + MAX_MONTE_CARLO_RUNS.toLocaleString('en-US') + ' races.'
+                      : undefined}
+                    bind:value={runs}
+                  />
+                </div>
+                <div class="run-field seed-setting">
+                  <TextField
+                    id="race-seed"
+                    label="Seed"
+                    type="number"
+                    min={-2147483648}
+                    max={2147483647}
+                    error={seedInvalid
+                      ? 'Enter a whole number from −2,147,483,648 to 2,147,483,647.'
+                      : undefined}
+                    bind:value={simulatorSession.seed}
+                  />
+                  <Button
+                    variant="secondary"
+                    size="sm"
+                    icon="dice"
+                    ariaLabel="Random seed"
+                    onclick={() =>
+                      (simulatorSession.seed = String(Math.floor(Math.random() * 2 ** 31)))}
+                  />
+                </div>
+                <div class="run-field gates">
+                  <ToggleField
+                    id="race-gates"
+                    label="Gates"
+                    options={GATE_OPTIONS}
+                    bind:value={gateOrder}
+                  />
+                </div>
               </div>
             {/snippet}
           </RaceBar>

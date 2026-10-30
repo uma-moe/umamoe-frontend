@@ -125,7 +125,7 @@
                 </h3>
                 {#if members > 0}
                   <Button
-                    variant="ghost"
+                    variant="secondary"
                     size="sm"
                     ariaLabel={'Remove lobby team ' + (team + 1)}
                     onclick={() => lobby.removeTeam(team)}
@@ -187,14 +187,14 @@
               selected.
             </span>
             <Button
-              variant="ghost"
+              variant="secondary"
               size="sm"
               onclick={() => (lobby.selected = null)}
             >
               Cancel
             </Button>
             <Button
-              variant="ghost"
+              variant="secondary"
               size="sm"
               ariaLabel={'Remove ' + runnerName(selectedRunner.build.card) + ' from lobby'}
               onclick={() => lobby.selected !== null && lobby.remove(lobby.selected)}
@@ -208,7 +208,7 @@
           {/if}
           {#if lobby.count > 0 || lobby.pending.length > 0}
             <Button
-              variant="ghost"
+              variant="secondary"
               size="sm"
               onclick={clearLobby}
             >

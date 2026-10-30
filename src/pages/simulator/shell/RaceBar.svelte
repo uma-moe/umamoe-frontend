@@ -49,7 +49,7 @@
     bare?: boolean;
     /** In bare mode, the track and course alone, each a cell of the form's own grid. */
     courseOnly?: boolean;
-    /** More fields in the conditions' row in bare mode. */
+    /** More fields in bare mode: beside the course where the form is wide, under the conditions where it is not. */
     extra?: Snippet;
   } = $props();
 
@@ -125,9 +125,6 @@
     {#if note}
       <span class="note">{note}</span>
     {/if}
-    {#if bare}
-      {@render extra?.()}
-    {/if}
   </div>
 {/snippet}
 <section
@@ -136,6 +133,7 @@
   class:sidebar
   class:inline-conditions={inlineConditions}
   class:bare
+  class:has-extra={bare && Boolean(extra)}
   class:course-only={bare && courseOnly}
   aria-label={bare && courseOnly ? 'Course' : 'Race conditions'}
 >
@@ -350,6 +348,9 @@
       {:else if bare}
         {#if !courseOnly}
           {@render conditions()}
+          {#if extra}
+            <div class="extra">{@render extra()}</div>
+          {/if}
         {/if}
       {:else}
         {@render conditions()}

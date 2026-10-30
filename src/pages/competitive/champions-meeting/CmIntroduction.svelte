@@ -27,7 +27,7 @@
         the minimum-player filters and confidence intervals to judge sample size.
       </p>
       <Button
-        variant="ghost"
+        variant="secondary"
         size="sm"
         icon="book"
         href="/research/new-age-umamusume-data"
