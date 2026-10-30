@@ -135,6 +135,15 @@ test('Course setup preserves every searchable resource option and its breakdown'
     .evaluateAll((nodes) => nodes.map((node) => node.getBoundingClientRect().height));
 
   expect(new Set(heights).size).toBe(1);
+  if (info.project.name === 'chromium') {
+    // A wide form keeps the track, course and sampling on one row, the conditions under it.
+    const bottoms = await race
+      .locator('#sim-track,#sim-course,#race-samples,#race-seed,#race-gates')
+      .evaluateAll((nodes) => nodes.map((node) => Math.round(node.getBoundingClientRect().bottom)));
+
+    expect(new Set(bottoms).size).toBe(1);
+  }
+
   const track = page.getByRole('combobox', { name: 'Track', exact: true });
   await track.click();
   await expect(page.getByRole('option')).toHaveCount(
