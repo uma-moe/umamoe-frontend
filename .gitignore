@@ -95,6 +95,7 @@ scripts/*
 !scripts/check-seo.mjs
 !scripts/companion-stylesheet-reload.ts
 !scripts/build-skill-explorer-umas.ts
+!scripts/build-potential-skills.ts
 !scripts/fit-cm-statlines.ts
 
 .github/copilot-instructions.md

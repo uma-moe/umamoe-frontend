@@ -1,4 +1,10 @@
 import type { SkillData } from '@/lib/game-data/skills/skills';
+import {
+  loadPotentialSkills,
+  STARTING_POTENTIAL_LEVEL,
+  unlockedSkills,
+  type PotentialSkills
+} from '@/lib/game-data/cards/potential-skills';
 import { aptitudeGrade } from '@/lib/profile/profile-display';
 import { hintedSkills } from '../skill-offers';
 import { BUILD_CODE_VERSION, decodeBuildCode, type BuildCode } from './build-code';
@@ -7,8 +13,9 @@ import { BUILD_CODE_VERSION, decodeBuildCode, type BuildCode } from './build-cod
  * A career's final turn, saved as JSON: her state when the career ends, before she spends her skill points. honse_act
  * writes the turn's `single_mode_load_common`; UmaExporter writes the whole server response, with the same state under
  * `data`. Either way `chara_info` holds her stats, aptitudes, style, mood, skills, skill points, fans and hint levels,
- * which read as a build code: the runner, her skill points and every hinted skill as an offer at its hint level. The
- * course and its conditions stay as they are. contracts/final-turn.schema.json documents the shape read here.
+ * which read as a build code: the runner, her skill points, every hinted skill as an offer at its hint level, and the
+ * skills her card's potential (talent) level unlocks, on offer without a hint where she has none. The course and its
+ * conditions stay as they are. contracts/final-turn.schema.json documents the shape read here.
  */
 interface CareerSkill {
   skill_id: number;
@@ -30,6 +37,8 @@ export interface FinalTurnCharaInfo {
   wiz: number;
   motivation: number;
   fans?: number;
+  /** Potential level, 1 to 5: it unlocks skills of her card to buy without a hint. */
+  talent_level?: number;
   skill_point: number;
   race_running_style: number;
   proper_distance_short: number;
@@ -114,10 +123,14 @@ export function finalTurnCharaInfo(value: unknown): FinalTurnCharaInfo | undefin
 /** Character uniques are 1xxxxx. */
 const isUnique = (skill: number) => skill >= 100000 && skill < 200000;
 
-/** Her final turn as a build code; its hints need the skill catalog to name the skills they are for. */
+/**
+ * Her final turn as a build code; its hints need the skill catalog to name the skills they are for, and her potential
+ * level her card's potential skills.
+ */
 export function finalTurnCode(
   info: FinalTurnCharaInfo,
-  skillLookup: Map<number, SkillData>
+  skillLookup: Map<number, SkillData>,
+  potentialSkills: PotentialSkills
 ): BuildCode {
   const unique = info.skill_array.find((skill) => isUnique(skill.skill_id));
   const hintLevels: Record<string, number> = {};
@@ -129,6 +142,12 @@ export function finalTurnCode(
       hintLevels[String(skill.skill_id)] = hint.level;
     }
   }
+
+  const unlocked = unlockedSkills(potentialSkills, {
+    cardId: info.card_id,
+    potentialLevel: isNumber(info.talent_level) ? info.talent_level : STARTING_POTENTIAL_LEVEL
+  });
+  const chartSkills = [...new Set([...Object.keys(hintLevels), ...unlocked.map(String)])];
 
   return {
     version: BUILD_CODE_VERSION,
@@ -159,18 +178,19 @@ export function finalTurnCode(
       sp: info.skill_point,
       ...(isNumber(info.fans) ? { fans: info.fans } : {})
     },
-    chartSkills: Object.keys(hintLevels),
+    chartSkills,
     hintLevels
   };
 }
 
 /**
  * Reads a build code or a career's final turn. JSON with a career `chara_info` is a final turn; anything else is read
- * as a build code, which says what is wrong with it.
+ * as a build code, which says what is wrong with it. `potentialSkills` loads the cards' potential skills for a final turn.
  */
 export async function decodeBuildImport(
   text: string,
-  skillLookup: Map<number, SkillData>
+  skillLookup: Map<number, SkillData>,
+  potentialSkills: () => Promise<PotentialSkills> = loadPotentialSkills
 ): Promise<BuildCode> {
   const value = text.trim();
   if (value.startsWith('{')) {
@@ -182,7 +202,7 @@ export async function decodeBuildImport(
     }
 
     const info = finalTurnCharaInfo(parsed);
-    if (info) return finalTurnCode(info, skillLookup);
+    if (info) return finalTurnCode(info, skillLookup, await potentialSkills());
   }
 
   return decodeBuildCode(value);

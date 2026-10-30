@@ -61,6 +61,7 @@
         "motivation": { "description": "Mood: 1 awful to 5 great.", "type": "integer", "minimum": 1, "maximum": 5 },
         "skill_point": { "description": "Skill points left to spend: the Build optimizer's budget.", "type": "integer", "minimum": 0 },
         "fans": { "description": "Her fan count; skills that grow with fans need it.", "type": "integer", "minimum": 0 },
+        "talent_level": { "description": "Potential level, 1 to 5. Her card's skills unlocked up to it are on offer without a hint; without it, its starting skills.", "type": "integer", "minimum": 1, "maximum": 5 },
         "race_running_style": { "description": "1 front runner, 2 pace chaser, 3 late surger, 4 end closer.", "enum": [1, 2, 3, 4] },
         "proper_distance_short": { "$ref": "#/$defs/aptitude" },
         "proper_distance_mile": { "$ref": "#/$defs/aptitude" },

@@ -3,6 +3,7 @@ import path from 'node:path';
 import Ajv2020 from 'ajv/dist/2020';
 import { describe, expect, it } from 'vitest';
 import type { SkillData } from '@/lib/game-data/skills/skills';
+import type { PotentialSkills } from '@/lib/game-data/cards/potential-skills';
 import { buildCodeGoal, buildCodeOffers, buildCodeUma } from './build-code';
 import { decodeBuildImport, finalTurnCharaInfo } from './final-turn';
 
@@ -24,6 +25,9 @@ const catalog = new Map(
     skill(201661, "Playtime's Over!"),
     skill(201662, 'See Ya Later!', 2),
     skill(900371, 'Schwarzes Schwert'),
+    skill(200512, 'Straightaway Adept'),
+    skill(200162, 'Firm Conditions ○'),
+    skill(201351, 'Shake It Out'),
     skill(100061, 'Unique', 3)
   ].map((entry) => [entry.skill_id, entry])
 );
@@ -63,6 +67,21 @@ const charaInfo = {
   ]
 };
 
+/** Her card's potential skills: two starting skills, one she was also hinted, and one each at levels 2 and 4. */
+const potentialSkills: PotentialSkills = new Map([
+  [
+    100601,
+    [
+      { level: 1, skillId: 200512 },
+      { level: 1, skillId: 200041 },
+      { level: 2, skillId: 200162 },
+      { level: 4, skillId: 201351 }
+    ]
+  ]
+]);
+const loadPotentialSkills = () => Promise.resolve(potentialSkills);
+const noPotentialSkills = () => Promise.resolve<PotentialSkills>(new Map());
+
 const readContract = (name: string) =>
   JSON.parse(readFileSync(path.join(process.cwd(), 'contracts', name), 'utf8'));
 
@@ -87,7 +106,7 @@ describe('final turns', () => {
   });
 
   it('reads her as the runner with her skill points', async () => {
-    const code = await decodeBuildImport(JSON.stringify(honseAct), catalog);
+    const code = await decodeBuildImport(JSON.stringify(honseAct), catalog, noPotentialSkills);
 
     const { uma } = buildCodeUma(code.uma1!);
     const goal = buildCodeGoal(code);
@@ -112,7 +131,7 @@ describe('final turns', () => {
   });
 
   it('offers every hinted skill at its hint level, but none she owns and no negative rank', async () => {
-    const code = await decodeBuildImport(JSON.stringify(umaExporter), catalog);
+    const code = await decodeBuildImport(JSON.stringify(umaExporter), catalog, noPotentialSkills);
 
     const offers = buildCodeOffers(code, [100061, 200042]);
 
@@ -128,12 +147,38 @@ describe('final turns', () => {
   it('loads a final turn without hints or fans as her build with nothing on offer', async () => {
     const { fans: _fans, skill_tips_array: _hints, ...bare } = charaInfo;
 
-    const code = await decodeBuildImport(JSON.stringify({ data: { chara_info: bare } }), catalog);
+    const code = await decodeBuildImport(
+      JSON.stringify({ data: { chara_info: bare } }),
+      catalog,
+      noPotentialSkills
+    );
 
     expect(validate(code), JSON.stringify(validate.errors)).toBe(true);
     expect(code.uma1?.fans).toBeUndefined();
     expect(code.uma1?.sp).toBe(2984);
     expect(buildCodeOffers(code, [100061, 200042])).toEqual([]);
+  });
+
+  it('offers the skills her potential level unlocks, without a hint unless she has one', async () => {
+    const atLevelTwo = { data: { chara_info: { ...charaInfo, talent_level: 2 } } };
+
+    const code = await decodeBuildImport(JSON.stringify(atLevelTwo), catalog, loadPotentialSkills);
+    const offers = buildCodeOffers(code, [100061, 200042]);
+
+    expect(validateFinalTurn(atLevelTwo), JSON.stringify(validateFinalTurn.errors)).toBe(true);
+    expect(offers).toContainEqual({ skillId: 200512, hint: 0 });
+    expect(offers).toContainEqual({ skillId: 200162, hint: 0 });
+    expect(offers).toContainEqual({ skillId: 200041, hint: 4 });
+    expect(offers.map((offer) => offer.skillId)).not.toContain(201351);
+  });
+
+  it('offers her card’s starting skills when the turn names no potential level', async () => {
+    const code = await decodeBuildImport(JSON.stringify(umaExporter), catalog, loadPotentialSkills);
+
+    const offered = buildCodeOffers(code, [100061, 200042]).map((offer) => offer.skillId);
+
+    expect(offered).toContain(200512);
+    expect(offered).not.toContain(200162);
   });
 
   it('reads anything else as a build code', async () => {
