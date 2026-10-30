@@ -49,7 +49,7 @@
     bare?: boolean;
     /** In bare mode, the track and course alone, each a cell of the form's own grid. */
     courseOnly?: boolean;
-    /** More fields after the conditions in bare mode. */
+    /** More fields in the conditions' row in bare mode. */
     extra?: Snippet;
   } = $props();
 
@@ -124,6 +124,9 @@
     </div>
     {#if note}
       <span class="note">{note}</span>
+    {/if}
+    {#if bare}
+      {@render extra?.()}
     {/if}
   </div>
 {/snippet}
@@ -347,7 +350,6 @@
       {:else if bare}
         {#if !courseOnly}
           {@render conditions()}
-          {@render extra?.()}
         {/if}
       {:else}
         {@render conditions()}

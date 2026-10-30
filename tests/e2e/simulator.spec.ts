@@ -78,17 +78,15 @@ test('Course setup preserves every searchable resource option and its breakdown'
   );
 
   await page.goto('/simulator/race');
-  // The setup reads top to bottom: the race, its course, then the field; running stays in the bar under them.
+  // The setup reads top to bottom: the race with its course and sampling, then the field; running stays in the bar
+  // under them.
   const race = page.getByRole('region', { name: 'Race', exact: true }),
     controls = page.getByRole('region', { name: 'Run simulation', exact: true });
 
-  await expect(race.getByRole('combobox', { name: 'Race format', exact: true })).toBeVisible();
+  await expect(race.getByRole('radiogroup', { name: 'Gates', exact: true })).toBeVisible();
+  await expect(race.getByRole('combobox', { name: 'Course', exact: true })).toBeVisible();
+  await expect(page.getByRole('combobox', { name: 'Race format', exact: true })).toHaveCount(0);
   await expect(page.getByRole('button', { name: 'Race settings', exact: true })).toHaveCount(0);
-  expect(await race.evaluate((node) => node.getBoundingClientRect().bottom)).toBeLessThanOrEqual(
-    await page
-      .getByRole('region', { name: 'Course', exact: true })
-      .evaluate((node) => node.getBoundingClientRect().top)
-  );
 
   if (info.project.name === 'mobile-chromium') {
     for (const width of [320, 390]) {
@@ -113,7 +111,8 @@ test('Course setup preserves every searchable resource option and its breakdown'
       expect(layout.conditionTops[0]).toBe(layout.conditionTops[1]);
       expect(layout.conditionTops[2]).toBe(layout.conditionTops[3]);
       expect(layout.conditionLefts[0]).toBe(layout.conditionLefts[2]);
-      expect(layout.height).toBeLessThan(180);
+      // The conditions, sampled races, seed and gates.
+      expect(layout.height).toBeLessThan(300);
       expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(
         true
       );
@@ -260,6 +259,7 @@ test('Single-race report uses the selected conditions and retains its editable s
     const body = route.request().postDataJSON();
     expect(body.seeds).toEqual([12345]);
     expect(body.output_mode).toBe('report');
+    expect(body.gateOrder).toBeUndefined();
     expect(route.request().headers()['x-api-key']).toBeUndefined();
     expect(body.input.setup).toMatchObject({
       ground_condition: 4,

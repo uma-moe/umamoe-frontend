@@ -15,6 +15,27 @@ type SampleContext = {
   track: ParsedRaceCapture['track'];
 };
 
+/**
+ * The field seated as sampled race `index` ran. Under randomized gates each run has its own gates, so a rerun at the
+ * sent `frame_order` would race a different field.
+ */
+function seatedInput(
+  input: MonteCarloInput,
+  result: MonteCarloResult,
+  index: number
+): MonteCarloInput {
+  const gates = result.gates?.[index];
+  if (gates === undefined) return input;
+
+  return {
+    ...input,
+    runners: input.runners.map((runner) => ({
+      ...runner,
+      frame_order: gates[runner.source_input_index] ?? runner.frame_order
+    }))
+  };
+}
+
 type ReplayProps = {
   capture: ParsedRaceCapture;
   suspended?: boolean;
@@ -73,7 +94,7 @@ export class ReportSample {
               (
                 await simulatorRepository.monteCarlo({
                   body: {
-                    input,
+                    input: seatedInput(input, result, index),
                     seeds: [result.seeds[index]],
                     output_mode: 'skills',
                     output_format: 'msgpack'
@@ -116,8 +137,9 @@ export class ReportSample {
 
     this.simulation = { status: 'running' };
     try {
+      const seated = seatedInput(input, result, this.index);
       const response = await simulatorRepository.detailedReplay({
-        body: { ...input, seed: result.seeds[this.index] },
+        body: { ...seated, seed: result.seeds[this.index] },
         signal: request.signal
       });
 
@@ -130,7 +152,7 @@ export class ReportSample {
           'These diagnostics do not match the sampled engine and seed. Run the simulation again.'
         );
       const next = applyResimulation(previous, response.result);
-      const sources = input.runners
+      const sources = seated.runners
         .toSorted((a, b) => a.frame_order - b.frame_order)
         .map((r) => r.source_input_index);
 

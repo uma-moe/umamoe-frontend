@@ -71,7 +71,7 @@ export type BuildCodePage =
       teamColors?: unknown;
       seed?: unknown;
       raceInstanceId?: unknown;
-      raceType?: unknown;
+      gateOrder?: unknown;
       runs?: unknown;
     }
   | { tab: 'stamina'; setup: unknown }

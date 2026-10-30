@@ -26,6 +26,8 @@ export interface MonteCarloResult {
   engine_build: string;
   runs: number;
   seeds: number[];
+  /** Each run's gates by source input. Under randomized gates they differ from the sent `frame_order`. */
+  gates?: number[][];
   finish_order: number[][];
   finish_times: number[][];
   final_hp?: number[][];

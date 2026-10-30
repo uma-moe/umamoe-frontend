@@ -19,22 +19,24 @@
 .race-form:focus {
   outline: none;
 }
-/* Race format, sampled races and seed in one row. */
-.race-fields {
+/* Sampled races, seed and gates continue the race conditions' row. */
+.run-field {
   --control-height: var(--setup-control-height);
-  display: grid;
-  grid-template-columns: minmax(180px, 260px) minmax(120px, 160px) minmax(180px, 260px);
-  gap: 12px;
-  align-items: start;
+  min-width: 0;
 }
-.race-fields :global(.field) {
+.run-field.samples {
+  width: 120px;
+}
+.run-field.seed-setting {
+  width: 200px;
+}
+.run-field.gates {
+  width: 150px;
+}
+.run-field :global(.field) {
   gap: 4px;
 }
-.race-fields :global(label) {
-  font-size: 12px;
-}
-.race-fields :global(input),
-.race-fields :global(.select-control) {
+.run-field :global(input) {
   font-size: 13px;
 }
 .seed-setting {
@@ -65,13 +67,12 @@
 .race-form :global(section.profile.compact .outline) {
   padding-block: 8px;
 }
+/* A phone: the conditions become a two-column grid, and these fields fill its cells. */
 @container race-form (max-width:560px) {
-  .race-fields {
-    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
-    row-gap: 8px;
-  }
-  .race-fields > :global(.field:first-child) {
-    grid-column: 1 / -1;
+  .run-field.samples,
+  .run-field.seed-setting,
+  .run-field.gates {
+    width: auto;
   }
 }
 @media (max-width: 767px) {

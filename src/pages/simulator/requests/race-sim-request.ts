@@ -17,6 +17,9 @@ import { traineeUma, type Trainee } from '../setup/trainee';
 
 export type MonteCarloOutputMode = 'procs' | 'skills' | 'results' | 'report';
 
+/** `sent` races every run at the runners' own gates; `randomized` seats each run by its own seed, as CM draws them. */
+export type MonteCarloGateOrder = 'sent' | 'randomized';
+
 /** At most 18 runners per field; a race needs at least 2. */
 export const MIN_FIELD_RUNNERS = 2;
 export const MAX_FIELD_RUNNERS = 18;
@@ -88,6 +91,7 @@ export interface MonteCarloBody {
   seeds?: Array<number>;
   output_mode: MonteCarloOutputMode;
   output_format: 'json';
+  gateOrder?: MonteCarloGateOrder;
 }
 
 export interface MonteCarloForm {
@@ -100,6 +104,7 @@ export interface MonteCarloForm {
   /** Explicit seeds; when present, `runs` is omitted. */
   seeds?: Array<number>;
   outputMode?: MonteCarloOutputMode;
+  gateOrder?: MonteCarloGateOrder;
 }
 
 /** Writes the runner array, deriving `source_input_index` and a unique `frame_order`. */
@@ -150,6 +155,8 @@ export function buildMonteCarloRequest(form: MonteCarloForm): MonteCarloBody {
 
   if (seeds.length > 0) body.seeds = seeds;
   else body.runs = clampInt(form.runs ?? 1, 1, MAX_MONTE_CARLO_RUNS, 1);
+
+  if (form.gateOrder === 'randomized') body.gateOrder = 'randomized';
 
   return body;
 }

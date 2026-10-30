@@ -49,6 +49,16 @@ describe('monte carlo request', () => {
     expect(body.runs).toBeUndefined();
   });
 
+  it('races at the sent gates unless randomized gates are asked for', () => {
+    const form = { courseId: 1, seed: 1, setup: SETUP, runners: runners(2) };
+
+    const sentGates = buildMonteCarloRequest(form);
+    const randomGates = buildMonteCarloRequest({ ...form, gateOrder: 'randomized' });
+
+    expect(sentGates.gateOrder).toBeUndefined();
+    expect(randomGates.gateOrder).toBe('randomized');
+  });
+
   it('derives source_input_index from the array and keeps frame_order unique', () => {
     const body = buildMonteCarloRequest({
       courseId: 1,

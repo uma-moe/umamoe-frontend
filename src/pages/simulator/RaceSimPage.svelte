@@ -4,10 +4,10 @@
   import CourseButtons from './shell/CourseButtons.svelte';
   import RunBar from './shell/RunBar.svelte';
   import SimSection from './shell/SimSection.svelte';
+  import ToggleField from './shell/ToggleField.svelte';
   import SimulatorCourseProfile from './courses/SimulatorCourseProfile.svelte';
   import Banner from '@/components/feedback/Banner.svelte';
   import Button from '@/components/controls/Button.svelte';
-  import SelectField from '@/components/controls/SelectField.svelte';
   import TextField from '@/components/controls/TextField.svelte';
   import SimulatorShell from './shell/SimulatorShell.svelte';
   import SimulatorUmaField from './setup/runner/SimulatorUmaField.svelte';
@@ -18,10 +18,10 @@
     type BuildCodePage
   } from './setup/build/code/build-code';
   import RaceSimResult from './reports/RaceSimResult.svelte';
-  import { RACE_TYPE_OPTIONS } from './simulator-race-types';
   import {
     MAX_MONTE_CARLO_RUNS,
     buildMonteCarloRequest,
+    type MonteCarloGateOrder,
     type MonteCarloInput
   } from './requests/race-sim-request';
   import {
@@ -52,7 +52,12 @@
   import type { ParsedRaceCapture } from '@/lib/race/capture/race-capture-parser';
   import { trackName, type RaceCourse } from '@/lib/game-data/racing/courses';
 
-  let raceType = $state('0'),
+  const GATE_OPTIONS: Array<{ value: MonteCarloGateOrder; label: string; title: string }> = [
+    { value: 'sent', label: 'As set', title: 'Every race starts each runner from her own gate' },
+    { value: 'randomized', label: 'Random', title: 'Every race draws new gates, as CM does' }
+  ];
+
+  let gateOrder = $state<MonteCarloGateOrder>('sent'),
     runs = $state('100'),
     step = $state<'setup' | 'report'>('setup');
 
@@ -111,7 +116,7 @@
       importNotice: ''
     });
 
-    raceType = '0';
+    gateOrder = 'sent';
     run = null;
     step = 'setup';
     error = '';
@@ -153,7 +158,8 @@
         ...(single ? { seeds: [Number(simulatorSession.seed)] } : {}),
         setup: {
           raceInstanceId: selectedRaceInstanceId(),
-          raceType: Number(raceType),
+          // Champions Meeting: the race sim races CM fields, so the format is not a choice.
+          raceType: 0,
           season: Number(simulatorSession.season),
           weather: Number(simulatorSession.weather),
           ground: Number(simulatorSession.ground),
@@ -166,7 +172,8 @@
           fanCount: uma.fanCount,
           frameOrder: uma.frameOrder
         })),
-        outputMode: 'report'
+        outputMode: 'report',
+        gateOrder
       });
 
       let response;
@@ -224,7 +231,7 @@
     if (seed !== undefined) simulatorSession.seed = seed;
     if (typeof page.raceInstanceId === 'number' && page.raceInstanceId >= 0)
       simulatorSession.raceInstanceId = page.raceInstanceId;
-    if (typeof page.raceType === 'string') raceType = page.raceType;
+    if (page.gateOrder === 'sent' || page.gateOrder === 'randomized') gateOrder = page.gateOrder;
     const races = wholeNumber(page.runs);
     if (races !== undefined) runs = races;
     simulatorSession.importNotice =
@@ -301,53 +308,53 @@
           title="Race"
           note="Every runner runs the same sampled races"
         >
-          <div class="race-fields">
-            <SelectField
-              id="race-type"
-              label="Race format"
-              options={RACE_TYPE_OPTIONS.filter((option) => !['14', '7'].includes(option.value))}
-              bind:value={raceType}
-            />
-            <TextField
-              id="race-samples"
-              type="number"
-              min={1}
-              max={MAX_MONTE_CARLO_RUNS}
-              label="Sampled races"
-              error={runsInvalid
-                ? 'Enter 1–' + MAX_MONTE_CARLO_RUNS.toLocaleString('en-US') + ' races.'
-                : undefined}
-              bind:value={runs}
-            />
-            <div class="seed-setting">
-              <TextField
-                id="race-seed"
-                label="Seed"
-                type="number"
-                min={-2147483648}
-                max={2147483647}
-                error={seedInvalid
-                  ? 'Enter a whole number from −2,147,483,648 to 2,147,483,647.'
-                  : undefined}
-                bind:value={simulatorSession.seed}
-              />
-              <Button
-                variant="secondary"
-                size="sm"
-                icon="dice"
-                ariaLabel="Random seed"
-                onclick={() =>
-                  (simulatorSession.seed = String(Math.floor(Math.random() * 2 ** 31)))}
-              />
-            </div>
-          </div>
-        </SimSection>
-        <SimSection
-          number={2}
-          title="Course"
-        >
           {#snippet actions()}<CourseButtons details={false} />{/snippet}
-          <RaceBar bare />
+          <RaceBar bare>
+            {#snippet extra()}
+              <div class="run-field samples">
+                <TextField
+                  id="race-samples"
+                  type="number"
+                  min={1}
+                  max={MAX_MONTE_CARLO_RUNS}
+                  label="Sampled races"
+                  error={runsInvalid
+                    ? 'Enter 1–' + MAX_MONTE_CARLO_RUNS.toLocaleString('en-US') + ' races.'
+                    : undefined}
+                  bind:value={runs}
+                />
+              </div>
+              <div class="run-field seed-setting">
+                <TextField
+                  id="race-seed"
+                  label="Seed"
+                  type="number"
+                  min={-2147483648}
+                  max={2147483647}
+                  error={seedInvalid
+                    ? 'Enter a whole number from −2,147,483,648 to 2,147,483,647.'
+                    : undefined}
+                  bind:value={simulatorSession.seed}
+                />
+                <Button
+                  variant="secondary"
+                  size="sm"
+                  icon="dice"
+                  ariaLabel="Random seed"
+                  onclick={() =>
+                    (simulatorSession.seed = String(Math.floor(Math.random() * 2 ** 31)))}
+                />
+              </div>
+              <div class="run-field gates">
+                <ToggleField
+                  id="race-gates"
+                  label="Gates"
+                  options={GATE_OPTIONS}
+                  bind:value={gateOrder}
+                />
+              </div>
+            {/snippet}
+          </RaceBar>
           <SimulatorCourseProfile
             {course}
             compact
@@ -355,7 +362,7 @@
           />
         </SimSection>
         <SimulatorUmaField
-          number={3}
+          number={2}
           imports={[
             {
               id: 'code',
@@ -482,7 +489,7 @@
             teamColors: $state.snapshot(simulatorTeamColors),
             seed: String(simulatorSession.seed),
             raceInstanceId: simulatorSession.raceInstanceId,
-            raceType,
+            gateOrder,
             runs: String(runs)
           }
         }
