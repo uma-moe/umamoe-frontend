@@ -204,4 +204,12 @@ describe('V5 in the existing optimizer', () => {
     response.report.finalists = [response.report.finalists[1]!];
     expect(theorizedResult({ result: response, offers })!.builds).toHaveLength(1);
   });
+
+  it('leaves out a later build V5 did not explain', () => {
+    const response = result();
+    response.report.finalists.reverse();
+    response.model!.build!.explanation.runner_up!.purchases = [999];
+    const view = theorizedResult({ result: response, offers })!;
+    expect(view.builds.map((b) => b.finalist)).toEqual([response.report.finalists[0]]);
+  });
 });

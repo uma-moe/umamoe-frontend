@@ -576,14 +576,18 @@ function v5Result(result: OptimizeResult, offers: PricedOffer[]): TheorizedResul
   const model = result.model;
   if (!isOptimizeModel(model)) return undefined;
   const explanation = model.build!.explanation;
-  const finalists = result.report.finalists.slice(0, COMPARED_BUILDS);
   const same = (a: number[], b: number[]) => a.length === b.length && a.every((p) => b.includes(p));
-  const reports = finalists.map((f) =>
-    [explanation.optimized, explanation.runner_up].find(
-      (e) => e && same(e.purchases, f.build.purchases)
+  const explained = result.report.finalists.slice(0, COMPARED_BUILDS).map((finalist) => ({
+    finalist,
+    report: [explanation.optimized, explanation.runner_up].find(
+      (e) => e && same(e.purchases, finalist.build.purchases)
     )
-  );
-  if (reports.some((r) => r === undefined)) return undefined;
+  }));
+  if (!explained[0]?.report) return undefined;
+  // The pick must be explained; a later build without a report (an older simulator's first build) is left out.
+  const kept = explained.filter((e) => e.report);
+  const finalists = kept.map((e) => e.finalist);
+  const reports = kept.map((e) => e.report);
   const rows = compareRows(finalists, offers);
   const baseline = measuredMean(result.report.baseline, 'finish_time_seconds');
   const builds = finalists.map((finalist, index): TheorizedBuild => {
