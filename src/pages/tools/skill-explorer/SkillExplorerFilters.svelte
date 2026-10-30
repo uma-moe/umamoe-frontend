@@ -124,7 +124,7 @@
       Number(surface !== 'all') +
       Number(distance !== 'all') +
       Number(bestOfFamily) +
-      Number(showDayBound)
+      Number(!showDayBound)
   );
 
   function chooseRace(value: string) {
@@ -151,7 +151,7 @@
     rarities = new Set(SKILL_RARITIES);
     kinds = new Set(SKILL_KINDS);
     bestOfFamily = false;
-    showDayBound = false;
+    showDayBound = true;
   }
 </script>
 
@@ -321,7 +321,7 @@
                 id="skill-explorer-day-bound"
                 label="Ground, weather and season skills"
                 ariaLabel="Ground, weather and season skills"
-                description="Assume their day conditions hold"
+                description="Valued as if their day held, marked Forced"
                 bind:checked={showDayBound}
               />
             </div>

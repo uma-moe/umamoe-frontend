@@ -122,13 +122,17 @@ describe('Skill Explorer plot view', () => {
     ]);
   });
 
-  it('marks a skill forced to proc', () => {
+  it('marks a skill forced to proc on at least half the courses it is valued on', () => {
     const forced = { ...point(200011, 0.5, 0), forced: 1 };
-    const plotted = view({ points: [point(200341, 0.8, 0.6), forced] }).plotted;
+    const half = { ...point(200012, 0.4, 0), courses: 4, forced: 2 };
+    const once = { ...point(900011, 0.3, 0), courses: 4, forced: 1 };
+    const plotted = view({ points: [point(200341, 0.8, 0.6), forced, half, once] }).plotted;
 
     expect(plotted.map((p) => [p.skillId, p.forced])).toEqual([
       [200341, false],
-      [200011, true]
+      [200011, true],
+      [200012, true],
+      [900011, false]
     ]);
   });
 

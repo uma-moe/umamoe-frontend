@@ -242,7 +242,8 @@ export function plotView(options: PlotOptions): PlotView {
     xLabel: xMode === 'position' ? positionLabel(x, courseDistance) : `${x} SP`,
     matches,
     searchMatch,
-    forced: point.forced > 0
+    // Forced on at least half the courses it is valued on: its value there is mostly an assumed day.
+    forced: point.forced > 0 && point.forced * 2 >= point.courses
   }));
   const ySplit = median(plotted.map((point) => point.y));
 

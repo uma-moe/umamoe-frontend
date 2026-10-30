@@ -132,7 +132,7 @@
   let umaCardId = $state<number>();
   let show = $state<ShowLimit>('100');
   let bestOfFamily = $state(false);
-  let showDayBound = $state(false);
+  let showDayBound = $state(true);
   let procScaled = $state(true);
   let comparedSkillIds = $state.raw<ReadonlySet<number>>(new Set());
 

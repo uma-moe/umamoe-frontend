@@ -190,9 +190,9 @@
 
   {#if point.forced > 0}
     <p class="forced">
-      Never procs for her{point.courses > 1
+      Needs a ground, weather or season the explorer's day lacks{point.courses > 1
         ? ` on ${point.forced} of ${point.courses} courses`
-        : ''}: valued forced to proc where the course lets it, at the rate it fires when forced.
+        : ''}: valued as if that day held, at the rate it fires then.
     </p>
   {/if}
 
@@ -276,7 +276,7 @@
         <li>In the reference build</li>
       {/if}
       {#if scopeCourses > 1}
-        <li>Fires on {point.courses} of {scopeCourses} courses</li>
+        <li>Fires on {point.courses - point.forced} of {scopeCourses} courses</li>
       {/if}
     </ul>
   {/if}
