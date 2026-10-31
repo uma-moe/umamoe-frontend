@@ -5,7 +5,7 @@
   import Menu from '@/components/navigation/Menu.svelte';
   import type { RaceCourse } from '@/lib/game-data/racing/courses';
   import { moodIcon, runningStyleName } from '@/lib/race/replay/race-display';
-  import { getRankInfoFromLabel, getStatRankInfo } from '@/lib/rank';
+  import { getRankInfoFromLabel, getStatRankInfo, rankIconPath } from '@/lib/rank';
   import { APTITUDE_GRADES } from '../../requests/stamina-request';
   import type { SimulatorUma } from '../../simulator-uma';
   import SimSection from '../../shell/SimSection.svelte';
@@ -70,21 +70,12 @@
   const GRADE_OPTIONS = APTITUDE_GRADES.map((grade) => ({
     value: grade,
     label: grade,
-    image: rankIcon(getRankInfoFromLabel(grade).iconIndex)
+    image: rankIconPath(getRankInfoFromLabel(grade).iconIndex)
   }));
 
   const styleIndex = $derived(
     RUNNING_STYLES.indexOf(uma.trainee.runningStyle as (typeof RUNNING_STYLES)[number])
   );
-
-  /** The game's square grade badge, from a rank's icon index. */
-  function rankIcon(index: number) {
-    return (
-      '/game-assets/textures/uma_ranks/utx_ico_statusrank_' +
-      String(index).padStart(2, '0') +
-      '.webp'
-    );
-  }
 
   /** The stat with its green skills, when it has any. */
   function withGreens(key: (typeof STATS)[number][0]) {
@@ -166,7 +157,7 @@
             min={1}
             max={3000}
             labelImage="/assets/images/icon/stats/{icon}.webp"
-            prefixImage={rankIcon(rank.iconIndex)}
+            prefixImage={rankIconPath(rank.iconIndex)}
             bind:value={uma.trainee[key]}
           />
           <span class="sr-only">{label} rank {rank.label}</span>

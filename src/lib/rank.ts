@@ -23,6 +23,15 @@ function token(tier: RankInfo['tier']) {
   return `var(--rank-${tier.toLowerCase()})`;
 }
 
+/** The game's square rank badge for a status-rank icon index. */
+export function rankIconPath(iconIndex: number): string {
+  return (
+    '/game-assets/textures/uma_ranks/utx_ico_statusrank_' +
+    String(iconIndex).padStart(2, '0') +
+    '.webp'
+  );
+}
+
 export function getRankInfo(rarity: number): RankInfo {
   const index = Math.max(0, Math.min(97, Math.trunc(rarity) - 1));
   if (index < 18) {

@@ -3,7 +3,7 @@
   import Button from '@/components/controls/Button.svelte';
   import Icon from '@/components/Icon.svelte';
   import { runningStyleName } from '@/lib/race/replay/race-display';
-  import { getRankInfoFromLabel } from '@/lib/rank';
+  import { getRankInfoFromLabel, getStatRankInfo, rankIconPath } from '@/lib/rank';
   import { loadSkills } from '@/lib/game-data/skills/skills';
   import Artwork from '@/components/game/Artwork.svelte';
   import SelectField from '@/components/controls/SelectField.svelte';
@@ -71,10 +71,7 @@
   const GRADE_OPTIONS = APTITUDE_GRADES.map((grade) => ({
     value: grade,
     label: grade,
-    image:
-      '/game-assets/textures/uma_ranks/utx_ico_statusrank_' +
-      String(getRankInfoFromLabel(grade).iconIndex).padStart(2, '0') +
-      '.webp'
+    image: rankIconPath(getRankInfoFromLabel(grade).iconIndex)
   }));
 
   const SURFACES = ['Turf', 'Dirt'];
@@ -325,13 +322,15 @@
 
       <div class="fields stats">
         {#each STAT_FIELDS as stat (stat.key)}
+          {@const rank = getStatRankInfo(Number(editing.trainee[stat.key]))}
           <TextField
             id="{uid}-{stat.key}"
             label={stat.label}
             type="number"
             min={1}
             max={3000}
-            prefixImage="/assets/images/icon/stats/{stat.icon}.webp"
+            labelImage="/assets/images/icon/stats/{stat.icon}.webp"
+            prefixImage={rankIconPath(rank.iconIndex)}
             bind:value={editing.trainee[stat.key]}
           />
         {/each}

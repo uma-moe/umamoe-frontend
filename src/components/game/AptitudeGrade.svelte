@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { getRankInfoFromLabel } from '@/lib/rank';
+  import { getRankInfoFromLabel, rankIconPath } from '@/lib/rank';
 
   export type AptitudeGradeValue = 'S' | 'A' | 'B' | 'C' | 'D' | 'E' | 'F' | 'G';
 
@@ -13,11 +13,7 @@
 
   let failed = $state('');
 
-  const image = $derived(
-    '/game-assets/textures/uma_ranks/utx_ico_statusrank_' +
-      String(getRankInfoFromLabel(grade).iconIndex).padStart(2, '0') +
-      '.webp'
-  );
+  const image = $derived(rankIconPath(getRankInfoFromLabel(grade).iconIndex));
 </script>
 
 <span
