@@ -12,14 +12,19 @@
   } from '@/lib/game-data/skills/skills';
   import type { MonteCarloSkillInput } from '../../../requests/race-sim-request';
   import SkillPoints, { LEARNED_SKILL_POINTS_NOTE } from '@/components/game/SkillPoints.svelte';
+  import { selectableOwnedSkill } from './uma-draft';
 
   interface Props {
     skills?: Array<MonteCarloSkillInput>;
     /** Keeps control ids unique when a page renders one editor per runner. */
     idPrefix: string;
+    /** Her card, so her own inherited unique stays out of the picker. */
+    cardId?: number;
+    /** Put the cursor in the search when the dialog opens. */
+    autofocus?: boolean;
   }
 
-  let { skills = $bindable([]), idPrefix }: Props = $props();
+  let { skills = $bindable([]), idPrefix, cardId, autofocus = false }: Props = $props();
 
   /** The simulator reads levels 1…6; `buildSkills` clamps anything else. */
   const MAX_LEVEL = 6;
@@ -47,10 +52,14 @@
       });
   });
 
-  /** Everything this runner does not already have, so a skill cannot be added twice. */
+  /** Everything she could add: no personal uniques, nothing she already has, and no duplicate. */
   const options = $derived(
     [...skillLookup.values()]
-      .filter((skill) => !skills.some((picked) => picked.skillId === skill.skill_id))
+      .filter(
+        (skill) =>
+          selectableOwnedSkill(skill, cardId) &&
+          !skills.some((picked) => picked.skillId === skill.skill_id)
+      )
       .map((skill) => ({
         value: String(skill.skill_id),
         label: skill.name,
@@ -105,6 +114,7 @@
       {options}
       bind:query
       action
+      {autofocus}
       popupAnchor={searchAnchor}
       maxResults={12}
       emptyText={error || 'No skills match.'}
@@ -117,6 +127,7 @@
       {#each skills as picked (picked.skillId)}
         {@const skill = skillLookup.get(picked.skillId)}
         {@const name = skill?.name ?? `Skill ${picked.skillId}`}
+        {@const unique = skillRarity(skill, Boolean(skill?.inherited)) === 'unique-main'}
         <li>
           <div class="chip">
             <SkillChip
@@ -128,16 +139,18 @@
               onremove={() => removeSkill(picked.skillId)}
             />
           </div>
-          <div class="level">
-            <SelectFieldSlim
-              id="{idPrefix}-level-{picked.skillId}"
-              label="Level for {name}"
-              hideLabel
-              options={LEVEL_OPTIONS}
-              value={String(picked.level ?? 1)}
-              onchange={(value) => setLevel(picked.skillId, value)}
-            />
-          </div>
+          {#if unique}
+            <div class="level">
+              <SelectFieldSlim
+                id="{idPrefix}-level-{picked.skillId}"
+                label="Level for {name}"
+                hideLabel
+                options={LEVEL_OPTIONS}
+                value={String(picked.level ?? 1)}
+                onchange={(value) => setLevel(picked.skillId, value)}
+              />
+            </div>
+          {/if}
         </li>
       {/each}
     </ul>
@@ -204,15 +217,19 @@
     padding: 0;
     list-style: none;
   }
+  /* The chip and, for her unique, its level stay on one line; the chip takes the remaining width. */
   .picked li {
-    display: grid;
-    grid-template-columns: minmax(0, 1fr) 72px;
+    display: flex;
     align-items: center;
     gap: 6px;
     min-width: 0;
   }
   .chip {
+    flex: 1 1 auto;
     min-width: 0;
+  }
+  .level {
+    flex: 0 0 72px;
   }
   .chip :global(.skill-chip) {
     min-height: 32px;

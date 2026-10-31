@@ -40,6 +40,7 @@
     uma,
     course,
     adding = false,
+    focusSkills = false,
     open = $bindable(false),
     onsave
   }: {
@@ -48,6 +49,8 @@
     course?: RaceCourse;
     /** A new runner for the field rather than changes to one already there. */
     adding?: boolean;
+    /** Puts the cursor in the skill search when the dialog opens, for the Owns row's Add skills action. */
+    focusSkills?: boolean;
     open?: boolean;
     onsave: (uma: SimulatorUma) => void;
   } = $props();
@@ -361,6 +364,8 @@
 
       <RunnerSkills
         idPrefix={uid}
+        cardId={editing.cardId}
+        autofocus={open && focusSkills}
         bind:skills={editing.skills}
       />
     </div>

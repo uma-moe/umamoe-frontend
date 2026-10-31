@@ -1608,7 +1608,7 @@ test('HP calculator races her many times and answers with how often she spurts a
   // A full build counts its skills into the quick counts: Swinging Maestro is a gold recovery, Right-Handed ○ a green for this right-handed course.
   const greens = page.getByRole('group', { name: 'Green skills', exact: true });
   await expect(greens).toHaveCount(0);
-  await page.getByRole('button', { name: 'Edit build', exact: true }).click();
+  await page.getByRole('button', { name: 'Add skills', exact: true }).click();
   const editor = page.getByRole('dialog', { name: 'Edit Uma', exact: true });
   for (const [typed, option] of [
     ['Swinging', /Swinging Maestro/],

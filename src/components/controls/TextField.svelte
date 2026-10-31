@@ -21,6 +21,8 @@
     autocomplete?: HTMLInputAttributes['autocomplete'];
     inputmode?: 'none' | 'text' | 'decimal' | 'numeric' | 'tel' | 'search' | 'email' | 'url';
     hideLabel?: boolean;
+    /** An image shown after the label text, such as the stat's own icon. */
+    labelImage?: string;
     prefixIcon?: IconName;
     suffixIcon?: IconName;
     prefixImage?: string;
@@ -45,6 +47,7 @@
     autocomplete,
     inputmode,
     hideLabel = false,
+    labelImage,
     prefixIcon,
     suffixIcon,
     prefixImage,
@@ -78,10 +81,21 @@
 <div class="field">
   <label
     class="field-label"
+    class:with-image={labelImage}
     for={id}
     class:sr-only={hideLabel}
   >
     {label}
+    {#if labelImage}
+      <img
+        class="label-icon"
+        src={labelImage}
+        alt=""
+        width="14"
+        height="14"
+        loading="lazy"
+      />
+    {/if}
   </label>
   <span
     class="input-wrap"
@@ -184,6 +198,17 @@
     font-size: var(--font-sm);
     font-weight: 600;
     line-height: 1.2;
+  }
+  .field-label.with-image {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+  }
+  .label-icon {
+    width: 14px;
+    height: 14px;
+    flex: 0 0 auto;
+    object-fit: contain;
   }
   .input-wrap {
     position: relative;

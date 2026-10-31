@@ -1,3 +1,4 @@
+import type { SkillData } from '@/lib/game-data/skills/skills';
 import type { MonteCarloSkillInput } from '../../../requests/race-sim-request';
 import type { SimulatorUma } from '../../../simulator-uma';
 import { TRAINEE_MAX_STAT, TRAINEE_MIN_STAT } from '../../trainee';
@@ -54,6 +55,43 @@ export function characterUniqueSkillId(cardId: number): number {
   const outfit = cardId % 100;
 
   return 100000 + (outfit - 1) * 10000 + (character - 1000) * 10 + 1;
+}
+
+/** The inherited (9xxxxx) copy of a card's unique, the one a runner can never inherit from herself. */
+export function inheritedUniqueSkillId(cardId: number): number {
+  return characterUniqueSkillId(cardId) + 800000;
+}
+
+/**
+ * Whether a skill belongs in her owned list through the picker. Personal uniques belong to one Uma, so another
+ * runner's unique never shows up here; her own is added with her character. Her inherited copy is out too, since a
+ * runner cannot inherit her own unique.
+ */
+export function selectableOwnedSkill(skill: SkillData, cardId: number | undefined): boolean {
+  if (cardId === undefined) return Boolean(skill.inherited) || (!skill.unique && skill.rarity < 4);
+
+  const personalUnique = !skill.inherited && (skill.unique || skill.rarity >= 4);
+  if (personalUnique) return skill.skill_id === characterUniqueSkillId(cardId);
+
+  if (!skill.inherited) return true;
+
+  return skill.skill_id !== inheritedUniqueSkillId(cardId);
+}
+
+/**
+ * Her card's unique skill when she doesn't own it yet and the skill data knows it, so the Owns row can offer it back
+ * after a removal; undefined when she has no card, already owns it or the skill is unknown.
+ */
+export function missingCharacterUnique(
+  uma: Pick<SimulatorUma, 'cardId' | 'skills'>,
+  knownSkill: (skillId: number) => boolean
+): number | undefined {
+  if (uma.cardId === undefined) return undefined;
+
+  const skillId = characterUniqueSkillId(uma.cardId);
+  if (uma.skills.some((skill) => skill.skillId === skillId)) return undefined;
+
+  return knownSkill(skillId) ? skillId : undefined;
 }
 
 /**
