@@ -231,6 +231,15 @@
   font-size: 12px;
   color: var(--text-secondary);
 }
+@media (max-width: 767px) {
+  .offer {
+    --step: var(--control-height);
+    --tap: var(--control-height);
+  }
+  .hint {
+    grid-template-columns: var(--step) 24px var(--step) 50px;
+  }
+}
 @container build-form (max-width:620px) {
   .budget-row {
     grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
@@ -245,28 +254,45 @@
   .offers {
     grid-template-columns: minmax(0, 1fr);
   }
-  /* The name and price on top; the hint and the lock under them. */
+  /*
+   * Still one row: the struck price already shows the hint discount, the old price sits over the new one, and the lock
+   * keeps its icon and pressed colour without the word. Names get two lines rather than an early ellipsis.
+   */
   .offer {
-    grid-template-columns: 22px minmax(0, 1fr) auto var(--tap);
-    grid-template-areas:
-      'icon name cost remove'
-      '. hint lock remove';
-    row-gap: 4px;
-    padding-block: 6px;
+    --step: 30px;
+    --tap: 30px;
+    grid-template-columns: 22px minmax(0, 1fr) auto 52px var(--tap) var(--tap);
+    column-gap: 6px;
+  }
+  .name strong {
+    display: -webkit-box;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 2;
+    line-clamp: 2;
+    white-space: normal;
+  }
+  .name:has(small) strong {
+    -webkit-line-clamp: 1;
+    line-clamp: 1;
   }
   .hint {
-    justify-self: start;
+    grid-template-columns: var(--step) 18px var(--step);
   }
-  .lock {
-    justify-self: end;
+  .discount {
+    display: none;
   }
-}
-@media (max-width: 767px) {
-  .offer {
-    --step: var(--control-height);
-    --tap: var(--control-height);
+  .cost {
+    flex-direction: column;
+    align-items: flex-end;
+    gap: 0;
+    line-height: 1.1;
   }
-  .hint {
-    grid-template-columns: var(--step) 24px var(--step) 50px;
+  .lock-label {
+    display: none;
+  }
+  .lock :global(.ui-button) {
+    width: var(--tap);
+    min-width: 0;
+    padding: 0;
   }
 }

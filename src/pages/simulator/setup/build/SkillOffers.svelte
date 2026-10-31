@@ -247,7 +247,7 @@
               title={offer.locked ? 'Every build buys it' : 'Lock it so every build buys it'}
               onclick={() => toggleLock(offer.skillId)}
             >
-              {offer.locked ? 'Locked' : 'Lock'}
+              <span class="lock-label">{offer.locked ? 'Locked' : 'Lock'}</span>
             </Button>
           </span>
           <span class="remove">
