@@ -28,23 +28,27 @@
     {/if}
   </span>
   <span class="kpi-headline">
-    {#each kpi.subjects ?? [] as subject, index (index)}
-      <span
-        class="subject"
-        style:color={subject.style === undefined ? undefined : styleColors[subject.style]}
-      >
-        {#if subject.cardId !== undefined}
-          <Artwork
-            src={portrait(subject.cardId)}
-            alt=""
-            size="xs"
-          />
-        {:else if subject.style !== undefined}
-          <i style:background={styleColors[subject.style]}></i>
-        {/if}
-        {subject.text}
+    {#if kpi.subjects?.length}
+      <span class="subjects">
+        {#each kpi.subjects as subject, index (index)}
+          <span
+            class="subject"
+            style:color={subject.style === undefined ? undefined : styleColors[subject.style]}
+          >
+            {#if subject.cardId !== undefined}
+              <Artwork
+                src={portrait(subject.cardId)}
+                alt=""
+                size="xs"
+              />
+            {:else if subject.style !== undefined}
+              <i style:background={styleColors[subject.style]}></i>
+            {/if}
+            <span class="subject-name">{subject.text}</span>
+          </span>
+        {/each}
       </span>
-    {/each}
+    {/if}
     <strong class={kpi.few ? 'few' : kpi.tone}>{kpi.value}</strong>
   </span>
   <span class="kpi-note">

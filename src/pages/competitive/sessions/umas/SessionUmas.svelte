@@ -79,10 +79,11 @@
     if (rival)
       list.push({
         id: 'rival',
-        label: 'Most often your toughest rival',
+        label: 'Toughest rival',
         value: rival.races + ' of ' + opponents.races,
         subjects: [{ text: rival.name, cardId: rival.cardId }],
-        detail: 'races as the best-placed opponent · won ' + rival.wins,
+        detail:
+          'races as the best-placed opponent' + (rival.wins > 0 ? ', winning ' + rival.wins : ''),
         action: { label: 'Select', icon: 'eye', onselect: () => (selected = rival.key) }
       });
 
@@ -160,7 +161,7 @@
       {/snippet}
       <div class="column-head">
         <span>Uma</span>
-        <span>Entries · styles</span>
+        <span>Entries by style</span>
         <span>Wins</span>
         <span>Win rate</span>
       </div>
@@ -206,10 +207,11 @@
         {/each}
       </ol>
       <p class="footnote">
-        {ranking === 'entries'
-          ? 'Ranked by entries.'
-          : 'Ranked by win rate; under ' + SMALL_SAMPLE + ' entries follow, muted.'}
-        Bars: entries, coloured by running style.
+        {#if ranking === 'winrate'}
+          Umas with fewer than {SMALL_SAMPLE} entries are muted and listed last.
+        {:else}
+          Umas with fewer than {SMALL_SAMPLE} entries are muted.
+        {/if}
       </p>
     </ChartFrame>
     <ChartFrame
@@ -321,9 +323,7 @@
             </li>
           {/each}
         </ol>
-        <p class="footnote">
-          {opponents.races} races with your runners. Won: races the opponent won outright.
-        </p>
+        <p class="footnote">Counted over {opponents.races} races with your runners.</p>
       </ChartFrame>
     {/if}
     {#if inspected}

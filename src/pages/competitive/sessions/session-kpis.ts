@@ -232,5 +232,5 @@ export function kpiText(kpi: SessionKpi) {
     kpi.detail
   ]
     .filter((part) => part !== undefined)
-    .join(' · ');
+    .join(', ');
 }

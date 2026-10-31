@@ -245,7 +245,7 @@
     tabindex={zoomable ? 0 : undefined}
     aria-hidden={zoomable ? undefined : true}
     aria-label={zoomable
-      ? `${label}. Plus and minus zoom; arrow keys pan; Home resets.`
+      ? `${label}. Plus and minus zoom, arrow keys pan, Home resets.`
       : undefined}
     onkeydown={navigate}
   ></div>

@@ -162,7 +162,7 @@ describe('session KPIs', () => {
   it('compares the player’s team with an evenly matched one', () => {
     const kpi = playerKpi({ races: 24, wins: 13, podiums: 20 }, baseline);
 
-    expect(kpiText(kpi)).toBe('Your team won · 54.2% · above the even 33.3% · 13 of 24 races');
+    expect(kpiText(kpi)).toBe('Your team won, 54.2%, above the even 33.3%, 13 of 24 races');
     expect(kpi.comparison?.tone).toBe('over');
   });
 
@@ -186,7 +186,7 @@ describe('session KPIs', () => {
     const lucky = umaKpi({ ...uma, races: SMALL_SAMPLE - 1, wins: 2 }, baseline, 'Top Uma');
 
     expect(kpiText(measured)).toBe(
-      'Top Uma · King Halo · 35.7% · 3.2× the neutral 11.1% · 5 of 14 races'
+      'Top Uma, King Halo, 35.7%, 3.2× the neutral 11.1%, 5 of 14 races'
     );
     expect(measured.few).toBe(false);
     expect(lucky.few).toBe(true);

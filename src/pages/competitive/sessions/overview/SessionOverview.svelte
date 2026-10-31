@@ -178,11 +178,11 @@
     return [
       'Gate ',
       { text: String(bestGate.gate) },
-      ' won most often: ',
+      ' won most often, ',
       { text: bestGate.wins + ' of ' + bestGate.starts },
-      ' starts. Blue bars beat the neutral ',
+      ' starts. Blue bars beat the dashed ',
       { text: formatRate(baseline.uma) },
-      ' (dashed).'
+      ' neutral line.'
     ];
   });
 </script>
@@ -220,7 +220,7 @@
       {/snippet}
       <div class="column-head styles">
         <span>Style</span>
-        <span>Bar: wins · tick: field</span>
+        <span>Wins against field</span>
         <span>Field</span>
         <span>Wins</span>
       </div>
@@ -228,7 +228,7 @@
         <button
           class="overview-row styles"
           aria-label={'Find ' + runningStyleName(row.style) + ' teams'}
-          title={row.entries + ' entries · ' + row.wins + ' wins'}
+          title={row.wins + ' wins from ' + row.entries + ' entries'}
           onclick={() => onteams({ style: String(row.style) })}
         >
           <span
@@ -252,7 +252,6 @@
           <strong class="number">{formatRate(row.winShare)}</strong>
         </button>
       {/each}
-      <p class="footnote">A bar past its tick: the style won more than its share of the field.</p>
     </ChartFrame>
     <ChartFrame
       plain
@@ -288,7 +287,7 @@
               <i
                 style:width={(part.entries / uma.races) * 100 + '%'}
                 style:background={styleColors[part.strategy]}
-                title={runningStyleName(part.strategy) + ' · ' + part.entries + ' entries'}
+                title={part.entries + ' ' + runningStyleName(part.strategy) + ' entries'}
               ></i>
             {/each}
           </span>
@@ -347,7 +346,7 @@
           </strong>
         </button>
       {/each}
-      <p class="footnote">Muted: fewer than {SMALL_SAMPLE} races.</p>
+      <p class="footnote">Rates from fewer than {SMALL_SAMPLE} races are muted.</p>
     </ChartFrame>
   </div>
   <div class="results">

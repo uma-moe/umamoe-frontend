@@ -77,7 +77,7 @@
       id: 'leaderless',
       label: 'Rooms without a Front Runner',
       value: formatRate(rate(leaderless, captures.length)),
-      detail: leaderless + ' of ' + captures.length + ' races · a Pace Chaser leads'
+      detail: leaderless + ' of ' + captures.length + ' races'
     });
 
     return list;
@@ -201,9 +201,7 @@
             </strong>
           </div>
         {/each}
-        <p class="footnote">
-          vs. field = win share ÷ field share: 1.0× is even, 1.5× won half again its numbers.
-        </p>
+        <p class="footnote">vs. field divides win share by field share, so 1.0× is even.</p>
       </div>
     </ChartFrame>
     <ChartFrame
@@ -363,7 +361,7 @@
           {/if}
         {/snippet}
       </DataTable>
-      <p class="footnote">Muted: fewer than {SMALL_SAMPLE} races.</p>
+      <p class="footnote">Rates from fewer than {SMALL_SAMPLE} races are muted.</p>
     </ChartFrame>
   </div>
   <ChartFrame

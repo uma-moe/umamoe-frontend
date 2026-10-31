@@ -42,7 +42,9 @@
 
   let view = $state<SessionView>('overview'),
     visited = $state<SessionView[]>(['overview']),
-    navigation = $state<HTMLElement>();
+    navigation = $state<HTMLElement>(),
+    panels = $state<HTMLElement>(),
+    reservedHeight = $state<number>();
 
   let selectedUma = $state(''),
     teamFilter = $state<TeamFilter>({});
@@ -65,18 +67,42 @@
   );
 
   $effect(() => {
-    if (!visited.includes(view)) visited = [...visited, view];
-  });
-
-  $effect(() => {
     captures;
     detail = undefined;
   });
 
+  /**
+   * Switches the view without pulling the reader up the page. The session ends the page, so a shorter
+   * view would shrink it under a reader scrolled down to the tabs and the browser would clamp the
+   * scroll position; the panels keep the previous view's height until scrolling up makes it unneeded.
+   */
+  async function select(next: SessionView) {
+    if (next === view) return;
+
+    reservedHeight = panels?.offsetHeight;
+    if (!visited.includes(next)) visited = [...visited, next];
+    view = next;
+
+    await tick();
+    releaseReservedHeight();
+  }
+
+  /** Gives back the reserved room the page no longer needs below the viewport, down to the view's own height. */
+  function releaseReservedHeight() {
+    if (reservedHeight === undefined) return;
+
+    const page = document.documentElement;
+    const roomBelowViewport = Math.max(0, page.scrollHeight - window.scrollY - window.innerHeight);
+    const remaining = reservedHeight - roomBelowViewport;
+    const viewHeight =
+      panels?.querySelector<HTMLElement>(':scope > :not([hidden])')?.offsetHeight ?? 0;
+
+    reservedHeight = remaining > viewHeight ? remaining : undefined;
+  }
+
   /** Opens a view from a link inside another one, keeping the tabs in sight when the reader had scrolled past them. */
   async function show(next: SessionView) {
-    view = next;
-    await tick();
+    await select(next);
     if ((navigation?.getBoundingClientRect().top ?? 0) < 0)
       navigation?.scrollIntoView({ block: 'start', behavior: 'instant' });
   }
@@ -104,6 +130,10 @@
   }
 </script>
 
+<svelte:window
+  onscroll={releaseReservedHeight}
+  onresize={releaseReservedHeight}
+/>
 <div class="session-analysis">
   <div
     class="session-navigation"
@@ -115,7 +145,7 @@
       label="Session analysis views"
       items={views}
       controls={panelId}
-      bind:value={() => view, (next) => (view = next as SessionView)}
+      bind:value={() => view, (next) => void select(next as SessionView)}
     />
     <dl
       class="session-totals"
@@ -169,6 +199,8 @@
     class="session-panels"
     role="tabpanel"
     aria-label={views.find((item) => item.id === view)?.label}
+    style:min-height={reservedHeight === undefined ? undefined : reservedHeight + 'px'}
+    bind:this={panels}
   >
     {#if visited.includes('overview')}
       <div hidden={view !== 'overview'}>

@@ -73,7 +73,7 @@
       id: 'measured',
       label: 'Team builds with ' + SMALL_SAMPLE + '+ races',
       value: measuredTeams.length + ' of ' + teams.length,
-      detail: 'the rest are muted: too few races to judge'
+      detail: 'the rest have too few races to judge'
     });
 
     return list;

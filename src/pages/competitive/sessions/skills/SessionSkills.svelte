@@ -104,7 +104,7 @@
         label: 'Learners won more with',
         value: '+' + correlated.gap.toFixed(1) + ' pts',
         subjects: [{ text: skillName(correlated.skillId) }],
-        detail: 'than runners without it · a hint, not the skill’s effect',
+        detail: 'than runners without it',
         action: { label: 'Show', icon: 'eye', onselect: () => showSkill(correlated.skillId) }
       });
 
@@ -191,7 +191,7 @@
         bind:value={() => runners, countRunners}
       />
     {/if}
-    <p>{number(overview.players)} players · {number(overview.races)} races</p>
+    <p>{number(overview.players)} players across {number(overview.races)} races</p>
   </div>
   <section
     class="skill-list"

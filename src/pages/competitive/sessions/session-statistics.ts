@@ -17,7 +17,7 @@ export const metricHelp = {
   'Field share': 'The percentage of all runner entries using this Uma or running style.',
   'Win share': 'The percentage of races won by this running style.',
   'Win rate':
-    'Wins divided by appearances. A runner’s rate measures individual wins; a team’s rate measures races won by any member.',
+    'Wins divided by appearances. A runner’s rate counts its own wins, and a team’s rate counts races won by any member.',
   'Team wins':
     'Races won by any member of the team, divided by its races. Three equally matched teams each win one race in three.',
   'Your best': 'The best finish among your runners in that race.',

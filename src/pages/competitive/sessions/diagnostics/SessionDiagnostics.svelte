@@ -100,9 +100,7 @@
       <div>
         <h3>
           Race results
-          <small>
-            {filtered.length} runner entries · expand one for its skills, HP and decisions
-          </small>
+          <small>{filtered.length} runner entries</small>
         </h3>
       </div>
       <div class="runner-filter">
@@ -212,9 +210,7 @@
       <div>
         <h3>
           Race behaviour
-          <small>
-            {measured.length} measured entries · {runnerScope} · seconds in each simulation mode
-          </small>
+          <small>{measured.length} measured entries from {runnerScope}</small>
         </h3>
       </div>
     </header>

@@ -63,7 +63,7 @@
           text:
             'won ' +
             percent(split.with.wins, split.with.runs) +
-            ' with · ' +
+            ' with, ' +
             percent(split.without.wins, split.without.runs) +
             ' without'
         }

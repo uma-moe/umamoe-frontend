@@ -32,7 +32,7 @@
 
 <Disclosure
   {id}
-  title={'Race ' + (selected.race + 1) + ': ' + selected.runner.name}
+  title={selected.runner.name + ' in race ' + (selected.race + 1)}
   description={selected.capture.fileName}
   compact
   bind:open

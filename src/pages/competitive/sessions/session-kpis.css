@@ -7,13 +7,16 @@
   border-radius: var(--radius-md);
   background: var(--card-surface-bg);
 }
+/* Each tile spans three rows shared with its neighbours, so labels, values and notes line up along a
+   row of tiles whether or not a tile carries a button. */
 .kpi {
   display: grid;
-  align-content: start;
-  gap: 3px;
+  grid-row: span 3;
+  grid-template-rows: subgrid;
+  row-gap: 4px;
   min-width: 0;
   margin: 0 0 -1px -1px;
-  padding: 8px 12px;
+  padding: 10px 12px;
   border-bottom: 1px solid var(--border-subtle);
   border-left: 1px solid var(--border-subtle);
   color: var(--text-primary);
@@ -29,28 +32,33 @@
 }
 .kpi-action {
   flex: none;
-  margin-block: -4px -2px;
-}
-.kpi-action :global(button) {
-  min-height: 26px;
-  padding-inline: 8px;
-  font-size: 11px;
 }
 .kpi-headline {
   display: flex;
-  align-items: center;
-  flex-wrap: wrap;
-  gap: 2px 8px;
+  align-items: flex-start;
+  gap: 8px;
   min-width: 0;
   font-size: 13px;
   font-weight: 600;
-  line-height: 1.35;
+  line-height: 24px;
+}
+/* The value keeps its own column, so a long name or lineup wraps or truncates beside it instead of
+   pushing the number onto a second line out of step with the neighbouring tiles. */
+.subjects {
+  display: flex;
+  flex: 1 1 auto;
+  flex-wrap: wrap;
+  gap: 0 8px;
+  min-width: 0;
 }
 .subject {
   display: inline-flex;
   align-items: center;
   gap: 5px;
   min-width: 0;
+  max-width: 100%;
+}
+.subject-name {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -68,6 +76,7 @@
   margin-block: -3px;
 }
 .kpi-headline strong {
+  flex: none;
   margin-left: auto;
   font-size: 18px;
   font-weight: 700;
@@ -88,6 +97,7 @@
 }
 .kpi-note {
   display: flex;
+  align-content: start;
   flex-wrap: wrap;
   gap: 1px 8px;
   font-size: 11px;
@@ -119,7 +129,7 @@
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
   .kpi {
-    padding: 7px 10px;
+    padding: 8px 10px;
   }
   /* An odd last tile takes the whole row instead of leaving an empty cell beside it. */
   .kpi:last-child:nth-child(odd) {

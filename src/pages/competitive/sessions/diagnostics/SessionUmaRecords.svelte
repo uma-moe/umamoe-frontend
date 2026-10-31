@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { formatRaceTime, hpRemainingColor } from '@/lib/race/replay/race-display';
+  import { formatRaceTime, hpRemainingColor, ordinalPlace } from '@/lib/race/replay/race-display';
   import ChartFrame from '@/components/charts/ChartFrame.svelte';
   import DataTable from '@/components/data/DataTable.svelte';
   import Button from '@/components/controls/Button.svelte';
@@ -36,7 +36,7 @@
     Rushed: 'Runs where the runner became rushed (kakari) at least once.',
     Dueled: 'Runs with a duel on the final straight.',
     'Spot struggle': 'Runs with a spot struggle for the lead early in the race.',
-    'Avg. time': 'Average finish time; the best time is in the tooltip.'
+    'Avg. time': 'Average finish time. Hover a time for the best one.'
   };
 
   let expanded = $state<string>();
@@ -128,7 +128,7 @@
       <h4>Finishes</h4>
       <ol class="places">
         {#each counts as count, place (place)}
-          <li title={count + ' × ' + (place + 1) + '.'}>
+          <li title={count + ' × ' + ordinalPlace(place + 1)}>
             <span
               class="bar"
               class:win={place === 0}

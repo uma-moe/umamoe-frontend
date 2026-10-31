@@ -11,8 +11,8 @@
     class="hint"
     class:emphasis={zoom.wheelHint}
   >
-    <span class="with-hover">Ctrl + scroll or pinch to zoom · drag to pan</span>
-    <span class="with-touch">Pinch to zoom · drag to pan</span>
+    <span class="with-hover">Ctrl + scroll or pinch to zoom, drag to pan</span>
+    <span class="with-touch">Pinch to zoom, drag to pan</span>
   </p>
   <div
     class="buttons"
