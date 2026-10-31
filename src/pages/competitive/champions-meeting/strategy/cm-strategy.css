@@ -246,9 +246,11 @@ h4 i {
   overflow: visible;
 }
 .rep-controls {
-  display: grid;
-  justify-items: end;
-  gap: 8px;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 8px 12px;
   max-width: 100%;
 }
 .rep-filter {

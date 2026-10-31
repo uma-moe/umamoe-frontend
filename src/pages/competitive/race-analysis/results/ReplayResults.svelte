@@ -1,5 +1,5 @@
 <script lang="ts">
-  import InfoBadge from '@/components/feedback/InfoBadge.svelte';
+  import InfoIcon from '@/components/feedback/InfoIcon.svelte';
   import { onMount } from 'svelte';
   import type { ParsedRaceCapture } from '@/lib/race/capture/race-capture-parser';
   import { lastSpurtResult, raceMetricHelp } from '@/lib/race/capture/race-diagnostics';
@@ -88,7 +88,7 @@
       <h2>Race results</h2>
       <InspectPopover label="Reading race results">
         {#snippet trigger()}
-          <InfoBadge />
+          <InfoIcon />
         {/snippet}
         <h3>Reading race results</h3>
         <p>

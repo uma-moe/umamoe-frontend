@@ -11,7 +11,7 @@
   const sections = [
     {
       href: '/competitive/race-analysis',
-      icon: 'race' as const,
+      icon: 'analysis' as const,
       accent: 'primary',
       title: 'Race Analysis',
       description: 'Replay and compare races'

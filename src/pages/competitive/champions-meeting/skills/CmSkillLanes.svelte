@@ -1,5 +1,5 @@
 <script lang="ts">
-  import InfoBadge from '@/components/feedback/InfoBadge.svelte';
+  import InfoIcon from '@/components/feedback/InfoIcon.svelte';
   import { onDestroy, untrack } from 'svelte';
   import Button from '@/components/controls/Button.svelte';
   import Spinner from '@/components/feedback/Spinner.svelte';
@@ -347,7 +347,7 @@
             label="How to read activation distances"
             align="end"
           >
-            {#snippet trigger()}<InfoBadge />{/snippet}
+            {#snippet trigger()}<InfoIcon />{/snippet}
             {#if !removable}<div class="lane-reading">
                 <span>
                   Mean / median <strong>

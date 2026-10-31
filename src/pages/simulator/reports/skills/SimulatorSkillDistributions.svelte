@@ -1,5 +1,5 @@
 <script lang="ts">
-  import InfoBadge from '@/components/feedback/InfoBadge.svelte';
+  import InfoIcon from '@/components/feedback/InfoIcon.svelte';
   import { resolveEncodedSkill } from '@/lib/game-data/skills/skills';
   import { ReportSkillCatalog } from './report-skill-catalog.svelte';
   import ChartFrame from '@/components/charts/ChartFrame.svelte';
@@ -281,7 +281,7 @@
         {#snippet titleActions()}
           <InspectPopover label="How to read skill distributions">
             {#snippet trigger()}
-              <InfoBadge />
+              <InfoIcon />
             {/snippet}
             <h3>Model and observations</h3>
             <p>

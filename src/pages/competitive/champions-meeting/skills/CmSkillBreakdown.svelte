@@ -1,5 +1,5 @@
 <script lang="ts">
-  import InfoBadge from '@/components/feedback/InfoBadge.svelte';
+  import InfoIcon from '@/components/feedback/InfoIcon.svelte';
   import RaceSkill from '../../runners/RaceSkill.svelte';
   import SelectField from '@/components/controls/SelectField.svelte';
   import InspectPopover from '@/components/overlays/InspectPopover.svelte';
@@ -202,7 +202,7 @@
                 label="How skill percentages are calculated"
                 align="start"
               >
-                {#snippet trigger()}<InfoBadge />{/snippet}
+                {#snippet trigger()}<InfoIcon />{/snippet}
                 <div class="rates-help">
                   <strong>Different rows use different denominators</strong>
                   {#if comparison}

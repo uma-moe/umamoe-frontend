@@ -1,5 +1,5 @@
 <script lang="ts">
-  import InfoBadge from '@/components/feedback/InfoBadge.svelte';
+  import InfoIcon from '@/components/feedback/InfoIcon.svelte';
   import type { ChartDatum } from '@/lib/statistics/statistics';
   import ChartFrame from '@/components/charts/ChartFrame.svelte';
   import MetricBar from '@/components/data/MetricBar.svelte';
@@ -78,7 +78,7 @@
           class="ranking-info"
           aria-label={'About ' + title + '. ' + help}
         >
-          <InfoBadge />
+          <InfoIcon />
         </button>
       </Tooltip>
     {/snippet}

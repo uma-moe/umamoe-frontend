@@ -1,5 +1,5 @@
 <script lang="ts">
-  import InfoBadge from '@/components/feedback/InfoBadge.svelte';
+  import InfoIcon from '@/components/feedback/InfoIcon.svelte';
   import type { Snippet } from 'svelte';
   import Button from '@/components/controls/Button.svelte';
   import SelectField from '@/components/controls/SelectField.svelte';
@@ -152,7 +152,7 @@
       align="end"
     >
       {#snippet trigger()}
-        <InfoBadge />
+        <InfoIcon />
       {/snippet}
       <ReplayTelemetryGuide ensemble={minimal} />
       <h3>Course and skill timeline</h3>

@@ -1,5 +1,5 @@
 <script lang="ts">
-  import InfoBadge from '@/components/feedback/InfoBadge.svelte';
+  import InfoIcon from '@/components/feedback/InfoIcon.svelte';
   import type { Snippet } from 'svelte';
   import Banner from '@/components/feedback/Banner.svelte';
   import Button from '@/components/controls/Button.svelte';
@@ -150,7 +150,7 @@
         label="How skill impact is measured"
         align="end"
       >
-        {#snippet trigger()}<InfoBadge />{/snippet}
+        {#snippet trigger()}<InfoIcon />{/snippet}
         <h3>Skill effect comparisons</h3>
         <p>
           Each measurement reruns this batch’s seeds with one skill’s effects suppressed while the

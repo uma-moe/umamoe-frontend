@@ -30,6 +30,12 @@
       'M1.5 14h3.5',
       'M2.5 18h3'
     ],
+    // Race Analysis: a lens over a finishing trend.
+    analysis: [
+      'M10.5 17a6.5 6.5 0 1 0 0-13 6.5 6.5 0 0 0 0 13Z',
+      'm15.5 15.5 5 5',
+      'm7 12.2 2.1-2.3 2 1.6 3-3.4'
+    ],
     'arrow-right': ['M4 12h16', 'm14 6 6 6-6 6'],
     gift: [
       'M3 8h18v4H3z',

@@ -5,7 +5,7 @@
   import Button from '../controls/Button.svelte';
   import Spinner from '../feedback/Spinner.svelte';
   import InspectPopover from '../overlays/InspectPopover.svelte';
-  import InfoBadge from '../feedback/InfoBadge.svelte';
+  import InfoIcon from '../feedback/InfoIcon.svelte';
 
   export interface ChartLegendItem {
     label: string;
@@ -104,7 +104,7 @@
                 openOnHover
               >
                 {#snippet trigger()}
-                  <InfoBadge />
+                  <InfoIcon />
                 {/snippet}
                 <p class="about-text">{description}</p>
               </InspectPopover>

@@ -1,5 +1,5 @@
 <script lang="ts">
-  import InfoBadge from '@/components/feedback/InfoBadge.svelte';
+  import InfoIcon from '@/components/feedback/InfoIcon.svelte';
   import Button from '@/components/controls/Button.svelte';
   import Icon from '@/components/Icon.svelte';
   import InspectPopover from '@/components/overlays/InspectPopover.svelte';
@@ -107,7 +107,7 @@
 {#snippet tools()}
   <InspectPopover label="About the result">
     {#snippet trigger()}
-      <InfoBadge />
+      <InfoIcon />
     {/snippet}
     <p class="about-text">{about}</p>
   </InspectPopover>

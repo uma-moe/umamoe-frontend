@@ -1,5 +1,5 @@
 <script lang="ts">
-  import InfoBadge from '@/components/feedback/InfoBadge.svelte';
+  import InfoIcon from '@/components/feedback/InfoIcon.svelte';
   import { untrack, type Snippet } from 'svelte';
   import InspectPopover from '../overlays/InspectPopover.svelte';
   import { virtualScroll, type VirtualRange } from '@/lib/virtual-scroll';
@@ -176,7 +176,7 @@
                   align={column.numeric ? 'end' : 'start'}
                 >
                   {#snippet trigger()}
-                    <InfoBadge />
+                    <InfoIcon />
                   {/snippet}
                   <p>{columnHelp[column.label]}</p>
                 </InspectPopover>

@@ -1,5 +1,5 @@
 <script lang="ts">
-  import InfoBadge from '@/components/feedback/InfoBadge.svelte';
+  import InfoIcon from '@/components/feedback/InfoIcon.svelte';
   import type { Snippet } from 'svelte';
   import ChartFrame from '@/components/charts/ChartFrame.svelte';
   import InspectPopover from '@/components/overlays/InspectPopover.svelte';
@@ -118,7 +118,7 @@
         align="end"
       >
         {#snippet trigger()}
-          <InfoBadge />
+          <InfoIcon />
         {/snippet}
         <h3>Reading the outcomes</h3>
         <p>

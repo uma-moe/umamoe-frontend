@@ -1,5 +1,5 @@
 <script lang="ts">
-  import InfoBadge from '@/components/feedback/InfoBadge.svelte';
+  import InfoIcon from '@/components/feedback/InfoIcon.svelte';
   import InspectPopover from '@/components/overlays/InspectPopover.svelte';
   import { ReportSkillCatalog } from './report-skill-catalog.svelte';
   import { theme } from '@/stores/theme';
@@ -122,7 +122,7 @@
       <span class="who">{umas[runner]?.name}</span>
       <InspectPopover label="How to read the skill rows">
         {#snippet trigger()}
-          <InfoBadge />
+          <InfoIcon />
         {/snippet}
         <h3>Skills over the race</h3>
         <p>

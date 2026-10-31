@@ -1,5 +1,5 @@
 <script lang="ts">
-  import InfoBadge from '@/components/feedback/InfoBadge.svelte';
+  import InfoIcon from '@/components/feedback/InfoIcon.svelte';
   import type { RaceRunner } from '@/lib/race/capture/race-capture-parser';
   import { hpRemainingColor } from '@/lib/race/replay/race-display';
   import { detailedSample } from '@/lib/race/capture/race-diagnostics';
@@ -125,7 +125,7 @@
 {#snippet telemetryHelp()}
   <InspectPopover label="How to read race telemetry">
     {#snippet trigger()}
-      <InfoBadge />
+      <InfoIcon />
     {/snippet}
     <ReplayTelemetryGuide ensemble={Boolean(replay.ensemble)} />
   </InspectPopover>

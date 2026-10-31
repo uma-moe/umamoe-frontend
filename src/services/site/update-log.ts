@@ -58,7 +58,7 @@ export const UPDATE_LOG: UpdateEntry[] = [
       {
         category: 'major',
         label: 'Race Analysis',
-        icon: 'chart',
+        icon: 'analysis',
         preview: {
           image: '/updates/2.1/race-analysis.jpg',
           alt: 'Race analysis with a race replay, runner positions and performance details.',

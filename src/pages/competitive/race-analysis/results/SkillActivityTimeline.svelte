@@ -1,5 +1,5 @@
 <script lang="ts">
-  import InfoBadge from '@/components/feedback/InfoBadge.svelte';
+  import InfoIcon from '@/components/feedback/InfoIcon.svelte';
   import type { ParsedRaceCapture } from '@/lib/race/capture/race-capture-parser';
   import { diagnosticHorse } from '@/lib/race/capture/race-diagnostics';
   import { skillActivityRows, skillIconGroups, type SkillPeriod } from './skill-activity';
@@ -143,7 +143,7 @@
     <span>Skill activity</span>
     <InspectPopover label="Skill activity details">
       {#snippet trigger()}
-        <InfoBadge />
+        <InfoIcon />
       {/snippet}
       <h3>Gate {index + 1} · {runner?.name ?? 'Selected runner'}</h3>
       <p>
