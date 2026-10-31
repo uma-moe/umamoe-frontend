@@ -21,8 +21,20 @@
 }
 
 .method {
-  margin: 0;
+  display: grid;
+  gap: 0.5rem;
   color: var(--text-muted);
   font-size: 0.8rem;
   line-height: 1.5;
+}
+
+.method p,
+.method ul {
+  margin: 0;
+}
+
+.method ul {
+  display: grid;
+  gap: 0.25rem;
+  padding-left: 1.1rem;
 }

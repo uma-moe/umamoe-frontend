@@ -635,45 +635,77 @@
         title="How skill values are calculated"
         compact
       >
-        <p class="method">
-          <strong>Win rate</strong>
-          comes from the model the optimizer builds with ({modelName(index.model.variant)},
-          checkpoint {index.model.checkpoint}): on every course a reference runner per style, no
-          particular uma, with the statline forecast there, races a hundred real CM fields, the
-          course's own recorded rooms or the nearest CM's runners brought to it. Her races show
-          where and how often each skill fires; the model turns a proc there into seconds and win,
-          so a value is what the skill adds when it procs.
-          <strong>Scale by proc rate</strong>
-          weighs it by how often it procs, over all races. Values are for comparing skills with each other;
-          their exact size is an estimate.
-          {#if margin !== undefined}
-            Checked against full races, 80% of the skills here came within ±{Math.round(
-              margin * 100
-            )}% of their value.
-          {/if}
-          <strong>In build</strong>
-          is what a skill adds to, or takes from, a {index.buildSize}-skill reference build the
-          model picks, in place of its gold or ◎ version when the build holds that;
-          <strong>Alone</strong>
-          is what it adds to no skills.
-          <strong>Works best with</strong>
-          names the skills that raise its value most beside it, on log-odds, so a stronger build's flatter
-          win curve does not count as a combination. A CM shows its course. Over several courses, a value
-          is the median course's, so turf shows what a skill is worth on a typical turf course, and proc
-          points average the races it fired in. Strong and weaker split at the median shown skill. A skill
-          that waits on her own activations, such as a count of her skills or recoveries, is raced again
-          with the skills that feed it bought beside her build and valued there. One that needs a ground,
-          weather, season or night the explorer's day lacks is valued as if that day held, marked Forced.
-          Any other skill that never procs for her is left out. All styles averages only over styles where
-          the skill can activate. Forced skills scale by the rate they proc at once their day holds. Negative
-          skills are left out; ground, weather, season and night skills show on a CM whose day they hold
-          on, and elsewhere only when asked.
-          <strong>Picking an uma</strong>
-          highlights her unique, as inherited, and the skills she starts with or unlocks by potential
-          level: from the Global game data for umas out on Global, from the Japanese for those still to
-          come. Skills from her training events are not included. Only skills in the Global skill list
-          are displayed.
-        </p>
+        <div class="method">
+          <p>
+            Every value comes from racing. For each running style, a typical runner (no particular
+            uma, with the stats you would expect for that course) races a hundred real Champions
+            Meeting fields on the course: the CM's own recorded rooms, or runners from the nearest
+            CM when the course has none. Those races show where and how often each skill activates.
+            The model the optimizer builds with ({modelName(index.model.variant)}, checkpoint
+            {index.model.checkpoint}) then works out how much time the skill saves at that spot and
+            what that does to the win rate.
+          </p>
+          <ul>
+            <li>
+              <strong>Win rate</strong>
+              is how much the skill adds to the win rate when it activates.
+            </li>
+            <li>
+              <strong>Scale by proc rate</strong>
+              multiplies that by how often it activates: a skill worth +10% that procs in half the races
+              shows +5%.
+            </li>
+            <li>
+              <strong>In build</strong>
+              adds the skill to a typical {index.buildSize}-skill build the model picks, replacing
+              its gold or ◎ version if the build has one. For a skill already in that build, it is
+              what removing it costs.
+            </li>
+            <li>
+              <strong>Alone</strong>
+              adds the skill to a runner with no other skills.
+            </li>
+            <li>
+              <strong>Works best with</strong>
+              lists the skills that raise its value most when owned together. Win rate gains shrink as
+              a build gets stronger anyway, so that alone does not count as a combo.
+            </li>
+          </ul>
+          <p>
+            <strong>How accurate is it?</strong>
+            The values are best for comparing skills with each other; the exact numbers are estimates.
+            {#if margin !== undefined}
+              Checked against full race simulations, 8 in 10 skills landed within {Math.round(
+                margin * 100
+              )}% of their own value: a skill shown at +10% measured between +{Math.round(
+                10 * (1 - margin)
+              )}% and +{Math.round(10 * (1 + margin))}%.
+            {/if}
+          </p>
+          <p>
+            <strong>Courses.</strong>
+            A CM shows its own course. A wider view such as Turf shows the middle (median) course of the
+            group, so it is what a skill is worth on a typical turf course; activation spots average the
+            races where it fired. Strong and weaker split at the middle skill shown. All styles averages
+            only the styles that can activate the skill.
+          </p>
+          <p>
+            <strong>Special cases.</strong>
+            A skill that needs the runner's own activations first, such as a count of skills used or recoveries,
+            is raced again with the skills that trigger it added. A ground, weather, season or night skill
+            whose condition the day lacks is valued as if it held and marked Forced; Scale by proc rate
+            then uses how often it procs when the condition holds. On a CM, these skills show only when
+            the race day matches; elsewhere you can hide them under Skill filters. Other skills that never
+            activate for the runner, and negative skills, are left out.
+          </p>
+          <p>
+            <strong>Picking an uma</strong>
+            highlights her unique (as an inherited skill) and the skills she starts with or unlocks with
+            potential levels, from Global game data for umas out on Global and Japanese data for those
+            still to come. Skills from training events are not included. Only skills in the Global skill
+            list are shown.
+          </p>
+        </div>
       </Disclosure>
     </div>
   {/if}
