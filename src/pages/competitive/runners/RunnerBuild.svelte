@@ -10,7 +10,7 @@
   import AptitudeGrid from '@/components/game/AptitudeGrid.svelte';
   import RaceSkill from './RaceSkill.svelte';
   import type { AptitudeGradeValue } from '@/components/game/AptitudeGrade.svelte';
-  import AptitudeGrade from '@/components/game/AptitudeGrade.svelte';
+  import AptitudeTile from '@/components/game/AptitudeTile.svelte';
   import { runningStyleName } from '@/lib/race/replay/race-display';
   import { identity, score, stats } from '../analysis-view';
   import SkillPoints, { LEARNED_SKILL_POINTS_NOTE } from '@/components/game/SkillPoints.svelte';
@@ -89,6 +89,11 @@
       grade: grades[Math.max(0, value - 1)] ?? 'G'
     }))
   );
+
+  const statPresentation = $derived.by(() => {
+    if (compact) return 'tiles';
+    return expanded ? 'icons' : 'inline';
+  });
 
   const totalStats = $derived(
     Object.values(runner.stats).reduce((total, value) => total + (value ?? 0), 0)
@@ -219,7 +224,7 @@
       {/if}
       <StatStrip
         items={stats(runner)}
-        presentation={compact || !expanded ? 'inline' : 'icons'}
+        presentation={statPresentation}
         compact
       />
     </section>
@@ -233,37 +238,13 @@
           aria-label="Aptitudes for this race"
         >
           {#each raceAptitudes as item}
-            <span
-              class="aptitude-cell race-aptitude"
-              style:--aptitude-color={item.grade
-                ? `var(--aptitude-${item.grade.toLowerCase()})`
-                : 'var(--text-muted)'}
+            <AptitudeTile
+              label={item.label ?? item.group}
+              caption={item.label ? item.group : undefined}
+              grade={item.grade}
               title={item.group + ': ' + (item.label ?? 'not detected')}
-            >
-              <span class="race-aptitude-label">
-                {#if item.label}
-                  <small>{item.group}</small>
-                  {item.label}
-                {:else}
-                  {item.group}
-                {/if}
-              </span>
-              {#if item.grade}
-                <AptitudeGrade
-                  grade={item.grade}
-                  label={item.label ?? item.group}
-                  size="sm"
-                />
-              {:else}
-                <span
-                  class="unknown-grade"
-                  aria-label={(item.label ?? item.group) + ': not recorded'}
-                  title="Aptitude not recorded"
-                >
-                  —
-                </span>
-              {/if}
-            </span>
+              prominent
+            />
           {/each}
         </div>
       </section>
@@ -275,48 +256,21 @@
             <h3>Aptitudes</h3>
           {/if}
           {#if compact && raceContext && aptitudes.length}
-            <div
-              class="full-aptitudes"
-              aria-label="All aptitudes"
-            >
-              {#each ['Distance', 'Surface', 'Style'] as group}
-                <div>
-                  <span>{group}</span>
-                  <div>
-                    {#each aptitudeItems.filter((item) => item.group === group) as item}
-                      <span
-                        class="aptitude-cell"
-                        style:--aptitude-color={`var(--aptitude-${item.grade.toLowerCase()})`}
-                      >
-                        <span>{item.label}</span>
-                        <AptitudeGrade
-                          grade={item.grade}
-                          label={item.label}
-                          size="sm"
-                        />
-                      </span>
-                    {/each}
-                  </div>
-                </div>
-              {/each}
-            </div>
+            <AptitudeGrid
+              items={aptitudeItems}
+              label="All aptitudes"
+              layout="tiles"
+            />
           {:else if compact}
             <div
               class="compact-aptitudes"
               aria-label="Race aptitudes"
             >
               {#each aptitudeItems as item}
-                <span
-                  class="aptitude-cell"
-                  style:--aptitude-color={`var(--aptitude-${item.grade.toLowerCase()})`}
-                >
-                  <span>{item.label}</span>
-                  <AptitudeGrade
-                    grade={item.grade}
-                    label={item.label}
-                    size="sm"
-                  />
-                </span>
+                <AptitudeTile
+                  label={item.label}
+                  grade={item.grade}
+                />
               {/each}
             </div>
           {:else}

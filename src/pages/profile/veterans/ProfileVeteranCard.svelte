@@ -162,14 +162,14 @@
       <StatStrip
         items={stats}
         label={baseStats ? 'Base stats' : 'Displayed stats'}
-        presentation="fields"
+        presentation="tiles"
       />
     </div>
     {#if summary.aptitudes?.length}
       <div class="card-aptitudes">
         <AptitudeGrid
           items={summary.aptitudes}
-          layout="fields"
+          layout="tiles"
         />
       </div>
     {/if}
@@ -228,12 +228,14 @@
           {#each skills as skillId}
             {@const resolved = resolveEncodedSkill(skillCatalog, skillId)}
             {@const id = resolved.skill?.skill_id ?? Math.floor(skillId / 10)}
+            {@const rarity = skillRarity(resolved.skill, resolved.inherited)}
             {#snippet chip()}
+              <!-- Only the trainee's own unique levels up; every other skill stays at Lv.1. -->
               <SkillChip
                 name={resolved.skill?.name ?? `Skill ${id}`}
                 icon={skillImage(resolved.skill?.icon)}
-                level={`Lv.${resolved.level}`}
-                rarity={skillRarity(resolved.skill, resolved.inherited)}
+                level={rarity === 'unique-main' ? `Lv.${resolved.level}` : undefined}
+                {rarity}
                 compact
                 fill
               />
@@ -380,17 +382,17 @@
     font-size: 10px;
     font-weight: 400;
   }
-  /* Two full-width rows per line, like the simulator's skill editor, so names line up. */
+  /* Equal columns, as on the race analysis builds, so long and short names line up in rows. */
   .skill-list {
     min-width: 0;
     display: grid;
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-    gap: 4px 6px;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 4px;
   }
   .skill-filter {
     min-width: 0;
     display: flex;
-    align-items: center;
+    align-items: stretch;
     min-height: 24px;
     padding: 0;
     border: 0;
@@ -433,6 +435,7 @@
   .skill-filter :global(.skill-chip img) {
     width: 26px;
     height: 26px;
+    align-self: center;
   }
   .skill-filter :global(.skill-body) {
     min-height: 26px;
@@ -485,10 +488,12 @@
   .card-open:focus-visible {
     outline-offset: -2px;
   }
-  @container (max-width:330px) {
+  @container (max-width: 400px) {
     .skill-list {
-      grid-template-columns: minmax(0, 1fr);
+      grid-template-columns: repeat(2, minmax(0, 1fr));
     }
+  }
+  @container (max-width:330px) {
     .card-open {
       padding: 8px;
     }

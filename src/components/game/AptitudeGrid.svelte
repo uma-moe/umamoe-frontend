@@ -1,5 +1,6 @@
 <script lang="ts">
   import AptitudeGrade, { type AptitudeGradeValue } from './AptitudeGrade.svelte';
+  import AptitudeTile from './AptitudeTile.svelte';
 
   export interface AptitudeItem {
     id: string;
@@ -13,8 +14,8 @@
     label?: string;
     compact?: boolean;
     stretch?: boolean;
-    /** `fields` boxes each grade like the simulator's aptitude selects, one group per row. */
-    layout?: 'rows' | 'columns' | 'fields';
+    /** `tiles` puts each group on a row of grade-tinted tiles, as on the race analysis builds. */
+    layout?: 'rows' | 'columns' | 'tiles';
     gradeFirst?: boolean;
   }
 
@@ -47,7 +48,7 @@
     class:compact
     class:stretch
     class:columns={layout === 'columns'}
-    class:fields={layout === 'fields'}
+    class:tiles={layout === 'tiles'}
     class:grade-first={gradeFirst}
     aria-label={label}
   >
@@ -63,17 +64,26 @@
           role="list"
         >
           {#each group.items as item (item.id)}
-            <div
-              class="aptitude-item"
-              role="listitem"
-            >
-              <span>{item.label}</span>
-              <AptitudeGrade
-                grade={item.grade}
-                label={item.label}
-                size={compact && layout === 'columns' ? 'xs' : 'sm'}
-              />
-            </div>
+            {#if layout === 'tiles'}
+              <span role="listitem">
+                <AptitudeTile
+                  label={item.label}
+                  grade={item.grade}
+                />
+              </span>
+            {:else}
+              <div
+                class="aptitude-item"
+                role="listitem"
+              >
+                <span>{item.label}</span>
+                <AptitudeGrade
+                  grade={item.grade}
+                  label={item.label}
+                  size={compact && layout === 'columns' ? 'xs' : 'sm'}
+                />
+              </div>
+            {/if}
           {/each}
         </div>
       </section>
@@ -293,61 +303,62 @@
     width: 18px;
     height: 18px;
   }
-  .fields {
+  .tiles {
     width: 100%;
-    gap: 4px;
+    gap: 6px;
     padding: 0;
     background: transparent;
   }
-  .fields .aptitude-group {
-    grid-template-columns: 46px repeat(4, minmax(0, 1fr));
-    gap: 4px;
+  .tiles .aptitude-group {
+    grid-template-columns: 48px minmax(0, 1fr);
+    gap: 8px;
   }
-  .fields .aptitude-items {
-    display: contents;
-  }
-  .fields h4 {
-    color: var(--text-primary);
+  .tiles h4 {
+    color: var(--text-secondary);
     font-size: 10px;
-    font-weight: 600;
+    font-weight: 400;
     letter-spacing: 0;
     text-transform: none;
   }
-  .fields .aptitude-item {
-    min-width: 0;
-    min-height: 26px;
-    justify-content: flex-start;
-    gap: 5px;
-    padding: 0 6px 0 3px;
-    border: 1px solid var(--factor-field-border);
-    border-radius: 6px;
-    background: var(--factor-field-bg);
+  .tiles .aptitude-items {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 4px;
   }
-  .fields .aptitude-item > span {
-    order: 1;
-    color: var(--factor-field-text);
+  .tiles .aptitude-items > span {
+    min-width: 0;
+    display: grid;
+  }
+  .tiles :global(.aptitude-tile) {
+    padding-inline: 4px;
     font-size: 10px;
   }
-  .fields :global(.aptitude) {
-    width: 18px;
-    height: 18px;
-  }
   @container (max-width: 380px) {
-    .fields .aptitude-group {
-      grid-template-columns: 40px repeat(4, minmax(0, 1fr));
-      gap: 3px;
+    .tiles .aptitude-group {
+      grid-template-columns: 40px minmax(0, 1fr);
+      gap: 4px;
     }
-    .fields h4,
-    .fields .aptitude-item > span {
+    .tiles :global(.aptitude-tile) {
+      min-height: 28px;
+      gap: 2px;
+      padding-inline: 3px;
       font-size: 9px;
     }
-    .fields .aptitude-item {
-      gap: 2px;
-      padding: 0 2px;
+    /* Grade names stay whole words; a name too long for its tile ends in an ellipsis. */
+    .tiles :global(.aptitude-tile .label) {
+      overflow: hidden;
+      overflow-wrap: normal;
+      text-overflow: ellipsis;
+      white-space: nowrap;
     }
-    .fields :global(.aptitude) {
-      width: 16px;
-      height: 16px;
+    .tiles :global(.aptitude) {
+      width: 18px;
+      height: 18px;
+    }
+  }
+  @container (max-width: 280px) {
+    .tiles .aptitude-items {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
     }
   }
   @container (max-width:330px) {

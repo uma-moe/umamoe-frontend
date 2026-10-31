@@ -38,7 +38,7 @@
 .choice-gate :global(svg) {
   color: var(--accent-primary);
 }
-.runner-choice :global(.race-aptitude small) {
+.runner-choice :global(.aptitude-tile small) {
   display: none;
 }
 .runner-choice :global(.identity h3) {

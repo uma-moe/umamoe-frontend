@@ -21,7 +21,7 @@
     id?: string;
     source?: 'family' | 'parent' | 'p1' | 'p2';
     expanded?: boolean;
-    /** `rows` lays each tone out two full-width sparks per line, like the card's learned skills. */
+    /** `rows` lines the sparks up in equal columns, like the card's learned skills. */
     layout?: 'wrap' | 'rows';
     selectedFactors?: VeteranFactorFilter[];
     queryMatches?: VeteranQueryMatch[];
@@ -99,7 +99,7 @@
     {/snippet}
     {#if onmore}
       <button
-        class="spark-filter"
+        class="spark-filter white-more"
         aria-label={`View all ${white.length} white sparks`}
         onclick={onmore}
       >
@@ -122,17 +122,18 @@
   .spark-group[data-tone='white'] {
     flex-basis: 100%;
   }
+  /* One grid for every tone keeps the columns full instead of leaving a gap after each colour. */
   .rows {
     display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
     container-type: inline-size;
   }
   .rows .spark-group {
-    display: grid;
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-    gap: 4px 6px;
+    display: contents;
   }
   .rows .spark-filter {
     min-width: 0;
+    align-items: stretch;
   }
   .rows .spark-filter :global(.spark) {
     width: 100%;
@@ -143,12 +144,14 @@
   .rows .spark-filter :global(.name) {
     flex: 1;
   }
-  .rows .white-count {
+  .rows > .white-count,
+  .rows > .white-more {
+    grid-column: 1 / -1;
     justify-self: start;
   }
-  @container (max-width: 300px) {
-    .rows .spark-group {
-      grid-template-columns: minmax(0, 1fr);
+  @container (max-width: 376px) {
+    .rows {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
     }
   }
   .spark-filter {

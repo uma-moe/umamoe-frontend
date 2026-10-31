@@ -281,67 +281,63 @@ dd small {
     font-size: 10px;
   }
 }
-.field-stats {
-  gap: 6px;
+.tile-stats {
+  gap: 4px;
   overflow: visible;
   border: 0;
   border-radius: 0;
   background: transparent;
 }
-.field-stats > div,
-.field-stats > div + div {
-  min-height: 0;
+.tile-stats > div,
+.tile-stats > div + div {
+  min-height: 48px;
   display: grid;
-  grid-template-columns: minmax(0, 1fr);
+  grid-template-columns: auto auto;
   grid-template-rows: auto auto;
-  align-content: start;
+  justify-content: center;
+  align-items: center;
   gap: 4px;
-  padding: 0;
-  border: 0;
-  text-align: left;
+  padding: 6px 2px;
+  border: 1px solid color-mix(in srgb, var(--stat-color) 22%, var(--border-subtle));
+  border-radius: var(--radius-sm);
+  background: color-mix(in srgb, var(--stat-color) 9%, var(--surface-2));
 }
-.field-stats dt {
+.tile-stats img {
   grid-column: 1;
   grid-row: 1;
+  width: 14px;
+  height: 14px;
+}
+.tile-stats dd {
+  grid-column: 2;
+  grid-row: 1;
   color: var(--text-primary);
-  font-size: 10px;
-  font-weight: 600;
-  letter-spacing: 0;
+  font-size: 15px;
+  font-weight: 650;
   line-height: 1.2;
-  text-transform: none;
 }
-.field-stats dd {
-  grid-column: 1;
+.tile-stats dt {
+  grid-column: 1 / -1;
   grid-row: 2;
-  min-width: 0;
-  min-height: 28px;
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  padding: 0 6px;
-  border: 1px solid var(--factor-field-border);
-  border-radius: 6px;
-  background: var(--factor-field-bg);
-  color: var(--factor-field-text);
-  font-size: 12px;
-  font-weight: 600;
+  color: var(--text-secondary);
+  font-size: 10px;
+  font-weight: 400;
+  letter-spacing: 0;
+  line-height: 1.3;
+  text-transform: capitalize;
 }
-.field-stats img {
-  width: 16px;
-  height: 16px;
-  flex: 0 0 auto;
-}
-@container (max-width: 330px) {
-  .field-stats {
-    gap: 4px;
+@container (max-width: 380px) {
+  .tile-stats > div,
+  .tile-stats > div + div {
+    min-height: 44px;
+    gap: 3px;
+    padding: 5px 1px;
   }
-  .field-stats dd {
-    gap: 4px;
-    padding: 0 4px;
-    font-size: 11px;
+  .tile-stats img {
+    width: 12px;
+    height: 12px;
   }
-  .field-stats img {
-    width: 13px;
-    height: 13px;
+  .tile-stats dd {
+    font-size: 13px;
   }
 }

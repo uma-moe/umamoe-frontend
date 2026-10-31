@@ -9,10 +9,6 @@
   flex-wrap: wrap;
   gap: 5px;
 }
-small {
-  font-size: 10px;
-  color: var(--text-secondary);
-}
 .build-content {
   display: contents;
 }
@@ -140,101 +136,8 @@ small {
     flex-basis: 100%;
   }
 }
-.compact .stat-overview :global(.inline-stats) {
-  gap: 4px;
-}
-.compact .stat-overview :global(.inline-stats > div) {
-  min-height: 48px;
-  gap: 4px;
-  padding: 6px 2px;
-  border: 1px solid color-mix(in srgb, var(--stat-color) 22%, var(--border-subtle));
-  border-radius: var(--radius-sm);
-  background: color-mix(in srgb, var(--stat-color) 9%, var(--surface-2));
-}
-.compact .stat-overview :global(.inline-stats img) {
-  width: 14px;
-  height: 14px;
-}
-.compact .stat-overview :global(.inline-stats dd) {
-  font-size: 15px;
-  line-height: 1.2;
-}
-.compact .stat-overview :global(.inline-stats dt) {
-  font-size: 10px;
-  line-height: 1.3;
-  text-transform: capitalize;
-}
 .compact-aptitudes {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 4px;
-}
-.aptitude-cell {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 4px;
-  min-width: 0;
-  min-height: 32px;
-  padding: 4px 8px;
-  border: 1px solid color-mix(in srgb, var(--aptitude-color) 18%, var(--border-subtle));
-  border-radius: var(--radius-sm);
-  background: color-mix(in srgb, var(--aptitude-color) 6%, var(--surface-2));
-  color: var(--text-secondary);
-  font-size: 11px;
-  line-height: 1.3;
-}
-.aptitude-cell > span {
-  min-width: 0;
-  overflow-wrap: anywhere;
-}
-/* A race's three relevant grades name the category they were read for, such as Medium or Turf. */
-.race-aptitude {
-  min-height: 38px;
-}
-.race-aptitude-label {
-  display: grid;
-  gap: 1px;
-  color: var(--text-primary);
-  font-weight: 600;
-}
-.race-aptitude-label small {
-  font-size: 10px;
-  font-weight: 400;
-}
-.unknown-grade {
-  display: inline-grid;
-  place-items: center;
-  width: 22px;
-  color: var(--text-muted);
-  font-size: 12px;
-}
-.full-aptitudes {
-  display: grid;
-  gap: 6px;
-  container-type: inline-size;
-}
-.full-aptitudes > div {
-  display: grid;
-  grid-template-columns: 48px minmax(0, 1fr);
-  gap: 8px;
-  align-items: center;
-}
-.full-aptitudes > div > span {
-  font-size: 10px;
-  color: var(--text-secondary);
-}
-.full-aptitudes > div > div {
-  display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
-  gap: 4px;
-}
-.full-aptitudes .aptitude-cell {
-  padding-inline: 4px;
-  font-size: 10px;
-}
-@container (max-width: 360px) {
-  .full-aptitudes > div > div {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-  }
 }
