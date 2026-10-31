@@ -20,9 +20,9 @@
   import { buildSearch } from './build-search.svelte';
 
   /**
-   * The setup: where she races, the course (or, in Team Trials, the pool of tracks) and its conditions; then, when the
-   * row has room, her SP, fans and Fast Learner, followed by what the build is for and the HP she loses to debuffs. The
-   * search's seed and how many builds it tries are not the reader's to set.
+   * The setup: what the build is for, where she races, the course (or, in Team Trials, the pool of tracks) and its
+   * conditions; then, when the row has room, her SP, fans and Fast Learner, followed by the HP she loses to debuffs.
+   * The search's seed and how many builds it tries are not the reader's to set.
    */
   interface Props {
     teamTrials: boolean;
@@ -59,13 +59,18 @@
   note="The race, her SP and the search"
 >
   {#snippet actions()}{#if !teamTrials}<CourseButtons />{/if}{/snippet}
-  <!-- One grid on the runner's columns, so every field lines up with the stats above it: the race first, then what the
-       search plans for and how it runs. -->
+  <!-- One grid: what the search plans for and the race first, then her SP and the debuffs she takes. -->
   <div
     class="goal"
     class:team-trials={teamTrials}
     bind:clientWidth={width}
   >
+    <SelectField
+      id="build-mode"
+      label="Plan for"
+      options={MODE_OPTIONS}
+      bind:value={buildSearch.mode}
+    />
     {#if !teamTrials}
       <RaceBar
         bare
@@ -97,12 +102,6 @@
       bind:value={simulatorSession.startTime}
     />
     {#if budgetHere}<BuildBudget />{/if}
-    <SelectField
-      id="build-mode"
-      label="Plan for"
-      options={MODE_OPTIONS}
-      bind:value={buildSearch.mode}
-    />
     <div class="pair">
       <TextField
         id="build-debuffs"

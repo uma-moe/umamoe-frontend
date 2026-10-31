@@ -247,12 +247,15 @@
   .fields:not(.stats) {
     grid-template-columns: minmax(0, 1.35fr) minmax(80px, 0.6fr) repeat(3, minmax(0, 0.8fr));
   }
+  /* No row gap: the picker's dialog is an empty row of the slot, and a gap before it would make the Runner row taller
+     than the stat fields, stretching the selects beside them. */
   .picker-slot {
     display: grid;
-    gap: 4px;
+    align-content: start;
     min-width: 0;
   }
   .picker-label {
+    margin-bottom: 4px;
     color: var(--color-text);
     font-size: 12px;
     font-weight: 600;

@@ -155,7 +155,9 @@
       </Button>
     </header>
   {/if}
-  {#if simulatorCourseData.loading}
+  <!-- Bare, the pickers are cells of the form's grid: they keep their place, waiting, rather than a spinner taking one
+       cell and stretching the row. -->
+  {#if simulatorCourseData.loading && !bare}
     <Spinner
       centered
       minHeight="160px"
@@ -191,7 +193,7 @@
             id="sim-track"
             label="Track"
             options={tracks}
-            placeholder="Search tracks…"
+            placeholder={simulatorCourseData.loading ? 'Loading tracks…' : 'Search tracks…'}
             disabled={!tracks.length}
             popupAnchor={trackAnchor}
             bind:value={trackSelection}
@@ -236,8 +238,11 @@
             id="sim-course"
             label="Course"
             options={courses}
-            placeholder="Search distances or surfaces…"
+            placeholder={simulatorCourseData.loading
+              ? 'Loading courses…'
+              : 'Search distances or surfaces…'}
             emptyText="No courses on this track"
+            disabled={simulatorCourseData.loading}
             popupAnchor={courseAnchor}
             bind:value={simulatorSession.courseId}
           >

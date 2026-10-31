@@ -194,7 +194,8 @@
     height: 24px;
     object-fit: contain;
   }
-  /* The row's chips are 24px; the action keeps their height instead of making the line taller. */
+  /* The row's chips are 24px; the action keeps their height instead of making the line taller. Its border is the
+     visible one, as the chips' filled faces are, so it does not read smaller beside them. */
   .add-skill {
     height: 24px;
     min-height: 24px;
@@ -202,7 +203,7 @@
     align-items: center;
     gap: 4px;
     padding: 0 8px;
-    border: 1px solid var(--factor-field-border);
+    border: 1px solid var(--border-secondary);
     border-radius: 6px;
     background: var(--factor-field-bg);
     color: var(--color-text);
@@ -213,7 +214,7 @@
     cursor: pointer;
   }
   .add-skill:hover {
-    border-color: var(--border-secondary);
+    border-color: var(--accent-primary);
   }
   .add-skill:focus-visible {
     outline: 0;
