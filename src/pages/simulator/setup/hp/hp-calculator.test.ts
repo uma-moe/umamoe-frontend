@@ -11,7 +11,7 @@ describe('HP calculator setups from a code or this browser', () => {
         downhill: true
       },
       counted: 'her build',
-      raceType: '5',
+      raceType: '14',
       fullSpurt: 'true'
     };
 
@@ -21,12 +21,20 @@ describe('HP calculator setups from a code or this browser', () => {
     expect([setup.plan.recovery.gold, setup.plan.recovery.white]).toEqual([1, 2]);
     expect(setup.plan.positionFight).toEqual({ on: true, seconds: 8.8 });
     expect(setup.plan.downhill).toBe(true);
-    expect([setup.counted, setup.raceType, setup.fullSpurt]).toEqual(['her build', '5', 'true']);
+    expect([setup.counted, setup.raceType, setup.fullSpurt]).toEqual(['her build', '14', 'true']);
   });
 
   it('starts from the defaults for options it can’t read', () => {
     const setup = restoreHpCalculator({ fullSpurt: 'maybe', raceType: 5 });
 
     expect([setup.raceType, setup.fullSpurt]).toEqual(['0', 'false']);
+  });
+
+  it('reads retired race formats as the format that simulates the same race', () => {
+    const restored = ['5', '7', '8', '99'].map(
+      (raceType) => restoreHpCalculator({ raceType }).raceType
+    );
+
+    expect(restored).toEqual(['0', '6', '0', '0']);
   });
 });

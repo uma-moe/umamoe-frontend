@@ -9,10 +9,7 @@ import { RACE_TYPES, type RaceType } from './requests/stamina-request';
 
 export const RACE_TYPE_LABELS: Record<RaceType, string> = {
   0: 'Champions Meeting',
-  5: 'Champions Meeting (alt)',
   6: 'Career',
-  7: 'Career (team)',
-  8: 'Champions Meeting (win rate)',
   14: 'Team Trials'
 };
 

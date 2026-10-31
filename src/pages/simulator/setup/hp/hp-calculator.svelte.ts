@@ -1,5 +1,6 @@
 import type { RaceCourse } from '@/lib/game-data/racing/courses';
 import type { SkillData } from '@/lib/game-data/skills/skills';
+import { RACE_TYPES } from '../../requests/stamina-request';
 import { createSimulatorUma, restoreSimulatorUma, type SimulatorUma } from '../../simulator-uma';
 import { countSkills, createHpPlan, STAT_KEYS, type HpPlan } from './hp-plan';
 import { RUNNING_STYLES } from '../trainee';
@@ -35,6 +36,22 @@ const record = (value: unknown): Loose | undefined =>
 
 const count = (value: unknown, fallback: number) =>
   typeof value === 'number' && Number.isFinite(value) && value >= 0 ? value : fallback;
+
+/** Formats the picker used to list, read as the format that simulates the same race. */
+const RETIRED_RACE_TYPES = new Map([
+  ['5', '0'],
+  ['7', '6'],
+  ['8', '0']
+]);
+
+/** A saved race format the picker still lists, or Champions Meeting. */
+function restoreRaceType(saved: string): string {
+  const replacement = RETIRED_RACE_TYPES.get(saved);
+  if (replacement !== undefined) return replacement;
+
+  const listed = RACE_TYPES.some((raceType) => String(raceType) === saved);
+  return listed ? saved : '0';
+}
 
 /** Reads a saved plan over the defaults, keeping only fields of the right type. */
 export function restorePlan(saved: unknown): HpPlan {
@@ -94,7 +111,7 @@ export function restoreHpCalculator(saved: unknown): HpCalculatorState {
   state.uma = restoreSimulatorUma(data.uma, state.uma);
   state.plan = restorePlan(data.plan);
   if (typeof data.counted === 'string') state.counted = data.counted;
-  if (typeof data.raceType === 'string') state.raceType = data.raceType;
+  if (typeof data.raceType === 'string') state.raceType = restoreRaceType(data.raceType);
   if (data.fullSpurt === 'true' || data.fullSpurt === 'false') state.fullSpurt = data.fullSpurt;
 
   return state;

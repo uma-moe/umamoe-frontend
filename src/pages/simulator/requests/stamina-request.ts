@@ -14,8 +14,11 @@ export function aptitudeGradeNumber(grade: AptitudeGrade): number {
   return APTITUDE_GRADES.length - APTITUDE_GRADES.indexOf(grade);
 }
 
-/** `race_type` values the simulator accepts: CM, CM alt, career, career team, CM win rate, Team Trials. */
-export const RACE_TYPES = [0, 5, 6, 7, 8, 14] as const;
+/**
+ * `race_type` values worth sending: Champions Meeting, career and Team Trials. The simulator also accepts 5 and 8,
+ * which run a synthetic race exactly like 0, and 7, which runs like 6; they only matter for captured replays.
+ */
+export const RACE_TYPES = [0, 6, 14] as const;
 export type RaceType = (typeof RACE_TYPES)[number];
 
 /** `effects` limits: at most 256 groups totalling at most 1024 triggers. */
