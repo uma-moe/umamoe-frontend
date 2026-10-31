@@ -9,15 +9,14 @@
   import TextField from '@/components/controls/TextField.svelte';
   import EmptyState from '@/components/feedback/EmptyState.svelte';
   import Icon from '@/components/Icon.svelte';
+  import RankBadge from '@/components/game/RankBadge.svelte';
   import type { RaceCourse } from '@/lib/game-data/racing/courses';
-  import ProfileVeteranIdentity from '@/pages/profile/veterans/ProfileVeteranIdentity.svelte';
   import { courseAptitudeItems, type VeteranEntry } from './veteran-entries';
   import { STYLES, SORTS, STATS, shownVeterans } from './veteran-list';
 
   /**
-   * A collection of Veterans to choose from, drawn like CM Data's runner cards: search, filter by running style and
-   * sort, with each one's stats, learned skills and her aptitudes on this course. One is chosen with a click, or several are
-   * ticked.
+   * A collection of Veterans to choose from, one dense line each: search, filter by running style and sort, with each
+   * one's stats, learned skills and her aptitudes on this course. One is chosen with a click, or several are ticked.
    */
   let {
     entries,
@@ -49,7 +48,6 @@
   const shown = $derived(shownVeterans(entries, query, style, sort, course));
   const ticked = $derived(new Set(selected));
   const full = $derived(max !== undefined && selected.length >= max);
-  const allShown = $derived(shown.length > 0 && shown.every((entry) => ticked.has(entry.key)));
 
   function toggle(entry: VeteranEntry, on: boolean) {
     if (!on) {
@@ -60,23 +58,7 @@
     if (!ticked.has(entry.key) && !full) selected = [...selected, entry.key];
   }
 
-  function tickShown() {
-    if (allShown) {
-      const drop = new Set(shown.map((entry) => entry.key));
-      selected = selected.filter((key) => !drop.has(key));
-      return;
-    }
-
-    const next = [...selected];
-    for (const entry of shown) {
-      if (max !== undefined && next.length >= max) break;
-      if (!ticked.has(entry.key)) next.push(entry.key);
-    }
-
-    selected = next;
-  }
-
-  /** Her five stats and their sum, each tile tinted by its stat. */
+  /** Her five stats and their sum. */
   function statItems(entry: VeteranEntry): StatStripItem[] {
     return [
       ...STATS.map(([key, icon, label]) => ({
@@ -92,13 +74,42 @@
 </script>
 
 {#snippet details(entry: VeteranEntry)}
-  <span class="identity">
-    <ProfileVeteranIdentity
-      summary={entry.summary}
-      rarity={entry.rarity}
-      score={entry.score}
-      rankPlacement="details"
-    />
+  <span
+    class="identity"
+    title={entry.summary.scenario}
+  >
+    <span class="portrait">
+      {#if entry.summary.image}
+        <img
+          src={entry.summary.image}
+          alt=""
+          loading="lazy"
+        />
+      {/if}
+    </span>
+    <span class="name">{entry.uma.name}</span>
+    <span class="details">
+      {#if entry.summary.detail}
+        <span>{entry.summary.detail}</span>
+      {/if}
+      {#if entry.score !== undefined}
+        <span class="rank">
+          <RankBadge
+            score={entry.score}
+            size="xs"
+          />
+          {entry.score.toLocaleString()}
+        </span>
+      {/if}
+      {#if entry.rarity}
+        <span
+          class="rarity"
+          aria-label={entry.rarity + ' rarity stars'}
+        >
+          {'★'.repeat(Math.min(5, entry.rarity))}
+        </span>
+      {/if}
+    </span>
   </span>
   {#if !compact}
     <span class="stats">
@@ -206,15 +217,6 @@
           {selected.length} of {max} ticked
         </span>
       {/if}
-      {#if mode === 'multi' && shown.length}
-        <Button
-          variant="ghost"
-          size="sm"
-          onclick={tickShown}
-        >
-          {allShown ? 'Untick all' : 'Tick all'}
-        </Button>
-      {/if}
     </div>
 
     {#if shown.length}
@@ -225,7 +227,7 @@
         <span class="identity-head">Veteran</span>
         {#if !compact}
           <span class="stats-head">Stats</span>
-          <span class="learned-head">Learned</span>
+          <span class="learned-head">Skills</span>
         {/if}
         <span class="fit-head">{course ? 'On this course' : 'Aptitudes'}</span>
       </div>

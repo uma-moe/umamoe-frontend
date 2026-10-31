@@ -1056,10 +1056,10 @@ test.skip('Veteran collection search evaluates every legal team and imports the 
   const search = page.getByRole('dialog', { name: 'Find my best team', exact: true });
   const pool = search.getByRole('region', { name: 'Your Veterans' });
   await expect(pool).toContainText('4 picked · 2 teams');
-  // Unticking one Special Week build leaves one team; Tick all brings both back.
+  // Unticking one Special Week build leaves one team; ticking it again brings both back.
   await pool.getByRole('checkbox', { name: 'Special Week' }).first().uncheck();
   await expect(pool).toContainText('3 picked · 1 team');
-  await pool.getByRole('button', { name: 'Tick all', exact: true }).click();
+  await pool.getByRole('checkbox', { name: 'Special Week' }).first().check();
   await expect(pool).toContainText('4 picked · 2 teams');
   await search.getByLabel('Races per team', { exact: true }).fill('2');
   await search.getByRole('button', { name: 'Find the best team', exact: true }).click();
