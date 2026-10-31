@@ -4,8 +4,8 @@ After the reroll patch, spark data got messier. Before, the sparks on a uma were
 
 That matters for the new `+` scenario sparks. For example, `Ignited Spirit WIT` and `Ignited Spirit WIT +` both give the Ignited Spirit WIT skill, but the `+` version also gives stats. The `+` version only appears in its matching scenario:
 
-- Racing Spirit `+`: URA
-- Ignited Spirit `+`: Aoharu
+- Racing Spirit `+`: URA Finale
+- Ignited Spirit `+`: Unity Cup
 
 The two questions I wanted to check were:
 
@@ -82,8 +82,8 @@ This analysis used `2,338,032` trials, clustered by `1,047,605` deduped uma keys
 
 | Group | Trials |
 | --- | ---: |
-| Ignited, Aoharu | 2,201,118 |
-| Racing, URA | 136,914 |
+| Ignited, Unity Cup | 2,201,118 |
+| Racing, URA Finale | 136,914 |
 | Combined | 2,338,032 |
 
 Inside those matching scenarios, I kept normal legacy copies and `+` legacy copies separate:
@@ -129,15 +129,15 @@ Broken out by family, the same broad pattern appears. Racing is just much smalle
 
 This is the control case. The uma was trained outside the scenario where `+` can spawn:
 
-- Ignited Spirit outside Aoharu
-- Racing Spirit outside URA
+- Ignited Spirit outside Unity Cup
+- Racing Spirit outside URA Finale
 
 This sample is much smaller: `16,452` trials, clustered by `14,248` deduped uma keys.
 
 | Group | Trials |
 | --- | ---: |
-| Ignited, URA and MANT | 3,170 |
-| Racing, Aoharu and MANT | 13,282 |
+| Ignited, URA Finale and Trackblazer | 3,170 |
+| Racing, Unity Cup and Trackblazer | 13,282 |
 | Combined | 16,452 |
 
 Since `+` cannot appear here, the only question is whether `+` copies help the normal version.

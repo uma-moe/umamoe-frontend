@@ -5,6 +5,7 @@
     SupportCardPickerOption
   } from '@/components/pickers/picker-types';
   import { factorOptions } from '@/lib/game-data/factors/factors';
+  import { scenarioLabel } from '@/lib/game-data/scenarios';
   import type {
     InheritanceFilterMode,
     InheritanceSearchFilters
@@ -58,23 +59,6 @@
   }
 
   const factorLabels = $derived(new Map(factorOptions().map((factor) => [factor.id, factor.text])));
-
-  const scenarioLabels = [
-    '',
-    'URA Finals',
-    'Unity Cup',
-    'Grand Concert',
-    'Trackblazer',
-    'Grand Masters',
-    'Project L’Arc',
-    'U.A.F.',
-    'Great Food Festival',
-    'Run! Mecha',
-    'Twinkle Legends',
-    'Design Your Island',
-    'Yukoma Hot Springs',
-    'Beyond Dreams'
-  ];
 
   const activeFilterViews = $derived.by<ActiveFilterView[]>(() => {
     const views: ActiveFilterView[] = [];
@@ -183,7 +167,7 @@
         }
       );
     filters.scenarioIds.forEach((id) =>
-      add(`scenario-${id}`, `Scenario: ${scenarioLabels[id] ?? id}`, 'default', () => {
+      add(`scenario-${id}`, `Scenario: ${scenarioLabel(id) ?? id}`, 'default', () => {
         filters.scenarioIds = filters.scenarioIds.filter((value) => value !== id);
       })
     );

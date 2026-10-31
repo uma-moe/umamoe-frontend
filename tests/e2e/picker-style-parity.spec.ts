@@ -359,7 +359,7 @@ test('Support picker shows readable cards and resets its search and filters on r
 
   await dialog.getByRole('combobox', { name: 'Type', exact: true }).click();
   await expect(dialog.getByRole('combobox', { name: 'Type', exact: true })).toBeFocused();
-  await expect(dialog.getByRole('option', { name: 'Wisdom', exact: true })).toBeVisible();
+  await expect(dialog.getByRole('option', { name: 'Wit', exact: true })).toBeVisible();
   await page.keyboard.press('Escape');
   await expect(dialog).toBeVisible();
   await search.fill('Kitasan Black');

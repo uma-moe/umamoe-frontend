@@ -112,6 +112,30 @@ it('preserves Angular query compilation and request serialization across the com
   }
 });
 
+it('accepts global scenario and support type names, and the older names saved queries use', async () => {
+  const queryData = await loadUqlQueryData();
+  const compiler = new UqlCompiler(queryData);
+  const witCard = queryData.supports.find((card) => card.type === 'intelligence');
+  if (!witCard) throw new Error('The support fixture has no Wit card.');
+
+  const scenarioQueries = [
+    ['Scenario = URA Finale', 'scenario_id = 1'],
+    ['Scenario = Aoharu', 'scenario_id = 2'],
+    ['Scenario = Trackblazer', 'scenario_id = 4'],
+    ['Scenario = MANT', 'scenario_id = 4'],
+    ['Scenario = Grand Masters', 'scenario_id = 5']
+  ];
+  for (const [query, compiled] of scenarioQueries) {
+    expect(validateInheritanceUql(query!, compiler), query).toMatchObject({ compiled });
+  }
+
+  const witQuery = validateInheritanceUql(`Support card = ${witCard.name} (Wit)`, compiler);
+  const wisdomQuery = validateInheritanceUql(`Support card = ${witCard.name} (Wisdom)`, compiler);
+
+  expect(witQuery.state).toBe('valid');
+  expect(wisdomQuery).toMatchObject({ state: 'valid', compiled: witQuery.compiled });
+});
+
 it('retains literal data and blocks unresolved or invalid query payloads instead of dropping the filter', async () => {
   const compiler = new UqlCompiler(await loadUqlQueryData());
   const query = "trainer_name = 'a  b' and Followers >= 1";

@@ -18,6 +18,9 @@ import type { SupportCardData } from '@/lib/game-data/support-cards/support-card
 import type { RaceQueryValue } from '@/lib/game-data/racing/races';
 import { scenarios } from '@/lib/game-data/scenarios';
 
+/** Support types older queries wrote out; the game calls the type Wit. */
+const LEGACY_SUPPORT_TYPE_NAMES: Record<string, string> = { wisdom: 'wit', intelligence: 'wit' };
+
 export interface UqlCharacter {
   id: string;
   name: string;
@@ -98,8 +101,6 @@ export class UqlCompiler {
     .filter((factor) => factor.valueContext === 'green-factor')
     .map((factor) => ({ id: factor.factorId }));
 
-  private readonly scenarioOptionIds = scenarios.map((scenario) => scenario.id);
-
   constructor(
     private readonly queryData: UqlQueryData = {
       characters: [],
@@ -170,10 +171,6 @@ export class UqlCompiler {
     ).trim();
   }
 
-  private getScenarioName(id: number): string {
-    return scenarios.find((scenario) => scenario.id === id)?.label ?? `Scenario ${id}`;
-  }
-
   private getSupportCardTypeDisplay(type: string): string {
     return (
       (
@@ -182,7 +179,7 @@ export class UqlCompiler {
           stamina: 'Stamina',
           power: 'Power',
           guts: 'Guts',
-          intelligence: 'Wisdom',
+          intelligence: 'Wit',
           friend: 'Friend'
         } as Record<string, string>
       )[type] ?? 'Unknown'
@@ -1868,11 +1865,13 @@ export class UqlCompiler {
     const value = rawValue.trim().replace(/^['"]|['"]$/g, '');
     if (/^\d+$/.test(value)) return value;
     const normalizedValue = this.normalizeUqlName(value);
-    return (
-      this.scenarioOptionIds
-        .find((id) => this.normalizeUqlName(this.getScenarioName(id)) === normalizedValue)
-        ?.toString() ?? null
+    const scenario = scenarios.find((entry) =>
+      [entry.label, ...(entry.aliases ?? [])].some(
+        (name) => this.normalizeUqlName(name) === normalizedValue
+      )
     );
+
+    return scenario ? String(scenario.id) : null;
   }
 
   private compileFriendlySupportCardExpressions(query: string): string {
@@ -2668,7 +2667,8 @@ export class UqlCompiler {
     let rarity: string | undefined;
     const typeMatch = text.match(/\s*\(([^)]+)\)\s*$/);
     if (typeMatch) {
-      type = this.normalizeUqlName(typeMatch[1]!);
+      const typeName = this.normalizeUqlName(typeMatch[1]!);
+      type = LEGACY_SUPPORT_TYPE_NAMES[typeName] ?? typeName;
       text = text.slice(0, typeMatch.index).trim();
     }
 

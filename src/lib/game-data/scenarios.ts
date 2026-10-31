@@ -12,13 +12,42 @@ import island from '@/assets/images/scenario/scenario_logo_011.webp';
 import yukoma from '@/assets/images/scenario/scenario_logo_012.webp';
 import dreams from '@/assets/images/scenario/scenario_logo_013.webp';
 
-export const scenarios = [
+export interface Scenario {
+  id: number;
+  /** The name the global client uses, or the best-known English name for scenarios it has not released. */
+  label: string;
+  /** Older and Japanese-era names that queries written before the rename still use. */
+  aliases?: string[];
+  image: string;
+  width: number;
+  height: number;
+  viewBox: string;
+}
+
+export const scenarios: Scenario[] = [
   // View boxes exclude transparent asset padding so logos share a visible height.
-  { id: 1, label: 'URA Finals', image: ura, width: 1052, height: 886, viewBox: '20 0 986 866' },
-  { id: 2, label: 'Unity Cup', image: unity, width: 673, height: 368, viewBox: '12 13 638 333' },
+  {
+    id: 1,
+    label: 'URA Finale',
+    aliases: ['URA Finals', 'URA'],
+    image: ura,
+    width: 1052,
+    height: 886,
+    viewBox: '20 0 986 866'
+  },
+  {
+    id: 2,
+    label: 'Unity Cup',
+    aliases: ['Aoharu', 'Aoharu Cup'],
+    image: unity,
+    width: 673,
+    height: 368,
+    viewBox: '12 13 638 333'
+  },
   {
     id: 3,
     label: 'Grand Concert',
+    aliases: ['Grand Live', 'GL'],
     image: grandConcert,
     width: 512,
     height: 512,
@@ -27,6 +56,7 @@ export const scenarios = [
   {
     id: 4,
     label: 'Trackblazer',
+    aliases: ['MANT', 'Make a New Track'],
     image: trackblazer,
     width: 750,
     height: 450,
@@ -34,14 +64,31 @@ export const scenarios = [
   },
   {
     id: 5,
-    label: 'Grand Masters',
+    label: 'Grandmasters',
+    aliases: ['Grand Masters'],
     image: grandMasters,
     width: 916,
     height: 730,
     viewBox: '8 70 904 571'
   },
-  { id: 6, label: 'Project L’Arc', image: larc, width: 826, height: 516, viewBox: '4 11 818 495' },
-  { id: 7, label: 'U.A.F.', image: uaf, width: 893, height: 576, viewBox: '2 53 893 462' },
+  {
+    id: 6,
+    label: 'Project L’Arc',
+    aliases: ['LArc', "L'Arc"],
+    image: larc,
+    width: 826,
+    height: 516,
+    viewBox: '4 11 818 495'
+  },
+  {
+    id: 7,
+    label: 'U.A.F.',
+    aliases: ['UAF'],
+    image: uaf,
+    width: 893,
+    height: 576,
+    viewBox: '2 53 893 462'
+  },
   {
     id: 8,
     label: 'Great Food Festival',
@@ -91,3 +138,8 @@ export const scenarios = [
     viewBox: '0 68 512 288'
   }
 ];
+
+/** The scenario's display name, or undefined for an id this list does not know yet. */
+export function scenarioLabel(id: number): string | undefined {
+  return scenarios.find((scenario) => scenario.id === id)?.label;
+}

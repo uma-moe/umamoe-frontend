@@ -9,7 +9,7 @@ import { getRankInfoFromScore } from '@/lib/rank';
 import { encodedSkills } from '@/lib/profile/veterans/profile-veterans';
 import { mergeVeterans } from '@/lib/veterans/records/veteran-profile';
 import { profileRepository, type ProfileVeteran } from '@/pages/profile/profile-repository';
-import { scenarios } from '@/pages/veterans/collection/veteran-adapter';
+import { scenarioLabel } from '@/lib/game-data/scenarios';
 import { deviceVeteranParents } from '@/pages/veterans/collection/veteran-library';
 import { simulatorUmaFromVeteran, type SimulatorUma } from '../../simulator-uma';
 import { RUNNING_STYLES } from '../trainee';
@@ -89,7 +89,7 @@ export async function loadVeteranEntries(
         image: veteran.card_id ? characterImagePath(veteran.card_id) : undefined,
         rank: rank ?? '',
         scenario: veteran.scenario_id
-          ? (scenarios[veteran.scenario_id] ?? 'Scenario ' + veteran.scenario_id)
+          ? (scenarioLabel(veteran.scenario_id) ?? 'Scenario ' + veteran.scenario_id)
           : undefined,
         detail: STYLE_NAMES[uma.trainee.runningStyle],
         affinity: Number.NaN,

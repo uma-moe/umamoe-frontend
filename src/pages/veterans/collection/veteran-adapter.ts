@@ -1,25 +1,10 @@
 import { characterImagePath } from '@/lib/game-data/characters';
 import { factorMetadata } from '@/lib/game-data/factors/factors';
 import { getRankInfoFromScore } from '@/lib/rank';
+import { scenarioLabel } from '@/lib/game-data/scenarios';
 import type { VeteranRecord } from '@/lib/veterans/generated/veteran-record';
 import type { VeteranUiRecord, VeteranSparkGroup } from '@/components/game/veteran-ui-types';
 import type { SparkTone, SparkSource } from '@/components/sparks/SparkItem.svelte';
-
-export const scenarios: Record<number, string> = {
-  1: 'URA Finals',
-  2: 'Unity Cup',
-  3: 'Grand Concert',
-  4: 'Trackblazer',
-  5: 'Grand Masters',
-  6: 'Project L’Arc',
-  7: 'U.A.F.',
-  8: 'Great Food Festival',
-  9: 'Run! Mecha',
-  10: 'Twinkle Legends',
-  11: 'Design Your Island',
-  12: 'Yukoma Hot Springs',
-  13: 'Beyond Dreams'
-};
 
 function tone(type: number | undefined): SparkTone {
   if (type === 0) return 'blue';
@@ -94,7 +79,7 @@ export function veteranToUi(
     rank,
     score: record.rankScore ?? undefined,
     scenario: record.scenarioId
-      ? (scenarios[record.scenarioId] ?? `Scenario ${record.scenarioId}`)
+      ? (scenarioLabel(record.scenarioId) ?? `Scenario ${record.scenarioId}`)
       : undefined,
     detail: `Card ${record.cardId}`,
     workspace,

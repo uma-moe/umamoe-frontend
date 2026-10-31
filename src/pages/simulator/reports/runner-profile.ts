@@ -40,7 +40,7 @@ export function raceAptitudes(uma: SimulatorUma, course?: RaceCourse): RaceAptit
   return [
     {
       key: 'surface',
-      label: SURFACES[surface] ?? 'Surface',
+      label: SURFACES[surface] ?? 'Track',
       grade: grade(uma.trainee.groundAptitudes[surface])
     },
     {

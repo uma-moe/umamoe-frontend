@@ -44,16 +44,16 @@ export const whiteSparks = [
 ];
 
 export const aptitudeFixtures = [
-  { id: 'turf', group: 'Surface', label: 'Turf', grade: 'A' as const },
-  { id: 'dirt', group: 'Surface', label: 'Dirt', grade: 'G' as const },
+  { id: 'turf', group: 'Track', label: 'Turf', grade: 'A' as const },
+  { id: 'dirt', group: 'Track', label: 'Dirt', grade: 'G' as const },
   { id: 'sprint', group: 'Distance', label: 'Sprint', grade: 'F' as const },
   { id: 'mile', group: 'Distance', label: 'Mile', grade: 'F' as const },
   { id: 'medium', group: 'Distance', label: 'Medium', grade: 'A' as const },
   { id: 'long', group: 'Distance', label: 'Long', grade: 'S' as const },
-  { id: 'runner', group: 'Style', label: 'Runner', grade: 'B' as const },
-  { id: 'leader', group: 'Style', label: 'Leader', grade: 'A' as const },
-  { id: 'betweener', group: 'Style', label: 'Betweener', grade: 'D' as const },
-  { id: 'chaser', group: 'Style', label: 'Chaser', grade: 'F' as const }
+  { id: 'front', group: 'Style', label: 'Front', grade: 'B' as const },
+  { id: 'pace', group: 'Style', label: 'Pace', grade: 'A' as const },
+  { id: 'late', group: 'Style', label: 'Late', grade: 'D' as const },
+  { id: 'end', group: 'Style', label: 'End', grade: 'F' as const }
 ];
 
 export const statFixtures = [
@@ -100,8 +100,8 @@ export const veteranFixture: VeteranUiRecord = {
   image: mejiroMcQueenImage,
   rank: 'UE1',
   score: 29412,
-  scenario: 'Grand Masters',
-  detail: 'Long, Leader',
+  scenario: 'Grandmasters',
+  detail: 'Long, Pace',
   workspace: 'Local',
   updated: '4 min ago',
   affinity: 83,
@@ -330,14 +330,14 @@ export const characterPickerOptions = [
     id: 'mcqueen',
     name: 'Mejiro McQueen',
     image: mejiroMcQueenImage,
-    subtitle: 'Long, Leader',
+    subtitle: 'Long, Pace',
     affinity: 83
   },
   {
     id: 'oguri',
     name: 'Oguri Cap',
     image: oguriCapImage,
-    subtitle: 'Mile, Betweener',
+    subtitle: 'Mile, Late',
     affinity: 72
   },
   {

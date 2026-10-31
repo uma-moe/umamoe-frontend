@@ -314,7 +314,7 @@ test('Team Stadium cycles complete distance squads with three desktop columns an
   await stadium.getByRole('button', { name: 'Previous distance' }).click();
   await expect(panel).toHaveAccessibleName('Dirt');
   await stadium.getByRole('button', { name: 'Next distance' }).click();
-  for (const distance of ['Sprint', 'Mile', 'Middle', 'Long', 'Dirt']) {
+  for (const distance of ['Sprint', 'Mile', 'Medium', 'Long', 'Dirt']) {
     await expect(panel).toHaveAccessibleName(distance);
     await expect(panel.locator('.stadium-member')).toHaveCount(3);
     await stadium.getByRole('button', { name: 'Next distance' }).click();

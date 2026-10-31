@@ -132,7 +132,7 @@
       },
       {
         id: 'surface',
-        label: SURFACES[surface] ?? 'Surface',
+        label: SURFACES[surface] ?? 'Track',
         list: 'groundAptitudes',
         index: surface
       },

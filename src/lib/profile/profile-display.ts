@@ -4,6 +4,7 @@ import type {
   StadiumMember
 } from '@/pages/profile/profile-repository';
 import { normalizeInheritanceRecord } from '@/lib/inheritance/search/inheritance-search';
+import { scenarioLabel } from '@/lib/game-data/scenarios';
 import { effectiveMemberFans, type ClubMemberSnapshot } from '@/lib/clubs/member-metrics';
 
 export function profileInheritanceRecord(
@@ -149,7 +150,7 @@ export function buildCircleMemberships(
 
 export function distanceName(value: number | null): string {
   return (
-    ({ 1: 'Sprint', 2: 'Mile', 3: 'Middle', 4: 'Long', 5: 'Dirt' } as Record<number, string>)[
+    ({ 1: 'Sprint', 2: 'Mile', 3: 'Medium', 4: 'Long', 5: 'Dirt' } as Record<number, string>)[
       value ?? 0
     ] ?? (value == null ? '-' : `Dist ${value}`)
   );
@@ -163,19 +164,8 @@ export function runningStyleName(value: number | null): string {
 }
 
 export function scenarioName(value: number | null | undefined): string {
-  return (
-    (
-      {
-        1: 'URA',
-        2: 'Aoharu',
-        3: 'GL',
-        4: 'MANT',
-        5: 'Grand Masters',
-        6: 'LArc',
-        7: 'U.A.F.'
-      } as Record<number, string>
-    )[value ?? 0] ?? (value == null ? '-' : `Scenario ${value}`)
-  );
+  if (value == null) return '-';
+  return scenarioLabel(value) ?? `Scenario ${value}`;
 }
 
 export function aptitudeGrade(

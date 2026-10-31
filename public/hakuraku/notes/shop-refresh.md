@@ -1,4 +1,4 @@
-# MANT shop refresh data
+# Trackblazer shop refresh data
 
 I've got around 200 shop refreshes of data for each one, enjoy.
 

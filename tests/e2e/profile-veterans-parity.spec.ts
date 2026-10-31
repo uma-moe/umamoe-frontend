@@ -461,7 +461,7 @@ test('Veteran details retain support deck, stats, aptitudes, races, sparks, skil
   expect(Math.abs(bounds.y + bounds.height / 2 - page.viewportSize()!.height / 2)).toBeLessThan(2);
   expect(bounds.height).toBeLessThan(page.viewportSize()!.height);
   const identity = dialog.locator('.dialog-panel > header .veteran-identity');
-  await expect(identity.locator('.scenario')).toHaveText('Grand Masters');
+  await expect(identity.locator('.scenario')).toHaveText('Grandmasters');
   await expect(identity.locator('.race-style')).toContainText('Long, Pace');
   await expect(identity.getByLabel('5 rarity stars')).toHaveText('★★★★★');
   for (const selector of ['.scenario', '.rarity']) {

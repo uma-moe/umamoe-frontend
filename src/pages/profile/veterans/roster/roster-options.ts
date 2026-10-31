@@ -87,7 +87,7 @@ export const distanceOptions = [
   { value: '', label: 'Any distance' },
   { value: '1', label: 'Sprint' },
   { value: '2', label: 'Mile' },
-  { value: '3', label: 'Middle' },
+  { value: '3', label: 'Medium' },
   { value: '4', label: 'Long' },
   { value: '5', label: 'Dirt' }
 ];

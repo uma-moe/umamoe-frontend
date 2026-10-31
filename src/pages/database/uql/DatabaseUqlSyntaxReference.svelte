@@ -177,7 +177,7 @@
           <dd>Selected support card with a minimum limit break.</dd>
         </div>
         <div>
-          <dt>Scenario = Aoharu</dt>
+          <dt>Scenario = Unity Cup</dt>
           <dd>Readable scenario name compiled to its scenario ID.</dd>
         </div>
         <div>

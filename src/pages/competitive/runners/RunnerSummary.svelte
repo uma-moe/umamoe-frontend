@@ -46,7 +46,7 @@
       class="race-aptitudes"
       aria-label="Race aptitudes"
     >
-      {#each [['distance', 'Distance'], ['surface', 'Surface'], ['style', 'Style']] as [key, label]}
+      {#each [['distance', 'Distance'], ['surface', 'Track'], ['style', 'Style']] as [key, label]}
         {@const grade = grades[(runner.aptitudes[key as keyof RaceRunner['aptitudes']] ?? 0) - 1]}
         <span>
           {label}{#if grade}

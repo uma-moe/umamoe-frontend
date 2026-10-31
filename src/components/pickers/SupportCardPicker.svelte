@@ -56,7 +56,7 @@
 
       return {
         value,
-        label: value === 'Wit' ? 'Wisdom' : value,
+        label: value,
         image: `/assets/images/icon/stats/${value.toLowerCase()}.webp`
       };
     }
@@ -221,8 +221,8 @@
             />
             <img
               src={`/assets/images/icon/stats/${option.type.toLowerCase()}.webp`}
-              alt={`${option.type === 'Wit' ? 'Wisdom' : option.type} support`}
-              title={`${option.type === 'Wit' ? 'Wisdom' : option.type} support`}
+              alt={`${option.type} support`}
+              title={`${option.type} support`}
               width="18"
               height="18"
             />

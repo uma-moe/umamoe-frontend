@@ -279,9 +279,9 @@
           <div class="filter-panel">
             <header><h3>Skill filters</h3></header>
             <div class="filter-group">
-              <span class="group-label">Surface</span>
+              <span class="group-label">Track</span>
               <SegmentedControl
-                label="Surface"
+                label="Track"
                 compact
                 options={surfaceOptions}
                 bind:value={surface}
@@ -289,9 +289,9 @@
               />
             </div>
             <div class="filter-group">
-              <span class="group-label">Length</span>
+              <span class="group-label">Distance</span>
               <SegmentedControl
-                label="Length"
+                label="Distance"
                 compact
                 options={distanceOptions}
                 bind:value={distance}

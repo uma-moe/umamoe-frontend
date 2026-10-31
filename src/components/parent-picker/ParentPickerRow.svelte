@@ -12,11 +12,8 @@
     type parentAffinityDetails,
     type SelectableParent
   } from '@/lib/veterans/parents/parent-picker';
-  import {
-    combineVeteranFactors,
-    sparkGroups,
-    scenarios
-  } from '@/pages/veterans/collection/veteran-adapter';
+  import { combineVeteranFactors, sparkGroups } from '@/pages/veterans/collection/veteran-adapter';
+  import { scenarioLabel } from '@/lib/game-data/scenarios';
 
   interface Props {
     parent: SelectableParent;
@@ -71,7 +68,7 @@
       image: character.cardId ? characterImagePath(character.cardId) : undefined,
       rank: '',
       scenario: parent.scenario_id
-        ? (scenarios[parent.scenario_id] ?? `Scenario ${parent.scenario_id}`)
+        ? (scenarioLabel(parent.scenario_id) ?? `Scenario ${parent.scenario_id}`)
         : undefined,
       detail: parent.name || parent.trainerName,
       affinity: affinity

@@ -24,7 +24,7 @@
   } from '@/lib/tierlist/tierlist';
   import { tierlistRepository } from './tierlist-repository';
 
-  const types = ['Speed', 'Stamina', 'Power', 'Guts', 'Intelligence'];
+  const types = ['Speed', 'Stamina', 'Power', 'Guts', 'Wit'];
 
   let data = $state<TierlistData>();
   let loading = $state(true);

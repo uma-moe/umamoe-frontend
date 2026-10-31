@@ -96,7 +96,7 @@
       },
       {
         id: 'surface',
-        label: 'Surface',
+        label: 'Track',
         list: 'groundAptitudes',
         index: (course?.surface ?? 1) - 1
       },

@@ -478,7 +478,7 @@ export function createDatabaseUqlLanguage(
     },
     {
       label: 'Scenario',
-      insertText: 'Scenario = Aoharu',
+      insertText: 'Scenario = Unity Cup',
       kind: 'snippet',
       detail: 'Filter by the training scenario ID using its readable name'
     },
@@ -878,13 +878,7 @@ export function createDatabaseUqlLanguage(
   }));
 
   const supportSuggestions: UqlSuggestion[] = supports.map((card) => {
-    const label =
-      card.title +
-      ' [' +
-      card.tags[1] +
-      '] (' +
-      (card.tags[0] === 'Wit' ? 'Wisdom' : card.tags[0]) +
-      ')';
+    const label = card.title + ' [' + card.tags[1] + '] (' + card.tags[0] + ')';
 
     return {
       label,

@@ -104,7 +104,7 @@ function describeTerm(term: Term, trackName: (id: number) => string): string | u
     case 'distance_type':
       return named(DISTANCES, value, 'Distance');
     case 'ground_type':
-      return named(SURFACES, value, 'Surface');
+      return named(SURFACES, value, 'Track');
     case 'ground_condition':
       return `${op === '!=' ? 'Not ' : ''}${named(GROUNDS, value, 'Ground')} ground`;
     case 'weather':

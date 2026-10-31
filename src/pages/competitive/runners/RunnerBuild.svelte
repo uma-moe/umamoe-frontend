@@ -84,7 +84,7 @@
       group: id.includes('distance')
         ? 'Distance'
         : id.includes('ground') || id === 'surface'
-          ? 'Surface'
+          ? 'Track'
           : 'Style',
       grade: grades[Math.max(0, value - 1)] ?? 'G'
     }))
@@ -148,7 +148,7 @@
         )
       },
       {
-        group: 'Surface',
+        group: 'Track',
         label: surfaceKey ? (surfaceKey === 'turf' ? 'Turf' : 'Dirt') : undefined,
         grade: aptitude(
           surfaceKey ? 'proper_ground_' + surfaceKey : undefined,
