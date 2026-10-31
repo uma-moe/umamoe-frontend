@@ -11,6 +11,7 @@
     id,
     source = 'family',
     expanded = false,
+    layout = 'wrap',
     selectedFactors = [],
     queryMatches = [],
     onfactor,
@@ -20,6 +21,8 @@
     id?: string;
     source?: 'family' | 'parent' | 'p1' | 'p2';
     expanded?: boolean;
+    /** `rows` lays each tone out two full-width sparks per line, like the card's learned skills. */
+    layout?: 'wrap' | 'rows';
     selectedFactors?: VeteranFactorFilter[];
     queryMatches?: VeteranQueryMatch[];
     onfactor?: (filter: VeteranFactorFilter) => void;
@@ -39,6 +42,7 @@
 
 <div
   class="spark-groups"
+  class:rows={layout === 'rows'}
   {id}
 >
   {#each ['blue', 'pink', 'green', 'white'] as tone}
@@ -117,6 +121,35 @@
   }
   .spark-group[data-tone='white'] {
     flex-basis: 100%;
+  }
+  .rows {
+    display: grid;
+    container-type: inline-size;
+  }
+  .rows .spark-group {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 4px 6px;
+  }
+  .rows .spark-filter {
+    min-width: 0;
+  }
+  .rows .spark-filter :global(.spark) {
+    width: 100%;
+    min-height: 26px;
+    padding-block: 3px;
+    border-radius: 6px;
+  }
+  .rows .spark-filter :global(.name) {
+    flex: 1;
+  }
+  .rows .white-count {
+    justify-self: start;
+  }
+  @container (max-width: 300px) {
+    .rows .spark-group {
+      grid-template-columns: minmax(0, 1fr);
+    }
   }
   .spark-filter {
     max-width: 100%;

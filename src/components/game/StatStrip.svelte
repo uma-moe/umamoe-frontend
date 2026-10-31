@@ -14,7 +14,8 @@
     label?: string;
     compact?: boolean;
     framed?: boolean;
-    presentation?: 'labels' | 'icons' | 'inline' | 'values';
+    /** `fields` mirrors the simulator's stat inputs: a label above a boxed icon and value. */
+    presentation?: 'labels' | 'icons' | 'inline' | 'values' | 'fields';
   }
 
   let {
@@ -34,6 +35,7 @@
     class:icon-stats={presentation === 'icons'}
     class:inline-stats={presentation === 'inline'}
     class:values={presentation === 'values'}
+    class:field-stats={presentation === 'fields'}
     aria-label={label}
     style={`--stat-count:${Math.max(1, items.length)}`}
   >
@@ -43,24 +45,40 @@
         data-tone={item.tone ?? 'neutral'}
         title={item.label + ': ' + item.value + (item.unit ?? '')}
       >
-        {#if item.icon}
-          <img
-            src={item.icon}
-            alt=""
-            decoding="async"
-          />
-        {/if}
-        <dd>
-          {item.value}{#if item.unit}
-            <small>{item.unit}</small>
+        {#if presentation === 'fields'}
+          <dt>{item.label}</dt>
+          <dd>
+            {#if item.icon}
+              <img
+                src={item.icon}
+                alt=""
+                decoding="async"
+              />
+            {/if}
+            {item.value}{#if item.unit}
+              <small>{item.unit}</small>
+            {/if}
+          </dd>
+        {:else}
+          {#if item.icon}
+            <img
+              src={item.icon}
+              alt=""
+              decoding="async"
+            />
           {/if}
-        </dd>
-        <dt
-          class:sr-only={(presentation === 'icons' || presentation === 'values') &&
-            Boolean(item.icon)}
-        >
-          {item.label}
-        </dt>
+          <dd>
+            {item.value}{#if item.unit}
+              <small>{item.unit}</small>
+            {/if}
+          </dd>
+          <dt
+            class:sr-only={(presentation === 'icons' || presentation === 'values') &&
+              Boolean(item.icon)}
+          >
+            {item.label}
+          </dt>
+        {/if}
       </div>
     {/each}
   </dl>

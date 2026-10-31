@@ -4,7 +4,7 @@
   import type { VeteranUiRecord } from '@/components/game/veteran-ui-types';
   import type { LineageBranch, LineageNodeData } from '@/components/lineage/lineage-types';
   import type { RaceHistoryEntry } from '@/lib/game-data/racing/races';
-  import { encodedSkills } from '@/lib/profile/veterans/profile-veterans';
+  import { encodedSkills, veteranCreationTime } from '@/lib/profile/veterans/profile-veterans';
   import {
     resolveEncodedSkill,
     skillImage,
@@ -72,11 +72,8 @@
   );
 
   const spTotal = $derived(skillPointTotal(skillCatalog, encodedSkills(veteran)));
-  const created = $derived(
-    veteran.creation_time && Number.isFinite(Date.parse(veteran.creation_time))
-      ? new Date(veteran.creation_time).toLocaleDateString()
-      : ''
-  );
+  const trainedAt = $derived(veteranCreationTime(veteran));
+  const created = $derived(trainedAt === null ? '' : new Date(trainedAt).toLocaleDateString());
 
   function inspectFamily(node: LineageNodeData) {
     sparkSource = node.role === 'main' ? 'main' : node.id.split(':').pop()!;

@@ -13,7 +13,8 @@
     label?: string;
     compact?: boolean;
     stretch?: boolean;
-    layout?: 'rows' | 'columns';
+    /** `fields` boxes each grade like the simulator's aptitude selects, one group per row. */
+    layout?: 'rows' | 'columns' | 'fields';
     gradeFirst?: boolean;
   }
 
@@ -46,6 +47,7 @@
     class:compact
     class:stretch
     class:columns={layout === 'columns'}
+    class:fields={layout === 'fields'}
     class:grade-first={gradeFirst}
     aria-label={label}
   >
@@ -290,6 +292,63 @@
   .compact.grade-first:not(.columns) :global(.aptitude) {
     width: 18px;
     height: 18px;
+  }
+  .fields {
+    width: 100%;
+    gap: 4px;
+    padding: 0;
+    background: transparent;
+  }
+  .fields .aptitude-group {
+    grid-template-columns: 46px repeat(4, minmax(0, 1fr));
+    gap: 4px;
+  }
+  .fields .aptitude-items {
+    display: contents;
+  }
+  .fields h4 {
+    color: var(--text-primary);
+    font-size: 10px;
+    font-weight: 600;
+    letter-spacing: 0;
+    text-transform: none;
+  }
+  .fields .aptitude-item {
+    min-width: 0;
+    min-height: 26px;
+    justify-content: flex-start;
+    gap: 5px;
+    padding: 0 6px 0 3px;
+    border: 1px solid var(--factor-field-border);
+    border-radius: 6px;
+    background: var(--factor-field-bg);
+  }
+  .fields .aptitude-item > span {
+    order: 1;
+    color: var(--factor-field-text);
+    font-size: 10px;
+  }
+  .fields :global(.aptitude) {
+    width: 18px;
+    height: 18px;
+  }
+  @container (max-width: 380px) {
+    .fields .aptitude-group {
+      grid-template-columns: 40px repeat(4, minmax(0, 1fr));
+      gap: 3px;
+    }
+    .fields h4,
+    .fields .aptitude-item > span {
+      font-size: 9px;
+    }
+    .fields .aptitude-item {
+      gap: 2px;
+      padding: 0 2px;
+    }
+    .fields :global(.aptitude) {
+      width: 16px;
+      height: 16px;
+    }
   }
   @container (max-width:330px) {
     .compact.grade-first:not(.columns) {

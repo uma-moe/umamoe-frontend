@@ -81,6 +81,19 @@ describe('profile Veteran parity logic', () => {
     expect(veterans.map((v) => v.id)).toEqual([1, 2, 3, 4, 5]);
   });
 
+  it('sorts uploaded veterans by the create_time the backend reports', () => {
+    const veterans = [
+      { ...base, id: 1, create_time: '2026-03-01T10:00:00Z' },
+      { ...base, id: 2, create_time: '2026-05-01T10:00:00Z' },
+      { ...base, id: 3, creation_time: '2026-04-01T10:00:00Z' }
+    ];
+
+    const state = filters(computeVeteranStatBounds(veterans));
+    const newestFirst = filterAndSortVeterans(veterans, state, 'creation_time', 'desc', new Map());
+
+    expect(newestFirst.map((v) => v.id)).toEqual([2, 3, 1]);
+  });
+
   it('matches multiple distance and style choices, including empty and unrestricted selections', () => {
     const veterans = [
       base,

@@ -281,3 +281,67 @@ dd small {
     font-size: 10px;
   }
 }
+.field-stats {
+  gap: 6px;
+  overflow: visible;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+}
+.field-stats > div,
+.field-stats > div + div {
+  min-height: 0;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  grid-template-rows: auto auto;
+  align-content: start;
+  gap: 4px;
+  padding: 0;
+  border: 0;
+  text-align: left;
+}
+.field-stats dt {
+  grid-column: 1;
+  grid-row: 1;
+  color: var(--text-primary);
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0;
+  line-height: 1.2;
+  text-transform: none;
+}
+.field-stats dd {
+  grid-column: 1;
+  grid-row: 2;
+  min-width: 0;
+  min-height: 28px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 0 6px;
+  border: 1px solid var(--factor-field-border);
+  border-radius: 6px;
+  background: var(--factor-field-bg);
+  color: var(--factor-field-text);
+  font-size: 12px;
+  font-weight: 600;
+}
+.field-stats img {
+  width: 16px;
+  height: 16px;
+  flex: 0 0 auto;
+}
+@container (max-width: 330px) {
+  .field-stats {
+    gap: 4px;
+  }
+  .field-stats dd {
+    gap: 4px;
+    padding: 0 4px;
+    font-size: 11px;
+  }
+  .field-stats img {
+    width: 13px;
+    height: 13px;
+  }
+}

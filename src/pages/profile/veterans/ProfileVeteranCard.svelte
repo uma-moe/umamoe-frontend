@@ -5,6 +5,7 @@
   import {
     encodedSkills,
     veteranBaseStat,
+    veteranCreationTime,
     veteranFactors,
     veteranFactorTotals,
     type VeteranFactorFilter
@@ -101,11 +102,8 @@
   );
 
   const spTotal = $derived(skillPointTotal(skillCatalog, encodedSkills(veteran)));
-  const created = $derived(
-    veteran.creation_time && Number.isFinite(Date.parse(veteran.creation_time))
-      ? new Date(veteran.creation_time).toLocaleDateString()
-      : ''
-  );
+  const trainedAt = $derived(veteranCreationTime(veteran));
+  const created = $derived(trainedAt === null ? '' : new Date(trainedAt).toLocaleDateString());
 
   function openDetails(event: MouseEvent) {
     (event.currentTarget as HTMLButtonElement).focus({ preventScroll: true });
@@ -164,16 +162,14 @@
       <StatStrip
         items={stats}
         label={baseStats ? 'Base stats' : 'Displayed stats'}
-        presentation="inline"
+        presentation="fields"
       />
     </div>
     {#if summary.aptitudes?.length}
       <div class="card-aptitudes">
         <AptitudeGrid
           items={summary.aptitudes}
-          compact
-          stretch
-          gradeFirst
+          layout="fields"
         />
       </div>
     {/if}
@@ -207,6 +203,7 @@
           id={id + '-sparks'}
           source={sparkSource}
           expanded={expandedSection === 'sparks'}
+          layout="rows"
           {selectedFactors}
           {queryMatches}
           {onfactor}
@@ -238,6 +235,7 @@
                 level={`Lv.${resolved.level}`}
                 rarity={skillRarity(resolved.skill, resolved.inherited)}
                 compact
+                fill
               />
             {/snippet}
             {#if onskill}
@@ -382,14 +380,15 @@
     font-size: 10px;
     font-weight: 400;
   }
+  /* Two full-width rows per line, like the simulator's skill editor, so names line up. */
   .skill-list {
     min-width: 0;
-    display: flex;
-    flex-wrap: wrap;
-    gap: 4px;
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 4px 6px;
   }
   .skill-filter {
-    max-width: 100%;
+    min-width: 0;
     display: flex;
     align-items: center;
     min-height: 24px;
@@ -421,9 +420,6 @@
     font-size: 10px;
     color: var(--color-text-muted);
   }
-  .skill-list {
-    gap: 4px;
-  }
   .skill-filter:hover {
     filter: brightness(1.15);
   }
@@ -431,15 +427,16 @@
     display: none;
   }
   .skill-filter :global(.skill-chip) {
-    min-height: 22px;
+    min-height: 26px;
     font-size: 10px;
   }
   .skill-filter :global(.skill-chip img) {
-    width: 22px;
-    height: 22px;
+    width: 26px;
+    height: 26px;
   }
   .skill-filter :global(.skill-body) {
-    min-height: 22px;
+    min-height: 26px;
+    align-items: center;
   }
   .skill-filter :global(.skill-name) {
     white-space: normal;
@@ -489,6 +486,9 @@
     outline-offset: -2px;
   }
   @container (max-width:330px) {
+    .skill-list {
+      grid-template-columns: minmax(0, 1fr);
+    }
     .card-open {
       padding: 8px;
     }

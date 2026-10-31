@@ -50,7 +50,7 @@ export function veteranBaseStat(value: number | null | undefined, mood: number):
 }
 
 export function veteranCreationTime(veteran: ProfileVeteran): number | null {
-  const timestamp = Date.parse(veteran.creation_time ?? '');
+  const timestamp = Date.parse(veteran.creation_time ?? veteran.create_time ?? '');
   return Number.isFinite(timestamp) ? timestamp : null;
 }
 

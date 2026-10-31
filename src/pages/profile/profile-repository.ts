@@ -224,6 +224,8 @@ export interface ProfileVeteran extends Omit<StadiumMember, 'id'> {
   inheritance?: VeteranInheritance | null;
   succession_chara_array?: SuccessionChara[] | null;
   creation_time?: string | null;
+  /** Uploaded veterans report their training date here instead of `creation_time`. */
+  create_time?: string | null;
   retired_at?: string | null;
   race_results?: number[] | null;
   win_saddle_id_array?: number[] | null;
