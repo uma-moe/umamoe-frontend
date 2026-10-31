@@ -2115,7 +2115,6 @@ test('Build search prices the skills on offer by hint and answers with the skill
 
   // When no skill she can afford gains her anything, she keeps the SP.
   nothing = true;
-  await page.locator('#build-seed').fill('7');
   await find.click();
   await expect(answer).toContainText('Buy nothing');
   await expect(result).toContainText('The optimizer selected no additional skills for this setup.');
@@ -2126,7 +2125,6 @@ test('Build search prices the skills on offer by hint and answers with the skill
 
   // An older optimizer service is named as such, not read as an answer, whether it answers or refuses a solo race.
   old = true;
-  await page.locator('#build-seed').fill('8');
   await find.click();
   await expect(result.getByRole('status')).toContainText('Optimizer report unavailable');
   await expect(result).not.toContainText('Buy nothing');
@@ -2134,7 +2132,6 @@ test('Build search prices the skills on offer by hint and answers with the skill
     route.fulfill({ status: 422, json: { error: 'runner count must be 2..=18' } });
 
   await page.route('**/api/sim/optimize', refuse);
-  await page.locator('#build-seed').fill('9');
   await find.click();
   await expect(result.getByRole('status')).toContainText('older build');
   await page.unroute('**/api/sim/optimize', refuse);
@@ -2142,7 +2139,6 @@ test('Build search prices the skills on offer by hint and answers with the skill
   old = false;
   nothing = false;
   field = true;
-  await page.locator('#build-seed').fill('10');
   await find.click();
   await expect(answer).toContainText('Buy 1 skill');
   // Worth stays in lengths; the races that check a build count runners beaten in those fields.
@@ -2157,7 +2153,6 @@ test('Build search prices the skills on offer by hint and answers with the skill
   field = false;
   // A skill that can never fire for her here (another distance, style, track or day) is skipped, and says why.
   inert = true;
-  await page.locator('#build-seed').fill('11');
   await find.click();
   const cantFire = result.getByRole('region', { name: /^Can’t fire here/ });
   await expect(cantFire).toContainText('Swinging Maestro');
