@@ -30,8 +30,14 @@
 
   const phone = $derived(width > 0 && width < 600);
   const cell = $derived(phone ? 46 : 62),
-    skill = $derived(phone ? 124 : 200),
+    skill = $derived(phone ? 140 : 200),
     gutter = 20;
+
+  // A phone keeps each skill on one line while its name still has room; otherwise the cells go beneath the name and
+  // share the full width, scrolling sideways only when even narrow cells do not fit.
+  const NARROW_CELL = 32;
+  const stacked = $derived(phone && width < skill + sources.length * (cell + 2));
+  const overflows = $derived(stacked && width < sources.length * (NARROW_CELL + 2));
 
   // As many side-by-side lists as fit, but never so many that each is only a few rows long.
   const columns = $derived(
@@ -128,6 +134,7 @@
 <ChartFrame
   id="simulation-skill-activation"
   title="Skill activation"
+  stickyContent
   description={'How often each learned skill activates over the ' +
     result.runs +
     ' races, least reliable first. Each cell is the share of races in which that runner activated the skill at least once. Skills that fire almost every race stay grey. The less often one fires, the stronger its amber, and red means it never fired. “—” means she has not learned it. Hover a cell for the exact count, its 95% interval and how long the skill lasts. Where each skill fires is on the heatmap under the race timeline, and what it is worth is in the ranking below.'}
@@ -154,9 +161,13 @@
   {:else}
     <div
       class="activation"
+      class:phone
+      class:stacked
+      class:overflows
       bind:clientWidth={width}
       style:--skill={skill + 'px'}
       style:--cell={cell + 'px'}
+      style:--narrow-cell={NARROW_CELL + 'px'}
       style:--runners={sources.length}
     >
       {#if !visible.length}
@@ -364,6 +375,51 @@
   }
   .line:not(.head):hover .skill :global(.skill-chip) {
     outline: 1px solid var(--border-primary);
+  }
+  /* A phone scrolls the list with the page, so the runner header sticks under the report's sticky bars. */
+  .activation.phone {
+    max-height: none;
+    overflow: visible;
+  }
+  .phone .line.head {
+    top: calc(var(--utility-height, 0px) + var(--report-nav-offset, 0px));
+    grid-template-rows: auto;
+  }
+  .phone .line.head > :is(.skill-head, .unit) {
+    grid-row: 1;
+    grid-column: 1;
+    padding-bottom: 4px;
+  }
+  .phone .unit {
+    justify-self: end;
+  }
+  .phone .skill {
+    width: 100%;
+  }
+  /* Stacked, each name sits over its cells; the faces head the cells, under one line of labels. */
+  .stacked .line {
+    grid-template-columns: repeat(var(--runners), minmax(var(--narrow-cell), 1fr));
+    row-gap: 3px;
+  }
+  .stacked .line:not(.head) {
+    margin-top: 10px;
+  }
+  .stacked .line.head {
+    grid-template-rows: auto auto;
+  }
+  .stacked .line.head > :is(.skill-head, .unit),
+  .stacked .skill {
+    grid-column: 1 / -1;
+  }
+  .stacked .rate.never {
+    font-size: 10px;
+  }
+  /* Cells too many for the width scroll sideways, and the header then stays in place above them. */
+  .activation.overflows {
+    overflow-x: auto;
+  }
+  .overflows .line.head {
+    position: static;
   }
   .key {
     display: flex;

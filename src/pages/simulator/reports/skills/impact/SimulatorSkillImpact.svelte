@@ -194,6 +194,7 @@
     <ChartFrame
       id="skill-impact-runner"
       title="Learned skills"
+      stickyContent
       description={impacts.available
         ? 'What each of ' +
           umas[active]!.name +

@@ -206,7 +206,6 @@
     white-space: nowrap;
   }
   .opponent {
-    height: 44px;
     vertical-align: bottom;
   }
   .opponent span {
@@ -318,6 +317,10 @@
   @media (max-width: 600px) {
     .corner {
       width: 130px;
+    }
+    .opponent :global(.face) {
+      width: 28px;
+      height: 28px;
     }
     .who b {
       max-width: 78px;

@@ -31,6 +31,8 @@
     compact?: boolean;
     maximize?: boolean;
     showHeader?: boolean;
+    /** Lets sticky rows inside the chart pin to the page; the plot still clips but is no longer a scroll container. */
+    stickyContent?: boolean;
   }
 
   let {
@@ -51,7 +53,8 @@
     surface = false,
     compact = false,
     maximize = false,
-    showHeader = true
+    showHeader = true,
+    stickyContent = false
   }: Props = $props();
 
   async function restoreExpandFocus() {
@@ -165,6 +168,7 @@
     {/if}
     <div
       class="plot"
+      class:sticky-content={stickyContent}
       aria-busy={state === 'loading'}
     >
       {#if state === 'ready' && children}
@@ -413,6 +417,9 @@
     display: flex;
     flex-direction: column;
     overflow: hidden;
+  }
+  .plot.sticky-content {
+    overflow: clip;
   }
   .state {
     min-height: 180px;

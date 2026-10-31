@@ -174,27 +174,40 @@ sup {
   transform: translateX(-100%);
 }
 @media (max-width: 600px) {
-  .gain-row {
-    grid-template-columns: minmax(0, 1fr) 72px;
-    gap: 2px 8px;
-    padding-block: 3px;
+  /* The page scrolls the list, so the header sticks under the report's sticky bars instead. */
+  .gain-list {
+    max-height: none;
+    overflow: visible;
   }
-  .gain-row .secondary,
+  .gain-row.head {
+    top: calc(var(--utility-height, 0px) + var(--report-nav-offset, 0px));
+  }
+  /* Each skill takes two lines, its chip over its bar, with the gain beside both. */
+  .gain-row {
+    grid-template-columns: minmax(0, 1fr) auto;
+    gap: 3px 12px;
+    padding-block: 5px;
+  }
+  .gain-row > .num.secondary,
   .gain-head small,
   .gain-row.foot {
     display: none;
   }
   .gain-row > .track {
-    grid-column: 1 / -1;
+    grid-column: 1;
     grid-row: 2;
-    height: 12px;
+    height: 10px;
+  }
+  .gain-row > .value {
+    grid-column: 2;
+    grid-row: 1 / 3;
   }
   .gain-row .bar {
-    top: 2px;
+    top: 1px;
     height: 8px;
   }
   .gain-row .range {
-    top: 5px;
+    top: 4px;
   }
   .gain-head {
     grid-column: auto;
