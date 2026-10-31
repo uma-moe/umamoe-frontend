@@ -252,16 +252,17 @@
     justify-items: start;
   }
   /*
-   * Still one row, with the name taking what is left: the struck price already shows the hint discount, the old price
-   * sits over the new one, the hint is one small +/− button and the lock keeps its icon and pressed colour without the
-   * word. Rows share the list's columns through subgrid, so the price column is only as wide as the widest price.
+   * Still one row, with the name taking what is left: − discount + for the hint, the old price over the new one, and
+   * the lock and remove as bare icons. Rows share the list's columns through subgrid, so every column is only as wide
+   * as its widest entry and still lines up down the list.
    */
   .offers {
-    grid-template-columns: 22px minmax(0, 1fr) auto auto 28px 28px;
-    column-gap: 5px;
+    grid-template-columns: 22px minmax(0, 1fr) auto auto 26px 24px;
+    column-gap: 4px;
   }
   .offer {
-    --tap: 28px;
+    --step: 26px;
+    --tap: 26px;
     grid-column: 1 / -1;
     grid-template-columns: subgrid;
     padding-inline: 6px 2px;
@@ -277,41 +278,22 @@
     -webkit-line-clamp: 1;
     line-clamp: 1;
   }
-  /* The level with + over − beside it, in one bordered button. */
+  /* The discount stands in for the level between − and +; the struck price beside it shows what it saves. */
   .hint {
-    grid-template-columns: 18px 18px;
-    grid-template-rows: 1fr 1fr;
-    height: var(--tap);
-    border: 1px solid var(--border-subtle);
-    border-radius: 6px;
-    overflow: hidden;
+    grid-template-columns: var(--step) 36px var(--step);
   }
   .hint output {
-    grid-area: 1 / 1 / 3 / 2;
-    border: 0;
-  }
-  .hint button {
-    grid-column: 2;
-    width: 100%;
-    border: 0;
-    border-left: 1px solid var(--border-subtle);
-    border-radius: 0;
-  }
-  .hint button:first-child {
-    grid-row: 2;
-    border-top: 1px solid var(--border-subtle);
-    border-radius: 0;
-  }
-  .hint button:nth-of-type(2) {
-    grid-row: 1;
-    border-radius: 0;
-  }
-  .hint button :global(svg) {
-    width: 10px;
-    height: 10px;
+    display: none;
   }
   .discount {
-    display: none;
+    grid-area: 1 / 2;
+    display: grid;
+    place-items: center;
+    height: 100%;
+    padding: 0;
+    border-block: 1px solid var(--border-subtle);
+    background: var(--surface-1);
+    font-size: 10px;
   }
   .cost {
     flex-direction: column;
@@ -322,14 +304,25 @@
   .lock-label {
     display: none;
   }
+  /* A bare icon like the remove button beside it; locked fills in with the accent. */
   .lock :global(.ui-button) {
     width: var(--tap);
     min-width: 0;
     padding: 0;
     gap: 0;
+    border-color: transparent;
+    border-radius: var(--radius-sm, 6px);
+    background: transparent;
+    color: var(--text-secondary);
+  }
+  .lock :global(.ui-button[aria-pressed='true']) {
+    border-color: transparent;
   }
   .lock :global(.ui-button svg) {
-    width: 14px;
-    height: 14px;
+    width: 15px;
+    height: 15px;
+  }
+  .remove :global(.icon-button) {
+    width: 24px;
   }
 }
