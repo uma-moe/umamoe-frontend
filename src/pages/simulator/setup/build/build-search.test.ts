@@ -4,7 +4,6 @@ import { restoreBuildSearch } from './build-search.svelte';
 describe('Build optimizer setups from a code or this browser', () => {
   it('keeps what she can buy with hints and locks, the goal and the HP debuffs', () => {
     const saved = {
-      uma: { name: 'Mihono Bourbon', trainee: { speed: '1564', runningStyle: 'Nige' }, skills: [] },
       offers: [
         { skillId: 200162, hint: 3, locked: true },
         { skillId: 201662, hint: 9 },
@@ -20,8 +19,6 @@ describe('Build optimizer setups from a code or this browser', () => {
 
     const setup = restoreBuildSearch(saved);
 
-    expect(setup.uma.name).toBe('Mihono Bourbon');
-    expect(setup.uma.trainee.speed).toBe('1564');
     expect(setup.offers).toEqual([
       { skillId: 200162, hint: 3, locked: true },
       { skillId: 201662, hint: 5 }

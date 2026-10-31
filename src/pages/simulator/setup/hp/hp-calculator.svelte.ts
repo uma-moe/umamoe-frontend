@@ -1,16 +1,16 @@
 import type { RaceCourse } from '@/lib/game-data/racing/courses';
 import type { SkillData } from '@/lib/game-data/skills/skills';
 import { RACE_TYPES } from '../../requests/stamina-request';
-import { createSimulatorUma, restoreSimulatorUma, type SimulatorUma } from '../../simulator-uma';
+import type { SimulatorUma } from '../../simulator-uma';
 import { countSkills, createHpPlan, STAT_KEYS, type HpPlan } from './hp-plan';
 import { RUNNING_STYLES } from '../trainee';
 
 /**
- * The HP calculator's own runner, skill counts and race options, kept apart from the race field so nothing here
- * changes the race simulator's field. Saved in this browser, so a reload or a discarded tab keeps the setup.
+ * The HP calculator's own skill counts and race options, kept apart from the race field so nothing here changes the
+ * race simulator's field. The runner is shared with the Build optimizer (simulator-runner). Saved in this browser, so
+ * a reload or a discarded tab keeps the setup.
  */
 export interface HpCalculatorState {
-  uma: SimulatorUma;
   plan: HpPlan;
   /** Which build the skill counts were last taken from, for the note beside them. */
   counted: string;
@@ -22,7 +22,6 @@ const STORAGE_KEY = 'uma.hp-calculator.v1';
 
 function defaults(): HpCalculatorState {
   return {
-    uma: createSimulatorUma('Your runner'),
     plan: createHpPlan(),
     counted: '',
     raceType: '0',
@@ -108,7 +107,6 @@ export function restoreHpCalculator(saved: unknown): HpCalculatorState {
   const data = record(saved);
   if (!data) return state;
 
-  state.uma = restoreSimulatorUma(data.uma, state.uma);
   state.plan = restorePlan(data.plan);
   if (typeof data.counted === 'string') state.counted = data.counted;
   if (typeof data.raceType === 'string') state.raceType = restoreRaceType(data.raceType);

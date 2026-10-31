@@ -1,14 +1,13 @@
 import { OPTIMIZE_MODES, type OptimizeMode } from '../../requests/optimize-request';
-import { createSimulatorUma, restoreSimulatorUma, type SimulatorUma } from '../../simulator-uma';
 import { MAX_HINT, type SkillOffer } from './skill-offers';
 import type { TeamTrialsMode } from './track-pool';
 
 /**
- * Build search's own setup: the runner at the end of her career, the skills on offer with their hints, the SP budget,
- * what to optimize for and on which Team Trials tracks. Saved in this browser, so a reload keeps it.
+ * Build search's own setup: the skills on offer with their hints, the SP budget, what to optimize for and on which
+ * Team Trials tracks. The runner is shared with the HP calculator (simulator-runner). Saved in this browser, so a
+ * reload keeps it.
  */
 export interface BuildSearchState {
-  uma: SimulatorUma;
   offers: SkillOffer[];
   budget: string;
   fastLearner: boolean;
@@ -25,7 +24,6 @@ const STORAGE_KEY = 'uma.build-search.v1';
 
 function defaults(): BuildSearchState {
   return {
-    uma: createSimulatorUma('Your runner'),
     offers: [],
     budget: '1200',
     fastLearner: false,
@@ -49,7 +47,6 @@ export function restoreBuildSearch(saved: unknown): BuildSearchState {
   const data = record(saved);
   if (!data) return state;
 
-  state.uma = restoreSimulatorUma(data.uma, state.uma);
   if (Array.isArray(data.offers))
     state.offers = data.offers.flatMap((item) => {
       const offer = record(item);

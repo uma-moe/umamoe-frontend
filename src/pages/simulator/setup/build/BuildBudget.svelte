@@ -1,6 +1,7 @@
 <script lang="ts">
   import TextField from '@/components/controls/TextField.svelte';
   import ToggleField from '../../shell/ToggleField.svelte';
+  import { simulatorRunner } from '../runner/simulator-runner.svelte';
   import { buildSearch } from './build-search.svelte';
 
   /**
@@ -29,9 +30,10 @@
     min={0}
     placeholder="—"
     bind:value={
-      () => (buildSearch.uma.fanCount === undefined ? '' : String(buildSearch.uma.fanCount)),
+      () =>
+        simulatorRunner.uma.fanCount === undefined ? '' : String(simulatorRunner.uma.fanCount),
       (value) =>
-        (buildSearch.uma.fanCount =
+        (simulatorRunner.uma.fanCount =
           value === '' || !Number.isFinite(Number(value))
             ? undefined
             : Math.max(0, Math.round(Number(value))))

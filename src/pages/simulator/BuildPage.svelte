@@ -27,6 +27,11 @@
     restoreBuildSearch,
     saveBuildSearch
   } from './setup/build/build-search.svelte';
+  import {
+    runnerFromSetup,
+    saveSimulatorRunner,
+    simulatorRunner
+  } from './setup/runner/simulator-runner.svelte';
   import { offerPurchases, type PricedOffer } from './setup/build/skill-offers';
   import BuildResult from './reports/outcomes/build/BuildResult.svelte';
   import { theorizedResult } from './reports/outcomes/build/build-result';
@@ -58,8 +63,9 @@
   let codeOpen = $state(false);
   let codeText = $state('');
 
-  // Keep the setup in this browser as it changes.
+  // Keep the setup and the runner in this browser as they change.
   $effect(saveBuildSearch);
+  $effect(saveSimulatorRunner);
 
   /**
    * A link can carry a build code as `?build=`. It opens the import with the code so its preview shows what replaces
@@ -110,7 +116,7 @@
 
   /** The course she races on; in Team Trials the first of the pool stands for the distance. */
   const course = $derived(teamTrials ? pool[0] : selectedCourse());
-  const owned = $derived(buildSearch.uma.skills.map((skill) => skill.skillId));
+  const owned = $derived(simulatorRunner.uma.skills.map((skill) => skill.skillId));
   const offers = $derived(
     offerPurchases(buildSearch.offers, owned, skillLookup, buildSearch.fastLearner)
   );
@@ -179,7 +185,7 @@
       seed: formNumber(buildSearch.seed),
       mode: buildSearch.mode,
       ...(teamTrials && pool.length ? { tracks: pool.map((entry) => entry.course_id) } : {}),
-      uma1: buildCodeRunner($state.snapshot(buildSearch.uma), course, {
+      uma1: buildCodeRunner($state.snapshot(simulatorRunner.uma), course, {
         sp: formNumber(buildSearch.budget),
         fastLearner: buildSearch.fastLearner
       }),
@@ -189,7 +195,10 @@
           .filter((offer) => offer.hint > 0)
           .map((offer) => [String(offer.skillId), offer.hint])
       ),
-      page: { tab: 'build', setup: $state.snapshot(buildSearch) }
+      page: {
+        tab: 'build',
+        setup: { ...$state.snapshot(buildSearch), uma: $state.snapshot(simulatorRunner.uma) }
+      }
     };
   }
 
@@ -198,6 +207,8 @@
     if (page.tab !== 'build') return 'This code was copied from another tab.';
 
     Object.assign(buildSearch, restoreBuildSearch(page.setup));
+    const runner = runnerFromSetup(page.setup);
+    if (runner) simulatorRunner.uma = runner;
   }
 
   async function send(): Promise<void> {
@@ -209,7 +220,7 @@
       budget = formNumber(buildSearch.budget);
 
     const races = buildRaces({
-      her: $state.snapshot(buildSearch.uma),
+      her: $state.snapshot(simulatorRunner.uma),
       seed: formNumber(buildSearch.seed),
       course: $state.snapshot(course),
       pool: teamTrials ? pool : undefined,
@@ -278,7 +289,7 @@
       aria-label="Build optimizer input"
     >
       <RunnerInput
-        bind:uma={buildSearch.uma}
+        bind:uma={simulatorRunner.uma}
         {course}
         note="Her stats at the end of the career"
         oncode={() => (codeOpen = true)}
@@ -333,7 +344,7 @@
   current={currentCode}
   onrestore={restoreTab}
   onimport={({ umas, offers, goal }) => {
-    buildSearch.uma = umas[0]!;
+    simulatorRunner.uma = umas[0]!;
     buildSearch.offers = offers;
     if (goal.sp !== undefined) buildSearch.budget = String(goal.sp);
     if (goal.fastLearner !== undefined) buildSearch.fastLearner = goal.fastLearner;

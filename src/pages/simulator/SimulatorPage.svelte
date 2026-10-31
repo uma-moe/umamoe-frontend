@@ -25,6 +25,11 @@
     restoreHpCalculator,
     saveHpCalculator
   } from './setup/hp/hp-calculator.svelte';
+  import {
+    runnerFromSetup,
+    saveSimulatorRunner,
+    simulatorRunner
+  } from './setup/runner/simulator-runner.svelte';
   import { planEvents, planStats, type PlanMarker } from './setup/hp/hp-plan';
   import { hpSpread, hpVerdict } from './reports/outcomes/hp/hp-needed';
   import { traineeMotivation, traineeRunningStyle, traineeStats } from './setup/trainee';
@@ -77,8 +82,9 @@
   let courses = $state.raw<Record<string, Course>>({});
   let skills = $state.raw(new Map<number, SkillData>());
 
-  // Keep the setup in this browser as it changes.
+  // Keep the setup and the runner in this browser as they change.
   $effect(saveHpCalculator);
+  $effect(saveSimulatorRunner);
 
   onMount(() => {
     let active = true;
@@ -110,7 +116,7 @@
     (course && courses[course.course_id]) ?? { distance: course?.distance ?? 2000 }
   );
 
-  const trainee = $derived(hpCalculator.uma.trainee);
+  const trainee = $derived(simulatorRunner.uma.trainee);
   const stats = $derived(planStats(traineeStats(trainee), hpCalculator.plan));
   // What the counts and situations become on this course; the course strip shows it before calculating too.
   const events = $derived(planEvents(hpCalculator.plan, geometry, stats.guts, stats.wisdom));
@@ -236,6 +242,8 @@
     if (page.tab !== 'stamina') return 'This code was copied from another tab.';
 
     Object.assign(hpCalculator, restoreHpCalculator(page.setup));
+    const runner = runnerFromSetup(page.setup);
+    if (runner) simulatorRunner.uma = runner;
   }
 </script>
 
@@ -251,7 +259,7 @@
       use:submitOnEnter
     >
       <RunnerInput
-        bind:uma={hpCalculator.uma}
+        bind:uma={simulatorRunner.uma}
         green={hpCalculator.plan.green}
         {course}
         onbuild={count}
@@ -262,8 +270,8 @@
         course={geometry}
         guts={stats.guts}
         wit={stats.wisdom}
-        skillCount={hpCalculator.uma.skills.length}
-        oncount={() => count(hpCalculator.uma)}
+        skillCount={simulatorRunner.uma.skills.length}
+        oncount={() => count(simulatorRunner.uma)}
       />
     </div>
     <HpCalcBar
@@ -313,12 +321,15 @@
       season: Number(simulatorSession.season),
       time: Number(simulatorSession.startTime)
     },
-    uma1: buildCodeRunner($state.snapshot(hpCalculator.uma), course),
-    page: { tab: 'stamina', setup: $state.snapshot(hpCalculator) }
+    uma1: buildCodeRunner($state.snapshot(simulatorRunner.uma), course),
+    page: {
+      tab: 'stamina',
+      setup: { ...$state.snapshot(hpCalculator), uma: $state.snapshot(simulatorRunner.uma) }
+    }
   })}
   onrestore={restoreTab}
   onimport={({ umas }) => {
-    hpCalculator.uma = umas[0]!;
+    simulatorRunner.uma = umas[0]!;
     count(umas[0]!);
   }}
 />
