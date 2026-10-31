@@ -179,6 +179,8 @@
       aria-label="Skills on offer"
     >
       {#each offers.priced as offer (offer.skillId)}
+        <!-- A bundled upgrade's cost includes the ranks below it, so its own base is not the price before the hint. -->
+        {@const showsBasePrice = offer.cost !== offer.base && offer.needs !== 'bundled'}
         <li
           class="offer tier-{skillTier(offer.skill)}"
           class:locked={offer.locked}
@@ -224,20 +226,22 @@
                 size={14}
               />
             </button>
-            <span
-              class="discount"
-              class:none={!offer.hint}
-            >
-              {offer.hint ? '−' + HINT_DISCOUNT[offer.hint] + '%' : 'no hint'}
-            </span>
           </div>
+          <!-- The hint discount and the price before it sit with the price, so the hint stepper can stay narrow. -->
           <span class="cost">
-            {#if offer.cost !== offer.base && offer.needs !== 'bundled'}
-              <s>{offer.base}</s>
+            {#if offer.hint || showsBasePrice}
+              <span class="saving">
+                {#if offer.hint}
+                  <span class="discount">−{HINT_DISCOUNT[offer.hint]}%</span>
+                {/if}
+                {#if showsBasePrice}
+                  <s>{offer.base}</s>
+                {/if}
+              </span>
             {/if}
             <SkillPoints value={offer.cost} />
           </span>
-          <span class="lock">
+          <span class="actions">
             <Button
               variant="secondary"
               size="sm"
@@ -249,8 +253,6 @@
             >
               <span class="lock-label">{offer.locked ? 'Locked' : 'Lock'}</span>
             </Button>
-          </span>
-          <span class="remove">
             <IconButton
               icon="close"
               size="sm"
@@ -266,7 +268,7 @@
             <strong>{skillLookup.get(offer.skillId)?.name ?? 'Skill ' + offer.skillId}</strong>
             <small>no cost data, so the search leaves it out</small>
           </span>
-          <span class="remove">
+          <span class="actions">
             <IconButton
               icon="close"
               size="sm"
