@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { findTextRanges, highlightResultText } from './find-loaded';
+import { findTextRanges, highlightResultText } from './find-loaded-matches';
 
 describe('Find text ranges', () => {
   it('matches literal text across inline elements without changing DOM', () => {

@@ -4,12 +4,11 @@
   import { router } from '@/routes/router';
   import {
     availableFindSources,
-    findLoaded,
     findRequested,
     findSources,
-    highlightResultText,
-    type FindMatch
+    isFindShortcut
   } from '@/lib/find-loaded';
+  import { findLoaded, highlightResultText, type FindMatch } from '@/lib/find-loaded-matches';
 
   let open = $state(false),
     query = $state(''),
@@ -69,7 +68,7 @@
   function keydown(event: KeyboardEvent) {
     if (event.defaultPrevented || event.isComposing || document.querySelector('dialog[open]'))
       return;
-    if ((event.ctrlKey || event.metaKey) && !event.altKey && event.key.toLowerCase() === 'f') {
+    if (isFindShortcut(event)) {
       if (!open && !availableFindSources($findSources).length) return;
       event.preventDefault();
       void show();

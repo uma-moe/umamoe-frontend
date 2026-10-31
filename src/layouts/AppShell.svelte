@@ -3,6 +3,12 @@
   import { onMount } from 'svelte';
   import { searchParams } from 'sv-router';
   import { tourAudience } from '@/components/tours/tour-state';
+  import {
+    availableFindSources,
+    findRequested,
+    findSources,
+    isFindShortcut
+  } from '@/lib/find-loaded';
   import { router, pendingRoute } from '@/routes/router';
   import { navigationForPath, routeDefinitionForPath } from '@/routes/route-manifest';
   import { theme, toggleTheme } from '@/stores/theme';
@@ -18,7 +24,6 @@
   import MoeFooter from './MoeFooter.svelte';
   import Spinner from '@/components/feedback/Spinner.svelte';
   import ServiceNotices from './ServiceNotices.svelte';
-  import FindLoadedResults from './FindLoadedResults.svelte';
   import StickyFooterAd from './ads/StickyFooterAd.svelte';
   import { syncFusePage } from '@/services/ads/fuse-ads';
 
@@ -41,6 +46,10 @@
 
   let tourLoading: Promise<void> | undefined;
 
+  // The find bar stays out of the base shell until it is first asked for, from the footer or by Ctrl+F.
+  let FindLoadedResults = $state<typeof import('./FindLoadedResults.svelte').default>();
+  let findLoading: Promise<void> | undefined;
+
   function loadTour(): Promise<void> {
     if (PageTour) return Promise.resolve();
     return (tourLoading ??= import('@/components/tours/PageTour.svelte')
@@ -54,6 +63,29 @@
       .finally(() => {
         tourLoading = undefined;
       }));
+  }
+
+  function loadFindBar(): Promise<void> {
+    return (findLoading ??= import('./FindLoadedResults.svelte')
+      .then((module) => {
+        FindLoadedResults = module.default;
+      })
+      .catch((error: unknown) => {
+        console.warn('Find could not be loaded. Asking for it again will retry.', error);
+      })
+      .finally(() => {
+        findLoading = undefined;
+      }));
+  }
+
+  // Once loaded, the find bar handles its own shortcuts; until then this asks for it in the same cases it would open.
+  function requestFindFromShortcut(event: KeyboardEvent): void {
+    if (FindLoadedResults || event.defaultPrevented || event.isComposing) return;
+    if (!isFindShortcut(event) || document.querySelector('dialog[open]')) return;
+    if (!availableFindSources($findSources).length) return;
+
+    event.preventDefault();
+    findRequested.update((value) => value + 1);
   }
 
   const currentRoute = $derived(routeDefinitionForPath(router.route.pathname));
@@ -147,9 +179,14 @@
   $effect(() => {
     analytics?.trackPageView(router.route.pathname);
   });
+
+  $effect(() => {
+    if ($findRequested && !FindLoadedResults) void loadFindBar();
+  });
 </script>
 
 <svelte:window
+  onkeydown={requestFindFromShortcut}
   onresize={closeNavigation}
   onscroll={() => {
     if (menuOpen) menuTop = utilityBar.getBoundingClientRect().bottom;
@@ -353,7 +390,9 @@
   <PageTour startRequest={tourRequest} />
 {/if}
 <ServiceNotices />
-<FindLoadedResults />
+{#if FindLoadedResults}
+  <FindLoadedResults />
+{/if}
 <StickyFooterAd />
 {#if tourLoadError}
   <Dialog
