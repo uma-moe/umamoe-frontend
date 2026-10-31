@@ -19,11 +19,16 @@ h3 {
   font-size: 11px;
   color: var(--text-muted);
 }
+.header-actions {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-left: auto;
+}
 .tools {
   display: flex;
   align-items: center;
   gap: 4px;
-  margin-left: auto;
 }
 .tools :global(.inspect > .trigger) {
   display: grid;
@@ -76,4 +81,28 @@ h3 {
 .skips span {
   margin-right: 4px;
   font-weight: 650;
+}
+.card-actions {
+  padding-top: 6px;
+  border-top: 1px solid var(--border-subtle);
+}
+.card-actions :global(.ui-button) {
+  width: 100%;
+}
+.race-error {
+  margin: 0;
+  font-size: 11px;
+  line-height: 1.5;
+  color: var(--accent-error);
+}
+.race-added {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin: 0;
+  font-size: 11px;
+  line-height: 1.5;
+  color: var(--text-secondary);
 }

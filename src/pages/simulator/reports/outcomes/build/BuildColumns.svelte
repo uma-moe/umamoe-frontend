@@ -1,5 +1,6 @@
 <script lang="ts">
   import type { Snippet } from 'svelte';
+  import Button from '@/components/controls/Button.svelte';
   import BuildColumnHead from './BuildColumnHead.svelte';
   import BuildSkillRow from './BuildSkillRow.svelte';
   import {
@@ -18,9 +19,34 @@
     field: boolean;
     checkRaces: number;
     tools?: Snippet;
+    /** Adds one build to the Race sim field. */
+    onrace?: (build: TheorizedBuild) => void;
+    /** Adds both builds at once, so they race each other. */
+    onraceall?: () => void;
+    /** The builds already added to the field, by their place in `builds`, so their button adds nothing twice. */
+    raced?: number[];
+    /** Opens the Race sim, where the added builds are. */
+    onopenrace?: () => void;
+    /** Why adding a build failed, said under the cards. */
+    raceError?: string;
+    /** Why the builds cannot be raced yet; empty when they can. */
+    raceBlocked?: string;
   }
 
-  let { builds, skillUnit = 'lengths', phaseBounds, field, checkRaces, tools }: Props = $props();
+  let {
+    builds,
+    skillUnit = 'lengths',
+    phaseBounds,
+    field,
+    checkRaces,
+    tools,
+    onrace,
+    onraceall,
+    raced = [],
+    onopenrace,
+    raceError = '',
+    raceBlocked = ''
+  }: Props = $props();
 
   const UNIT_TITLE: Record<SkillUnit, string> = {
     lengths: 'Lengths gained',
@@ -90,6 +116,22 @@
         {build.skipped.join(', ')}
       </p>
     {/if}
+    {#if onrace}
+      <div class="card-actions">
+        <Button
+          size="sm"
+          variant="secondary"
+          icon="stopwatch"
+          disabled={Boolean(raceBlocked) || raced.includes(index)}
+          title={raced.includes(index)
+            ? 'Already in the Race sim field'
+            : raceBlocked || 'Add her to the Race sim field with these skills'}
+          onclick={() => onrace(build)}
+        >
+          {raced.includes(index) ? 'In the Race sim' : 'Add to Race sim'}
+        </Button>
+      </div>
+    {/if}
   </article>
 {/snippet}
 
@@ -105,7 +147,21 @@
     >
       {UNIT_TITLE[skillUnit]}
     </span>
-    {#if tools}<div class="tools">{@render tools()}</div>{/if}
+    <div class="header-actions">
+      {#if onraceall && builds.length > 1}
+        <Button
+          size="sm"
+          variant="secondary"
+          icon="stopwatch"
+          disabled={Boolean(raceBlocked)}
+          title={raceBlocked || 'Add both builds to the Race sim field, so they race each other'}
+          onclick={onraceall}
+        >
+          Race both builds
+        </Button>
+      {/if}
+      {#if tools}<div class="tools">{@render tools()}</div>{/if}
+    </div>
   </header>
 
   <div class="columns">
@@ -113,6 +169,31 @@
       {@render buildCard(build, index)}
     {/each}
   </div>
+  {#if raceError}
+    <p
+      class="race-error"
+      role="status"
+    >
+      {raceError}
+    </p>
+  {:else if raced.length && onopenrace}
+    <p
+      class="race-added"
+      role="status"
+    >
+      <span>
+        {raced.length === 1 ? 'She is' : 'Both builds are'} in the Race sim field.
+      </span>
+      <Button
+        size="sm"
+        variant="primary"
+        icon="stopwatch"
+        onclick={onopenrace}
+      >
+        Open Race sim
+      </Button>
+    </p>
+  {/if}
 </section>
 
 <style>
