@@ -353,15 +353,9 @@
     border: 1px solid var(--border-subtle);
     border-radius: var(--radius-lg);
   }
+  /* Its sections keep SimSection's own spacing, as the Build optimizer's form does. */
   .hp-form {
     container: sim-form / inline-size;
-  }
-  .hp-form > :global(.hp-section) {
-    gap: 8px;
-    padding-block: 10px;
-  }
-  .hp-form > :global(.hp-section:first-child) {
-    padding-top: 0;
   }
   .hp-result {
     container: hp-result / inline-size;

@@ -125,12 +125,13 @@
 </div>
 
 <style>
-  /* Skills and the situations between runners side by side, as one band of the form. */
+  /* Skills and the situations between runners side by side, as one band of the form, spaced as SimSection spaces
+     the bands above it. */
   .pair {
     display: grid;
     grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
     gap: 0 20px;
-    padding-top: 10px;
+    padding-top: 12px;
     border-top: 1px solid var(--border-subtle);
   }
   .pair > :global(.hp-section) {
@@ -223,8 +224,11 @@
       gap: 12px;
     }
   }
-  /* A phone: the design system's control height. */
+  /* A phone: SimSection's closer bands and the design system's control height. */
   @media (max-width: 767px) {
+    .pair {
+      padding-top: 10px;
+    }
     .situations li {
       min-height: var(--control-height);
     }
