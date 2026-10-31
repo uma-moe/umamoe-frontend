@@ -1,9 +1,9 @@
 .veteran-list {
   --tick: 0px;
   --go: 0px;
-  --stats: 264px;
-  --learned: 76px;
-  --fit: 150px;
+  --stats: 384px;
+  --learned: 72px;
+  --fit: 228px;
   display: grid;
   gap: 8px;
   min-width: 0;
@@ -94,13 +94,10 @@
 .compact .row {
   grid-template-columns: var(--tick) minmax(0, 1fr) var(--fit) var(--go);
 }
-/* The table's head row: the first cell of the bordered table below, joined to it. */
+/* Column labels over the rows, ruled off from them like a table head. */
 .head {
-  padding: 6px 10px;
-  border: 1px solid var(--border-primary);
-  border-bottom-color: var(--border-subtle);
-  border-radius: var(--radius-lg) var(--radius-lg) 0 0;
-  background: var(--card-surface-bg);
+  padding: 4px 8px;
+  border-bottom: 1px solid var(--border-primary);
   color: var(--color-text-muted);
   font-size: 11px;
   font-weight: 500;
@@ -122,17 +119,12 @@
   display: grid;
   margin: -8px 0 0;
   padding: 0;
-  overflow: hidden;
-  border: 1px solid var(--border-primary);
-  border-top: 0;
-  border-radius: 0 0 var(--radius-lg) var(--radius-lg);
-  background: var(--card-surface-bg);
   list-style: none;
 }
 .row {
   position: relative;
   min-width: 0;
-  padding: 8px 10px;
+  padding: 5px 8px;
   color: var(--color-text);
   cursor: pointer;
 }
@@ -174,14 +166,14 @@
   min-width: 0;
 }
 .identity :global(.veteran-identity) {
-  grid-template-columns: 44px minmax(0, 1fr);
-  gap: 10px;
+  grid-template-columns: 36px minmax(0, 1fr);
+  gap: 8px;
 }
 .identity :global(.portrait) {
-  height: 48px;
+  height: 38px;
 }
 .identity :global(.identity) {
-  gap: 4px;
+  gap: 2px;
 }
 .identity :global(.identity h3) {
   font-size: 13px;
@@ -189,34 +181,32 @@
 .stats {
   min-width: 0;
 }
-/* CM Data's runner-card stats: a tinted tile per stat, three to a line with the total closing the second. */
-.stats :global(.inline-stats) {
-  grid-template-columns: repeat(3, minmax(0, 1fr));
+/* A tinted tile per stat, all six on one line: icon and value, with the total named. */
+.stats :global(.values) {
+  grid-template-columns: repeat(5, minmax(0, 1fr)) minmax(0, 1.45fr);
   gap: 4px;
 }
-.stats :global(.inline-stats > div) {
+.stats :global(.values > div) {
+  justify-content: center;
   min-height: 0;
-  gap: 2px 4px;
+  gap: 3px;
   padding: 3px 2px;
   border: 1px solid color-mix(in srgb, var(--stat-color) 22%, var(--border-subtle));
   border-radius: var(--radius-sm);
   background: color-mix(in srgb, var(--stat-color) 9%, var(--surface-2));
 }
-.stats :global(.inline-stats img) {
+.stats :global(.values img) {
   width: 13px;
   height: 13px;
 }
-.stats :global(.inline-stats dd) {
-  font-size: 13px;
+.stats :global(.values dd) {
+  font-size: 12px;
   line-height: 1.2;
   font-variant-numeric: tabular-nums;
 }
-.stats :global(.inline-stats dt) {
+.stats :global(.values dt) {
   font-size: 9px;
   line-height: 1.2;
-}
-.stats :global(.inline-stats > [data-stat='total'] dd) {
-  grid-column: 1 / -1;
 }
 /* Learned skills sit apart from the stats: how many, and what they cost. */
 .learned {
@@ -237,10 +227,12 @@
 .learned :global(.skill-points) {
   font-size: 12px;
 }
-/* CM Data's race aptitude cells: tinted by the grade, the category above what it was read for. */
+/* CM Data's race aptitude cells side by side, tinted by the grade; the column head names them. */
 .fit {
   display: grid;
-  gap: 3px;
+  /* Distance and style names run longer than the surface's. */
+  grid-template-columns: minmax(0, 1.25fr) minmax(0, 1fr) minmax(0, 1.25fr);
+  gap: 4px;
   min-width: 0;
 }
 .course-aptitude {
@@ -249,7 +241,7 @@
   justify-content: space-between;
   gap: 4px;
   min-width: 0;
-  padding: 2px 4px 2px 8px;
+  padding: 2px 3px 2px 6px;
   border: 1px solid color-mix(in srgb, var(--aptitude-color) 18%, var(--border-subtle));
   border-radius: var(--radius-sm);
   background: color-mix(in srgb, var(--aptitude-color) 6%, var(--surface-2));
@@ -259,21 +251,19 @@
   line-height: 1.2;
 }
 .aptitude-label {
-  display: flex;
-  align-items: baseline;
-  gap: 5px;
   min-width: 0;
   overflow: hidden;
+  text-overflow: ellipsis;
   white-space: nowrap;
 }
+/* The grade's own label and the cell's title still say which category it is. */
 .aptitude-label small {
-  color: var(--text-secondary);
-  font-size: 9px;
-  font-weight: 400;
+  display: none;
 }
 .course-aptitude :global(.aptitude) {
-  width: 20px;
-  height: 20px;
+  flex: none;
+  width: 18px;
+  height: 18px;
 }
 .go {
   display: grid;
@@ -288,57 +278,54 @@
 .more {
   justify-self: center;
 }
-/* Narrow: name and aptitudes share the first line, her stats and skills run under them. */
+/* Narrow: name, skills and aptitudes share the first line, her stats run under them. */
 @container veteran-list (max-width: 760px) {
   .head,
   .row {
-    grid-template-columns: var(--tick) minmax(0, 1fr) var(--fit) var(--go);
-    row-gap: 6px;
+    grid-template-columns: var(--tick) minmax(0, 1fr) var(--learned) var(--fit) var(--go);
+    row-gap: 4px;
   }
-  .head :is(.stats-head, .learned-head) {
+  .head .stats-head {
     display: none;
   }
-  .stats {
-    grid-column: 2;
-    grid-row: 2;
-  }
+  .learned-head,
   .learned {
-    grid-column: 3 / -1;
+    grid-column: 3;
+    grid-row: 1;
+  }
+  .stats {
+    grid-column: 2 / -1;
     grid-row: 2;
   }
 }
-/* Phone: each part takes its own line. */
+/* Phone: her skills beside her name, aptitudes and stats on a line each under them. */
 @container veteran-list (max-width: 460px) {
   .head {
     display: none;
   }
   .rows {
     margin-top: 0;
-    border-top: 1px solid var(--border-primary);
-    border-radius: var(--radius-lg);
   }
   .head,
   .row {
-    grid-template-columns: var(--tick) minmax(0, 1fr) var(--go);
+    grid-template-columns: var(--tick) minmax(0, 1fr) auto var(--go);
   }
   .fit {
     grid-column: 2 / -1;
     grid-row: 2;
-    grid-template-columns: repeat(3, minmax(0, 1fr));
-  }
-  /* Three cells to a line leave room for what each grade was read for, not its category. */
-  .aptitude-label small {
-    display: none;
   }
   .stats {
     grid-column: 2 / -1;
     grid-row: 3;
   }
-  .learned {
-    grid-column: 2 / -1;
-    grid-row: 4;
-    display: flex;
-    gap: 12px;
+  /* Too tight to name the total; its place at the end of the line and its tile's title say what it is. */
+  .stats :global(.values [data-stat='total'] dt) {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
   }
   .go {
     opacity: 1;

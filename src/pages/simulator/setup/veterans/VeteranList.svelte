@@ -76,7 +76,7 @@
     selected = next;
   }
 
-  /** Her five stats and their sum, three to a line as CM Data's runner cards show them. */
+  /** Her five stats and their sum, each tile tinted by its stat. */
   function statItems(entry: VeteranEntry): StatStripItem[] {
     return [
       ...STATS.map(([key, icon, label]) => ({
@@ -105,7 +105,7 @@
       <StatStrip
         label={entry.uma.name + ' stats'}
         items={statItems(entry)}
-        presentation="inline"
+        presentation="values"
         compact
       />
     </span>
