@@ -67,7 +67,7 @@
         class="button-spinner"
         aria-hidden="true"
       >
-        <Spinner size={16} />
+        <Spinner size={22} />
       </span>
     {:else if icon}
       <Icon
@@ -97,7 +97,7 @@
         class="button-spinner"
         aria-hidden="true"
       >
-        <Spinner size={16} />
+        <Spinner size={22} />
       </span>
     {:else if icon}
       <Icon
@@ -188,7 +188,8 @@
       padding: 3px 6px;
       font-size: 11px;
     }
-    .ui-button :global(svg) {
+    /* Only the icon shrinks; the loading mark keeps its size so it stays readable. */
+    .ui-button > :global(svg) {
       width: 14px;
       height: 14px;
     }

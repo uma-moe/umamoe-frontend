@@ -10,8 +10,8 @@ import { hpRemainingColor } from '@/lib/race/replay/race-display';
 import { diagnosticHorse } from '@/lib/race/capture/race-diagnostics';
 import { finalSpurtSection } from '@/lib/race/final-spurt';
 import {
-  meanTrajectorySignal,
   trajectorySeries,
+  type RaceSignalMeans,
   type RaceTrajectory
 } from '@/lib/race/replay/race-ensemble';
 
@@ -24,9 +24,15 @@ export interface TelemetrySignal {
 
 type MarkArea = [Record<string, unknown>, { xAxis: number }];
 
+/** A mean race: every sampled race behind it, and each runner's mean signals at the mean capture's frames. */
+export interface TelemetryEnsemble {
+  trajectories: RaceTrajectory[];
+  means: RaceSignalMeans;
+}
+
 export interface TelemetryChart {
   capture: ParsedRaceCapture;
-  ensemble?: RaceTrajectory[];
+  ensemble?: TelemetryEnsemble;
   runner?: RaceRunner;
   chartRunners: RaceRunner[];
   signals: TelemetrySignal[];
@@ -198,10 +204,8 @@ function chartData(chart: TelemetryChart, r: RaceRunner, signal: string) {
   const finish = chart.finishTimes.get(r.index);
   let data: (number | null)[][];
   if (ensemble && (signal === 'hp' || signal === 'gap')) {
-    data = capture.frames.map((frame) => [
-      frame.time,
-      meanTrajectorySignal(ensemble, frame.time, r.index, signal)
-    ]);
+    const means = ensemble.means[signal][r.index];
+    data = capture.frames.map((frame, step) => [frame.time, means?.[step] ?? null]);
   } else if (
     signal === 'target' ||
     (signal === 'acceleration' && hasDetailedAcceleration(chart, r))
@@ -260,6 +264,22 @@ const finishLine: CustomSeriesRenderItem = (params, api) => {
     }))
   };
 };
+
+/**
+ * One faint line per sampled race, all in a single series: a blank (NaN) point ends each race's line, so the chart
+ * keeps one series per signal however many races the batch has. The points are packed time/value pairs, which ECharts
+ * copies in one step instead of cloning a nested array per point on every update.
+ */
+function sampledRaces(trajectories: RaceTrajectory[], source: number, signal: string) {
+  const packed: number[] = [];
+  for (const trajectory of trajectories) {
+    const points = trajectorySeries(trajectory, source, signal);
+    for (const [time, value] of points) packed.push(time!, value!);
+    packed.push(points.at(-1)?.[0] ?? 0, NaN);
+  }
+
+  return Float64Array.from(packed);
+}
 
 /** Speed reads on the left; the other scales stack outward on the right. */
 const axisPlacement: Record<string, { position: 'left' | 'right'; offset: number }> = {
@@ -360,24 +380,25 @@ export function telemetryOption(chart: TelemetryChart, expanded: boolean): EChar
             : []
         ),
     series: [
-      ...(ensemble ?? []).flatMap((trajectory) =>
-        chartSignals.map((signal, i) => ({
-          name: 'Race ' + (trajectory.sample + 1) + ', ' + signal.label,
-          type: 'line',
-          xAxisIndex: 0,
-          yAxisIndex: axes.indexOf(signalAxis(signal.value)),
-          showSymbol: false,
-          silent: true,
-          lineStyle: {
-            width: 1,
-            opacity: Math.max(0.025, Math.min(0.15, 1 / Math.sqrt(ensemble!.length)))
-          },
-          itemStyle: { color: signal.color },
-          z: 0,
-          tooltip: { show: false },
-          data: trajectorySeries(trajectory, runner?.index ?? 0, signal.value)
-        }))
-      ),
+      ...(ensemble
+        ? chartSignals.map((signal) => ({
+            name: 'Sampled races, ' + signal.label,
+            type: 'line',
+            xAxisIndex: 0,
+            yAxisIndex: axes.indexOf(signalAxis(signal.value)),
+            showSymbol: false,
+            silent: true,
+            lineStyle: {
+              width: 1,
+              opacity: Math.max(0.025, Math.min(0.15, 1 / Math.sqrt(ensemble.trajectories.length)))
+            },
+            itemStyle: { color: signal.color },
+            z: 0,
+            tooltip: { show: false },
+            dimensions: ['time', 'value'],
+            data: sampledRaces(ensemble.trajectories, runner?.index ?? 0, signal.value)
+          }))
+        : []),
       ...chartSignals.flatMap((signal, i) =>
         chartRunners.map((r) => ({
           name:

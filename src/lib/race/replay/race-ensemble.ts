@@ -256,6 +256,52 @@ export function meanTrajectorySignal(
   );
 }
 
+/** Every runner's mean HP (% of her starting HP) and mean gap to her own race's leader, one value per time. */
+export interface RaceSignalMeans {
+  hp: Float64Array[];
+  gap: Float64Array[];
+}
+
+/**
+ * The same means as `meanTrajectorySignal`, for every runner in one pass over the races. A mean chart reads a runner's
+ * line from here, so following another runner does not walk every race again.
+ */
+export function meanSignalSeries(
+  trajectories: RaceTrajectory[],
+  times: ArrayLike<number>
+): RaceSignalMeans {
+  const count = trajectories[0]?.count ?? 0;
+  const hp = Array.from({ length: count }, () => new Float64Array(times.length)),
+    gap = Array.from({ length: count }, () => new Float64Array(times.length));
+
+  for (const trajectory of trajectories) {
+    const winnerTime = Math.min(...trajectory.finishTimes);
+    // Gaps freeze when the race's winner finishes, so every later time reads the same field.
+    const frozenField = trajectoryAtTime(trajectory, winnerTime);
+
+    for (let step = 0; step < times.length; step++) {
+      const time = times[step]!;
+      const frame = trajectoryAtTime(trajectory, time),
+        field = time < winnerTime ? frame : frozenField;
+
+      let leader = 0;
+      for (let source = 0; source < count; source++) leader = Math.max(leader, field[source * 4]!);
+
+      for (let source = 0; source < count; source++) {
+        const offset = source * 4;
+        hp[source]![step]! +=
+          (frame[offset + 3]! / Math.max(1, trajectory.values[offset + 3]!)) * 100;
+        gap[source]![step]! += leader - field[offset]!;
+      }
+    }
+  }
+
+  for (const series of [...hp, ...gap])
+    for (let step = 0; step < series.length; step++) series[step]! /= trajectories.length;
+
+  return { hp, gap };
+}
+
 export function trajectorySeries(
   trajectory: RaceTrajectory,
   source: number,
@@ -270,19 +316,17 @@ export function trajectorySeries(
   );
 
   if (indices.at(-1) !== trajectory.times.length - 1) indices.push(trajectory.times.length - 1);
+  // Each point sits on a recorded frame, so it reads that frame directly; only gaps after the winner finishes need
+  // the field frozen at her finish.
+  const winnerTime = Math.min(...trajectory.finishTimes);
+  const frozenField = signal === 'gap' ? trajectoryAtTime(trajectory, winnerTime) : undefined;
+
   return indices.map((frame) => {
     const time = trajectory.times[frame]!;
-    return [
-      time,
-      trajectorySignal(
-        trajectory,
-        signal === 'gap'
-          ? trajectoryAtTime(trajectory, Math.min(time, ...trajectory.finishTimes))
-          : trajectory.values.subarray(frame * stride, (frame + 1) * stride),
-        source,
-        signal
-      )
-    ];
+    const recorded = trajectory.values.subarray(frame * stride, (frame + 1) * stride);
+    const field = frozenField !== undefined && time >= winnerTime ? frozenField : recorded;
+
+    return [time, trajectorySignal(trajectory, field, source, signal)];
   });
 }
 

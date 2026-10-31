@@ -33,6 +33,7 @@ import {
   raceFieldSpread,
   raceDistanceSpread,
   meanRaceCapture,
+  meanSignalSeries,
   meanTrajectorySignal,
   trajectoryAtTime,
   trajectorySeries
@@ -164,6 +165,28 @@ describe('simulator source integration', () => {
       raceFieldSpread([trajectories[0]!, reversed], 4)
     );
     expect(meanTrajectorySignal([trajectories[0]!, reversed], 100, 0, 'gap')).toBe(400);
+    // The one-pass means behind the mean race's chart match the per-runner mean at every time, past the finish too.
+    const field = [...trajectories, reversed];
+    const times = [0, 1, 2, 3.5, 4, 20, 100];
+    const means = meanSignalSeries(field, times);
+    for (const source of [0, 1])
+      times.forEach((time, step) => {
+        expect(means.hp[source]![step]).toBeCloseTo(
+          meanTrajectorySignal(field, time, source, 'hp')
+        );
+        expect(means.gap[source]![step]).toBeCloseTo(
+          meanTrajectorySignal(field, time, source, 'gap')
+        );
+      });
+    // Gap points read their recorded frame and freeze with the field once the race's winner finishes.
+    const gapSeries = trajectorySeries(reversed, 0, 'gap');
+    const winnerTime = Math.min(...reversed.finishTimes);
+    expect(gapSeries.map((point) => point[1])).toEqual(
+      gapSeries.map(([time]) => {
+        const field = trajectoryAtTime(reversed, Math.min(time!, winnerTime));
+        return Math.max(field[0]!, field[4]!) - field[0]!;
+      })
+    );
     const trends = raceSignalSpreads([trajectories[0]!, reversed]);
     expect(trends.times).toHaveLength(81);
     expect(trends.runners).toHaveLength(2);

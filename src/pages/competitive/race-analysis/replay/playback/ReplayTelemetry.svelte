@@ -3,7 +3,7 @@
   import type { RaceRunner } from '@/lib/race/capture/race-capture-parser';
   import { hpRemainingColor } from '@/lib/race/replay/race-display';
   import { detailedSample } from '@/lib/race/capture/race-diagnostics';
-  import { meanTrajectorySignal } from '@/lib/race/replay/race-ensemble';
+  import { meanSignalSeries, meanTrajectorySignal } from '@/lib/race/replay/race-ensemble';
   import InspectPopover from '@/components/overlays/InspectPopover.svelte';
   import ChartFrame from '@/components/charts/ChartFrame.svelte';
   import LazyEChartsSurface from '@/components/charts/LazyEChartsSurface.svelte';
@@ -16,7 +16,8 @@
     telemetryMarkers,
     telemetryOption,
     telemetryPhases,
-    telemetrySignals
+    telemetrySignals,
+    type TelemetryEnsemble
   } from './replay-telemetry';
 
   let {
@@ -60,11 +61,20 @@
     )
   );
 
+  // Every runner's means are worked out once per batch, so following another runner only redraws the chart.
+  const ensemble = $derived.by((): TelemetryEnsemble | undefined => {
+    const trajectories = replay.ensemble;
+    if (!trajectories) return undefined;
+
+    const times = replay.capture.frames.map((frame) => frame.time);
+    return { trajectories, means: meanSignalSeries(trajectories, times) };
+  });
+
   const option = $derived(
     telemetryOption(
       {
         capture: replay.capture,
-        ensemble: replay.ensemble,
+        ensemble,
         runner: replay.runner,
         chartRunners,
         signals: chartSignals,

@@ -40,7 +40,7 @@
         aria-hidden="true"
       >
         <LogoMark
-          size={20}
+          size={28}
           label=""
           animated
         />
