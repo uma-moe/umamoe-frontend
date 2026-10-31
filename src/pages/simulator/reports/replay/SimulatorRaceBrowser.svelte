@@ -145,7 +145,7 @@
         class="race-row head"
         role="row"
       >
-        <span role="columnheader">Race · seed</span>
+        <span role="columnheader">Race</span>
         <span role="columnheader">Finishing order</span>
         {#each sources as source (source)}<span
             class="runner-head"

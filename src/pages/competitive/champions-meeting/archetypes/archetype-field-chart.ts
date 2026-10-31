@@ -61,7 +61,7 @@ export function fieldChart(
               lineStyle: { type: 'dashed', color: '#9aa8ba' },
               label: {
                 show: true,
-                formatter: 'Equal teams · 33.3%',
+                formatter: 'Equal teams at 33.3%',
                 position: 'insideEndTop',
                 rotate: 0,
                 color: ink,

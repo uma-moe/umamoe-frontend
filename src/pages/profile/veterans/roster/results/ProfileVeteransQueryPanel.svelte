@@ -47,8 +47,8 @@
     <p>Loading query editor…</p>
   {/if}
   <p class="filter-help">
-    Main is the veteran; GP1 / GP2 are P1 / P2. Ranking functions and support limit-break rules are
-    unavailable.
+    Main is the veteran, and GP1 / GP2 are P1 / P2. Ranking functions and support limit-break rules
+    are unavailable.
   </p>
   <div class="query-actions">
     <small>

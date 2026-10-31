@@ -56,9 +56,9 @@
     if (session.opening) return 'Downloading and opening the database…';
     if (!loaded) return 'Not loaded';
 
-    const size = `${session.tables.length.toLocaleString()} tables · ${totalRows.toLocaleString()} rows`;
+    const size = `${session.tables.length.toLocaleString()} tables, ${totalRows.toLocaleString()} rows`;
     if (session.database?.kind !== 'published') return size;
-    return `Global ${session.database.marker.replace(':', ' · resource ')} · ${size}`;
+    return `Global ${session.database.marker.replace(':', ', resource ')}, ${size}`;
   });
 
   function execute(statement: string) {
@@ -282,7 +282,7 @@
             >
               {linkCopied ? 'Link copied' : 'Copy link'}
             </Button>
-            <span>Runs the first statement · up to 100,000 rows</span>
+            <span>Runs the first statement, up to 100,000 rows</span>
           </div>
           <MasterDataResults
             result={session.result}
@@ -307,7 +307,7 @@
   <FileDrop
     id="master-upload"
     label="Drop a database file"
-    description="SQLite .mdb, .db, .sqlite or .gz · Up to 150 MB"
+    description="SQLite .mdb, .db, .sqlite or .gz up to 150 MB"
     accept=".mdb,.db,.sqlite,.gz"
     disabled={session.opening}
     onfiles={openFile}

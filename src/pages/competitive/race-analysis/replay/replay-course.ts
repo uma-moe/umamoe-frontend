@@ -232,7 +232,7 @@ export function courseLandmarks(course: Course | undefined) {
     { distance: course.distance / 6, label: 'Mid race', color: '#69b7ee' },
     {
       distance: finalSpurtSection(course.distance).start,
-      label: 'Final spurt window · Late race',
+      label: 'Final spurt window',
       color: finalSpurtSection(course.distance).color
     },
     { distance: course.distance, label: 'Finish', color: '#e5e7eb' }

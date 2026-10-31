@@ -114,7 +114,7 @@
   description={fitCourse
     ? 'Best suited to ' +
       trackName(fitCourse.race_track_id) +
-      ' · ' +
+      ' ' +
       describeCourse(fitCourse) +
       ' first'
     : undefined}

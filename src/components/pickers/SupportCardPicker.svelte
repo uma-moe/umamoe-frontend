@@ -135,7 +135,7 @@
       >
         <Spinner size={16} />
         <span>
-          {cached ? 'Using cached resources; refreshing...' : 'Still fetching resources...'}
+          {cached ? 'Using cached resources while refreshing...' : 'Still fetching resources...'}
         </span>
       </div>
     {/if}

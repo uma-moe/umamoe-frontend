@@ -32,11 +32,11 @@ export function charaCardId(cards: Cards, chara?: number) {
 export function matcherLabel(cards: Cards, matcher: TeamMatcher): string {
   const card = matcherCard(cards, matcher);
   return [
-    card ? card.name + ' · ' + (matcher.card ? card.outfit : 'Any outfit') : 'Any Uma',
+    card ? card.name + ' (' + (matcher.card ? card.outfit : 'any outfit') + ')' : 'Any Uma',
     matcher.style ? styleNames[matcher.style] : undefined
   ]
     .filter(Boolean)
-    .join(' · ');
+    .join(' + ');
 }
 
 export function sameMatcher(a: TeamMatcher, b: TeamMatcher) {
@@ -54,7 +54,7 @@ export function runnerChoices(cards: Cards) {
       .flatMap((character) => [
         {
           value: 'chara:' + character.chara,
-          label: character.name + ' · Any outfit',
+          label: character.name + ' (any outfit)',
           image: portrait(charaCardId(cards, character.chara)),
           keywords: String(character.chara)
         },
@@ -63,7 +63,7 @@ export function runnerChoices(cards: Cards) {
           .sort((a, b) => a[1].outfit.localeCompare(b[1].outfit))
           .map(([id, card]) => ({
             value: id,
-            label: card.name + ' · ' + card.outfit,
+            label: card.name + ' (' + card.outfit + ')',
             image: portrait(Number(id)),
             keywords: id
           }))

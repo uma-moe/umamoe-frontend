@@ -40,7 +40,7 @@
 <section id="support-cards">
   <StatisticsSectionHeading
     title="Build your support deck"
-    context="{view.supportData.length} cards · {view.deckData.length} builds"
+    context="{view.supportData.length} cards in {view.deckData.length} builds"
   />
   <div
     class="type-filters"
@@ -63,7 +63,7 @@
       <StatisticsRanking
         id="support-ranking"
         title="Most Popular Support Cards"
-        description="Share of all recorded card uses; a deck contributes multiple cards."
+        description="Share of all recorded card uses. Each deck contributes several cards."
         items={filteredSupports}
         searchable
         searchLabel="Search support cards"

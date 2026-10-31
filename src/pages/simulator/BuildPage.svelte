@@ -146,7 +146,7 @@
   const planSetup = $derived(
     offers.purchases.length +
       (offers.purchases.length === 1 ? ' skill' : ' skills') +
-      ' on offer · ' +
+      ' on offer within ' +
       formNumber(buildSearch.budget).toLocaleString('en-US') +
       ' SP'
   );

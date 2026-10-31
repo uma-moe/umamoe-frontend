@@ -29,7 +29,7 @@
     id="profile-fan-history"
     title="Fan History"
     icon="timeline"
-    description={`${monthly.length} ${monthly.length === 1 ? 'month' : 'months'} · Monthly totals, gains and ranks`}
+    description={`${monthly.length} ${monthly.length === 1 ? 'month' : 'months'} of totals, gains and ranks`}
     bind:open={expanded}
   >
     {#if expanded}

@@ -120,7 +120,7 @@
           size={14}
         />
         <span>
-          Build factor rules below. Separate rows are required together; use <b>OR</b>
+          Build factor rules below. Separate rows are required together. Use <b>OR</b>
           to accept either adjacent requirement.
         </span>
       </div>

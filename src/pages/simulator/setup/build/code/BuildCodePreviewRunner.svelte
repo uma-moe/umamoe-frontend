@@ -40,7 +40,7 @@
         uma.fanCount !== undefined ? uma.fanCount.toLocaleString('en-US') + ' fans' : ''
       ]
         .filter(Boolean)
-        .join(' · ')}
+        .join(', ')}
     </span>
   </div>
   <ul

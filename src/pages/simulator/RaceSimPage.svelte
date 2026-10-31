@@ -271,7 +271,7 @@
             <small>
               {[run.track.condition, run.track.weather, run.track.season]
                 .filter(Boolean)
-                .join(' · ')} · {run.result.runs.toLocaleString('en-US')}
+                .join(', ')}, {run.result.runs.toLocaleString('en-US')}
               {run.result.runs === 1 ? 'race' : 'races'}
             </small>{:else}Results{/if}
         </h2>
@@ -412,7 +412,7 @@
                   ' ' +
                   course.distance.toLocaleString('en-US') +
                   ' m'
-                : 'No course yet'} · {runsInvalid
+                : 'No course yet'}, {runsInvalid
                 ? 'check sampled races'
                 : Number(runs).toLocaleString('en-US') + (Number(runs) === 1 ? ' race' : ' races')}
             </span>

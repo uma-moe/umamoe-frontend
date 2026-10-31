@@ -181,10 +181,10 @@
 
 <ChartFrame
   id="simulation-build-comparison"
-  title={'Try a different build · ' + current.name}
+  title={'Try a different build for ' + current.name}
   description={'Change ' +
     current.name +
-    '’s stats, aptitudes, style or skills and rerun the exact same races: opponents, gates, conditions and seeds stay fixed, so the difference comes from the build. Each row shows the stats and the three aptitudes this race applies, with changes from the current build highlighted. Gained is how far ahead of her current build the alternative finishes on average, with its 95% range; wins and full spurt show the change in percentage points and the current and alternative rate. Native random draws can diverge once a build changes, so small differences are noise.'}
+    '’s stats, aptitudes, style or skills and rerun the exact same races. Opponents, gates, conditions and seeds stay fixed, so the difference comes from the build. Each row shows the stats and the three aptitudes this race applies, with changes from the current build highlighted. Gained is how far ahead of her current build the alternative finishes on average, with its 95% range. Wins and full spurt show the change in percentage points and the current and alternative rate. Native random draws can diverge once a build changes, so small differences are noise.'}
 >
   {#snippet actions()}<Button
       size="sm"
@@ -408,7 +408,7 @@
                   class="metric pending"
                   colspan="3"
                 >
-                  <span class="muted">Not compared yet · press Compare</span>
+                  <span class="muted">Not compared yet</span>
                 </td>
               {/if}
               <td class="row-actions">

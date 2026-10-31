@@ -42,7 +42,7 @@
 <ChartFrame
   id="simulation-head-to-head"
   title="Head-to-head"
-  description={'How often the runner on the left finishes ahead of the runner at the top, in the same races. Blue means she usually beats her, red means she usually loses, and the stronger the colour the clearer the result; pale cells are close to even. Runners are in win-rate order. Hover a cell for the 95% interval and the average finish-time difference.'}
+  description={'How often the runner on the left finishes ahead of the runner at the top, in the same races. Blue means she usually beats her, red means she usually loses, and the stronger the colour the clearer the result. Pale cells are close to even. Runners are in win-rate order. Hover a cell for the 95% interval and the average finish-time difference.'}
 >
   <div class="scroll">
     <table
@@ -102,11 +102,11 @@
                     pair.ahead +
                     ' of ' +
                     result.runs +
-                    ' races (95%: ' +
+                    ' races (95% interval ' +
                     pair.interval[0].toFixed(0) +
                     '–' +
                     pair.interval[1].toFixed(0) +
-                    '%) · on average ' +
+                    '%), on average ' +
                     Math.abs(pair.gap).toFixed(2) +
                     ' s ' +
                     (pair.gap <= 0 ? 'earlier' : 'later')}
@@ -131,7 +131,7 @@
     <ChartFrame
       id="simulation-teams"
       title="Teams"
-      description="How often each team wins the race, with any of its runners, and its best finishing place on average. The bar shows the win rate; the line is its 95% interval."
+      description="How often each team wins the race, with any of its runners, and its best finishing place on average. The bar shows the win rate and the line its 95% interval."
     >
       {#each teams as team (team.id)}
         <div class="team">

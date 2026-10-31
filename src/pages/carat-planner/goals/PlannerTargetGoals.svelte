@@ -70,7 +70,9 @@
 
   const fundingLabel = $derived(
     paidOnly
-      ? `Paid Carats only · ${projection.shortfallJewels ? `Requires ${projection.shortfallJewels.toLocaleString()} paid Carats` : 'Paid cost covered'}`
+      ? projection.shortfallJewels
+        ? `Requires ${projection.shortfallJewels.toLocaleString()} paid Carats`
+        : 'Paid cost covered'
       : [
           projection.shortfallJewels
             ? `${projection.shortfallJewels.toLocaleString()} Carats short`
@@ -79,7 +81,7 @@
           projection.freePullsUsed ? `${projection.freePullsUsed} free` : ''
         ]
           .filter(Boolean)
-          .join(' · ')
+          .join(', ')
   );
 
   const savedPulls = $derived(
@@ -131,10 +133,10 @@
                   ? `${-savedPulls} pulls over plan`
                   : 'As planned'}
             </span>
-            ·
+            ,
           {/if}{fundingLabel}{#if !paidOnly && projection.rewardCaratsGained > 0}
             <span class="reward-contribution">
-              · +{projection.rewardCaratsGained.toLocaleString()} from rewards
+              {', +' + projection.rewardCaratsGained.toLocaleString() + ' from rewards'}
             </span>
           {/if}
         </small>
@@ -153,7 +155,7 @@
             <span>{goal.option.name}</span>
             <small>
               {#if goal.actualCopies !== undefined}
-                {goal.desiredCopies} planned ·
+                {goal.desiredCopies} planned,
                 <strong class="actual-copies">
                   {goal.actualCopies} actual
                 </strong>
@@ -198,9 +200,9 @@
             Results
           {:else}
             All goals{#if inferred}
-              · estimated
+              (estimated)
             {:else if projection.sparkCopies}
-              · {projection.sparkCopies} shared spark{projection.sparkCopies === 1 ? '' : 's'}
+              with {projection.sparkCopies} shared spark{projection.sparkCopies === 1 ? '' : 's'}
             {/if}
           {/if}
         </small>

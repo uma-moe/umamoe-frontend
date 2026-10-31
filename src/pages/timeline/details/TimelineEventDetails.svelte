@@ -120,9 +120,9 @@
             ? 'grid'
             : 'calendar'}
         size={15}
-      />{event.typeLabel}{event.gachaLabel ? ' · ' + event.gachaLabel : ''}{event.rerun
-        ? ' · Rerun'
-        : ''}{event.predicted ? ' · Predicted' : ''}{#if prediction?.fitLabel}
+      />{event.typeLabel}{event.gachaLabel ? ', ' + event.gachaLabel : ''}{event.rerun
+        ? ', rerun'
+        : ''}{event.predicted ? ', predicted' : ''}{#if prediction?.fitLabel}
         <span>
           {prediction.fitLabel} date fit
         </span>

@@ -256,7 +256,7 @@ function expectedRecurringRewards(
       default_enabled: true,
       provenance: 'configured',
       assumption:
-        'Estimated for a day-one Global account that logs in daily; missed login days move the reward date.',
+        'Estimated for a day-one Global account that logs in daily. Missed login days move the reward date.',
       confidence: 'estimated_schedule'
     });
   }
@@ -274,7 +274,7 @@ function expectedRecurringRewards(
         category: 'seasonal_gift',
         default_enabled: true,
         provenance: 'jp_fallback',
-        assumption: 'JP-parity estimate; replaced by an exact Global reward when one is available.',
+        assumption: 'JP-parity estimate, replaced by an exact Global reward when one is available.',
         confidence: 'historical_standard',
         source_url: 'https://umamusume.jp/news/detail?id=3048'
       },
@@ -287,7 +287,7 @@ function expectedRecurringRewards(
         category: 'seasonal_gift',
         default_enabled: true,
         provenance: 'jp_fallback',
-        assumption: 'JP-parity estimate; replaced by an exact Global reward when one is available.',
+        assumption: 'JP-parity estimate, replaced by an exact Global reward when one is available.',
         confidence: 'historical_standard',
         source_url: 'https://umamusume.jp/news/detail?id=3117'
       },
@@ -300,7 +300,7 @@ function expectedRecurringRewards(
         category: 'seasonal_gift',
         default_enabled: true,
         provenance: 'jp_fallback',
-        assumption: 'JP-parity estimate; replaced by an exact Global reward when one is available.',
+        assumption: 'JP-parity estimate, replaced by an exact Global reward when one is available.',
         confidence: 'historical_standard',
         source_url: 'https://umamusume.jp/news/detail?id=2945'
       }
@@ -783,7 +783,7 @@ function competitivePresentation(
       previewItems,
       outcomeHeading: 'First-clear rewards',
       outcomeDescription:
-        'Each opponent grants this reward once; clearing all grants the combined card total.'
+        'Each opponent grants this reward once. Clearing all grants the combined card total.'
     };
   }
 
@@ -856,18 +856,18 @@ function competitiveTotalsToPreview(
 
 export function classicChampionsFinalOutcomes(): TimelineRewardOutcome[] {
   return [
-    championsFinalOutcome('Graded · Group A · 1st', 2500, 5, 5, 30, 100000, 25000),
-    championsFinalOutcome('Graded · Group A · 2nd', 1800, 4, 4, 25, 70000, 20000),
-    championsFinalOutcome('Graded · Group A · 3rd', 1200, 3, 3, 20, 50000, 15000),
-    championsFinalOutcome('Graded · Group B · 1st', 1200, 3, 3, 20, 60000, 20000),
-    championsFinalOutcome('Graded · Group B · 2nd', 900, 2, 2, 15, 50000, 15000),
-    championsFinalOutcome('Graded · Group B · 3rd', 700, 1, 1, 10, 40000, 10000),
-    championsFinalOutcome('Open · Group A · 1st', 1000, 3, 3, 20, 60000, 20000),
-    championsFinalOutcome('Open · Group A · 2nd', 850, 2, 2, 15, 50000, 15000),
-    championsFinalOutcome('Open · Group A · 3rd', 700, 1, 1, 10, 40000, 10000),
-    championsFinalOutcome('Open · Group B · 1st', 700, 2, 1, 10, 40000, 15000),
-    championsFinalOutcome('Open · Group B · 2nd', 600, 2, 0, 7, 30000, 10000),
-    championsFinalOutcome('Open · Group B · 3rd', 500, 1, 0, 5, 20000, 5000)
+    championsFinalOutcome('1st in Graded Group A', 2500, 5, 5, 30, 100000, 25000),
+    championsFinalOutcome('2nd in Graded Group A', 1800, 4, 4, 25, 70000, 20000),
+    championsFinalOutcome('3rd in Graded Group A', 1200, 3, 3, 20, 50000, 15000),
+    championsFinalOutcome('1st in Graded Group B', 1200, 3, 3, 20, 60000, 20000),
+    championsFinalOutcome('2nd in Graded Group B', 900, 2, 2, 15, 50000, 15000),
+    championsFinalOutcome('3rd in Graded Group B', 700, 1, 1, 10, 40000, 10000),
+    championsFinalOutcome('1st in Open Group A', 1000, 3, 3, 20, 60000, 20000),
+    championsFinalOutcome('2nd in Open Group A', 850, 2, 2, 15, 50000, 15000),
+    championsFinalOutcome('3rd in Open Group A', 700, 1, 1, 10, 40000, 10000),
+    championsFinalOutcome('1st in Open Group B', 700, 2, 1, 10, 40000, 15000),
+    championsFinalOutcome('2nd in Open Group B', 600, 2, 0, 7, 30000, 10000),
+    championsFinalOutcome('3rd in Open Group B', 500, 1, 0, 5, 20000, 5000)
   ];
 }
 
@@ -952,7 +952,7 @@ function groupChampionsOutcome(
   if (!group) {
     const outcome: TimelineRewardOutcome = {
       key: variantId + '-group',
-      label: 'League ' + league + ' · Round ' + round,
+      label: 'League ' + league + ', round ' + round,
       items: []
     };
 
@@ -968,7 +968,7 @@ function groupChampionsOutcome(
   const details: string[] = [];
   if (group.wins.size) details.push(formatOutcomeRange(group.wins) + ' wins');
   if (group.ranks.size) details.push('Ranks ' + formatOutcomeRange(group.ranks));
-  group.outcome.description = details.join(' · ');
+  group.outcome.description = details.join(', ');
   return true;
 }
 
@@ -985,18 +985,18 @@ function formatOutcomeRange(values: Set<number>): string {
 function competitiveOutcomeLabel(competition: string, label: string): string {
   const champions = /League\s+(\d+),\s*round\s+(\d+),\s*(\d+)\s+wins?,\s*rank\s+(\d+)/i.exec(label);
   if (champions) {
-    const rank = Number(champions[4]) > 0 ? ' · Rank ' + champions[4] : '';
+    const rank = Number(champions[4]) > 0 ? ', rank ' + champions[4] : '';
     return (
-      'League ' + champions[1] + ' · Round ' + champions[2] + ' · ' + champions[3] + ' wins' + rank
+      'League ' + champions[1] + ', round ' + champions[2] + ', ' + champions[3] + ' wins' + rank
     );
   }
 
   const heroes = /League rank type\s+(\d+),\s*rank\s+(\d+)\s*\(([-\d]+)\)/i.exec(label);
-  if (heroes) return 'League ' + heroes[1] + ' · Rank ' + heroes[2] + ' · ' + heroes[3] + ' pts';
+  if (heroes) return 'League ' + heroes[1] + ', rank ' + heroes[2] + ', ' + heroes[3] + ' pts';
 
   const teamRank = /Team rank\s+(\d+)\s*\(([-\d]+)\s+evaluation points\)/i.exec(label);
-  if (teamRank) return 'Team rank ' + teamRank[1] + ' · ' + teamRank[2] + ' evaluation';
-  if (/event missions/i.test(label)) return 'Event missions · Full completion';
+  if (teamRank) return 'Team rank ' + teamRank[1] + ' (' + teamRank[2] + ' evaluation points)';
+  if (/event missions/i.test(label)) return 'Full event mission completion';
   if (competition === 'legend_race') return label.replace(/^Legend race\s*[-:]\s*/i, '');
   return label.replace(/\s*\((?:rate|reward set)[^)]+\)\s*$/i, '').trim();
 }

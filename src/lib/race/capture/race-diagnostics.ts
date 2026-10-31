@@ -407,9 +407,9 @@ export const raceMetricHelp: Record<string, string> = {
   Time: 'Race completion time. The distance below it is the gap to the previous finisher when that runner crossed the line.',
   'Style / mood': 'Running style used in this race and the mood on race day.',
   Delay:
-    'Start delay in milliseconds. Delays of 80 ms or more are late starts; a delay above one simulation frame (66.6 ms) also loses the first acceleration frame.',
+    'Start delay in milliseconds. Delays of 80 ms or more are late starts. A delay above one simulation frame (66.6 ms) also loses the first acceleration frame.',
   'Last spurt':
-    'Distance between the first last-spurt check and the selected spurt start; zero means no delay. Speed is the selected spurt target, with the reduction from the full-spurt target in parentheses.',
+    'Distance between the first last-spurt check and the selected spurt start. Zero means no delay. Speed is the selected spurt target, with the reduction from the full-spurt target in parentheses.',
   'Duel (s)': 'Seconds spent dueling with another runner on the final straight.',
   'Downhill (s)':
     'Seconds in downhill accel mode. The line below splits it into time before the late race and time in it.',
@@ -418,17 +418,17 @@ export const raceMetricHelp: Record<string, string> = {
   'Time / gap':
     'Race completion time. The gap below it is the distance to the previous finisher when that runner crossed the finish line.',
   'Start delay':
-    'Time spent waiting after the start. Delays of 80 ms or more are marked as late starts. A delay above one simulation frame (66.6 ms) also loses the first acceleration frame; that is highlighted separately.',
+    'Time spent waiting after the start. Delays of 80 ms or more are marked as late starts. A delay above one simulation frame (66.6 ms) also loses the first acceleration frame, which is highlighted separately.',
   'Start delay (ms)':
     'Time spent waiting after the start. Delays of 80 ms or more are marked as late starts. A delay above one simulation frame (66.6 ms) also loses the first acceleration frame.',
   Start:
     'The start is marked delayed if it was at least 80 ms late or lost the first acceleration frame. Losing that frame starts above 66.6 ms.',
   'Spurt delay':
-    'Distance between the first last-spurt check and the selected spurt start. Zero means no delay. For recorded-only captures, delay is estimated from the late-race boundary. Speed is the selected spurt target; a negative value in parentheses shows the reduction from the full-spurt target, in m/s.',
+    'Distance between the first last-spurt check and the selected spurt start. Zero means no delay. For recorded-only captures, delay is estimated from the late-race boundary. Speed is the selected spurt target. A negative value in parentheses shows the reduction from the full-spurt target, in m/s.',
   'HP result':
     'Survived shows HP left at the finish as a share of maximum HP. Died shows how far before the finish HP ran out and, when resimulated, the HP shortfall as a share of maximum HP.',
   'HP at finish':
-    'HP remaining when the runner finishes. Zero means HP was exhausted; the exhaustion distance shows where it happened.',
+    'HP remaining when the runner finishes. Zero means HP was exhausted, and the exhaustion distance shows where it happened.',
   'Race modes (s)':
     'Seconds spent dueling, running downhill, or in position-keeping pace modes. Hover the downhill time for the part in the late race.',
   'Course loss (m)':
@@ -446,9 +446,9 @@ export const raceMetricHelp: Record<string, string> = {
   'First (s)':
     'Time of the first activation or active period. Select the time to watch that moment in replay.',
   'Active (s)':
-    'Total elapsed time the skill was active. Overlapping effects from the same skill are counted once; instant effects can last only one simulation tick.',
+    'Total elapsed time the skill was active. Overlapping effects from the same skill are counted once. Instant effects can last only one simulation tick.',
   'Wit check':
-    'The random percentage drawn for the skill’s wit check. A value below the activation chance passes; an equal or higher value fails. For example, 22% passes an 80% chance and 91% fails. A dash means no wit check is required. The race conditions still need to be met.',
+    'The random percentage drawn for the skill’s wit check. A value below the activation chance passes, and an equal or higher value fails. For example, 22% passes an 80% chance and 91% fails. A dash means no wit check is required. The race conditions still need to be met.',
   'Wit threshold (%)':
     'Chance of passing the skill’s activation check, determined by wit and any relevant modifiers. Passing the check does not guarantee the skill’s conditions are met.',
   'Wit check threshold':
@@ -460,7 +460,7 @@ export const raceMetricHelp: Record<string, string> = {
     'Number of separate active periods. Expand the count to see each period and jump to it in replay.',
   'HP at decision': 'HP available when the simulator calculated the last-spurt plan.',
   'Rushing check':
-    'The random percentage drawn for rushing, beside the runner’s rushing chance. A check below the chance makes the runner rush from the scheduled section; higher wit lowers the chance.',
+    'The random percentage drawn for rushing, beside the runner’s rushing chance. A check below the chance makes the runner rush from the scheduled section. Higher wit lowers the chance.',
   'HP for full spurt':
     'HP needed to start the full-speed spurt at this decision point and sustain it to the finish.',
   'Full spurt speed':
@@ -472,7 +472,7 @@ export const raceMetricHelp: Record<string, string> = {
   'Target (m/s)':
     'The simulator’s desired speed at this sample, including active effects. Actual speed may differ while accelerating or being blocked.',
   'Accel. (m/s²)':
-    'The acceleration rate at this sample. Positive values speed the runner up; negative values slow them down.',
+    'The acceleration rate at this sample. Positive values speed the runner up and negative values slow them down.',
   Section:
     'One of 24 equal distance sections used for the race’s base target-speed calculation. Select a section to replay its beginning.',
   'Distance (m)':
@@ -485,11 +485,11 @@ export const raceMetricHelp: Record<string, string> = {
   'Pace over time':
     'Target speed and acceleration over the race. Target speed is the desired speed, so it can differ from actual running speed.',
   'HP before → after':
-    'HP immediately before and after a skill applies. Values marked ≈ are estimates reconstructed from replay samples; exact application values are used when available.',
+    'HP immediately before and after a skill applies. Values marked ≈ are estimates reconstructed from replay samples. Exact application values are used when available.',
   'Applied HP':
     'HP actually added or removed by the skill. Recovery capped at maximum HP and debuffs applied after exhaustion can be smaller than requested.',
   'HP change':
-    'HP actually added or removed by the skill, with the change as a percentage of the runner’s maximum HP in parentheses. Recovery capped at maximum HP and debuffs applied after exhaustion can be smaller than requested; that requested amount is shown separately.',
+    'HP actually added or removed by the skill, with the change as a percentage of the runner’s maximum HP in parentheses. Recovery capped at maximum HP and debuffs applied after exhaustion can be smaller than requested, so the requested amount is shown separately.',
   'Max HP (%)':
     'The applied HP change as a percentage of the affected runner’s maximum HP. This is not a percentage of HP remaining.',
   Reference:

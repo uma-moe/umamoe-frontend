@@ -57,7 +57,7 @@
       return true;
     } catch {
       savesError =
-        'Changes could not be saved. Browser storage is unavailable or full; your saved trees have not changed.';
+        'Changes could not be saved. Browser storage is unavailable or full. Your saved trees have not changed.';
       savesOpen = true;
       return false;
     }

@@ -79,7 +79,7 @@
     />
     <div class="row-head">
       <button onclick={() => order('name')}>
-        Uma · style {sort === 'name' ? (descending ? '↓' : '↑') : '↕'}
+        Uma {sort === 'name' ? (descending ? '↓' : '↑') : '↕'}
       </button>
       <button onclick={() => order('winRate')}>
         Win% {sort === 'winRate' ? (descending ? '↓' : '↑') : '↕'}
@@ -116,10 +116,10 @@
             <span class="name">
               {p.name}
               <small style:color={colors[p.style] ?? '#69b7ee'}>
-                {styleNames[p.style]} · {p.outfit}
+                {styleNames[p.style]}, {p.outfit}
               </small>
               <small class="player-count">
-                {number(p.owners)} players · {pct(p.pop)} field
+                {number(p.owners)} players, {pct(p.pop)} field share
               </small>
               <i class="usage-track">
                 <i

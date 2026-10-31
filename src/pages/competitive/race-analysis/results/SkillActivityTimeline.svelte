@@ -83,7 +83,7 @@
 
   function periodLabel(period: SkillPeriod) {
     if (period.end === undefined) return period.start.toFixed(2) + ' s';
-    if (period.end === period.start) return period.start.toFixed(2) + ' s · instant';
+    if (period.end === period.start) return period.start.toFixed(2) + ' s, instant';
 
     return period.start.toFixed(2) + '–' + period.end.toFixed(2) + ' s';
   }
@@ -102,7 +102,7 @@
       (decision.passed ? '<' : '≥') +
       ' ' +
       decision.threshold.toFixed(1) +
-      '% · ' +
+      '%, ' +
       (decision.passed ? 'passed' : 'failed')
     );
   }
@@ -110,7 +110,7 @@
   function outcome(id: number) {
     const decision = decisions.find((decision) => Number(decision.skillId) === id);
     return decision?.activated
-      ? 'Activated · timing unavailable'
+      ? 'Activated, timing not recorded'
       : decision && !decision.passed
         ? 'Wit check failed'
         : decision?.required
@@ -145,10 +145,10 @@
       {#snippet trigger()}
         <InfoIcon />
       {/snippet}
-      <h3>Gate {index + 1} · {runner?.name ?? 'Selected runner'}</h3>
+      <h3>{runner?.name ?? 'Selected runner'}, gate {index + 1}</h3>
       <p>
         Icons mark activation times. Select one to seek the replay. A numbered icon contains nearby
-        activations; open it to choose a skill. Highlighted icons are currently active.
+        activations. Open it to choose a skill. Highlighted icons are currently active.
       </p>
       <Checkbox
         id={instanceId + '-all-skills'}
@@ -168,9 +168,7 @@
                 onclick={() => onseek(period.start)}
               >
                 {period.start.toFixed(2)} s{#if period.end !== undefined}
-                  – {period.end.toFixed(2)} s · {(period.end - period.start).toFixed(2)} s active
-                {:else}
-                  · Duration not recorded
+                  – {period.end.toFixed(2)} s, {(period.end - period.start).toFixed(2)} s active
                 {/if}
               </Button>
             {/each}{@render roll(row.id)}

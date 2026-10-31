@@ -126,7 +126,7 @@
 
     const top = gains.reduce((a, b) => (b.lengths > a.lengths ? b : a));
     const best = formatMarginValue(top.lengths, top.seconds, unit, 2);
-    return { badge: best, title: 'Every skill measured; the most valuable gains ' + best };
+    return { badge: best, title: 'Every skill is measured, and the most valuable gains ' + best };
   };
 
   const listed = $derived(sortRows(rows, sortKey, sortDirection, name));
@@ -160,7 +160,7 @@
           lengths at her finishing speed.
         </p>
         <p>
-          Quick uses the first {Math.min(PRELIMINARY_RACES, result.runs)} races; Full uses all {result.runs}.
+          Quick uses the first {Math.min(PRELIMINARY_RACES, result.runs)} races and Full uses all {result.runs}.
           Skills interact, so values do not add up to the build total.
         </p>
       </InspectPopover>
@@ -197,7 +197,7 @@
       description={impacts.available
         ? 'What each of ' +
           umas[active]!.name +
-          '’s skills is worth at the finish, as a bar on one shared scale with its 95% range as a thin line. Measure to fill it in; once a runner is measured, her tab shows her most valuable skill. Click a column header to sort; * marks quick results.'
+          '’s skills is worth at the finish, as a bar on one shared scale with its 95% range as a thin line. Measure to fill it in. Once a runner is measured, her tab shows her most valuable skill. Click a column header to sort. An asterisk marks quick results.'
         : 'Skill impact needs a report-enabled simulation. Run the simulation again to measure skills.'}
     >
       {#snippet actions()}
@@ -207,8 +207,8 @@
           options={[
             {
               value: 'quick',
-              label: 'Quick · ' + Math.min(PRELIMINARY_RACES, result.runs),
-              title: 'Quick: ' + Math.min(PRELIMINARY_RACES, result.runs) + ' races per skill'
+              label: 'Quick ' + Math.min(PRELIMINARY_RACES, result.runs),
+              title: 'First ' + Math.min(PRELIMINARY_RACES, result.runs) + ' races per skill'
             },
             {
               value: 'full',
@@ -243,7 +243,7 @@
             {unmeasured
               ? 'Measure ' +
                 unmeasured +
-                ' skills · ' +
+                ' skills over ' +
                 (unmeasured * races).toLocaleString('en-US') +
                 ' races'
               : 'All skills measured'}

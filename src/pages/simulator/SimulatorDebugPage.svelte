@@ -101,7 +101,7 @@
             id="sim-body"
             bind:value={bodyText}
             spellcheck="false"></textarea>
-          <span class="help">JSON only for now; MessagePack responses are not decoded.</span>
+          <span class="help">JSON only for now. MessagePack responses are not decoded.</span>
         </div>
 
         <div class="actions">

@@ -50,7 +50,7 @@
 
   /** Her outfit, and when she comes to Global if she is not out yet. */
   function subtitleOf(uma: ExplorerUma): string {
-    return [uma.outfit, releaseLabel(uma.release)].filter(Boolean).join(' · ');
+    return [uma.outfit, releaseLabel(uma.release)].filter(Boolean).join(', ');
   }
 
   function select(ids: string[]) {
@@ -73,7 +73,7 @@
       type="button"
       class="uma"
       aria-labelledby="{id}-label {id}-value"
-      title={selected ? `${selected.name} · ${subtitleOf(selected)}` : undefined}
+      title={selected ? `${selected.name}, ${subtitleOf(selected)}` : undefined}
       disabled={umas.length === 0}
       onclick={() => (open = true)}
     >

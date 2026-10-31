@@ -48,7 +48,7 @@
             class="comparison-key"
             title="When three teams are equally matched, each wins one race in three."
           >
-            33.3% · one win in three
+            33.3% is one win in three
           </span>
         </div>
       {/if}
@@ -81,7 +81,7 @@
             role="img"
             aria-label={'Team win rate ' +
               pct(Number(row.rate)) +
-              ' on a 0 to 100% scale; neutral baseline 33.3%, or one win in three'}
+              ', where 33.3% is one win in three'}
           >
             <i
               class="fill"

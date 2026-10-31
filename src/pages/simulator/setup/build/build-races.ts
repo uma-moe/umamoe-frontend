@@ -54,7 +54,7 @@ export function buildRaces(options: {
   });
 
   if (!pool) {
-    const name = trackName(course.race_track_id) + ' · ' + describeCourse(course);
+    const name = trackName(course.race_track_id) + ' ' + describeCourse(course);
     return {
       course,
       where: ['She raced on ' + courseName(course) + ' against ' + PACK + '.', PACK_MEASURES],
@@ -74,7 +74,7 @@ export function buildRaces(options: {
     ],
     scenarios: pool.map((course) => {
       const siblings = pool.filter((other) => other.race_track_id === course.race_track_id);
-      let name = trackName(course.race_track_id) + ' · ' + describeCourse(course, siblings);
+      let name = trackName(course.race_track_id) + ' ' + describeCourse(course, siblings);
       if (names.has(name)) name += ' #' + course.course_id;
       names.add(name);
       return scenario(course, name, { ...setup, raceInstanceId: 0 });

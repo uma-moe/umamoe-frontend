@@ -19,7 +19,7 @@
   >
     <p>
       The page could not start. A file may have failed to download, or a browser feature may be
-      unavailable. Reload to try again; your saved data has not been changed.
+      unavailable. Reload to try again. Your saved data has not been changed.
     </p>
     <p>
       If this keeps happening, report the page and your browser version using the Discord link

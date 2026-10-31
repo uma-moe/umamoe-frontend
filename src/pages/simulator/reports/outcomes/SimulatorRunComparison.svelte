@@ -69,9 +69,9 @@
         unitNote +
         '. ' +
         (compact
-          ? 'Ahead in is how often she finishes ahead; median is the typical margin.'
+          ? 'Ahead in is how often she finishes ahead. Median is the typical margin.'
           : 'The tiles give her worst and best race, the average and the typical (median) race, and how often she finishes ahead.') +
-        ' Each bar counts the races that ended with that margin: bars right of zero are races she finished ahead, in her colour, and bars left of zero are races ' +
+        ' Each bar counts the races that ended with that margin. Bars right of zero are races she finished ahead, in her colour, and bars left of zero are races ' +
         label(reference) +
         ' finished ahead, in grey. The dashed line marks the median. Hover a bar for its races.'
       );
@@ -79,10 +79,10 @@
 
     if (finishView === 'time') {
       return (
-        'Each runner’s own finish times over every race, on one shared clock: left is faster. ' +
+        'Each runner’s own finish times over every race, on one shared clock where left is faster. ' +
         (compact
-          ? 'Median is the typical race; vs best is how far her median is behind the fastest median shown.'
-          : 'The tiles give her fastest and slowest race, the average, the typical (median) race and the spread: how many seconds the middle 80% of her races cover.') +
+          ? 'Median is the typical race. Vs best is how far her median is behind the fastest median shown.'
+          : 'The tiles give her fastest and slowest race, the average, the typical (median) race and the spread, which is how many seconds the middle 80% of her races cover.') +
         ' The dashed line marks the median. Hover a bar for its races.'
       );
     }
@@ -131,8 +131,8 @@
           95% interval of how often she finishes ahead still contains 50%.
         </p>
         <p>
-          Margins are in lengths: 1 L = 2.5 m. The baseline runner is zero; every other runner is
-          measured from her.
+          Margins are in lengths, and 1 L is 2.5 m. The baseline runner is zero and every other
+          runner is measured from her.
         </p>
       </InspectPopover>
     </span>

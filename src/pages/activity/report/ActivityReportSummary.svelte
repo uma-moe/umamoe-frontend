@@ -58,7 +58,7 @@
   {#if score.short_high_fan_careers || score.short_fan_gain_score}
     <div class="automation-panel">
       <div>
-        <span class="eyebrow">Primary signal · Training speed</span>
+        <span class="eyebrow">Training speed (primary signal)</span>
         <h3>{wholeNumber(score.short_high_fan_careers)} under-15m high-fan careers</h3>
         <p>
           High-fan means at least 90K fans per observed minute during an estimated career window.

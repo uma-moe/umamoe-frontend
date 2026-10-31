@@ -226,10 +226,13 @@
 
   function labelText(point: PlottedSkill | undefined): string {
     if (!point) return '';
-    const forced = point.forced ? ' · Forced' : '';
-    const search = point.searchMatch ? ' · Search match' : '';
-    const compared = comparedSkillIds.has(point.skillId) ? ' · Compare' : '';
-    return point.name + forced + search + compared;
+    const flags = [
+      point.forced ? 'forced' : '',
+      point.searchMatch ? 'search match' : '',
+      comparedSkillIds.has(point.skillId) ? 'compared' : ''
+    ].filter(Boolean);
+
+    return flags.length ? point.name + ' (' + flags.join(', ') + ')' : point.name;
   }
 
   function clamp(value: number, low: number, high: number): number {
@@ -445,7 +448,7 @@
   <div class="toolbar">
     <p class="hint">
       <span class="with-hover">
-        Hover a skill to preview; click to keep it open. Scroll or pinch to zoom.
+        Hover a skill to preview it and click to keep it open. Scroll or pinch to zoom.
       </span>
       <span class="with-touch">Tap a skill for its details. Pinch to zoom.</span>
       {#if zoomed}

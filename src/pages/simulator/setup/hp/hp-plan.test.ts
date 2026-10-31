@@ -102,9 +102,9 @@ describe('HP calculator plan', () => {
         kind: 'recovery',
         at: 400,
         length: 1200,
-        label: 'Recovery: 1 unique, 2 gold, 1 white, in mid race'
+        label: 'Recovery (1 unique, 2 gold, 1 white) in mid race'
       },
-      { kind: 'debuff', at: 400, length: 1200, label: 'HP debuffs: 1 gold, 2 white, in mid race' }
+      { kind: 'debuff', at: 400, length: 1200, label: 'HP debuffs (1 gold, 2 white) in mid race' }
     ]);
 
     expect(uniqueRecovery(plan)).toBe(5.72);
@@ -143,8 +143,8 @@ describe('HP calculator plan', () => {
     ]);
 
     expect(markers.map((marker) => marker.label)).toEqual([
-      'Speed: 1 gold, 2 white, 1 unique, in the spurt',
-      'Acceleration: 1 gold, in the spurt'
+      'Speed (1 gold, 2 white, 1 unique) in the spurt',
+      'Acceleration (1 gold) in the spurt'
     ]);
   });
 

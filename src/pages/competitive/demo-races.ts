@@ -29,9 +29,9 @@ export const demoSkills = new Map([
 ]);
 
 export const demoMeetings = [
-  { value: 'tokyo', label: 'Tokyo · Turf · 2,400m', distance: 2400, course: 10606 },
-  { value: 'hanshin', label: 'Hanshin · Turf · 2,200m', distance: 2200, course: 10906 },
-  { value: 'nakayama', label: 'Nakayama · Turf · 2,500m', distance: 2500, course: 10506 }
+  { value: 'tokyo', label: 'Tokyo Turf 2,400m', distance: 2400, course: 10606 },
+  { value: 'hanshin', label: 'Hanshin Turf 2,200m', distance: 2200, course: 10906 },
+  { value: 'nakayama', label: 'Nakayama Turf 2,500m', distance: 2500, course: 10506 }
 ];
 
 export function makeDemoRaces(

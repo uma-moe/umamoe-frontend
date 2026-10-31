@@ -62,7 +62,7 @@ small {
 .stat-totals {
   display: inline-flex;
   align-items: baseline;
-  gap: 6px;
+  gap: 12px;
   margin-left: 3px;
 }
 .stat-total {

@@ -226,8 +226,8 @@
         </p>
         <h3>API Keys</h3>
         <p>
-          You can generate API keys to authenticate with our API. Keys are stored as hashed values;
-          the full key is shown only once at creation. We log request counts per key for rate
+          You can generate API keys to authenticate with our API. Keys are stored as hashed values,
+          and the full key is shown only once at creation. We log request counts per key for rate
           limiting.
         </p>
       </section>
@@ -500,11 +500,11 @@
           </li>
           <li>
             <strong>Authentication:</strong>
-            Passwords are never stored; authentication is delegated to OAuth providers.
+            Passwords are never stored. Authentication is delegated to OAuth providers.
           </li>
           <li>
             <strong>API Keys:</strong>
-            Stored as hashed values; the plaintext is never retained.
+            Stored as hashed values. The plaintext is never retained.
           </li>
           <li>
             <strong>Access Controls:</strong>

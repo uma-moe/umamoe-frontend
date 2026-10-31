@@ -195,11 +195,11 @@
         : undefined
     ]
       .filter(Boolean)
-      .join(' · ')
+      .join(', ')
   );
 
   const sectionLabel = (label: string, start: number, end: number) =>
-    label + ' · ' + number(Math.round(start)) + '–' + number(Math.round(end)) + ' m';
+    label + ' at ' + number(Math.round(start)) + '–' + number(Math.round(end)) + ' m';
 
   function remove(id: number) {
     selected = selected.filter((value) => value !== id);
@@ -306,8 +306,8 @@
     class="sr-only"
   >
     Hover or tap to inspect a distance. Use arrow keys, Home or End while focused. Drag or hold
-    Shift with arrow keys to select a range; Escape clears it. {removable
-      ? 'Each line is normalized to its own peak: the busiest distance bucket is 100%.'
+    Shift with arrow keys to select a range, and press Escape to clear it. {removable
+      ? 'Each line is normalized so its busiest distance bucket is 100%.'
       : 'Bars count all activations.'} Outcomes count each runner entry once, at its first activation.
   </span>
   <div
@@ -327,12 +327,12 @@
             {#if !removable}
               <strong class="skill-title">{skillName(lane.id)}</strong>
               <span class="skill-variants">
-                {#if aliases}{aliases} ·
+                {#if aliases}{aliases},
                 {/if}ID {lane.id}
               </span>
             {/if}
             {#if removable}
-              <span class="event-count">Normalized activations · each skill’s peak = 100%</span>
+              <span class="event-count">Activations scaled to each skill’s peak</span>
             {:else}
               <span class="event-count">
                 <strong>{details.values[lane.id] ? number(lane.total) : '—'}</strong>
@@ -381,10 +381,10 @@
               </p>
               <p>
                 {removable
-                  ? 'Each skill is scaled independently: its busiest distance bucket is 100%. This compares activation patterns regardless of event totals or how spread out the activations are. The table retains actual counts and outcome rates. Colour and dash patterns identify each skill.'
+                  ? 'Each skill is scaled independently so its busiest distance bucket is 100%. This compares activation patterns regardless of event totals or how spread out the activations are. The table retains actual counts and outcome rates. Colour and dash patterns identify each skill.'
                   : 'Bars count every activation, including repeats, and scale to each skill’s peak.'}
                 Outcome rates count each runner entry once, at its first activation. Mean and median distances
-                are bucket estimates; the central 80% spans the 10th–90th percentile.
+                are bucket estimates, and the central 80% spans the 10th–90th percentile.
               </p>
             </div>
           </InspectPopover>
@@ -406,7 +406,7 @@
                 title={FINAL_SPURT_HELP}
               >
                 <span class="spurt-label">
-                  Late race · Final spurt from {number(Math.round(spurt.start))} m
+                  Final spurt from {number(Math.round(spurt.start))} m
                 </span>
                 <span
                   class="spurt-short"
@@ -420,7 +420,7 @@
                   class="phase-background"
                   role="img"
                   aria-label={'Race legs: ' +
-                    phases.map((p) => sectionLabel(p.label, p.start, p.end)).join('; ')}
+                    phases.map((p) => sectionLabel(p.label, p.start, p.end)).join(', ')}
                 >
                   {#each phases as phase}
                     <span
@@ -562,7 +562,7 @@
                 role="img"
                 aria-label={course
                   ? 'Course sections: ' +
-                    segments.map((s) => sectionLabel(s.label, s.start, s.end)).join('; ')
+                    segments.map((s) => sectionLabel(s.label, s.start, s.end)).join(', ')
                   : 'Track sections unavailable'}
               >
                 {#each segments as segment}

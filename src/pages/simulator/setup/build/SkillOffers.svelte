@@ -279,7 +279,7 @@
     </ul>
   {:else}
     <p class="empty">
-      Add the skills she can buy; the search finds the best set within the budget.
+      Add the skills she can buy, and the search finds the best set within the budget.
     </p>
   {/if}
 </SimSection>

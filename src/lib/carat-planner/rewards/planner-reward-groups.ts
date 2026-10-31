@@ -252,14 +252,14 @@ function rewardBreakdown(
     }
 
     return amounts.length
-      ? [cleanRewardLabel(bundle.label).replace(/ item details$/i, '') + ': ' + amounts.join(' · ')]
+      ? [cleanRewardLabel(bundle.label).replace(/ item details$/i, '') + ': ' + amounts.join(', ')]
       : [];
   });
 
   if (!lines.length) return '';
   const notes = [];
   if (rewards.some((item) => item.provenance?.startsWith('jp_master')))
-    notes.push('JP master projection; Global master rewards replace it when available.');
+    notes.push('JP master projection. Global master rewards replace it when available.');
   if (rewards.some((item) => /bingo rewards/i.test(item.label)))
     notes.push(
       'Finite Bingo sheets are included. Repeatable sheets have no fixed maximum and are excluded.'
@@ -623,7 +623,7 @@ export function plannerRewardSummary(
       tickets > 0 ? integer.format(tickets) + (tickets === 1 ? ' ticket' : ' tickets') : ''
     ]
       .filter(Boolean)
-      .join(' · ')
+      .join(', ')
   };
 }
 

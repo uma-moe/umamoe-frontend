@@ -89,7 +89,7 @@
             onchange={(value) => oninspect(Number(value))}
             options={charted.map((source) => ({
               value: String(source),
-              label: name(source) + ' · #' + (source + 1),
+              label: name(source) + ' (#' + (source + 1) + ')',
               image: portrait(umas[source]!.cardId)
             }))}
           />
@@ -165,7 +165,7 @@
               <tr>
                 <td>
                   {race.run + 1}
-                  <small>· seed {result.seeds[race.run]}</small>
+                  <small>seed {result.seeds[race.run]}</small>
                 </td>
                 <td class="num">{whole(race.check)}</td>
                 <td

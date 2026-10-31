@@ -57,7 +57,7 @@
   class:highlightMain
   class:matched
   class:removable={Boolean(onremove)}
-  title={title ?? (sourceLabel ? `${name} · ${sourceLabel}` : name)}
+  title={title ?? (sourceLabel ? `${name}, ${sourceLabel}` : name)}
   data-source={source}
   aria-label={`${level} ${countMode === 'stars' ? 'star' : 'occurrences of'} ${name}${chance ? `, ${chance}` : ''}${sourceLabel ? `, ${sourceLabel}` : ''}${mainStars ? `, main parent contribution ${mainStars} stars` : ''}${p2Stars ? `, P2 contribution ${p2Stars} stars` : ''}`}
 >

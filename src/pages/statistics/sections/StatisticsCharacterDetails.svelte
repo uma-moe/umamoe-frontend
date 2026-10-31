@@ -159,7 +159,7 @@
       <span class="eyebrow">Character analysis</span>
       <h2>{character?.title ?? 'Uma ' + characterId}</h2>
       <p>
-        {loading ? 'Loading samples…' : compact(charSamples) + ' matching samples'} · ID {characterId}
+        {loading ? 'Loading samples…' : compact(charSamples) + ' matching samples'}
       </p>
     </div>
   </header>

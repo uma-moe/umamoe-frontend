@@ -33,7 +33,7 @@
     <h4>{title}</h4>
     <span class="spend">
       {count}
-      {count === 1 ? 'skill' : 'skills'} ·
+      {count === 1 ? 'skill' : 'skills'} for
       <SkillPoints value={spCost} />
     </span>
   </div>

@@ -128,7 +128,7 @@
           viewBox="0 0 1000 52"
           preserveAspectRatio="none"
           role="img"
-          aria-label="Course elevation profile; uphill in pink and downhill in blue"
+          aria-label="Course elevation profile with uphill in pink and downhill in blue"
         >
           <path
             class="terrain-fill"
@@ -251,7 +251,7 @@
           aria-label={'Seek to final spurt window at ' + Math.round(spurt.start) + ' metres'}
           onclick={() => onseek(spurt.time)}
         >
-          Final spurt window · {Math.round(spurt.start)} m
+          Final spurt from {Math.round(spurt.start)} m
         </button>
       {/if}
     </div>

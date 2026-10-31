@@ -162,7 +162,7 @@
       >
         <LazyEChartsSurface
           {option}
-          label={`Member progression · ${mode}`}
+          label={`Member progression (${mode})`}
           height={chartHeight}
           dismissTouchTooltip
         />

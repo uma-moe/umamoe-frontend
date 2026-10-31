@@ -35,7 +35,7 @@
 <SimSection
   number={1}
   title="Your Veterans"
-  note="{picked.length} picked · {teams.toLocaleString('en-US')} {teams === 1 ? 'team' : 'teams'}"
+  note="{picked.length} picked, {teams.toLocaleString('en-US')} {teams === 1 ? 'team' : 'teams'}"
 >
   {#snippet actions()}
     {#if $workspaces.length > 1}

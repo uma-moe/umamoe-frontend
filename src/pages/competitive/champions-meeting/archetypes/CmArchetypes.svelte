@@ -175,7 +175,7 @@
           <h2>Captured teams</h2>
           <p>
             {result ? number(total) + ' matching teams' : 'Finding teams…'}{activeFilters
-              ? ' · ' + activeFilters + ' lineup filters'
+              ? ' with ' + activeFilters + ' lineup filters'
               : ''}
           </p>
         </div>
@@ -274,7 +274,7 @@
       </div>
       <p class="loaded-count">
         {number(result.teams.length)} of {number(total)} teams loaded{loading
-          ? ' · Loading more teams…'
+          ? ', loading more…'
           : ''}
       </p>
     {/if}

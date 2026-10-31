@@ -129,7 +129,8 @@
   {:else if benchmark}
     <p class="course">
       <strong>
-        {trackName(benchmark.course.race_track_id)} · {describeCourse(benchmark.course)}
+        {trackName(benchmark.course.race_track_id)}
+        {describeCourse(benchmark.course)}
       </strong>
       <span>{benchmark.snapshot.meta.conditions}</span>
     </p>
@@ -138,7 +139,7 @@
       aria-label="The {benchmark.teams.length} leading teams"
     >
       {#each benchmark.teams as team, index (team.id)}
-        <li title={team.umas.map((uma) => uma.name).join(' · ')}>
+        <li title={team.umas.map((uma) => uma.name).join(', ')}>
           <span class="number">{index + 1}</span>
           {#each team.umas as uma (uma.id)}
             <SimulatorRunnerFace

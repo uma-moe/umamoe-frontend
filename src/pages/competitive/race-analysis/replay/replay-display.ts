@@ -37,7 +37,7 @@ export const replayToggleHelp: Record<ReplayToggle, string> = {
   slopes: 'Shades uphills and downhills. The shading is not to scale.',
   speed: 'Recorded speed per frame, interpolated between frames.',
   accel:
-    'Detailed simulations use the simulator rate; recorded races use the speed change between frames.',
+    'Detailed simulations use the simulator rate. Recorded races use the speed change between frames.',
   raceModes:
     'Labels Pace Up, Pace Down, Speed Up, Overtake, dueling and rushing. Recorded races only show rushing.',
   course: 'Corners, straights and race phase markers.',

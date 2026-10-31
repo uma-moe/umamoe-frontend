@@ -29,7 +29,7 @@
         </div>
         <div>
           <dt>GP / Any GP / Great parent</dt>
-          <dd>Either great parent may satisfy the predicate; it does not require both.</dd>
+          <dd>Either great parent may satisfy the predicate, not necessarily both.</dd>
         </div>
         <div>
           <dt>Characters in (...)</dt>
@@ -80,7 +80,7 @@
         </div>
         <div>
           <dt>+ - * /</dt>
-          <dd>Numeric arithmetic; division uses integer semantics.</dd>
+          <dd>Numeric arithmetic. Division uses integer semantics.</dd>
         </div>
         <div>
           <dt>% / mod</dt>
@@ -162,7 +162,7 @@
         </div>
         <div>
           <dt>White factors in (Skill A &gt; 3, Skill B)</dt>
-          <dd>Either skill; the first also has a lineage star threshold.</dd>
+          <dd>Either skill. The first also has a lineage star threshold.</dd>
         </div>
         <div>
           <dt>Race wins has all (...)</dt>
@@ -231,7 +231,7 @@
         </div>
         <div>
           <dt>sort by = Total Red stars</dt>
-          <dd>Sort by pink-star total; Red is the UI alias.</dd>
+          <dd>Sort by pink-star total. Red is the UI alias.</dd>
         </div>
         <div>
           <dt>sort by = Total Green stars</dt>

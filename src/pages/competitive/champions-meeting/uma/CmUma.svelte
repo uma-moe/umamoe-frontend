@@ -127,7 +127,7 @@
           .sort((a, b) => b.owners - a.owners)
           .map((p) => ({
             value: p.key,
-            label: p.name + ' · ' + p.outfit + ' · ' + styleNames[p.style]
+            label: p.name + ' (' + p.outfit + '), ' + styleNames[p.style]
           }))}
       />
     {/snippet}

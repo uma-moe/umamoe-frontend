@@ -65,7 +65,7 @@ export function veteranSummary(
     rank: v.rank_score == null ? '' : getRankInfoFromScore(v.rank_score).label,
     score: v.rank_score ?? undefined,
     scenario: item.scenario === '-' ? undefined : item.scenario,
-    detail: [item.distance, item.style].filter((value) => value && value !== '-').join(' · '),
+    detail: [item.distance, item.style].filter((value) => value && value !== '-').join(', '),
     affinity: affinity?.main ?? Number.NaN,
     affinityTarget: targetId ? { id: targetId, name: target?.name ?? 'Selected Uma' } : undefined,
     affinityNote: targetId
@@ -73,7 +73,7 @@ export function veteranSummary(
         (target?.name ?? 'the target') +
         ': direct relation, both parent contributions and shared G1 wins.'
       : affinity?.recorded
-        ? 'Stored main affinity; parent details unavailable'
+        ? 'Stored main affinity without parent details'
         : 'Main = P1 + P2. Each parent includes base affinity and shared G1 wins.',
     aptitudes: veteranAptitudes(v),
     stats: [

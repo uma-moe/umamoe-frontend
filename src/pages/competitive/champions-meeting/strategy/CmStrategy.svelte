@@ -95,9 +95,7 @@
         plain
         surface
         id="cm-style"
-        title={scope === 'all'
-          ? 'Style Breakdown'
-          : styleNames[Number(scope)] + ' · style overview'}
+        title={scope === 'all' ? 'Style Breakdown' : styleNames[Number(scope)] + ' overview'}
         description="A style’s win share exceeding its simulated field share means its win rate is above average."
       >
         {#snippet actions()}
@@ -177,10 +175,8 @@
               {/if}
               {#if scope !== 'all'}
                 <p class="scope-interval">
-                  95% intervals: individual {pct(row.individualCI[0], 2)}–{pct(
-                    row.individualCI[1],
-                    2
-                  )} · team {pct(row.teamCI[0], 2)}–{pct(row.teamCI[1], 2)}
+                  95% interval {pct(row.individualCI[0], 2)}–{pct(row.individualCI[1], 2)} individual,
+                  {pct(row.teamCI[0], 2)}–{pct(row.teamCI[1], 2)} team
                 </p>
               {/if}
             </div>
@@ -247,8 +243,7 @@
         surface
         id="cm-rooms"
         title="Room Composition"
-        description={'All simulated rooms · Rooms with pace promotion: ' +
-          pct(data.rooms.noDisplayedFront)}
+        description={pct(data.rooms.noDisplayedFront) + ' of simulated rooms have pace promotion.'}
       >
         <div
           class="room-average-grid"
@@ -391,7 +386,7 @@
                     {#each pairs.slice(repRanges[id]?.start ?? 0, repRanges[id]?.end ?? 0) as pair, index (pair.key)}
                       <button
                         data-virtual-index={(repRanges[id]?.start ?? 0) + index}
-                        title={pair.outfit + ' · ' + pct(pair.stylePop) + ' style share'}
+                        title={pair.outfit + ', ' + pct(pair.stylePop) + ' style share'}
                         onclick={() =>
                           onteams([{ card: pair.card, chara: pair.chara, style: id }, {}, {}])}
                       >

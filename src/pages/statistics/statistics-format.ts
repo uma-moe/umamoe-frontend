@@ -83,7 +83,7 @@ export function supportRow(
   return {
     ...item,
     image: card?.image,
-    detail: [...(card?.tags ?? []), '#' + item.id].join(' · ')
+    detail: [...(card?.tags ?? []), '#' + item.id].join(', ')
   };
 }
 

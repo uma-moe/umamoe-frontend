@@ -38,7 +38,7 @@
   const comparisonOptions = $derived(
     skills
       .filter((row) => !selected.includes(row.id))
-      .map((row) => ({ value: String(row.id), label: row.name + ' · ID ' + row.id }))
+      .map((row) => ({ value: String(row.id), label: row.name + ' (ID ' + row.id + ')' }))
   );
 </script>
 
@@ -52,7 +52,7 @@
       <div>
         <h2>
           Compare activation distances <span>
-            {selected.length} skill{selected.length === 1 ? '' : 's'} · {number(
+            {selected.length} skill{selected.length === 1 ? '' : 's'} on {number(
               overview.courseDistance
             )} m
           </span>

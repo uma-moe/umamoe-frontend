@@ -850,7 +850,7 @@ export function createDatabaseUqlLanguage(
         insertText: field.label,
         kind: 'field',
         detail:
-          'Up to 3 stars on a specific slot; compare a named factor like Main End Closer >= 1',
+          'Up to 3 stars on a specific slot. Compare a named factor like Main End Closer >= 1',
         searchText: getScopedSparkFieldSearchText(field),
         matchPhrases: [field.label, ...field.aliases],
         priority: getScopedSparkFieldPriority(field),
@@ -869,7 +869,7 @@ export function createDatabaseUqlLanguage(
     label: characterNames.get(character.id)?.displayName ?? character.title,
     insertText: characterNames.get(character.id)?.displayName ?? character.title,
     kind: 'value',
-    detail: `${characterNames.get(character.id)?.skin || 'Original'} · Character id ${character.id}`,
+    detail: `${characterNames.get(character.id)?.skin || 'Original'}, character ID ${character.id}`,
     searchText: `${character.searchText} ${characterNames.get(character.id)?.displayName ?? ''}`,
     valueContext: 'character',
     priority: 0,
@@ -933,7 +933,7 @@ export function createDatabaseUqlLanguage(
       kind: 'value',
       valueContext: 'legacy',
       priority: 0,
-      detail: `Owned legacy · ${parent.trainer_id || parent.share_source}`,
+      detail: `Owned legacy (${parent.trainer_id || parent.share_source})`,
       matchPhrases: [
         uqlLegacyName(parent, queryCharacters),
         `${parent.trainer_id}:${parent.member_id}`

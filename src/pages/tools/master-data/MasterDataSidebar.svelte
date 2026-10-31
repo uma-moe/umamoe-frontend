@@ -67,7 +67,7 @@
       <button
         class:active={active === table.name}
         aria-current={active === table.name ? 'true' : undefined}
-        title="{table.name} · {table.rows.toLocaleString()} rows · {table.columns.length} columns"
+        title="{table.name}, {table.rows.toLocaleString()} rows, {table.columns.length} columns"
         onclick={() => onbrowse(table.name)}
       >
         <span>{table.name}</span>

@@ -442,7 +442,7 @@ function describeReferences(items: QueryReference[]): VeteranQueryMatch[] {
                   .reduce((sum, value) => sum + (value % 10), 0);
 
         const prefix = spark[1]
-          ? ({ main: 'Main', left: 'P1', right: 'P2' } as Record<string, string>)[spark[1]] + ' · '
+          ? ({ main: 'Main', left: 'P1', right: 'P2' } as Record<string, string>)[spark[1]] + ' '
           : '';
 
         matches.push({

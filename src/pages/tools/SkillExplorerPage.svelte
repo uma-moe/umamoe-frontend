@@ -289,7 +289,7 @@
   }
 
   function meetingLabel(number: number, id: number): string {
-    return `CM${number} · ${courseLabel(id)}`;
+    return `CM${number} ${courseLabel(id)}`;
   }
 
   function meetingNote(meeting: MeetingOption): string | undefined {
@@ -581,7 +581,7 @@
         {#if scopeData}
           <span>
             {scopeData.courses}
-            {scopeData.courses === 1 ? 'course' : 'courses'} · {view?.plotted.length ?? 0} skills
+            {scopeData.courses === 1 ? 'course' : 'courses'}, {view?.plotted.length ?? 0} skills
           </span>
         {/if}
         {#if selectedUma && selectedUmaNote}
@@ -673,7 +673,7 @@
           </ul>
           <p>
             <strong>How accurate is it?</strong>
-            The values are best for comparing skills with each other; the exact numbers are estimates.
+            The values are best for comparing skills with each other. The exact numbers are estimates.
             {#if margin !== undefined}
               Checked against full race simulations, 8 in 10 skills landed within {Math.round(
                 margin * 100
@@ -685,7 +685,7 @@
           <p>
             <strong>Courses.</strong>
             A CM shows its own course. A wider view such as Turf shows the middle (median) course of the
-            group, so it is what a skill is worth on a typical turf course; activation spots average the
+            group, so it is what a skill is worth on a typical turf course. Activation spots average the
             races where it fired. Strong and weaker split at the middle skill shown. All styles averages
             only the styles that can activate the skill.
           </p>
@@ -693,10 +693,10 @@
             <strong>Special cases.</strong>
             A skill that needs the runner's own activations first, such as a count of skills used or recoveries,
             is raced again with the skills that trigger it added. A ground, weather, season or night skill
-            whose condition the day lacks is valued as if it held and marked Forced; Scale by proc rate
+            whose condition the day lacks is valued as if it held and marked Forced. Scale by proc rate
             then uses how often it procs when the condition holds. On a CM, these skills show only when
-            the race day matches; elsewhere you can hide them under Skill filters. Other skills that never
-            activate for the runner, and negative skills, are left out.
+            the race day matches. Elsewhere, you can hide them under Skill filters. Other skills that
+            never activate for the runner, and negative skills, are left out.
           </p>
           <p>
             <strong>Picking an uma</strong>

@@ -63,8 +63,8 @@
     const count = filter.trim()
       ? `${shown.length.toLocaleString()} of ${total} rows`
       : `${total} rows`;
-    const limit = result.truncated ? ' · stopped at the row limit' : '';
-    return `${count} · ${result.elapsedMs} ms${limit}`;
+    const limit = result.truncated ? ', stopped at the row limit' : '';
+    return `${count} in ${result.elapsedMs} ms${limit}`;
   });
 
   function cellValue(row: Record<string, string | number>, column: TableColumn): SqlValue {

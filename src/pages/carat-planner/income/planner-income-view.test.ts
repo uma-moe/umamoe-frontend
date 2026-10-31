@@ -112,7 +112,7 @@ it('summarizes scheduled income across currencies, competitive rewards and deduc
     }
   );
 
-  expect(summary.totalLabel).toBe('+4,690 Carats · +13 tickets · +3 shards · +3 Uncap Crystals');
+  expect(summary.totalLabel).toBe('+4,690 Carats, +13 tickets, +3 shards, +3 Uncap Crystals');
   expect(summary.sources.find((source) => source.label === 'Daily login')?.amountLabel).toBe(
     '+2,250 Free Carats'
   );
@@ -123,7 +123,7 @@ it('summarizes scheduled income across currencies, competitive rewards and deduc
   plan.disabledEventIds = ['cm'];
   plan.disabledRewardIds = ['gift'];
   expect(summarizePlannerIncome(buildPlannerLedger(plan, data, '2026-09-10')).totalLabel).toBe(
-    '+650 Carats · +2 tickets'
+    '+650 Carats, +2 tickets'
   );
   expect(summarizePlannerIncome([])).toEqual({
     resources: [],
@@ -217,9 +217,9 @@ it('includes the paid purchase grant in the daily pack toggle and income summary
   };
 
   expect(activeIncomeAssumptionCount(plan, [rule])).toBe(1);
-  expect(enabledIncomeTotalLabel(plan, [rule], [])).toBe('+50 / day · +500 paid / 30 days');
+  expect(enabledIncomeTotalLabel(plan, [rule], [])).toBe('+50 / day, +500 paid / 30 days');
   expect(incomeRuleScheduleLabel(rule)).toBe(
-    'Every day · +500 paid at projection start, then every 30 days'
+    'Every day, plus 500 paid at projection start and every 30 days after'
   );
 
   plan.enabledIncomeRuleIds = [];
@@ -289,7 +289,7 @@ it('matches the populated Angular income grouping, per-event amounts, monthly sh
       [],
       plannerIncomeData.rewards.global_reward_comparison
     )
-  ).toBe('+100 / day · +500 / week · +2,500 / month');
+  ).toBe('+100 / day, +500 / week, +2,500 / month');
   plan.scenarioSelections = {};
 
   plan.targets = [

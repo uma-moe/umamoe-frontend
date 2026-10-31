@@ -57,7 +57,7 @@
   function summary(category: Category): string {
     const count = current(category, 'count');
     const stars = current(category, 'stars');
-    return [count ? `${count} count` : '', stars ? `${stars}★` : ''].filter(Boolean).join(' · ');
+    return [count ? `${count} count` : '', stars ? `${stars}★` : ''].filter(Boolean).join(', ');
   }
 
   function clear(category: Category): void {

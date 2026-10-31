@@ -187,7 +187,7 @@
               )}{#if measured.preliminary}<sup
                   title={'Quick measurement on ' +
                     measured.count +
-                    ' races; switch to All and measure again to refine'}
+                    ' races. Switch to All and measure again to refine.'}
                 >
                   *
                 </sup>{/if}

@@ -333,7 +333,7 @@
       {/if}
       {#if simulationErrors.length}
         <Banner
-          title="Resimulation failed; recorded replays were kept"
+          title="Resimulation failed, so the recorded replays were kept"
           tone="warning"
           reportable={false}
         >

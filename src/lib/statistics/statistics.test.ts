@@ -125,7 +125,7 @@ describe('statistics aggregation parity', () => {
 
   it('uses the dataset composition instead of parsing a display string', () => {
     expect(compositionLabel({ composition: { speed: 2, wisdom: 3, friend: 0 } }, 'fallback')).toBe(
-      '2× speed · 3× wit'
+      '2× speed, 3× wit'
     );
   });
 });

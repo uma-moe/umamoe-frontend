@@ -394,7 +394,7 @@
             <div class="sidebar-section">
               <div class="outline-heading">
                 <h2>In this note</h2>
-                <span>{sectionCount} sections · {Math.round(progress)}% read</span>
+                <span>{sectionCount} sections, {Math.round(progress)}% read</span>
               </div>
               <div
                 class="reading-progress"

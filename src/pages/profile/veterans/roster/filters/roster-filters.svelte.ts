@@ -320,7 +320,7 @@ export class RosterFilters {
   }
 
   sparkLabel(filter: VeteranFactorFilter) {
-    return `${this.factors.find((factor) => Number(factor.id) === filter.factorId)?.text ?? `Factor ${filter.factorId}`} · ${filter.mode === 'total' ? 'Total ' : ''}${filter.minLevel}${filter.maxLevel != null ? '–' + filter.maxLevel : ''}★${filter.mode === 'exact' ? ' exactly' : filter.maxLevel != null ? '' : '+'} · ${scopeLabels[filter.scope]}`;
+    return `${this.factors.find((factor) => Number(factor.id) === filter.factorId)?.text ?? `Factor ${filter.factorId}`} ${filter.mode === 'total' ? 'total ' : ''}${filter.minLevel}${filter.maxLevel != null ? '–' + filter.maxLevel : ''}★${filter.mode === 'exact' ? ' exactly' : filter.maxLevel != null ? '' : '+'} (${scopeLabels[filter.scope]})`;
   }
 
   /** Adds characters to one include/exclude rule and drops them from the opposite rule. */

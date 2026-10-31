@@ -129,7 +129,7 @@ test('shop sidebar and mobile sheet filter the same collection', async ({ page }
     await expect(trigger).toBeFocused();
     // Opening an applied chip must show its controls even if this section was already expanded.
     await page
-      .getByRole('button', { name: 'Speed · Total 1★+ · Any generation', exact: true })
+      .getByRole('button', { name: 'Speed total 1★+ (Any generation)', exact: true })
       .click();
 
     await expect(filters.getByRole('slider', { name: 'Stars minimum', exact: true })).toBeVisible();
@@ -149,7 +149,7 @@ test('shop sidebar and mobile sheet filter the same collection', async ({ page }
   }
 
   await page
-    .getByRole('button', { name: 'Remove Speed · Total 1★+ · Any generation', exact: true })
+    .getByRole('button', { name: 'Remove Speed total 1★+ (Any generation)', exact: true })
     .click();
 
   await expect(page.locator('.active-filter-chips')).toHaveCount(0);

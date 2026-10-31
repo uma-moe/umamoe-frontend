@@ -83,7 +83,7 @@ async function sync(accountId: string, request: ReturnType<typeof session>): Pro
     await profileRepository.ingestVeterans(accountId, records.map(veteranPayload));
   } catch (error) {
     throw new Error(
-      `Saved on this device; account upload failed. ${error instanceof Error ? error.message : 'Please try again.'}`
+      `Saved on this device, but the account upload failed. ${error instanceof Error ? error.message : 'Please try again.'}`
     );
   }
 
@@ -97,7 +97,7 @@ async function sync(accountId: string, request: ReturnType<typeof session>): Pro
     records.some((record) => !uploadedIds.has(record.trainedCharaId))
   )
     throw new Error(
-      'Upload accepted, but the account collection has not refreshed yet. Your device copy is kept; retry in a moment.'
+      'Upload accepted, but the account collection has not refreshed yet. Your device copy is kept. Retry in a moment.'
     );
   await veteranRepository.replace(request.scope, [], 'uploaded-to-account');
   await loadVeteranDrafts(request.scope);

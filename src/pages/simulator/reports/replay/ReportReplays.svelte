@@ -134,9 +134,9 @@
       icon="info"
     >
       <p class="report-note">
-        {result.engine_build} · response schema {result.schema_version} · report {result.report
-          ?.version ?? 'not collected'} · {result.runs} races. Simulation traces use elapsed simulation
-        seconds; finish comparisons use official seconds. Rates describe this field and seed population.
+        {result.engine_build}, response schema {result.schema_version}, report {result.report
+          ?.version ?? 'not collected'}, {result.runs} races. Simulation traces use elapsed simulation
+        seconds, and finish comparisons use official seconds. Rates describe this field and seed population.
         Changing a build can change later random draws even with matched seeds.
       </p>
       {#if course}<SimulatorCourseProfile

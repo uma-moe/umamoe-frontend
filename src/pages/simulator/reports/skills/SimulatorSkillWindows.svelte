@@ -137,7 +137,7 @@
           at least {pct(SPOT * 100)} of races start it at nearly the same moment.
         </p>
         <p>
-          Hover a row for its timing, its duration and the share of races per course section; click
+          Hover a row for its timing, its duration and the share of races per course section. Click
           to watch it in the replay. The thin lines are the course sections from the Course strip.
         </p>
       </InspectPopover>

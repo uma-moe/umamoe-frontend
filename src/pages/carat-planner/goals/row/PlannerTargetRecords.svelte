@@ -122,7 +122,7 @@
         aria-label={`Notes for ${target.title}`}
         rows="4"
         maxlength="2000"
-        placeholder="e.g. LB3, +1 selector; usable at LB2"
+        placeholder="e.g. LB3 with a +1 selector, usable at LB2"
         value={target.notes ?? ''}
         oninput={(event) =>
           onupdate((value) => (value.notes = event.currentTarget.value || undefined))}></textarea>
@@ -171,7 +171,7 @@
       >
         <span class="result-label">
           <strong>Pulls done</strong>
-          <small>{target.plannedPulls} planned · include free pulls &amp; tickets</small>
+          <small>{target.plannedPulls} planned, including free pulls and tickets</small>
         </span>
         {#if stepUp}
           <SelectField

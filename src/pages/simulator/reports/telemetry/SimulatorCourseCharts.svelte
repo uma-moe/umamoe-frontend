@@ -210,7 +210,7 @@
       (unit === 'seconds'
         ? 'Seconds are how much earlier she reaches that point.'
         : 'Lengths use ' + name(reference) + '’s speed at that point (1 L = 2.5 m).') +
-      ' Each line is her median race; the followed runner’s middle 80% of races is shaded. The coloured bands are the race phases.'}
+      ' Each line is her median race. The followed runner’s middle 80% of races is shaded. The coloured bands are the race phases.'}
   >
     {#if gapChart}<LazyEChartsSurface
         option={gapChart}
@@ -222,7 +222,7 @@
     id="simulation-move-course"
     title="Along the course"
     description={metrics[metric]!.title +
-      ' at every point of the course, for each runner’s average race: compare where one runner is quicker, still accelerating or wider out than another. The followed runner’s middle 80% of races is shaded; the coloured bands are the race phases.'}
+      ' at every point of the course, for each runner’s average race. Compare where one runner is quicker, still accelerating or wider out than another. The followed runner’s middle 80% of races is shaded, and the coloured bands are the race phases.'}
   >
     {#snippet actions()}<SegmentedControl
         compact

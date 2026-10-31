@@ -30,7 +30,7 @@ test('Timeline details preserve pickups, rates, rewards, sources, predictions an
   const dialog = page.getByRole('dialog', { name: 'Mejiro McQueen + 1 more', exact: true });
   await expect(dialog.getByRole('heading', { name: 'Rate-up rates' })).toBeVisible();
   await expect(dialog.getByText('0.75% per pull')).toHaveCount(2);
-  await expect(dialog.getByText('3★ pool 3.00% · Published banner rates')).toBeVisible();
+  await expect(dialog.getByText('3★ pool 3.00%, Published banner rates')).toBeVisible();
   await expect(dialog.locator('.reward-list').getByLabel('10 free pulls')).toHaveCount(1);
   await expect(dialog.locator('.reward-list').getByLabel('900 Carats')).toBeVisible();
   await expect(dialog.getByRole('link', { name: 'News post' })).toHaveAttribute(
@@ -107,7 +107,7 @@ test('Timeline reward-only details retain race facts, placement ranges and selec
 
   let dialog = page.getByRole('dialog');
   await expect(dialog.getByRole('heading', { name: 'Race details' })).toBeVisible();
-  await expect(dialog.locator('.facts')).toContainText('Mile · Counterclockwise');
+  await expect(dialog.locator('.facts')).toContainText('Mile, Counterclockwise');
   await expect(dialog.getByText('Final placement rewards')).toBeVisible();
   await expect(dialog.getByText('500–2,500')).toBeVisible();
   await expect(dialog.getByRole('button', { name: 'Add to planner' })).toHaveCount(0);
@@ -176,7 +176,7 @@ test('Timeline detail retries retain the selected event and support banner rates
     .getByRole('button', { name: 'Open details for Kitasan Black + 1 more', exact: true })
     .click();
 
-  await expect(dialog.getByText('SSR pool 3.00% · Published banner rates')).toBeVisible();
+  await expect(dialog.getByText('SSR pool 3.00%, Published banner rates')).toBeVisible();
   await expect(dialog.locator('.rates a').first()).toContainText('0.75% per pull');
   await expect(dialog.locator('.rates a').last()).toContainText('2.25% per pull');
   await expect(dialog.getByLabel('20 free pulls')).toBeVisible();

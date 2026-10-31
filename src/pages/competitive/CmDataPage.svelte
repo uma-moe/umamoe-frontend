@@ -294,7 +294,7 @@
         <span>
           Teams seen {snapshot.meta.capturedThrough
             ? 'through ' + snapshot.meta.capturedThrough
-            : snapshot.meta.window} · Equally weighted player appearances
+            : snapshot.meta.window}. Each player counts equally.
         </span>
       </footer>
     {:else if snapshot && !error}

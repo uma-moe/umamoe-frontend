@@ -55,7 +55,7 @@
     <header class="section-heading">
       <div>
         <h3>Weekly activity heatmap</h3>
-        <p>{heatmap.touched} of 168 slots · {score.days_observed} report days</p>
+        <p>{heatmap.touched} of 168 slots over {score.days_observed} report days</p>
       </div>
     </header>
     <div class="heat-scroll">
@@ -79,7 +79,7 @@
           {#each Array.from({ length: 24 }, (_, index) => index) as hour}
             {@const cell = heatmap.values.get(`${dow}:${hour}`)}
             <i
-              title={`${day} ${hour}:00 · ${formatDuration(cell?.active_seconds)}`}
+              title={`${day} ${hour}:00, ${formatDuration(cell?.active_seconds)}`}
               style={`--heat:${(cell?.active_seconds ?? 0) / heatmap.max}`}
             ></i>
           {/each}
@@ -135,8 +135,8 @@
         <p>Fan gain is above balance, activity below, and the center line shows daily bias.</p>
       </div>
       <span>
-        Peak +{compactNumber(Math.max(...report.daily.map((row) => row.fan_gain)))} · {report.daily
-          .length} days
+        Peak +{compactNumber(Math.max(...report.daily.map((row) => row.fan_gain)))} over {report
+          .daily.length} days
       </span>
     </header>
     <LazyEChartsSurface

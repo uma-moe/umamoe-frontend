@@ -198,7 +198,7 @@ test('statistics resolves character names, outfits, cards and skills from the re
 
   await expect(
     page.getByRole('list', { name: 'Popular support cards', exact: true })
-  ).toContainText('Stamina · SSR');
+  ).toContainText('Stamina, SSR');
 
   await expect(
     page.getByRole('list', { name: 'Common skills', exact: true }).locator('img')

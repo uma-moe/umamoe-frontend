@@ -71,7 +71,7 @@
 <div class="uql-cm-frame {validationState}">
   <div class="uql-cm-toolbar">
     <span class="uql-cm-lang">uql</span>
-    <span class="uql-cm-meta">Ctrl+Space · Tab completes · Esc closes</span>
+    <span class="uql-cm-meta">Ctrl+Space suggests, Tab completes, Esc closes</span>
     {#if value}
       <div class="clear">
         <IconButton

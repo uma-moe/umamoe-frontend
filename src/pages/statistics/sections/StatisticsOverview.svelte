@@ -43,7 +43,7 @@
 <section id="statistics-overview">
   <StatisticsSectionHeading
     title="The field at a glance"
-    context="{view.supportData.length} support cards · {view.skillData.length} skills · {view
+    context="{view.supportData.length} support cards, {view.skillData.length} skills and {view
       .deckData.length} deck builds"
   />
   <div class="overview-grid">

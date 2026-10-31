@@ -283,7 +283,7 @@
             <div>
               <strong>{inspected.name}</strong>
               <small>
-                {inspected.outfit} ·
+                {inspected.outfit},
                 <span style:color={colors[inspected.style]}>{styleNames[inspected.style]}</span>
               </small>
             </div>

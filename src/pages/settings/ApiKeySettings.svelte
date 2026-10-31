@@ -187,11 +187,11 @@
                 {/if}
               </div>
               <small>
-                Created {formatDate(key.created_at)}{#if key.last_used}
-                  · Last used {formatDate(key.last_used)}
-                {/if}{#if key.total_requests}
-                  · {key.total_requests.toLocaleString()} requests
-                {/if}
+                Created {formatDate(key.created_at)}{key.last_used
+                  ? ', last used ' + formatDate(key.last_used)
+                  : ''}{key.total_requests
+                  ? ', ' + key.total_requests.toLocaleString() + ' requests'
+                  : ''}
               </small>
             </div>
             {#if !key.revoked}

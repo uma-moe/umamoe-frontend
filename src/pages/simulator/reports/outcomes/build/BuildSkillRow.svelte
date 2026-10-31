@@ -56,13 +56,13 @@
   const fill = $derived(scale > 0 ? Math.min(100, (Math.abs(value ?? 0) / scale) * 100) : 0);
   const valuedBy = $derived(
     {
-      physics: 'raced alone through her whole race',
-      prior: 'its field value from recorded CM races',
-      v5: 'V5 skill model',
-      ranker: 'V5 with trained move ranker',
-      posterior: 'V5 with paired race feedback',
-      recovery_races: 'paired recovery race estimate',
-      races: 'measured in races, paired over her build as it is',
+      physics: 'Valued by racing her alone through her whole race',
+      prior: 'Valued at its field value from recorded CM races',
+      v5: 'Valued by the V5 skill model',
+      ranker: 'Valued by V5 with the trained move ranker',
+      posterior: 'Valued by V5 with paired race feedback',
+      recovery_races: 'Valued by a paired recovery race estimate',
+      races: 'Measured in races, paired over her build as it is',
       unknown: 'No individual score reported'
     }[source]
   );
@@ -72,15 +72,15 @@
       context +
       (win === undefined
         ? ''
-        : ' (model win-rate change: ≈ ' +
+        : ' (≈ ' +
           winText(win).replace('%', ' pp') +
-          '; internal comparison only)') +
-      ' · ' +
+          ' model win-rate change, internal comparison only)') +
+      '. ' +
       fireText({ fire, phaseBounds, countGated }) +
-      ' · ' +
+      '. ' +
       valuedBy +
       (measurement
-        ? ' · Exact paired gain ' +
+        ? '. Exact paired gain ' +
           valueText(measurement.gain, 'score') +
           ' ± ' +
           measurement.standard_error.toFixed(2) +
@@ -88,7 +88,7 @@
         : '') +
       (fire.races === undefined
         ? ''
-        : ' · ' + fire.races.toLocaleString('en-US') + ' timing observations')
+        : '. Timing observed in ' + fire.races.toLocaleString('en-US') + ' races')
   );
   const viaText = $derived(
     via.length ? 'with ' + via.map((base) => base.skill.name).join(', ') : ''

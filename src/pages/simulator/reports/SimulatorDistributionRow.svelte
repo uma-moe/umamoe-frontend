@@ -166,7 +166,7 @@
     {#each tiles as tile}<span
         class="num"
         class:ahead={tile.tone === 'ahead'}
-        title={tile.label + (tile.detail ? ' · ' + tile.detail : '')}
+        title={tile.label + (tile.detail ? ', ' + tile.detail : '')}
       >
         <small class="label">{tile.label}</small>
         {tile.value}

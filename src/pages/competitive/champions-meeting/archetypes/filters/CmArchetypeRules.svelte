@@ -57,7 +57,7 @@
       label:
         'Runner ' +
         (index + 1) +
-        ' · ' +
+        ': ' +
         ((parsed.slots[index]?.anyOf ?? [parsed.slots[index] ?? {}])
           .filter(hasRequirement)
           .map(label)
@@ -117,9 +117,9 @@
       <span>
         <strong>{card.name}</strong>
         <small>
-          {' · ' + (matcher.card ? card.outfit : 'Any outfit')}{#if matcher.style}
+          {' (' + (matcher.card ? card.outfit : 'any outfit') + ')'}{#if matcher.style}
             <span style:color={colors[matcher.style]}>
-              {' · ' + styleNames[matcher.style]}
+              {' + ' + styleNames[matcher.style]}
             </span>
           {/if}
         </small>
@@ -128,7 +128,7 @@
       <span>
         <strong>{matcher.style ? styleNames[matcher.style] : 'Any Uma'}</strong>
         {#if matcher.style}
-          <small>· Any Uma</small>
+          <small>(any Uma)</small>
         {/if}
       </span>
     {/if}
@@ -243,7 +243,7 @@
             This choice is already applied.
           {:else if !hasRequirement(ruleMatcher)}
             {ruleTarget === 'exclude'
-              ? 'Example: Any Uma + Debuffer hides teams with a debuffer.'
+              ? 'For example, Any Uma + Debuffer hides teams with a debuffer.'
               : 'Choose an Uma, a style, or both.'}
           {:else if ruleTarget !== 'exclude'}
             <strong>

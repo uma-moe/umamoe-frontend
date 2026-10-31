@@ -39,11 +39,11 @@
 
   const MODES: Record<string, string> = {
     cm: 'Champions Meeting',
-    tt_sprint: 'Team Trials · Sprint',
-    tt_mile: 'Team Trials · Mile',
-    tt_medium: 'Team Trials · Medium',
-    tt_long: 'Team Trials · Long',
-    tt_dirt: 'Team Trials · Dirt'
+    tt_sprint: 'Team Trials (Sprint)',
+    tt_mile: 'Team Trials (Mile)',
+    tt_medium: 'Team Trials (Medium)',
+    tt_long: 'Team Trials (Long)',
+    tt_dirt: 'Team Trials (Dirt)'
   };
 
   const WHOLE: Record<Props['target'], (runners: number) => string> = {
@@ -70,7 +70,7 @@
       label(TIME_OPTIONS, conditions.startTime)
     ]
       .filter(Boolean)
-      .join(' · ')
+      .join(', ')
   );
 
   /** What loading it changes on this tab, in a sentence. */
@@ -101,14 +101,14 @@
     <dt>Course</dt>
     <dd>
       {#if course}
-        <strong>{trackName(course.race_track_id)} · {describeCourse(course)}</strong>
+        <strong>{trackName(course.race_track_id)} {describeCourse(course)}</strong>
         {#if conditionText}<span>{conditionText}</span>{/if}
       {:else if code.courseId}
         <span class="warn">
           Course {code.courseId} isn’t in the race data, so the course stays as it is.
         </span>
       {:else}
-        <span>Not in the code; the course stays as it is.</span>
+        <span>Not in the code, so the course stays as it is.</span>
       {/if}
     </dd>
   </div>
@@ -135,7 +135,7 @@
             goal.fastLearner ? 'Fast Learner' : ''
           ]
             .filter(Boolean)
-            .join(' · ')}
+            .join(', ')}
         </span>
       </dd>
     </div>

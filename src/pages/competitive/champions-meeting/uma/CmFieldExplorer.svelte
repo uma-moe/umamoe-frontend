@@ -294,7 +294,7 @@
       {/if}
     {:else}
       <div class="range-axis">
-        <span>Uma · role</span>
+        <span>Uma</span>
         <div>
           <span>0%</span>
           <span>{pct(axisMax / 2)}</span>
@@ -335,7 +335,7 @@
                 />
                 <span>
                   {pair.name}
-                  <small>{pair.outfit} · {styleNames[pair.style]}</small>
+                  <small>{pair.outfit}, {styleNames[pair.style]}</small>
                 </span>
               </span>
               <span

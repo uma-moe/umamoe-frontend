@@ -132,7 +132,7 @@
       class="count"
       class:over={count > MAX_TRACKS}
     >
-      {count} of {courses.length} courses · one drawn per race
+      {count} of {courses.length} courses, one drawn per race
     </span>
     <span class="actions">
       <Button

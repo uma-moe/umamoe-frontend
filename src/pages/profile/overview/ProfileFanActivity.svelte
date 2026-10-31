@@ -218,7 +218,7 @@
   <ChartFrame
     id="profile-fan-activity"
     title="Fan activity"
-    description="Daily totals · Drag handles to zoom"
+    description="Daily totals"
     legend={[{ label: 'Total fans', color: 'var(--accent-primary)' }]}
   >
     {#snippet actions()}

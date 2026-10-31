@@ -106,11 +106,11 @@
     if (!cell) return name(source) + ' has not learned it';
     const parts = [
       name(source) +
-        ': activates in ' +
+        ' activates in ' +
         cell.row.triggered +
         ' of ' +
         result.runs +
-        ' races (95%: ' +
+        ' races (95% interval ' +
         n(cell.row.interval[0], 0) +
         '–' +
         n(cell.row.interval[1], 0) +
@@ -121,7 +121,7 @@
       parts.push((cell.row.total / result.runs).toFixed(2) + ' activations per race');
     const length = lasts(cell);
     if (length) parts.push(length);
-    return parts.join(' · ');
+    return parts.join(', ');
   };
 </script>
 
@@ -130,7 +130,7 @@
   title="Skill activation"
   description={'How often each learned skill activates over the ' +
     result.runs +
-    ' races, least reliable first. Each cell is the share of races in which that runner activated the skill at least once. Skills that fire almost every race stay grey; the less often one fires, the stronger its amber, and red means it never fired. “—” means she has not learned it. Hover a cell for the exact count, its 95% interval and how long the skill lasts. Where each skill fires is on the heatmap under the race timeline; what it is worth is in the ranking below.'}
+    ' races, least reliable first. Each cell is the share of races in which that runner activated the skill at least once. Skills that fire almost every race stay grey. The less often one fires, the stronger its amber, and red means it never fired. “—” means she has not learned it. Hover a cell for the exact count, its 95% interval and how long the skill lasts. Where each skill fires is on the heatmap under the race timeline, and what it is worth is in the ranking below.'}
 >
   {#snippet actions()}<SegmentedControl
       compact
@@ -139,7 +139,7 @@
         { value: 'all', label: 'All ' + rows.length },
         {
           value: 'unreliable',
-          label: 'Not always · ' + flagged,
+          label: 'Not always ' + flagged,
           title: 'Skills at least one runner activates in fewer than 95% of races'
         }
       ]}

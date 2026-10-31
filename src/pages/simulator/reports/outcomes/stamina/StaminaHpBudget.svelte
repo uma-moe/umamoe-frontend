@@ -156,7 +156,7 @@
     </span>
     <span>
       <i class="k-max"></i>
-      max HP · then recovery
+      max HP, then recovery
     </span>
   </p>
 </ChartFrame>

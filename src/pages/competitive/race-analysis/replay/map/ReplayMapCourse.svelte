@@ -138,7 +138,7 @@
       class="view-cone"
       points={cone}
     >
-      <title>Base view range · illustrative, not skill-adjusted</title>
+      <title>Base view range before skill modifiers</title>
     </polygon>
   {/if}
   <polyline

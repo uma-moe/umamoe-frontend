@@ -47,7 +47,7 @@ export function variableAmountLabel(amounts: Amounts): string {
     if (amounts[key]) parts.push(integer.format(amounts[key]!) + ' ' + label);
   }
 
-  return parts.join(' · ') || 'No projected resources';
+  return parts.join(', ') || 'No projected resources';
 }
 
 export function sameRewardAmounts(a: Amounts, b: Amounts): boolean {

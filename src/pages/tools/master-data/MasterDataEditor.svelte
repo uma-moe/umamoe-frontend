@@ -42,7 +42,7 @@
 <div class="sql-editor">
   <div class="sql-editor-bar">
     <span class="language">SQLite</span>
-    <span class="hint">Ctrl / ⌘ + Enter runs · Ctrl + Space suggests tables and columns</span>
+    <span class="hint">Ctrl / ⌘ + Enter runs, Ctrl + Space suggests tables and columns</span>
   </div>
   <div bind:this={host}></div>
 </div>

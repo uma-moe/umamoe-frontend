@@ -2792,11 +2792,11 @@ test('CM uses Hakuraku charts and captured teams without inventing a replay cata
   await expect(skillDetail.getByRole('status')).toContainText('Loading Skill 10071');
   await expect(skillDetail.locator('.course-bands')).toHaveAttribute(
     'aria-label',
-    /Final straight · 2,190–2,500 m/
+    /Final straight at 2,190–2,500 m/
   );
   await expect(skillDetail.locator('.course-bands')).toHaveAttribute(
     'aria-label',
-    /Start section · 0–100 m/
+    /Start section at 0–100 m/
   );
   const loadingHeight = await skillDetail.evaluate((e) => e.getBoundingClientRect().height);
   releaseSkills();
@@ -2806,11 +2806,11 @@ test('CM uses Hakuraku charts and captured teams without inventing a replay cata
   ).toBeLessThan(2);
   await expect(skillDetail.locator('.phase-background')).toHaveAttribute(
     'aria-label',
-    /Mid race · 417–1,667 m/
+    /Mid race at 417–1,667 m/
   );
   await expect(skillDetail.locator('.phase-background')).toHaveAttribute(
     'aria-label',
-    /Final leg · 2,083–2,500 m/
+    /Final leg at 2,083–2,500 m/
   );
   expect(
     await skillDetail.locator('.phase-background').evaluate((background) => {
@@ -2841,7 +2841,7 @@ test('CM uses Hakuraku charts and captured teams without inventing a replay cata
   await page.getByRole('button', { name: 'Add Skill 10071 to comparison', exact: true }).click();
   const addSkill = page.getByRole('combobox', { name: 'Add a skill to comparison', exact: true });
   await addSkill.fill('10081');
-  await page.getByRole('option', { name: 'Skill 10081 · ID 10081', exact: true }).click();
+  await page.getByRole('option', { name: 'Skill 10081 (ID 10081)', exact: true }).click();
   const comparison = page.getByRole('region', { name: 'Skill comparison', exact: true });
   await expect(comparison.locator('.lane.card')).toHaveCount(2);
   await expect(comparison.locator('svg[role="slider"]')).toHaveCount(2);
@@ -2998,7 +2998,7 @@ test('CM uses Hakuraku charts and captured teams without inventing a replay cata
   await advanced.getByRole('combobox', { name: 'Running style', exact: true }).click();
   await advanced.getByRole('option', { name: 'Front Runner', exact: true }).click();
   await expect(advanced.getByRole('button', { name: 'Add option', exact: true })).toBeEnabled();
-  await expect(advanced.locator('.rule-preview')).toContainText('Runner 2: Any Uma · Front Runner');
+  await expect(advanced.locator('.rule-preview')).toContainText('Runner 2: Any Uma + Front Runner');
   await advanced.getByRole('button', { name: 'Add option', exact: true }).click();
   await expect.poll(() => teamSlots[1]).toEqual({ style: 1 });
   await expect(page.getByRole('combobox', { name: 'Teammate 2 style', exact: true })).toContainText(
@@ -3078,13 +3078,13 @@ test('CM uses Hakuraku charts and captured teams without inventing a replay cata
   await alternativeUma.fill('Kitasan Black');
   await page
     .getByRole('listbox', { name: 'Uma / outfit suggestions', exact: true })
-    .getByRole('option', { name: 'Kitasan Black · Any outfit', exact: true })
+    .getByRole('option', { name: 'Kitasan Black (any outfit)', exact: true })
     .click();
 
   await advanced.getByRole('combobox', { name: 'Running style', exact: true }).click();
   await advanced.getByRole('option', { name: 'Pace Chaser', exact: true }).click();
   await expect(advanced.locator('.rule-preview')).toContainText(
-    'Any Uma · Front Runner or Kitasan Black · Any outfit · Pace Chaser'
+    'Any Uma + Front Runner or Kitasan Black (any outfit) + Pace Chaser'
   );
   await advanced.getByRole('button', { name: 'Add option', exact: true }).click();
   await expect
@@ -3414,7 +3414,7 @@ test('master data browses the published database, follows columns and shares que
   await expect(tables).not.toContainText('unused_table');
 
   await tables.getByRole('button', { name: /^chara_data/ }).click();
-  await expect(page.getByText(/^2 rows ·/)).toBeVisible();
+  await expect(page.getByText(/^2 rows in /)).toBeVisible();
   await expect(results.getByText('NULL', { exact: true })).toBeVisible();
 
   await tables.getByRole('button', { name: /^card_data/ }).click();
@@ -3445,7 +3445,7 @@ test('master data browses the published database, follows columns and shares que
 
   const sharedQuery = new URLSearchParams({ q: 'SELECT text FROM text_data', filter: 'suzuka' });
   await page.goto(`/tools/master-data?${sharedQuery}`);
-  await expect(page.getByText(/^1 of 3 rows ·/)).toBeVisible({ timeout: 30000 });
+  await expect(page.getByText(/^1 of 3 rows in /)).toBeVisible({ timeout: 30000 });
   await expect(results).toContainText('Silence Suzuka');
   await page.screenshot({ path: info.outputPath('master-data.png'), fullPage: true });
   expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(
@@ -3917,7 +3917,7 @@ test('automatic resimulation falls back on failure and exposes simulator decisio
   await expect(page.getByLabel('Seed override (optional)', { exact: true })).toHaveCount(0);
   await expect(page.getByRole('button', { name: 'Run resimulation', exact: true })).toHaveCount(0);
   await expect(page.locator('.banner--warning')).toContainText(
-    'Resimulation failed; recorded replays were kept'
+    'Resimulation failed, so the recorded replays were kept'
   );
   await expect(page.locator('.banner--warning')).toContainText('Simulator access is required');
   await openRaceSection(page, 'Runner analysis');
@@ -4115,13 +4115,11 @@ test('automatic resimulation falls back on failure and exposes simulator decisio
   const picker = page.getByRole('dialog', { name: 'Choose runner', exact: true });
   await expect(picker.locator('.runner-choice .build.compact')).toHaveCount(2);
   await expect(
-    picker.getByRole('button', { name: 'Gate 1 · Inspected Special Week', exact: true })
+    picker.getByRole('button', { name: 'Gate 1, Inspected Special Week', exact: true })
   ).toHaveAttribute('aria-pressed', 'true');
 
   await picker.screenshot({ path: info.outputPath('runner-cm-picker.png') });
-  await picker
-    .getByRole('button', { name: 'Gate 1 · Inspected Special Week', exact: true })
-    .click();
+  await picker.getByRole('button', { name: 'Gate 1, Inspected Special Week', exact: true }).click();
 
   await expect(analysis.locator('.race-aptitudes [aria-label="Pace: B"]')).toBeVisible();
   await expect(analysis.locator('.race-aptitudes [aria-label="Turf: A"]')).toBeVisible();
@@ -4319,7 +4317,7 @@ test('automatic resimulation falls back on failure and exposes simulator decisio
   await page.getByRole('button', { name: 'Change Uma', exact: true }).click();
   await page
     .getByRole('dialog', { name: 'Choose runner', exact: true })
-    .getByRole('button', { name: 'Gate 2 · Blocker Suzuka', exact: true })
+    .getByRole('button', { name: 'Gate 2, Blocker Suzuka', exact: true })
     .click();
 
   await expect(details.locator('.outcome-summary')).toContainText('Clean');
@@ -4342,7 +4340,7 @@ test('automatic resimulation falls back on failure and exposes simulator decisio
   await page.getByRole('button', { name: 'Change Uma', exact: true }).click();
   await page
     .getByRole('dialog', { name: 'Choose runner', exact: true })
-    .getByRole('button', { name: 'Gate 1 · Inspected Special Week', exact: true })
+    .getByRole('button', { name: 'Gate 1, Inspected Special Week', exact: true })
     .click();
 
   await details
@@ -4552,7 +4550,7 @@ test('automatic resimulation falls back on failure and exposes simulator decisio
   await expect(applications).toContainText('0.0%');
   await expect(applications).toContainText('≈');
   const rushing = details.getByRole('region', { name: 'Rushing', exact: true });
-  await expect(rushing).toContainText('No rushing · check failed');
+  await expect(rushing).toContainText('No rushing');
   await expect(rushing).toContainText('99.00% ≥ 11.34%');
   await expect(rushing).toContainText('Not scheduled');
   await expect(rushing).not.toContainText('-1');

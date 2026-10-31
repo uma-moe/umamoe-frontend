@@ -86,7 +86,7 @@
           aria-label={simulatorTeamLabel(id)}
           aria-pressed={value === id}
           title={simulatorTeamLabel(id) +
-            ' · ' +
+            ', ' +
             simulatorRoster.umas.filter((uma) => uma.teamId === id).length +
             ' runners'}
           onclick={(event) => select(id, event)}

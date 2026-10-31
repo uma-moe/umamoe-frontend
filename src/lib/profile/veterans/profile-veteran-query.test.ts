@@ -243,8 +243,8 @@ describe('veteran card metrics and collection queries', () => {
     ]);
 
     expect(explain('Main Speed = 3 and GP1 Speed = 3')).toMatchObject([
-      { label: 'Main · Speed', factor: { level: 3 } },
-      { label: 'P1 · Speed', factor: { level: 3 } }
+      { label: 'Main Speed', factor: { level: 3 } },
+      { label: 'P1 Speed', factor: { level: 3 } }
     ]);
 
     expect(explain('Speed > 4 or Stamina > 4')).toMatchObject([
@@ -252,7 +252,7 @@ describe('veteran card metrics and collection queries', () => {
     ]);
 
     expect(explain('Speed > 8')).toEqual([]);
-    expect(explain('GP2 Speed = 0')).toMatchObject([{ label: 'P2 · Speed', factor: { level: 0 } }]);
+    expect(explain('GP2 Speed = 0')).toMatchObject([{ label: 'P2 Speed', factor: { level: 0 } }]);
     expect(explain('not (Stamina > 0)')).toMatchObject([
       { label: 'Stamina', factor: { level: 0 } }
     ]);

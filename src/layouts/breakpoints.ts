@@ -22,7 +22,7 @@ export const SCREEN_LAYOUTS: readonly ScreenLayoutContract[] = [
     label: 'Compact',
     min: 768,
     max: 1799,
-    navigation: '64px navigation rail; inline ads below 1700px, right ad rail above'
+    navigation: '64px navigation rail, inline ads below 1700px and a right ad rail above'
   },
   { id: 'expanded', label: 'Expanded', min: 1800, navigation: '240px navigation rail' }
 ] as const;

@@ -1139,7 +1139,7 @@ export class UqlEditorLanguage {
       .map((suggestion) => ({
         ...suggestion,
         priority: Math.min(suggestion.priority ?? this.defaultSuggestionPriority(suggestion), 6),
-        detail: `${this.getScopeLabel(scopedValue.scopeToken)} ${suggestion.detail || 'spark'}; compare stars with >=, =, <=`
+        detail: `${this.getScopeLabel(scopedValue.scopeToken)} ${suggestion.detail || 'spark'}. Compare stars with >=, = or <=`
       }));
   }
 

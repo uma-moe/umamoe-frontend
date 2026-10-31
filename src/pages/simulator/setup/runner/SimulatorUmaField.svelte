@@ -265,12 +265,6 @@
                 >
                   {outfit}
                 </span>
-                <span
-                  class="separator"
-                  aria-hidden="true"
-                >
-                  ·
-                </span>
               {/if}
               <span style:color={styleColors[Number(summary.raw.runningStyle)]}>{look.detail}</span>
             </p>
@@ -347,12 +341,6 @@
               value={sp}
               note={LEARNED_SKILL_POINTS_NOTE}
             />
-            <span
-              class="separator"
-              aria-hidden="true"
-            >
-              ·
-            </span>
             {@render skillList(uma, ranked)}
           </div>
         </article>

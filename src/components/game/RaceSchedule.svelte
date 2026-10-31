@@ -189,7 +189,7 @@
 <Dialog
   id={`${instanceId}-race-slot-picker`}
   bind:open={pickerOpen}
-  title={picker ? `${picker.year.label} · ${picker.slot.label}` : 'Choose a race'}
+  title={picker ? `${picker.year.label}, ${picker.slot.label}` : 'Choose a race'}
   maxWidth="640px"
 >
   <div class="race-options">

@@ -406,8 +406,7 @@
           size={15}
         />
         <p>
-          Community data, anonymized and aggregated. Usage describes popularity; it does not measure
-          race results.
+          Community data, anonymized and aggregated. Usage describes popularity, not race results.
         </p>
       </footer>
       <Dialog

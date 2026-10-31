@@ -42,7 +42,7 @@
       <label
         class:selected={value === option.value}
         class:has-image={cards && Boolean(option.image)}
-        title={compact ? [option.label, option.description].filter(Boolean).join(' · ') : undefined}
+        title={compact ? [option.label, option.description].filter(Boolean).join('\n') : undefined}
       >
         <input
           type="radio"

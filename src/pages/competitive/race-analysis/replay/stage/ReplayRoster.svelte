@@ -176,7 +176,7 @@
             ': ' +
             ['visible', 'dimmed', 'hidden'][visibility[r.index] ?? 0] +
             '. Change visibility'}
-          title="Click to dim, then hide; Shift-click to focus"
+          title="Click to dim, click again to hide, Shift-click to focus"
           onclick={(event) => cycle(r, event.shiftKey)}
         />
       </div>

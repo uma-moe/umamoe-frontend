@@ -372,7 +372,7 @@
       {:else if draft?.source === 'CM Data'}
         <strong>CM Data</strong>
         <span>
-          Her aptitudes were captured for its CM course; check them if you race elsewhere.
+          Her aptitudes were captured for its CM course. Check them if you race elsewhere.
         </span>
       {:else}
         <span>{draft?.source ?? 'Manual build'}</span>

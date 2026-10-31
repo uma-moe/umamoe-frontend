@@ -51,7 +51,7 @@
         <th scope="col">Skill</th>
         <th
           scope="col"
-          title="Actual events at the inspected distance; percentage of this skill’s total events."
+          title="Events at the inspected distance, as a share of this skill’s total events."
         >
           Activation events
         </th>

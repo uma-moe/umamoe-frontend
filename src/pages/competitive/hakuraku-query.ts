@@ -168,7 +168,7 @@ export function parseQuery(text: string, cards: Record<number, Card>): Requireme
 
   const included = requirements.filter((slot) => !slot.exclude);
   if (included.length > 3)
-    throw new Error('Use up to three team slots; additional filters must be “Without” clauses.');
+    throw new Error('Use up to three team slots. Any other filters must be “Without” clauses.');
   while (included.length < 3) included.push({});
   return [...included, ...requirements.filter((slot) => slot.exclude)];
 }

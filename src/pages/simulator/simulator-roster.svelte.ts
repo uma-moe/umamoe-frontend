@@ -67,7 +67,7 @@ export function restoreSimulatorField(saved: { field: unknown[]; teamColors?: un
 
   if (!umas.length) throw new Error('This code has no runner the race field can read.');
   if (umas.length > MAX_FIELD)
-    throw new Error('A race can contain at most 18 Uma; this code has ' + umas.length + '.');
+    throw new Error('A race can contain at most 18 Uma, but this code has ' + umas.length + '.');
 
   const teamColors: Record<number, string> = {};
   const colors =

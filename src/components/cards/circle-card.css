@@ -196,7 +196,7 @@
   display: flex;
   align-items: center;
   flex-wrap: wrap;
-  gap: 6px;
+  gap: 12px;
   margin-top: 5px;
   color: var(--text-secondary);
   font-size: 0.8125rem;
@@ -208,9 +208,6 @@
 }
 .gains-row strong {
   font-weight: 600;
-}
-.gains-sep {
-  color: var(--text-disabled);
 }
 .actions {
   position: relative;
@@ -375,9 +372,6 @@
   gap: 2px 12px;
   margin: 0;
   font-size: 11px;
-}
-.row .gains-sep {
-  display: none;
 }
 .row .gain-item {
   gap: 4px;

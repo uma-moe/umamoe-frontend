@@ -113,7 +113,7 @@ export const UPDATE_LOG: UpdateEntry[] = [
             text: 'Proc timing, proc rate and error margin for each skill.'
           },
           {
-            text: 'Filter by type, rarity or Uma; open a skill for effects and sources.'
+            text: 'Filter by type, rarity or Uma, and open a skill for effects and sources.'
           }
         ]
       },
@@ -157,7 +157,7 @@ export const UPDATE_LOG: UpdateEntry[] = [
             text: 'Set stats, hints and owned skills, then compare the best builds.'
           },
           {
-            text: 'Review costs and gains; share the setup as a build code.'
+            text: 'Review costs and gains, then share the setup as a build code.'
           }
         ]
       },
@@ -242,7 +242,7 @@ export const UPDATE_LOG: UpdateEntry[] = [
         icon: 'search',
         items: [
           {
-            text: 'Filter lineage sparks by stars or occurrences; combine main-parent requirements with AND/OR.',
+            text: 'Filter lineage sparks by stars or occurrences, and combine main-parent requirements with AND/OR.',
             link: '/database'
           },
           {

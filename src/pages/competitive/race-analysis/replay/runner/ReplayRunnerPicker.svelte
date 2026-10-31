@@ -33,7 +33,7 @@
         class="runner-choice"
         class:chosen={choice.index === replay.runner?.index}
         style:--runner-color={replay.teamColor(choice)}
-        aria-label={'Gate ' + (choice.index + 1) + ' · ' + choice.name}
+        aria-label={'Gate ' + (choice.index + 1) + ', ' + choice.name}
         aria-pressed={choice.index === replay.runner?.index}
         onclick={() => {
           selected = String(choice.index);

@@ -176,7 +176,7 @@
           class="sr-only"
           id={`${id}-${option.id}-description`}
         >
-          Outfit {option.id}{option.affinity !== undefined ? ` · Affinity ${option.affinity}` : ''}
+          Outfit {option.id}{option.affinity !== undefined ? `, affinity ${option.affinity}` : ''}
         </span>
         <span class="avatar">
           <Artwork

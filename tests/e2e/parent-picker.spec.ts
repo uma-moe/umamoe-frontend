@@ -258,7 +258,7 @@ test('Parent rows preserve Angular encoded factors, legacy inheritance, star ord
     '1★Speed'
   ]);
   await expect(rows.first().locator('.parent-factors .spark.matched')).toHaveCount(0);
-  await dialog.getByRole('button', { name: 'Speed · Own 1–3★', exact: true }).click();
+  await dialog.getByRole('button', { name: 'Speed 1–3★ (Own)', exact: true }).click();
   const edit = page.getByRole('dialog', { name: 'Edit spark filter', exact: true });
   await edit.getByRole('radio', { name: 'Combined', exact: true }).click();
   await edit.getByRole('slider', { name: 'Stars minimum' }).fill('6');
@@ -276,7 +276,7 @@ test('Parent rows preserve Angular encoded factors, legacy inheritance, star ord
     scale: 'css'
   });
 
-  await dialog.getByRole('button', { name: 'Speed · Combined 6–9★', exact: true }).click();
+  await dialog.getByRole('button', { name: 'Speed 6–9★ (Combined)', exact: true }).click();
   await edit.getByRole('radio', { name: 'P1', exact: true }).click();
   await edit.getByRole('button', { name: 'Save filter', exact: true }).click();
   await expect(rows.first().locator('.factor-list .spark.matched')).toHaveCount(0);
@@ -513,12 +513,12 @@ test('Select Parent uses linked accounts, scoped factors, bookmarks and restores
   await addFilter.getByRole('radio', { name: 'P2', exact: true }).click();
   await addFilter.getByRole('button', { name: 'Add filter', exact: true }).click();
   await expect(dialog.locator('.parent-row')).toHaveCount(0);
-  await dialog.getByRole('button', { name: 'Speed · P2 1–3★', exact: true }).click();
+  await dialog.getByRole('button', { name: 'Speed 1–3★ (P2)', exact: true }).click();
   const editFilter = page.getByRole('dialog', { name: 'Edit spark filter', exact: true });
   await editFilter.getByRole('radio', { name: 'P1', exact: true }).click();
   await editFilter.getByRole('button', { name: 'Save filter', exact: true }).click();
   await expect(dialog.locator('.parent-row')).toHaveCount(1);
-  await expect(dialog.getByRole('button', { name: 'Speed · P1 1–3★', exact: true })).toBeVisible();
+  await expect(dialog.getByRole('button', { name: 'Speed 1–3★ (P1)', exact: true })).toBeVisible();
   await page.screenshot({ path: test.info().outputPath('parent-picker.png') });
   await dialog.locator('.select-parent').click();
   await expect(page.getByRole('button', { name: 'Clear selected legacy' })).toBeVisible();

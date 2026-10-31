@@ -101,7 +101,7 @@ export const veteranFixture: VeteranUiRecord = {
   rank: 'UE1',
   score: 29412,
   scenario: 'Grand Masters',
-  detail: 'Long · Leader',
+  detail: 'Long, Leader',
   workspace: 'Local',
   updated: '4 min ago',
   affinity: 83,
@@ -330,21 +330,21 @@ export const characterPickerOptions = [
     id: 'mcqueen',
     name: 'Mejiro McQueen',
     image: mejiroMcQueenImage,
-    subtitle: 'Long · Leader',
+    subtitle: 'Long, Leader',
     affinity: 83
   },
   {
     id: 'oguri',
     name: 'Oguri Cap',
     image: oguriCapImage,
-    subtitle: 'Mile · Betweener',
+    subtitle: 'Mile, Betweener',
     affinity: 72
   },
   {
     id: 'kitasan',
     name: 'Kitasan Black',
     image: kitasanBlackImage,
-    subtitle: 'Medium · Runner',
+    subtitle: 'Medium, Runner',
     affinity: 68
   }
 ];

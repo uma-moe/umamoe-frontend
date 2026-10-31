@@ -206,7 +206,7 @@
           >
             {segment.label}
           </span>
-        {/each}{#each [{ distance: replay.bounds.distanceMax / 6, label: 'Mid race' }, { distance: finalSpurtSection(replay.bounds.distanceMax).start, label: 'Final spurt window · Late race' }].filter((m) => m.distance >= positionViewport.min && m.distance <= positionViewport.max) as marker}
+        {/each}{#each [{ distance: replay.bounds.distanceMax / 6, label: 'Mid race' }, { distance: finalSpurtSection(replay.bounds.distanceMax).start, label: 'Final spurt window' }].filter((m) => m.distance >= positionViewport.min && m.distance <= positionViewport.max) as marker}
           <span
             class="course-label phase"
             style:left={x(marker.distance) / 10 + '%'}

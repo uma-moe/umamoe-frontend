@@ -56,7 +56,7 @@ test('cards show compact affinity above combined sparks and retain inline stats 
     .click();
 
   await expect(page.locator('.active-filter-chips')).toContainText(
-    'Speed · Total 6★+ · Veteran + parents'
+    'Speed total 6★+ (Veteran + parents)'
   );
   const matchedSpark = card.getByRole('button', {
     name: 'Filter by Speed: 6 stars (family total)',
@@ -68,7 +68,7 @@ test('cards show compact affinity above combined sparks and retain inline stats 
   await expect(card.locator('.spark.matched')).toHaveCount(1);
   await card.screenshot({ path: testInfo.outputPath('matched-spark.png') });
   await page
-    .getByRole('button', { name: 'Remove Speed · Total 6★+ · Veteran + parents', exact: true })
+    .getByRole('button', { name: 'Remove Speed total 6★+ (Veteran + parents)', exact: true })
     .click();
 
   await expect(card.locator('.spark.matched')).toHaveCount(0);
@@ -444,7 +444,7 @@ test('sidebar controls expand fifty sparks inline, switch sources and keep skill
     .click();
 
   await expect(page.locator('.active-filter-chips')).toContainText(
-    target.text + ' · Total 6★+ · Veteran + parents'
+    target.text + ' total 6★+ (Veteran + parents)'
   );
   await expect(card.locator('.sparks .matched').first()).toBeVisible();
   await expect(card.locator('.card-aptitudes')).toBeVisible();
@@ -547,8 +547,8 @@ test('filter categories stay exclusive and UQL filters live alongside visual fil
   await expect(page.locator('.active-filter-chips')).toContainText('SP total ≥ 200');
   await expect(page.locator('.active-filter-chips')).toContainText('UQL query');
   const matches = page.locator('.veteran-card .query-matches');
-  await expect(matches).toContainText('Main · Speed');
-  await expect(matches).toContainText('P1 · Speed');
+  await expect(matches).toContainText('Main Speed');
+  await expect(matches).toContainText('P1 Speed');
   await replaceQuery(editor, 'Speed > 4');
   await expect(matches.locator('.spark')).toHaveCount(1);
   await expect(matches).toContainText('6');

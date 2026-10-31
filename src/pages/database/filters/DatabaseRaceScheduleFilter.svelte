@@ -201,7 +201,7 @@
     />
   </div>
   <p class="summary">
-    {selected.length} selected race{selected.length === 1 ? '' : 's'} · one race per calendar slot
+    {selected.length} selected race{selected.length === 1 ? '' : 's'}, one race per calendar slot
   </p>
   {#if error}
     <p class="error">{error}</p>
@@ -228,7 +228,7 @@
               />
               <span>
                 {race.name}
-                <small>{year.label} · {slot.label}</small>
+                <small>{year.label}, {slot.label}</small>
               </span>
             </button>
           {/each}

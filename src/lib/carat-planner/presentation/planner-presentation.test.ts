@@ -283,7 +283,7 @@ describe('Angular Planner search and pull-plan presentation', () => {
             name: 'Kitasan Black',
             image: '',
             kind: 'support',
-            subLabel: 'SSR · Stamina Support',
+            subLabel: 'SSR Stamina Support',
             searchTerms: ['support', 'stamina']
           }
         ]

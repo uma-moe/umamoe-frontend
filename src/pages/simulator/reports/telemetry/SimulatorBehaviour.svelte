@@ -80,7 +80,7 @@
   emptyDetail="This batch did not collect race diagnostics. Run it again to see them."
   description={'How each runner’s ' +
     result.runs +
-    ' races play out. Start is her average start delay. Position is her average place when the mid race and the late race begin; green means she usually moves up. Blocked and rushed show how often it happens and, in those races, for how long. Downhill is the average time in downhill mode, which saves HP. Position fights and duels show how often she gets into one, and are left out when none of the runners shown does. Bars compare the runners shown.'}
+    ' races play out. Start is her average start delay. Position is her average place when the mid race and the late race begin. Green means she usually moves up. Blocked and rushed show how often it happens and, in those races, for how long. Downhill is the average time in downhill mode, which saves HP. Position fights and duels show how often she gets into one, and are left out when none of the runners shown does. Bars compare the runners shown.'}
 >
   <div class="scroll">
     <table>
@@ -102,10 +102,10 @@
             Position <small>mid → late</small>
           </th>
           <th scope="col">
-            Blocked <small>races · length</small>
+            Blocked <small>races, length</small>
           </th>
           <th scope="col">
-            Rushed <small>races · length</small>
+            Rushed <small>races, length</small>
           </th>
           <th
             scope="col"

@@ -42,7 +42,7 @@
         <span>({range[0].toFixed(1)}–{range[1].toFixed(1)}%)</span>
       </p>
       <p class="detail">
-        Best finisher places {teamBestPlace(best).toFixed(2)} on average · {best.successes.toLocaleString(
+        Best finisher places {teamBestPlace(best).toFixed(2)} on average over {best.successes.toLocaleString(
           'en-US'
         )}
         races
@@ -82,7 +82,7 @@
                 />
               {/each}
             </span>
-            <span class="names">{team.umas.map((uma) => uma.name).join(' · ')}</span>
+            <span class="names">{team.umas.map((uma) => uma.name).join(', ')}</span>
             <span
               class="rate"
               title="{range[0].toFixed(1)}–{range[1].toFixed(1)}%"
@@ -103,7 +103,7 @@
         {/each}
       </ol>
       <p class="note">
-        Win rate is how often one of the three wins; the small number is where the best finisher
+        Win rate is how often one of the three wins. The small number is where the best finisher
         places on average. Showing the best {top.length}.
       </p>
     {/if}

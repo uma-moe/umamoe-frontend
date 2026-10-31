@@ -264,23 +264,23 @@ test('legacy selector keeps full-width results with compact chips and a two-step
   await addFilter.getByRole('button', { name: 'Add filter', exact: true }).click();
   await expect(dialog.locator('.selected-factor')).toHaveCount(2);
   await expect(dialog.locator('.parent-row')).toHaveCount(1);
-  await dialog.getByRole('button', { name: 'Speed · P1 1–3★', exact: true }).click();
+  await dialog.getByRole('button', { name: 'Speed 1–3★ (P1)', exact: true }).click();
   await editFilter.getByRole('radio', { name: 'P2', exact: true }).click();
   await editFilter.getByRole('button', { name: 'Save filter', exact: true }).click();
   await expect(dialog.locator('.parent-row')).toHaveCount(0);
-  await dialog.getByRole('button', { name: 'Speed · P2 1–3★', exact: true }).click();
+  await dialog.getByRole('button', { name: 'Speed 1–3★ (P2)', exact: true }).click();
   await editFilter.getByRole('radio', { name: 'P1', exact: true }).click();
   const stars = editFilter.getByRole('slider', { name: 'Stars minimum', exact: true });
   await stars.press('End');
   await expect(stars).toHaveValue('3');
   await editFilter.getByRole('button', { name: 'Save filter', exact: true }).click();
   await expect(dialog.locator('.parent-row')).toHaveCount(0);
-  await dialog.getByRole('button', { name: 'Speed · P1 3★', exact: true }).click();
+  await dialog.getByRole('button', { name: 'Speed 3★ (P1)', exact: true }).click();
   await stars.press('ArrowLeft');
   await expect(stars).toHaveValue('2');
   await editFilter.getByRole('button', { name: 'Save filter', exact: true }).click();
   await expect(dialog.locator('.parent-row')).toHaveCount(1);
-  await dialog.getByRole('button', { name: 'Speed · Own 1–3★', exact: true }).click();
+  await dialog.getByRole('button', { name: 'Speed 1–3★ (Own)', exact: true }).click();
   await editFilter.getByRole('radio', { name: 'Combined', exact: true }).click();
   await expect(stars).toHaveAttribute('max', '9');
   // Exercise the same draggable track used by the database filters.
@@ -291,20 +291,20 @@ test('legacy selector keeps full-width results with compact chips and a two-step
   await expect(stars).toHaveValue('5');
   await editFilter.getByRole('button', { name: 'Save filter', exact: true }).click();
   await expect(dialog.locator('.parent-row')).toHaveCount(1);
-  await dialog.getByRole('button', { name: 'Speed · Combined 5–9★', exact: true }).click();
+  await dialog.getByRole('button', { name: 'Speed 5–9★ (Combined)', exact: true }).click();
   await stars.press('ArrowRight');
   await expect(stars).toHaveValue('6');
   await editFilter.getByRole('button', { name: 'Save filter', exact: true }).click();
   await expect(dialog.locator('.parent-row')).toHaveCount(0);
-  await dialog.getByRole('button', { name: 'Speed · Combined 6–9★', exact: true }).click();
+  await dialog.getByRole('button', { name: 'Speed 6–9★ (Combined)', exact: true }).click();
   await editFilter.getByRole('radio', { name: 'Own', exact: true }).click();
   await expect(stars).toHaveValue('3');
   await editFilter.getByRole('button', { name: 'Cancel', exact: true }).click();
   await expect(
-    dialog.getByRole('button', { name: 'Speed · Combined 6–9★', exact: true })
+    dialog.getByRole('button', { name: 'Speed 6–9★ (Combined)', exact: true })
   ).toBeVisible();
 
-  await dialog.getByRole('button', { name: 'Speed · Combined 6–9★', exact: true }).click();
+  await dialog.getByRole('button', { name: 'Speed 6–9★ (Combined)', exact: true }).click();
   await editFilter.getByRole('radio', { name: 'Own', exact: true }).click();
   await editFilter.getByRole('button', { name: 'Back', exact: true }).click();
   await expect(editFilter.getByRole('button', { name: 'Blue stats', exact: true })).toBeFocused();
@@ -314,7 +314,7 @@ test('legacy selector keeps full-width results with compact chips and a two-step
   await expect(dialog.locator('.parent-row')).toHaveCount(1);
   await page.setViewportSize({ width: 390, height: 520 });
   await expect(
-    dialog.getByRole('button', { name: 'Speed · P1 2–3★', exact: true })
+    dialog.getByRole('button', { name: 'Speed 2–3★ (P1)', exact: true })
   ).toBeInViewport();
 
   expect(await dialog.evaluate((el) => el.scrollWidth <= el.clientWidth)).toBe(true);
@@ -328,11 +328,11 @@ test('legacy selector keeps full-width results with compact chips and a two-step
   await expect(upper).toHaveValue('4');
   await addFilter.getByRole('button', { name: 'Add filter', exact: true }).click();
   await expect(dialog.locator('.parent-row')).toHaveCount(0);
-  await dialog.getByRole('button', { name: 'Speed · Combined 1–4★', exact: true }).click();
+  await dialog.getByRole('button', { name: 'Speed 1–4★ (Combined)', exact: true }).click();
   await editFilter.getByRole('slider', { name: 'Stars maximum', exact: true }).press('ArrowRight');
   await editFilter.getByRole('button', { name: 'Save filter', exact: true }).click();
   await expect(
-    dialog.getByRole('button', { name: 'Speed · Combined 1–5★', exact: true })
+    dialog.getByRole('button', { name: 'Speed 1–5★ (Combined)', exact: true })
   ).toBeVisible();
 
   await expect(dialog.locator('.parent-row')).toHaveCount(1);

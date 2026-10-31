@@ -37,7 +37,7 @@
 
   function groupLabel(group: StatlineGroup): string {
     if (group.styles.length === RUNNING_STYLES.length) return 'All styles';
-    return group.styles.map((style) => STYLE_NAMES[String(style) as StyleKey]).join(' · ');
+    return group.styles.map((style) => STYLE_NAMES[String(style) as StyleKey]).join(', ');
   }
 
   function holdsSelected(group: StatlineGroup): boolean {

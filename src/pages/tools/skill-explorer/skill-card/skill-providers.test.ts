@@ -52,7 +52,7 @@ it('includes event sources while filtering unreleased supports and showing SSR c
 
   expect(sources?.umas).toEqual([]);
   expect(sources?.supports.map((card) => card.id)).toEqual([30069, 30018, 10001]);
-  expect(sources?.supports[0]?.detail).toContain('SSR · Stamina');
+  expect(sources?.supports[0]?.detail).toContain('SSR Stamina');
 });
 
 it('rejects unsafe or mismatched provider paths', () => {

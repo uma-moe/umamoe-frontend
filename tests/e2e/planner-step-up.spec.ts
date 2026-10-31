@@ -99,7 +99,9 @@ test('Step-ups share banner goal controls, budget paid steps and survive reload'
   await expect(advanced).toContainText('1 copy is guaranteed');
   await target.locator('.step-costs > summary').click();
   await expect(target.locator('.step-costs li')).toHaveCount(5);
-  await expect(target.locator('.step-costs li').last()).toContainText('Choose the guaranteed SSR');
+  await expect(target.locator('.step-costs li').last()).toContainText(
+    'guaranteed SSR of your choice'
+  );
   await target.screenshot({ path: info.outputPath('step-up-expanded.png') });
   await target
     .getByRole('button', { name: 'Increase desired copies of Chosen card', exact: true })
@@ -117,7 +119,7 @@ test('Step-ups share banner goal controls, budget paid steps and survive reload'
   const progress = target.getByRole('combobox', { name: 'Step-up progress', exact: true });
   await progress.click();
   await target
-    .getByRole('option', { name: 'Step 2 · 20 pulls · 1,200 paid Carats', exact: true })
+    .getByRole('option', { name: 'Step 2 (20 pulls, 1,200 paid Carats)', exact: true })
     .click();
 
   await expect(target.locator('.funding')).toContainText('20 planned pulls');
@@ -126,7 +128,7 @@ test('Step-ups share banner goal controls, budget paid steps and survive reload'
   await expect(target.locator('.goal-chance')).toContainText('0.2%');
   await expect(page.getByRole('group', { name: 'Projection summary' })).toContainText('Funded');
   await page.reload();
-  await expect(progress).toContainText('Step 2 · 20 pulls');
+  await expect(progress).toContainText('Step 2 (20 pulls');
   await expect(target.locator('.funding')).toContainText('20 planned pulls');
   await expect(target.locator('.goal-previews')).toContainText('2 copies required');
   await target.getByLabel(`Pickup goals for ${event.title}`, { exact: true }).click();
@@ -151,7 +153,7 @@ test('Step-ups share banner goal controls, budget paid steps and survive reload'
 
   await target.getByRole('combobox', { name: 'Actual step-up progress', exact: true }).click();
   await target
-    .getByRole('option', { name: 'Step 1 · 10 pulls · 500 paid Carats', exact: true })
+    .getByRole('option', { name: 'Step 1 (10 pulls, 500 paid Carats)', exact: true })
     .click();
 
   await expect(target.locator('.result-delta')).toHaveText('10 pulls saved');
@@ -167,7 +169,7 @@ test('Step-ups share banner goal controls, budget paid steps and survive reload'
   await expect(target.locator('.goal-chance > strong')).toHaveText('0/1 goals met');
   await actualCopies.fill('');
   await expect(target.locator('.goal-chance > strong')).toHaveText('Copies not recorded');
-  await expect(progress).toContainText('Step 2 · 20 pulls');
+  await expect(progress).toContainText('Step 2 (20 pulls');
   await target
     .getByRole('dialog', { name: `Actual results for ${event.title}`, exact: true })
     .screenshot({ path: info.outputPath('actual-step-up.png') });

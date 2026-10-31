@@ -15,7 +15,7 @@ test('Planner assumption summaries follow balances, daily income, default reward
     rewards = tabs.getByRole('tab', { name: 'Rewards', exact: true });
 
   await expect(rewards).toHaveAccessibleDescription(
-    '7 counted automatically · 2,555 Carats · 3 tickets'
+    '7 counted automatically (2,555 Carats, 3 tickets)'
   );
   const free = setup
     .getByRole('group', { name: 'Carats', exact: true })
@@ -24,7 +24,7 @@ test('Planner assumption summaries follow balances, daily income, default reward
   await free.fill('1234');
   await expect(bar).toContainText('1,234 starting Carats');
   await expect(tabs.getByRole('tab', { name: 'Balance' })).toHaveAccessibleDescription(
-    'Sep 1, 2026 · 1,234 Carats'
+    '1,234 Carats on Sep 1, 2026'
   );
 
   await rewards.click();
@@ -34,7 +34,7 @@ test('Planner assumption summaries follow balances, daily income, default reward
 
   await expect(bar).toContainText('8 rewards counted');
   await expect(rewards).toHaveAccessibleDescription(
-    '8 counted automatically · 2,555 Carats · 3 tickets'
+    '8 counted automatically (2,555 Carats, 3 tickets)'
   );
   await setup
     .getByRole('button', { name: 'Exclude Autumn Story Event rewards', exact: true })
@@ -42,7 +42,7 @@ test('Planner assumption summaries follow balances, daily income, default reward
 
   await expect(bar).toContainText('7 rewards counted');
   await expect(rewards).toHaveAccessibleDescription(
-    '7 counted automatically · 1,955 Carats · 1 ticket'
+    '7 counted automatically (1,955 Carats, 1 ticket)'
   );
   await page.reload();
   await expect(page.getByRole('button', { name: /Plan assumptions/ })).toContainText(

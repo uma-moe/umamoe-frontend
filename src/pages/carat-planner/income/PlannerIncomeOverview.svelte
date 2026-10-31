@@ -32,7 +32,7 @@
     <div>
       <strong>Projected income</strong>
       <span>
-        {period} · {income.preview ? '30-day preview' : 'Through your last planned pull'}
+        {period}{income.preview ? ' (30-day preview)' : ', until your last planned pull'}
       </span>
     </div>
   </header>

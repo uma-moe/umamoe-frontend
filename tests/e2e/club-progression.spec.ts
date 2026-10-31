@@ -104,7 +104,7 @@ test('Member charts keep source order, hide/isolate/restore, keyboard access, se
   await panel.getByRole('button', { name: 'Show daily gains' }).click();
   await expect(panel.getByRole('figure')).toHaveAttribute(
     'aria-label',
-    'Member progression · delta'
+    'Member progression (delta)'
   );
   await page.getByRole('button', { name: 'Previous month', exact: true }).click();
   await expect(panel.getByRole('button', { name: 'Show cumulative gains' })).toBeVisible();

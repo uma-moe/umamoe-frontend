@@ -355,9 +355,9 @@ test('Database review controls share sizing, empty numbers and toggle state with
   await expect(result.locator('.source-portrait')).toHaveCount(0);
   await result.screenshot({ path: test.info().outputPath('split-plain.png') });
   for (const [owner, title] of [
-    ['main', 'Focus primary parent sparks; click again to clear'],
-    ['left', 'Focus Legacy 1 sparks; click again to clear'],
-    ['right', 'Focus Legacy 2 sparks; click again to clear']
+    ['main', 'Focus primary parent sparks. Click again to clear.'],
+    ['left', 'Focus Legacy 1 sparks. Click again to clear.'],
+    ['right', 'Focus Legacy 2 sparks. Click again to clear.']
   ]) {
     const portrait = result.getByTitle(title, { exact: true });
     await portrait.click();

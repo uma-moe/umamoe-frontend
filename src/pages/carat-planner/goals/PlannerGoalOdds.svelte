@@ -3,11 +3,13 @@
   import type {
     PlannerDataBundle,
     PlannerGachaEntry,
+    PlannerStepUp,
     TargetProjection
   } from '@/lib/carat-planner/carat-planner';
   import {
     calculatePullDistribution,
-    pullOutcomeSegments
+    pullOutcomeSegments,
+    type PullOutcomeSegment
   } from '@/lib/carat-planner/gacha/planner-pull-probability';
   import { copies, percent, type PlannerGoalView } from './planner-goal-view';
   import Icon from '@/components/Icon.svelte';
@@ -74,6 +76,18 @@
   );
 
   const topRarity = $derived(cardKind === 'support' ? 'SSR' : '3★');
+
+  function outcomeText(segment: PullOutcomeSegment): string {
+    return `${percent(segment.probability)} ${segment.semanticLabel.toLowerCase()} (${segment.rangeLabel})`;
+  }
+
+  function stepText(step: PlannerStepUp['steps'][number]): string {
+    const cost = `${step.pulls} pulls for ${step.cost.toLocaleString()} paid Carats`;
+    if (step.selectable) return `${cost}, guaranteed ${topRarity} of your choice`;
+    if (step.guaranteed_rarity === 3) return `${cost}, guaranteed ${topRarity}`;
+
+    return cost;
+  }
 </script>
 
 <details
@@ -112,12 +126,12 @@
           <h4>Selected pickup outcomes at {distribution.pulls.toLocaleString()} pulls</h4>
           <p>
             {#if inferred}
-              Estimated from standard banner rates ·
-            {/if}Only selected featured cards count here{#if distribution.guaranteedHits}
-              · totals include {distribution.guaranteedHits} shared exchange {distribution.guaranteedHits ===
+              Estimated from standard banner rates.
+            {/if}Only selected featured cards count here.{#if distribution.guaranteedHits}
+              Totals include {distribution.guaranteedHits} shared exchange {distribution.guaranteedHits ===
               1
                 ? 'copy'
-                : 'copies'}
+                : 'copies'}.
             {/if}
           </p>
         </span>
@@ -202,13 +216,13 @@
       <div
         class="outcome-stack"
         role="img"
-        aria-label={`Selected pickup outcomes at ${distribution.pulls} pulls: ${segments.map((segment) => `${segment.semanticLabel}, ${segment.rangeLabel}: ${percent(segment.probability)}`).join('; ')}`}
+        aria-label={`Selected pickup outcomes at ${distribution.pulls} pulls: ${segments.map(outcomeText).join(', ')}`}
       >
         {#each segments as segment}
           <span
             data-outcome={segment.tone}
             style:width={`${segment.width}%`}
-            title={`${segment.semanticLabel} · ${segment.rangeLabel}: ${percent(segment.probability)}`}
+            title={outcomeText(segment)}
           ></span>
         {/each}
       </div>
@@ -260,7 +274,7 @@
       <details class="step-costs">
         <summary>
           <span>
-            Step costs and guarantees · {stepUp.rounds}
+            Step costs and guarantees, {stepUp.rounds}
             {stepUp.rounds === 1 ? 'round' : 'rounds'} available
           </span>
           <Icon
@@ -272,12 +286,7 @@
           {#each stepUp.steps as step, index}
             <li>
               <b>Step {index + 1}</b>
-              · {step.cost.toLocaleString()} paid Carats · {step.pulls}
-              pulls{#if step.selectable}
-                · Choose the guaranteed {topRarity}
-              {:else if step.guaranteed_rarity === 3}
-                · Guaranteed {topRarity}
-              {/if}
+              {stepText(step)}
             </li>
           {/each}
         </ol>

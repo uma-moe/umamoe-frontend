@@ -282,7 +282,7 @@
   <div class="overview-labels">
     <span>Start</span>
     <span>
-      Final spurt from {Math.round(spurt.start).toLocaleString()} m · {distance.toLocaleString()} m course
+      Final spurt from {Math.round(spurt.start).toLocaleString()} m of {distance.toLocaleString()} m
     </span>
     <span>Finish</span>
   </div>

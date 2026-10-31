@@ -101,9 +101,9 @@
     <h3 id="build-options">Build options</h3>
     <span
       class="key"
-      title="A full bar marks the largest skill contribution within that build. Each build has its own scale; bar width does not show build strength or win probability."
+      title="A full bar marks the largest skill contribution within that build. Each build has its own scale, so bar width does not show build strength or win probability."
     >
-      {UNIT_TITLE[skillUnit]} · bars scaled within each build
+      {UNIT_TITLE[skillUnit]}
     </span>
     {#if tools}<div class="tools">{@render tools()}</div>{/if}
   </header>

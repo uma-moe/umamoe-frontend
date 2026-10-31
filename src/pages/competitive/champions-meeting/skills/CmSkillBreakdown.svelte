@@ -222,8 +222,8 @@
                     same entries.
                   </p>
                   <p>
-                    Example: 60 of 100 learned entries activated the skill: 60% activation. If 12 of
-                    those 60 entries won, their individual win rate is 20%.
+                    For example, if 60 of 100 learned entries activated the skill, its activation
+                    rate is 60%. If 12 of those 60 entries won, their individual win rate is 20%.
                   </p>
                 </div>
               </InspectPopover>
@@ -311,9 +311,7 @@
     </table>
   </div>
   <p class="outcome-note">
-    {#if comparison}
-      Activated entries · expand a skill for its full breakdown.
-    {:else if groups[0]}
+    {#if !comparison && groups[0]}
       Activation rates use {number(groups[0].totals.learned)} learned entries. Win rates use the entries
       in each outcome row.
     {/if}

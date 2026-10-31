@@ -232,7 +232,7 @@
           surface
           id="simulator-skill-list"
           title="Skills"
-          description={'Select a skill · ' + data.rows.length + ' in this build'}
+          description={data.rows.length + ' skills in this build'}
         >
           <div class="skill-columns">
             <span>Skill</span>
@@ -364,7 +364,7 @@
           <div class="chart-note">
             <span>
               {row.triggered} / {result.runs} races activated{mode === 'binomial'
-                ? ' · Model middle 95%: ' + modelInterval[0] + '–' + modelInterval[1] + ' races'
+                ? ', model middle 95% ' + modelInterval[0] + '–' + modelInterval[1] + ' races'
                 : ''}
             </span>
             <span>{mean === undefined ? '' : 'Mean ' + mean.toFixed(2) + ' ' + unit}</span>

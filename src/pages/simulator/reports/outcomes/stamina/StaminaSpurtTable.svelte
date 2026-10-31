@@ -55,25 +55,25 @@
   const staminaTitle = (row: StaminaRunner) =>
     row.needed
       ? name(row.source) +
-        ': stamina ' +
+        ' has ' +
         whole(row.stamina) +
-        ' · the median race needs ' +
+        ' stamina. The median race needs ' +
         whole(row.needed.median) +
-        ' · 80% of races need ' +
+        ', 80% of races need ' +
         whole(row.needed.p10) +
         '–' +
         whole(row.needed.p90) +
-        ' · enough in ' +
+        ', and it is enough in ' +
         percent(row.covered) +
-        ' of races'
+        ' of races.'
       : '';
 
   const spurtTitle = (row: StaminaRunner) =>
     row.spurt
       ? name(row.source) +
-        ': full spurt from the late-race start in ' +
+        ' runs a full spurt from the late-race start in ' +
         percent(row.spurt.full) +
-        ' · slower or later in ' +
+        ' of races, a slower or later one in ' +
         percent(row.spurt.late) +
         (row.spurt.late > 0
           ? ' (' +
@@ -84,12 +84,13 @@
               .filter(Boolean)
               .join(', ') +
             (row.spurt.recovered > 0
-              ? '; recovery made ' + percent(row.spurt.recovered) + ' full later'
+              ? ', with recovery making ' + percent(row.spurt.recovered) + ' full later'
               : '') +
             ')'
           : '') +
-        ' · none in ' +
-        percent(row.spurt.none)
+        ', and none in ' +
+        percent(row.spurt.none) +
+        '.'
       : '';
 
   // A spurt that HP cut short runs below the full spurt speed, so the average only shows when it differs.
@@ -106,12 +107,12 @@
     const average = shortSpurtSpeed(row);
     return (
       name(row.source) +
-      ': full last spurt at ' +
+      ' runs her full last spurt at ' +
       n(row.fullSpeed, 2) +
       ' m/s' +
       (average === undefined
         ? ''
-        : ' · HP cut some spurts short, so the spurts she ran averaged ' + n(average, 2) + ' m/s')
+        : '. HP cut some spurts short, so the spurts she ran averaged ' + n(average, 2) + ' m/s')
     );
   }
 </script>
@@ -167,7 +168,7 @@
           <th
             scope="col"
             class="num"
-            title="Target speed of her full last spurt; the average of the spurts she ran follows when HP cut some short"
+            title="Target speed of her full last spurt. When HP cut some spurts short, the average of the ones she ran follows."
           >
             Spurt speed
           </th>
@@ -211,7 +212,7 @@
                 />
                 <span class="name">
                   <strong>{name(row.source)}</strong>
-                  <small>#{row.source + 1} · {style(row.source)}</small>
+                  <small>#{row.source + 1}, {style(row.source)}</small>
                 </span>
               </span>
             </th>
@@ -297,7 +298,7 @@
                 <small>m/s</small>
                 {@const average = shortSpurtSpeed(row)}
                 {#if average !== undefined}
-                  <small class="warn">· avg {n(average, 2)}</small>
+                  <small class="warn">(avg {n(average, 2)})</small>
                 {/if}
               {/if}
             </td>
@@ -313,7 +314,7 @@
             >
               {percent(row.exhausted?.rate)}{#if row.exhausted?.at}
                 <small class="wide-only">
-                  · {whole(distance - row.exhausted.at)} m to go
+                  ({whole(distance - row.exhausted.at)} m to go)
                 </small>
               {/if}
             </td>

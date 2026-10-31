@@ -25,7 +25,7 @@
   aria-label={label}
 >
   {#each items as pickup}
-    {@const description = [pickup.name, pickup.subLabel].filter(Boolean).join(' · ')}
+    {@const description = [pickup.name, pickup.subLabel].filter(Boolean).join(', ')}
     <a
       href={pickup.gametoraUrl}
       target="_blank"

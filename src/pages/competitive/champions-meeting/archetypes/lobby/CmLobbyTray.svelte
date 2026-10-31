@@ -67,7 +67,7 @@
           class="tray-count"
           role="status"
         >
-          {lobby.count}/{LOBBY_SIZE} Uma{lobby.pending.length ? ' · Loading…' : ''}
+          {lobby.count}/{LOBBY_SIZE} Uma{lobby.pending.length ? ', loading…' : ''}
         </span>
         <Icon
           name="chevron"

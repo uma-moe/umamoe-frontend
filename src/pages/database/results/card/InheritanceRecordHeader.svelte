@@ -213,7 +213,7 @@
                 Base: {affinity.base} + Race: {affinity.race}
               </span>
             {:else}
-              <span>Stored record score; local affinity data is not available yet.</span>
+              <span>Stored record score. Local affinity data is not available yet.</span>
             {/if}{#if affinity.crossRace}
               <span>
                 Includes P1–P2 races: {affinity.crossRace}
@@ -225,7 +225,7 @@
       {#if affinity.crossRace}
         <div
           class="stat cross-race"
-          title="Race affinity from G1 wins shared by P1 and P2; counted once in the total"
+          title="Race affinity from G1 wins shared by P1 and P2, counted once in the total"
         >
           <strong>{affinity.crossRace.toLocaleString()}</strong>
           <span>P1–P2 Race</span>

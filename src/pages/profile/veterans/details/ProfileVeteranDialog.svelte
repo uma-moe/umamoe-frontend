@@ -121,7 +121,7 @@
     veteran.rarity ? '★'.repeat(Math.max(0, Math.min(5, veteran.rarity))) : ''
   ]
     .filter(Boolean)
-    .join(' · ')}
+    .join(', ')}
   maxWidth="800px"
   maxHeight="min(90dvh, 850px)"
   mobileMaxHeight="calc(100dvh - 32px)"

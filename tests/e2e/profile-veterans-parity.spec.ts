@@ -63,10 +63,10 @@ test('standalone Veterans exposes search, removable spark chips and compact vete
   await page.getByRole('button', { name: 'Add Speed spark', exact: true }).click();
   await page.getByRole('button', { name: 'Stats & SP', exact: true }).click();
   await expect(page.locator('.active-filter-chips')).toContainText(
-    'Speed · Total 1★+ · Any generation'
+    'Speed total 1★+ (Any generation)'
   );
   await page
-    .getByRole('button', { name: 'Remove Speed · Total 1★+ · Any generation', exact: true })
+    .getByRole('button', { name: 'Remove Speed total 1★+ (Any generation)', exact: true })
     .click();
 
   await expect(page.locator('.active-filter-chips')).toContainText('Name: Grass');
@@ -462,7 +462,7 @@ test('Veteran details retain support deck, stats, aptitudes, races, sparks, skil
   expect(bounds.height).toBeLessThan(page.viewportSize()!.height);
   const identity = dialog.locator('.dialog-panel > header .veteran-identity');
   await expect(identity.locator('.scenario')).toHaveText('Grand Masters');
-  await expect(identity.locator('.race-style')).toContainText('Long · Pace');
+  await expect(identity.locator('.race-style')).toContainText('Long, Pace');
   await expect(identity.getByLabel('5 rarity stars')).toHaveText('★★★★★');
   for (const selector of ['.scenario', '.rarity']) {
     const color = await page
@@ -562,10 +562,10 @@ test('Veteran details retain support deck, stats, aptitudes, races, sparks, skil
     .press('ArrowRight');
 
   await expect(
-    dialog.getByRole('radio', { name: 'Grass Wonder P1 · Grandparent 1', exact: true })
+    dialog.getByRole('radio', { name: 'Grass Wonder P1 grandparent 1', exact: true })
   ).toBeChecked();
 
-  await expect(dialog.locator('.source-name')).toHaveText('Grass Wonder · P1 · Grandparent 1');
+  await expect(dialog.locator('.source-name')).toHaveText('Grass Wonder, P1 grandparent 1');
   await dialog
     .locator('.spark-section')
     .screenshot({ path: testInfo.outputPath('compact-spark-selector.png') });
@@ -588,7 +588,7 @@ test('Veteran details retain support deck, stats, aptitudes, races, sparks, skil
 
   await dialog.getByRole('button', { name: 'P1 legacy 1: Grass Wonder', exact: true }).click();
   await expect(
-    dialog.getByRole('radio', { name: 'Grass Wonder P1 · Grandparent 1', exact: true })
+    dialog.getByRole('radio', { name: 'Grass Wonder P1 grandparent 1', exact: true })
   ).toBeChecked();
 
   await expect(

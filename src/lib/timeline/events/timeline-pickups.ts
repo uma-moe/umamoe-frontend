@@ -53,7 +53,7 @@ export function timelinePickup(
         type ? `${type} Support` : 'Support card'
       ]
         .filter(Boolean)
-        .join(' · '),
+        .join(' '),
       searchTerms: ['support', ...(type ? [type] : [])]
     };
   }

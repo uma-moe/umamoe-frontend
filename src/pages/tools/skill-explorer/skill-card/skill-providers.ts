@@ -115,7 +115,7 @@ export function skillProviders({
     const provider = {
       id: source.cardId,
       name: display.character,
-      detail: `${rarity} · ${supportTypeName(card.type)} · ${display.title}`,
+      detail: `${rarity} ${supportTypeName(card.type)}, ${display.title}`,
       image: supportCardImagePath(card.id),
       href: source.href
     };

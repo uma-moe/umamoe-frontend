@@ -43,11 +43,11 @@
 
   const MODE_LABELS: Record<OptimizeMode, string> = {
     cm: 'Champions Meeting',
-    tt_sprint: 'Team Trials · Sprint',
-    tt_mile: 'Team Trials · Mile',
-    tt_medium: 'Team Trials · Medium',
-    tt_long: 'Team Trials · Long',
-    tt_dirt: 'Team Trials · Dirt'
+    tt_sprint: 'Team Trials (Sprint)',
+    tt_mile: 'Team Trials (Mile)',
+    tt_medium: 'Team Trials (Medium)',
+    tt_long: 'Team Trials (Long)',
+    tt_dirt: 'Team Trials (Dirt)'
   };
 
   const MODE_OPTIONS = OPTIMIZE_MODES.map((mode) => ({ value: mode, label: MODE_LABELS[mode] }));

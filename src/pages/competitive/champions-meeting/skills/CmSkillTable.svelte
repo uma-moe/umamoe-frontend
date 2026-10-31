@@ -64,7 +64,7 @@
   ];
   const variantName = (id: number) =>
     skillName(id) + (id >= 900000 && id < 1000000 ? ' (Inherited)' : '');
-  const aliases = (id: number) => variants(id).slice(1).map(variantName).join(' · ');
+  const aliases = (id: number) => variants(id).slice(1).map(variantName).join(', ');
 
   const activationCounts = $derived.by(() => {
     const counts = new Map<string, { learned: number; activated: number }>();
@@ -128,7 +128,7 @@
           aria-label={'Inspect ' + row.name}
           aria-expanded={inspected === Number(row.id)}
           aria-controls={inspected === Number(row.id) ? 'cm-skill-detail' : undefined}
-          title={'ID ' + row.id + ' · ' + row.variants}
+          title={typeof row.variants === 'string' ? row.variants : undefined}
           onclick={() => inspect(Number(row.id))}
         >
           <span

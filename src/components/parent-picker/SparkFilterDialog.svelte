@@ -142,7 +142,7 @@
     {onclose}
   >
     <div class="filter-steps">
-      <p class="step-label">{step} / 2 · {step === 1 ? 'Choose a spark' : 'Set requirement'}</p>
+      <p class="step-label">{step === 1 ? 'Choose a spark' : 'Set requirement'} ({step} of 2)</p>
       {#if step === 1}
         <div
           class="spark-categories"

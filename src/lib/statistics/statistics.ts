@@ -296,7 +296,7 @@ export function compositionLabel(item: DistributionItem | undefined, fallback: s
   return Object.entries(composition)
     .filter(([, count]) => count > 0)
     .map(([type, count]) => `${count}× ${type === 'wisdom' ? 'wit' : type}`)
-    .join(' · ');
+    .join(', ');
 }
 
 export function supportTypeDistribution(

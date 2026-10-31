@@ -89,8 +89,8 @@
         {/each}
       </div>
       <p class="uql-doc-example-intro">
-        These examples are clickable. The first changes optional-white scoring; the second changes
-        lineage scoring.
+        These examples are clickable. The first changes optional-white scoring and the second
+        changes lineage scoring.
       </p>
     </div>
 
@@ -106,8 +106,8 @@
       <div>
         <dt>priority = 1, 2, ...</dt>
         <dd>
-          Fallback preferences. Group 1 is checked only when two rows have the same group-0 score;
-          group 2 only breaks a further tie.
+          Fallback preferences. Group 1 is checked only when two rows have the same group-0 score.
+          Group 2 only breaks a further tie.
         </dd>
       </div>
       <div>

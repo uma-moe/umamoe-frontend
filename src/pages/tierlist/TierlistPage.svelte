@@ -217,7 +217,7 @@
               <button
                 class="chart-card"
                 style={`--x:${point.x}%;--stack:${point.stack};--tier:${point.color}`}
-                title={`${point.card.name} · ${(point.card.scores[Number(limitBreak)] ?? 0).toLocaleString()}`}
+                title={`${point.card.name}, score ${(point.card.scores[Number(limitBreak)] ?? 0).toLocaleString()}`}
                 aria-haspopup="dialog"
                 onmouseenter={(event) => preview(point.card, event)}
                 onmouseleave={() => (hovered = undefined)}
@@ -258,7 +258,7 @@
                     <button
                       type="button"
                       class:selected={selected?.id === card.id}
-                      title={`${card.name} · ${card.scores[Number(limitBreak)] ?? 0}`}
+                      title={`${card.name}, score ${card.scores[Number(limitBreak)] ?? 0}`}
                       aria-haspopup="dialog"
                       onmouseenter={(event) => preview(card, event)}
                       onmouseleave={() => (hovered = undefined)}
@@ -320,7 +320,7 @@
             percentile-based ranking.
           </p>
           <p>Scores are calculated based on the URA scenario optimal meta calculations.</p>
-          <h3>Percentile-Based Rankings:</h3>
+          <h3>Percentile-Based Rankings</h3>
           <div>
             {#each TIER_DEFINITIONS as tier}
               <span style={`--tier:${tier.color}`}>

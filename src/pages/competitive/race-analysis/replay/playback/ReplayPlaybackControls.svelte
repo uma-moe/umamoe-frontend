@@ -108,7 +108,7 @@
   </div>
   <p
     class="playback-state"
-    title={trackState.join(' · ') + ' · Leader ' + leaderLabel}
+    title={trackState.join(', ') + ', leader ' + leaderLabel}
   >
     <strong class="race-phase">{phase}</strong>
     {#each trackState.slice(1) as part}
@@ -158,7 +158,7 @@
       <h3>Course and skill timeline</h3>
       <p>
         The telemetry graph, course lanes and skill icons use the same replay time axis. Course
-        boundaries mark when the race leader reaches each section; elevation is relative to the
+        boundaries mark when the race leader reaches each section. Elevation is relative to the
         start.
       </p>
       <p>

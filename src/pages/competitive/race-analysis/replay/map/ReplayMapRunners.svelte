@@ -92,7 +92,7 @@
     }}
   >
     <title>
-      {marker.runner.name} · {Math.round(marker.horse.distance)} m · Lane {marker.lane.toFixed(2)} m ·
+      {marker.runner.name}, {Math.round(marker.horse.distance)} m, lane {marker.lane.toFixed(2)} m,
       {(marker.horse.speed / 100).toFixed(2)} m/s
     </title>
     <polygon
@@ -138,10 +138,7 @@
           loading="eager"
         />
         <b
-          title={'Place ' +
-            places.get(marker.runner.index) +
-            ' · Gate ' +
-            (marker.runner.index + 1)}
+          title={'Place ' + places.get(marker.runner.index) + ', gate ' + (marker.runner.index + 1)}
         >
           {places.get(marker.runner.index)}
         </b>

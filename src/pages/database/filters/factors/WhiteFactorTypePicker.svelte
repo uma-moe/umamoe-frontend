@@ -295,7 +295,7 @@
                 class:selected={selectedCategoryKeys.includes(category.key)}
                 aria-label={category.label}
                 aria-pressed={selectedCategoryKeys.includes(category.key)}
-                title="{category.label} · {category.factorCount} factors"
+                title="{category.label}, {category.factorCount} factors"
                 onclick={() => toggleCategory(category.key)}
               >
                 {#if category.icon}

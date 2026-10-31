@@ -193,7 +193,7 @@ export const timelineRepository = {
             const relatedSupportCardNames = strings(event.related_support_card_names);
             const context = [...relatedCharacters, ...relatedSupportCardNames]
               .slice(0, 3)
-              .join(' · ');
+              .join(', ');
 
             const estimatedEndDate =
               parseResourceDate(event.estimated_end_date) ??

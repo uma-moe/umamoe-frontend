@@ -352,8 +352,8 @@
     class="sr-only"
     id={helpId}
   >
-    Select a runner to follow them. Drag to pan; Ctrl or Command plus scroll to zoom. Open Replay
-    guide for more.
+    Select a runner to follow them. Drag to pan. Hold Ctrl or Command and scroll to zoom. Open
+    Replay guide for more.
   </span>
   <ReplayMapToolbar
     hasTrack={!!points.length}
@@ -384,7 +384,7 @@
           class="cone-label"
           title="Illustrative base view range from resources. Skill modifiers and exact visible identities are not returned by the simulator."
         >
-          Base view · {viewDistance} m
+          Base view {viewDistance} m
         </small>
       {/if}
     </div>

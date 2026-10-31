@@ -110,7 +110,7 @@
       }
     }}
   >
-    <title>{item.label} · {Math.round(item.distance).toLocaleString()} m</title>
+    <title>{item.label} at {Math.round(item.distance).toLocaleString()} m</title>
     <path
       class="landmark-hit"
       d={'M' + item.a.x + ' ' + item.a.y + ' L' + item.b.x + ' ' + item.b.y}

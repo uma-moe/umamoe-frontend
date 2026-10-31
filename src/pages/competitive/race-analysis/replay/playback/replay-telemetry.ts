@@ -402,7 +402,7 @@ export function telemetryOption(chart: TelemetryChart, expanded: boolean): EChar
       ...chartSignals.flatMap((signal, i) =>
         chartRunners.map((r) => ({
           name:
-            (ensemble ? 'Mean · ' : '') +
+            (ensemble ? 'Mean, ' : '') +
             (chartSignals.length > 1 ? signal.label + ', ' : '') +
             'Gate ' +
             (r.index + 1) +

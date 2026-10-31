@@ -53,7 +53,7 @@
       </p>
     {/if}
     <p>
-      {timing(tip.skill)} · {tip.skill.duration
+      {timing(tip.skill)}, {tip.skill.duration
         ? 'lasts about ' + tip.skill.duration.toFixed(1) + ' s'
         : 'instant effect'}
     </p>
@@ -73,7 +73,7 @@
           : 'sections'} now and then
       </small>
     {/if}
-    <small>Share of races it fires in each course section · click to watch that moment</small>
+    <small>Share of races it fires in each course section</small>
   {/if}
 </div>
 

@@ -26,7 +26,8 @@
           if (active) supportCatalog = cards;
         })
         .catch(() => {
-          if (active) supportError = 'Support names are unavailable; recorded card IDs are shown.';
+          if (active)
+            supportError = 'Support names are unavailable, so recorded card IDs are shown.';
         });
     return () => {
       active = false;
@@ -53,7 +54,7 @@
             ? 'Group'
             : supportTypeName(card.type)
           : undefined}
-        <li title={card ? `${card.name} · ${supportTypeName(card.type)}` : `Support card ${id}`}>
+        <li title={card ? `${card.name}, ${supportTypeName(card.type)}` : `Support card ${id}`}>
           <Artwork
             src={supportCardImagePath(id)}
             fallbackSrc="/assets/images/placeholder-card.webp"

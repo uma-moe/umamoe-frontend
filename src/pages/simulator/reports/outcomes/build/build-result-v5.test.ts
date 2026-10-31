@@ -152,7 +152,7 @@ describe('V5 in the existing optimizer', () => {
     expect(view.builds[0]!.winRate).toBeCloseTo(0.65);
     expect(view.builds[0]!.value).toBe(11);
     expect(view.builds[0]!.unit).toBe('seconds');
-    expect(bestSummary(view.builds[0]!)).toBe('2 skills · 400 SP');
+    expect(bestSummary(view.builds[0]!)).toBe('2 skills for 400 SP');
     expect(valueText(3, 'score')).toBe('+3.00 score');
     expect(v5Tally(response, response.model!)).toContain(
       '8,000 search races + 384 validation races = 8,384 races total'

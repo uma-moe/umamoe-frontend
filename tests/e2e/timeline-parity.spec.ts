@@ -378,7 +378,7 @@ test('Carat Planner accepts the compatible banner query and remains contained on
   await expect(page.getByText('Mejiro McQueen Pickup')).toBeVisible();
   await expect(page.getByText('Pull plan')).toBeVisible();
   await expect(page.getByText('200 funded', { exact: true })).toBeVisible();
-  await expect(page.locator('.target .funding')).toContainText('190 from resources · 10 free');
+  await expect(page.locator('.target .funding')).toContainText('190 from resources, 10 free');
   await page.locator('.target .pickup-summary').click();
   await expect(page.getByText('Rate-up goals', { exact: true })).toBeVisible();
   await expect(page.getByText('Detailed odds')).toBeVisible();

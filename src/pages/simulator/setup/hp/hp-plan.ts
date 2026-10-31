@@ -239,7 +239,7 @@ export function planEvents(
       kind: 'recovery',
       at: from,
       length: to - from,
-      label: 'Recovery: ' + tally(heals.map(([count, , name]) => [count, name])) + ', in mid race'
+      label: 'Recovery (' + tally(heals.map(([count, , name]) => [count, name])) + ') in mid race'
     });
   const debuffs = (['gold', 'white', 'unique'] as const).map(
     (tier) => [plan.debuffs[tier], tier] as [number, string]
@@ -258,7 +258,7 @@ export function planEvents(
       kind: 'debuff',
       at: from,
       length: to - from,
-      label: 'HP debuffs: ' + tally(debuffs) + ', in mid race'
+      label: 'HP debuffs (' + tally(debuffs) + ') in mid race'
     });
 
   // Speed and acceleration skills: each starts somewhere in its stretch of the spurt.
@@ -293,9 +293,9 @@ export function planEvents(
       at: first,
       length: Math.min(distance, last) - first,
       label:
-        (kind === 'speed' ? 'Speed: ' : 'Acceleration: ') +
+        (kind === 'speed' ? 'Speed (' : 'Acceleration (') +
         tally((['gold', 'white', 'unique'] as const).map((tier) => [plan[kind][tier], tier])) +
-        ', in the spurt'
+        ') in the spurt'
     });
   };
 

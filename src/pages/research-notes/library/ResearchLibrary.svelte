@@ -51,7 +51,7 @@
 
   const latestNote = researchNotes[0];
   const libraryMetadata = latestNote
-    ? countLabel(researchNotes.length) + ' · Updated ' + publishedDate(latestNote.date)
+    ? countLabel(researchNotes.length) + ', updated ' + publishedDate(latestNote.date)
     : undefined;
 
   const notes = $derived(filterNotes({ search, topic, sort }));

@@ -209,7 +209,7 @@
               ariaLabel={`Edit race wins for ${node.label}`}
               onclick={onraces}
             >
-              <span class="race-label">Race wins ·</span>
+              <span class="race-label">Race wins</span>
               {node.winSaddleIds.length}
             </Button><Button
               variant="secondary"

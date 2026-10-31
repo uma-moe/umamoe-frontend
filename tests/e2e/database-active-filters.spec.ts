@@ -33,7 +33,7 @@ test('removing a filter chip preserves other requirements and clears support-car
   await expect(chips.getByRole('button', { name: /^Blue:/ })).toHaveCount(1);
   await expect.poll(() => requests.at(-1)?.getAll('blue_sparks')).toEqual(['202']);
 
-  await chips.getByRole('button', { name: /Support: .* · LB4/ }).click();
+  await chips.getByRole('button', { name: /Support: .*, LB4/ }).click();
   await expect.poll(() => requests.at(-1)?.get('support_card_id')).toBeNull();
   await expect.poll(() => requests.at(-1)?.get('min_limit_break')).toBeNull();
   await expect(chips.getByRole('button', { name: /^Blue:/ })).toHaveCount(1);

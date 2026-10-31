@@ -98,12 +98,6 @@ text {
   min-width: 28px;
   padding-inline: 6px;
 }
-.inspection-controls > span {
-  font-size: 10px;
-  color: var(--text-secondary);
-  text-align: right;
-  line-height: 1.6;
-}
 .readout-values {
   display: grid;
   grid-template-columns: repeat(6, minmax(0, 1fr));
@@ -156,7 +150,4 @@ i {
   }
 }
 @media (max-width: 600px) {
-  .inspection-controls > span {
-    font-size: 9px;
-  }
 }

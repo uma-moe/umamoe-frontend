@@ -447,7 +447,7 @@ test('skill details expand within the selected row and comparison stays independ
   await expect(inspect).toHaveAttribute('aria-expanded', 'true');
   const comparison = page.getByRole('region', { name: 'Skill comparison', exact: true });
   await expect(comparison.locator('.event-count')).toHaveText(
-    'Normalized activations · each skill’s peak = 100%'
+    'Activations scaled to each skill’s peak'
   );
   await expect(comparison.locator('.line-scale')).toContainText('100%');
   await expect(comparison.locator('.lane svg[role="slider"]')).toHaveCount(1);
@@ -470,7 +470,7 @@ test('skill details expand within the selected row and comparison stays independ
   const add = comparison.getByRole('combobox', { name: 'Add a skill to comparison', exact: true });
   await add.fill(String(ids[3]));
   await page
-    .getByRole('option', { name: 'Skill ' + ids[3] + ' · ID ' + ids[3], exact: true })
+    .getByRole('option', { name: 'Skill ' + ids[3] + ' (ID ' + ids[3] + ')', exact: true })
     .click();
 
   await expect(add).toHaveValue('');
@@ -516,7 +516,7 @@ test('skill details expand within the selected row and comparison stays independ
   expect(await comparison.locator('.comparison-line').nth(4).getAttribute('stroke')).not.toBe('');
   await add.fill('10071');
   await expect(
-    page.getByRole('option', { name: 'Skill 10071 · ID 10071', exact: true })
+    page.getByRole('option', { name: 'Skill 10071 (ID 10071)', exact: true })
   ).toHaveCount(0);
 
   await page.keyboard.press('Escape');
@@ -881,7 +881,7 @@ test('compared skills use a compact table with expandable outcomes and shared di
   await expect(page.locator('.variant-alternatives').first()).toHaveText('2 alternatives');
   await expect(page.locator('.variant-alternatives').first()).toHaveAttribute(
     'title',
-    'Skill 10081 · Skill 10082'
+    'Skill 10081, Skill 10082'
   );
   await page.getByRole('button', { name: 'Add Skill 10071 to comparison', exact: true }).click();
   await page.getByRole('button', { name: 'Add Skill 10091 to comparison', exact: true }).click();
@@ -1155,7 +1155,7 @@ test('strategy keeps the familiar chart layout with sortable room data', async (
     .click();
 
   await expect(page.locator('.style-row')).toHaveCount(1);
-  await expect(page.getByRole('heading', { name: 'Front Runner · style overview' })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Front Runner overview' })).toBeVisible();
   await page.screenshot({ path: info.outputPath('cm-strategy-sorted.png'), fullPage: true });
   expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(
     page.viewportSize()!.width

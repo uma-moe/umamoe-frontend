@@ -148,9 +148,9 @@
                     <span>Runtime {formatDuration(snapshot.career_length_seconds)}</span>
                     {#each [...(snapshot.prior_snapshots ?? []), ...(snapshot.next_snapshots ?? [])] as neighbor}
                       <span>
-                        {snapshotTime(neighbor.snapshot_time)} · {neighbor.fan_delta >= 0
+                        {snapshotTime(neighbor.snapshot_time)}, {neighbor.fan_delta >= 0
                           ? '+'
-                          : ''}{wholeNumber(neighbor.fan_delta)} · {neighbor.career_count} career ends
+                          : ''}{wholeNumber(neighbor.fan_delta)}, {neighbor.career_count} career ends
                       </span>
                     {/each}
                   </div>

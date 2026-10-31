@@ -12,7 +12,7 @@ export function plannerStepOptions(stepUp?: PlannerStepUp): { value: string; lab
         cost += step.cost;
         options.push({
           value: String(pulls),
-          label: `${stepUp.rounds > 1 ? 'Round ' + round + ', ' : ''}Step ${index + 1} · ${pulls} pulls · ${cost.toLocaleString()} paid Carats`
+          label: `${stepUp.rounds > 1 ? 'Round ' + round + ', ' : ''}Step ${index + 1} (${pulls} pulls, ${cost.toLocaleString()} paid Carats)`
         });
       }
     }

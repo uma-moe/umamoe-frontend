@@ -26,20 +26,31 @@ export interface DistanceBreakdownItem {
   means: Record<string, number>;
 }
 
+/** Names as prose: "A", "A and B", "A, B and C". */
+function listText(names: string[]): string {
+  if (names.length < 2) return names[0] ?? '';
+
+  return names.slice(0, -1).join(', ') + ' and ' + names.at(-1);
+}
+
 export function selectionSummary(filters: StatisticsFilters): string {
-  return [
+  const scenarios =
     filters.scenarioIds.length === filters.allScenarioIds.length
-      ? 'All scenarios'
-      : filters.scenarioIds.map((id) => scenarioNames[id] ?? id).join(', ') || 'No scenarios',
+      ? 'all scenarios'
+      : listText(filters.scenarioIds.map((id) => scenarioNames[id] ?? id)) || 'no scenarios';
+  const classes =
     filters.classIds.length === allClasses.length
-      ? 'All classes'
+      ? 'all classes'
       : filters.classIds.length
-        ? `Classes ${filters.classIds.join(', ')}`
-        : 'No classes',
+        ? 'classes ' + listText(filters.classIds)
+        : 'no classes';
+  const distances =
     filters.distanceIds.length === filters.allDistanceIds.length
-      ? 'All distances'
-      : filters.distanceIds.map((id) => distanceNames[id] ?? id).join(', ') || 'No distances'
-  ].join(' · ');
+      ? 'all distances'
+      : listText(filters.distanceIds.map((id) => distanceNames[id] ?? id)) || 'no distances';
+
+  const summary = [scenarios, classes, distances].join(', ');
+  return summary.charAt(0).toUpperCase() + summary.slice(1);
 }
 
 export function classDistribution(data: GlobalStatistics, state: StatisticsFilters): ChartDatum[] {

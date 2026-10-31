@@ -141,7 +141,6 @@
           onchange={(value) => (selectedCount = value)}
         />
       </div>
-      <span>Hover the chart or choose a count · 95% intervals below</span>
     </div>
   {/if}
   <div
@@ -261,7 +260,8 @@
               fill={s.color}
             >
               <title>
-                {s.name}: {b.x} in room · {pct(b.rate)} per Uma · {b.races.toLocaleString()} races
+                {s.name} with {b.x} in the room, {pct(b.rate)} per Uma over {b.races.toLocaleString()}
+                races
               </title>
             </circle>
           {/each}

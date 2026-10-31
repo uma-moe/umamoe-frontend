@@ -47,13 +47,13 @@ test('Large pickup lists stay bounded, searchable and selectable without hiding 
   await target.getByRole('button', { name: 'Choose rate-ups', exact: true }).click();
   const picker = page.getByRole('dialog', { name: 'Choose rate-ups', exact: true });
   expect((await picker.boundingBox())!.height).toBeLessThanOrEqual(542);
-  await expect(picker.getByRole('status')).toHaveText('2 selected · 28 available');
+  await expect(picker.getByRole('status')).toHaveText('2 selected, 28 available');
   await picker.locator('.pickup-options').evaluate((node) => (node.scrollTop = node.scrollHeight));
   await expect(picker.getByText('Featured on this banner', { exact: true })).toBeInViewport();
   await picker.getByRole('searchbox').fill('Featured option 25');
   await expect(picker.locator('.pickup-options button')).toHaveCount(1);
   await picker.getByRole('button', { name: 'Select Featured option 25', exact: true }).click();
-  await expect(picker.getByRole('status')).toHaveText('3 selected · 28 available');
+  await expect(picker.getByRole('status')).toHaveText('3 selected, 28 available');
   await picker.getByRole('searchbox').fill('no such pickup');
   await expect(picker.getByText('No pickups match your search.')).toBeVisible();
   await page.keyboard.press('Escape');

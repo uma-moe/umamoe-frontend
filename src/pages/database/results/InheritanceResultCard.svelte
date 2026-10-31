@@ -287,7 +287,6 @@
         />Verified
       </span>
       {#if updatedLabel}
-        <span aria-hidden="true">·</span>
         <time datetime={record.lastUpdated}>{updatedLabel}</time>
       {/if}
     </div>

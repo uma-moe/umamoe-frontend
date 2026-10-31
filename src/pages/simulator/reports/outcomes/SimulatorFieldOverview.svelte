@@ -90,7 +90,7 @@
     title="The field"
     description={'Pick a baseline to measure everyone against, then tick up to ' +
       LIMIT +
-      ' runners to compare in depth below. Bars show wins, extended to top-3 finishes; margins are typical finish margins to the baseline.'}
+      ' runners to compare in depth below. Bars show wins, extended to top-3 finishes. Margins are typical finish margins to the baseline.'}
   >
     <div class="scroll">
       <table>

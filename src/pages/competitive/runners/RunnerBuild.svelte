@@ -209,7 +209,6 @@
                 <strong>{totalStats.toLocaleString('en-US')}</strong>
                 <span>total</span>
               </span>
-              <span aria-hidden="true">·</span>
               <SkillPoints
                 value={skillPoints}
                 note={LEARNED_SKILL_POINTS_NOTE}
@@ -239,7 +238,7 @@
               style:--aptitude-color={item.grade
                 ? `var(--aptitude-${item.grade.toLowerCase()})`
                 : 'var(--text-muted)'}
-              title={item.group + ' · ' + (item.label ?? 'not detected')}
+              title={item.group + ': ' + (item.label ?? 'not detected')}
             >
               <span class="race-aptitude-label">
                 {#if item.label}

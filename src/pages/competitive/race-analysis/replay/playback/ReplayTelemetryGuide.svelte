@@ -10,7 +10,7 @@
 <h3>Race telemetry</h3>
 {#if ensemble}
   <p>
-    Faint curves show every sampled race; the solid curve is their arithmetic mean at the same
+    Faint curves show every sampled race. The solid curve is their arithmetic mean at the same
     elapsed time. Select an Uma to follow its spread on the track and graph. Finishers stay at the
     line.
   </p>
@@ -21,9 +21,9 @@
 {:else}
   <p>
     Combined overlays speed, remaining HP and distance behind the leader in one chart. Live values
-    are shown on the left. The speed scale is on the left of the graph; HP and distance scales are
-    on the right. The curves, course lanes and skill icons share one replay time axis. Click the
-    chart to seek, or use the Replay time slider with the keyboard.
+    are shown on the left. The speed scale is on the left of the graph, and the HP and distance
+    scales are on the right. The curves, course lanes and skill icons share one replay time axis.
+    Click the chart to seek, or use the Replay time slider with the keyboard.
   </p>
   <p>
     Choose a single signal to focus on it, or enable Compare runners to add faint dotted traces for

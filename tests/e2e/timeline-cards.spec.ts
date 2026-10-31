@@ -66,9 +66,9 @@ test('Timeline cards use readable typography, fluid media, event colors and uncl
     const cm = page.locator('[data-event-id="detail-cm"]');
     await expect(cm.locator('h3')).toHaveText('Champions Meeting: Mile Champions Meeting');
     await expect(cm.locator('.race-lines span')).toHaveText([
-      'Tokyo · Turf',
-      '1600m · Mile · Counterclockwise',
-      'Firm · Spring · Sunny'
+      'Tokyo, Turf',
+      '1600m, Mile, Counterclockwise',
+      'Firm, Spring, Sunny'
     ]);
     await expect(cm.locator('.rewards')).toContainText('Finals');
     await expect(cm.locator('.rewards')).toContainText('500–2,500');

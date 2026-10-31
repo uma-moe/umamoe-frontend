@@ -64,7 +64,7 @@ const cadenceAmount = (rule: PlannerIncomeRule) =>
 export function incomeRuleScheduleLabel(rule: PlannerIncomeRule): string {
   const purchase = dailyCaratPackPurchaseRule(rule, rule.start_date);
   if (purchase)
-    return `Every day · +${purchase.amount} paid at projection start, then every ${purchase.every} days`;
+    return `Every day, plus ${purchase.amount} paid at projection start and every ${purchase.every} days after`;
   switch (rule.cadence) {
     case 'daily':
       return 'Every day';
@@ -138,7 +138,7 @@ export function buildPlannerIncomeGroups(
       helpText: shop
         ? `Counts ${shop.tickets} Uma + ${shop.tickets} support scout tickets each month, costing ${shop.cost} per month. Requires enough exchange currency. Excludes SR+ Make Debut tickets and limited event shops.`
         : id === 'team_trials_class'
-          ? 'Whole classes count weekly retention rewards. Half classes alternate repeat promotion and demotion payouts on the weekly schedule; displayed amounts are weekly averages. For example, Class 5.5 alternates 300 and 225 Carats (262.5 per week). First-time promotion bonuses are excluded. Bouncing is possible from Class 3 upward.'
+          ? 'Whole classes count weekly retention rewards. Half classes alternate repeat promotion and demotion payouts on the weekly schedule. Displayed amounts are weekly averages. For example, Class 5.5 alternates 300 and 225 Carats (262.5 per week). First-time promotion bonuses are excluded. Bouncing is possible from Class 3 upward.'
           : undefined,
       options: [...options]
         .sort((a, b) => number(a) - number(b))
@@ -172,9 +172,9 @@ export function buildPlannerIncomeGroups(
         ? [
             'Estimated Graded League Carats from the two qualifying rounds. Final placement rewards are counted separately.',
             '',
-            'Low investment: 6 entries per round, averaging 1–2 wins; Round 2 uses Group B payouts (105 + 150 = 255).',
-            'Competitive: all 8 entries per round, averaging 3 wins; Round 2 uses Group A payouts (240 + 400 = 640).',
-            'Meta highroller: all 8 entries per round, averaging 4–5 wins; Round 2 uses Group A payouts (360 + 900 = 1,260).'
+            'Low investment: 6 entries per round, averaging 1–2 wins. Round 2 uses Group B payouts (105 + 150 = 255).',
+            'Competitive: all 8 entries per round, averaging 3 wins. Round 2 uses Group A payouts (240 + 400 = 640).',
+            'Meta highroller: all 8 entries per round, averaging 4–5 wins. Round 2 uses Group A payouts (360 + 900 = 1,260).'
           ].join('\n')
         : undefined,
       sourceUrl: rounds ? 'https://game8.jp/umamusume/390471' : undefined,
@@ -458,12 +458,12 @@ export function summarizePlannerIncome(ledger: readonly PlannerLedgerEntry[]) {
       combined
         .filter(([, amount]) => amount !== 0)
         .map(([label, amount]) => `${signedIncome.format(amount)} ${label}`)
-        .join(' · ') || '0 projected income',
+        .join(', ') || '0 projected income',
     sources: [...sources.values()].map((source) => ({
       label: source.label,
       amountLabel: resources(source.amounts)
         .map((item) => `${item.formatted} ${item.label}`)
-        .join(' · ')
+        .join(', ')
     }))
   };
 }
@@ -523,7 +523,7 @@ export function enabledIncomeTotalLabel(
         ? [`+${incomeNumber.format(totals.get(cadence!)!)} ${label}`]
         : []
     )
-    .join(' · ');
+    .join(', ');
 }
 
 const RANDOM_GAMEPLAY_INCOME_HELP_TEXT = [

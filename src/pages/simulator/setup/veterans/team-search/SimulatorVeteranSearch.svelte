@@ -129,7 +129,7 @@
         return 'Pick at least three Veterans.';
       }
 
-      return 'Pick three different characters; variants of one can’t race together.';
+      return 'Pick three different characters. Variants of one character can’t race together.';
     }
 
     if (!validSamples) {
@@ -171,7 +171,7 @@
       ' races';
     if (teamSearch.busy) return counted;
 
-    return counted + (teamSearch.completed < teamSearch.total ? ' · stopped' : ' · done');
+    return counted + (teamSearch.completed < teamSearch.total ? ', stopped' : ' done');
   });
 
   const inputKey = $derived(
@@ -213,7 +213,7 @@
       total: teams * sampleCount,
       key: inputKey,
       description: cm
-        ? `${cm.snapshot.label} · ${cm.teams.length} leading teams · ${Math.min(fields.length, sampleCount)} opponent pairings.`
+        ? `${cm.snapshot.label}, ${cm.teams.length} leading teams and ${Math.min(fields.length, sampleCount)} opponent pairings.`
         : 'Six opponents from the race field.'
     });
   }

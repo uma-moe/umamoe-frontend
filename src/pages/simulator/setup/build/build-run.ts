@@ -14,7 +14,7 @@ export function bestSummary(pick: TheorizedBuild): string {
   return (
     pick.count +
     (pick.count === 1 ? ' skill' : ' skills') +
-    ' · ' +
+    ' for ' +
     pick.finalist.sp_cost.toLocaleString('en-US') +
     ' SP'
   );
@@ -32,6 +32,6 @@ export function explainBuildError(message: string, skillLookup: Map<number, Skil
       message
     )
   )
-    return 'The simulator service is an older build: it can’t race her alone or over a pool of tracks. Rebuild and restart it, then search again.';
+    return 'The simulator service is an older build that can’t race her alone or over a pool of tracks. Rebuild and restart it, then search again.';
   return message;
 }

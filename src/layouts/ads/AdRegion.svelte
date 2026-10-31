@@ -74,7 +74,7 @@
       {:else if preview}
         <span>
           <strong>Sponsored</strong>
-          <small>{placement} · {sizes.join(' / ')}</small>
+          <small>{placement}, {sizes.join(' / ')}</small>
         </span>
       {/if}
     </div>

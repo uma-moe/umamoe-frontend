@@ -141,9 +141,9 @@ test('UQL highlights searched sparks and keeps main-parent sparks first', async 
   await expect(card.locator('.spark--pink .name')).toHaveText(['Turf', 'Long']);
   await expect(card.locator('.spark--green').first()).toHaveAttribute('data-source', 'main');
   await page.screenshot({ path: testInfo.outputPath('uql-spark-highlights.png'), fullPage: true });
-  await card.getByTitle('Focus Legacy 1 sparks; click again to clear').click();
+  await card.getByTitle('Focus Legacy 1 sparks. Click again to clear.').click();
   await expect(card.locator('.matched-filter')).toHaveCount(0);
-  await card.getByTitle('Focus Legacy 1 sparks; click again to clear').click();
+  await card.getByTitle('Focus Legacy 1 sparks. Click again to clear.').click();
   await expect(card.locator('.matched-filter')).toHaveCount(4);
   await page.getByRole('tab', { name: /Bookmarks/ }).click();
   await expect(card.locator('.matched-filter .name')).toHaveText([

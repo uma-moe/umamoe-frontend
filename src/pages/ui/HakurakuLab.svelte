@@ -214,21 +214,21 @@
         items={[
           {
             id: 'speed-stamina',
-            name: '3× speed · 2× stamina · 1× friend',
+            name: '3× speed, 2× stamina, 1× friend',
             value: 1284,
             percentage: 42.8,
             composition: { speed: 3, stamina: 2, friend: 1 }
           },
           {
             id: 'speed-power',
-            name: '2× speed · 2× power · 2× wit',
+            name: '2× speed, 2× power, 2× wit',
             value: 960,
             percentage: 32,
             composition: { speed: 2, power: 2, wisdom: 2 }
           },
           {
             id: 'guts-wit',
-            name: '3× guts · 2× wit · 1× group',
+            name: '3× guts, 2× wit, 1× group',
             value: 756,
             percentage: 25.2,
             composition: { guts: 3, wiz: 2, group: 1 }

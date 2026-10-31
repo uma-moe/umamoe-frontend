@@ -637,7 +637,7 @@ export const tourSteps: TourStep[] = [
     anchorId: 'clubs-paginator',
     title: 'More Clubs',
     content:
-      'Use pagination after narrowing the list; it keeps the page fast while still letting you browse beyond the first set of matches.',
+      'Use pagination after narrowing the list. It keeps the page fast while still letting you browse beyond the first set of matches.',
     placement: { xPosition: 'after', yPosition: 'above' },
     asyncStepTimeout: 5000,
     isOptional: true,
@@ -982,7 +982,7 @@ export const tourSteps: TourStep[] = [
     anchorId: 'timeline-search',
     title: 'Search the Timeline',
     content:
-      'Search for characters, support cards, banners, or event names. Desktop arrow controls move between matches; mobile keeps search inside the filter sheet.',
+      'Search for characters, support cards, banners, or event names. Desktop arrow controls move between matches, and mobile keeps search inside the filter sheet.',
     placement: { xPosition: 'before', yPosition: 'below' },
     asyncStepTimeout: 5000,
     isOptional: true,
@@ -1048,7 +1048,7 @@ export const tourSteps: TourStep[] = [
     anchorId: 'timeline-track',
     title: 'Read the Schedule',
     content:
-      'Dates group releases into lanes, with month and milestone markers providing context. Desktop can use a horizontal track or vertical groups; mobile virtualizes the same feed for smooth scrolling.',
+      'Dates group releases into lanes, with month and milestone markers providing context. Desktop can use a horizontal track or vertical groups, and mobile virtualizes the same feed for smooth scrolling.',
     placement: { xPosition: 'after', yPosition: 'above' },
     asyncStepTimeout: 5000,
     isOptional: true,

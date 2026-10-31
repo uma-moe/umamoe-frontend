@@ -48,13 +48,6 @@
     rows.some((row) => typeof row.blocked === 'number' || typeof row.rushed === 'number')
   );
 
-  const hasMeasurements = $derived(hasDuel || hasDownhill || hasPace || hasLoss || hasIncidents);
-  const resultsContext = $derived(
-    hasMeasurements
-      ? 'Select a runner to inspect their race'
-      : 'Select a runner to inspect their race · recorded results only, without detailed simulation'
-  );
-
   const percentOf = (value: unknown, total: unknown) =>
     typeof value === 'number' && typeof total === 'number' && total > 0
       ? (value / total) * 100
@@ -95,16 +88,15 @@
         <p>
           Compare finish times, the gap to the previous finisher, last-spurt delay, selected speed
           and remaining HP. Delayed spurts and speed reductions are highlighted. Delay is measured
-          from the first spurt check; a speed reduction compares the selected speed with the
+          from the first spurt check. A speed reduction compares the selected speed with the
           full-spurt target. Select a runner to inspect their race below.
         </p>
         <p>
           Duel, downhill, pace and course-loss columns appear when the capture was resimulated. A
-          short dash means the runner never entered that mode; a long dash means it was not
+          short dash means the runner never entered that mode, and a long dash means it was not
           measured.
         </p>
       </InspectPopover>
-      <p class="results-context">{resultsContext}</p>
     </div>
   </header>
   <DataTable

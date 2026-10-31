@@ -543,13 +543,13 @@ export function checkText(finalist: OptimizeFinalist, field: boolean, races: num
   const unit = field ? ' runners beaten' : ' s';
   const sign = gain.mean >= 0 ? '+' : '−';
   return (
-    'Checked in ' +
-    races.toLocaleString('en-US') +
-    ' races: ' +
     sign +
     Math.abs(gain.mean).toFixed(2) +
     unit +
-    (survival.length ? ' · ' + survival.join(' · ') : '')
+    ' when checked in ' +
+    races.toLocaleString('en-US') +
+    ' races' +
+    (survival.length ? ', with ' + survival.join(' and ') : '')
   );
 }
 
@@ -754,8 +754,8 @@ export function raceTally(result: OptimizeResult): string {
     report.candidates_evaluated.toLocaleString('en-US') +
     ' builds on her courses, then raced its best and her build as it is again on fresh seeds to check them: ' +
     report.simulations.toLocaleString('en-US') +
-    ' races in all. Skill values are seconds saved in those races: in the pick, what each skill adds there; in the ' +
-    'list, what each saves bought alone.'
+    ' races in all. Skill values are seconds saved in those races. In the pick, a value is what the skill adds there. In the ' +
+    'list, it is what the skill saves when bought alone.'
   );
 }
 
@@ -789,8 +789,8 @@ export function v5Tally(result: OptimizeResult, model: OptimizeModel): string {
     model.budget.toLocaleString('en-US') +
     '-race budget and may finish earlier. ' +
     'Bars show V5 objective scores using the same model, ranker and paired race feedback as the search. ' +
-    'A held skill is valued by removing it and dependent purchases; an unbought skill by adding it with prerequisites, SP aside. ' +
-    'Model win-rate changes are internal comparisons from the V5 skill model. Card win rates and time differences come from internal validation races; they do not predict in-game results or reorder V5’s picks. ' +
+    'A held skill is valued by removing it and the purchases that depend on it, and an unbought skill by adding it with its prerequisites, ignoring SP. ' +
+    'Model win-rate changes are internal comparisons from the V5 skill model. Card win rates and time differences come from internal validation races. They do not predict in-game results or reorder V5’s picks. ' +
     'Activation timing is observed during search, in course sections. A paired measurement is shown only when that exact change was raced against that exact build.'
   );
 }

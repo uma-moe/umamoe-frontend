@@ -92,7 +92,7 @@ export const sortRows = (
 
 export const range = (measured: SkillValue, unit: MarginUnit) =>
   measured.low != null
-    ? '95%: ' +
+    ? '95% interval ' +
       (unit === 'seconds'
         ? formatMarginValue(0, measured.highSeconds!, unit) +
           ' to ' +
@@ -100,7 +100,7 @@ export const range = (measured: SkillValue, unit: MarginUnit) =>
         : formatMarginValue(measured.low, 0, unit, 2) +
           ' to ' +
           formatMarginValue(measured.high!, 0, unit, 2)) +
-      ' · ' +
+      ' over ' +
       measured.count +
       ' races'
     : measured.count + ' races';

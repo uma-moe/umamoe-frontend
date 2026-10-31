@@ -83,7 +83,7 @@
           <label
             class="seconds"
             title={item.seconds == null
-              ? 'The usual length; type to change it'
+              ? 'The usual length. Type to change it.'
               : 'Clear to go back to the usual ' + usual + ' s'}
           >
             <input

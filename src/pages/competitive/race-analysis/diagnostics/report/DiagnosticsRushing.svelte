@@ -34,10 +34,10 @@
 
   function rushingOutcome(decision: DiagnosticRow | null | undefined): string {
     if (!decision) return count(rushingPeriods.length, 'period');
-    if (decision.enabled) return 'Rushed · check passed';
+    if (decision.enabled) return 'Rushed';
     if (decision.preventedByModifier) return 'Prevented by a modifier';
 
-    return 'No rushing · check failed';
+    return 'No rushing';
   }
 </script>
 

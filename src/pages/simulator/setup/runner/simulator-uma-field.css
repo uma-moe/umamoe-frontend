@@ -56,7 +56,7 @@ h3 {
 }
 .build {
   display: flex;
-  gap: 4px;
+  gap: 8px;
   min-width: 0;
   margin: 0;
   font-size: 11px;
@@ -72,9 +72,6 @@ h3 {
   overflow: hidden;
   color: var(--text-secondary);
   text-overflow: ellipsis;
-}
-.separator {
-  color: var(--text-muted);
 }
 /* What she brings: her five stats, then her SP and skill count under the buttons' right edge. */
 .stats {
@@ -102,7 +99,7 @@ h3 {
   justify-self: end;
   display: flex;
   align-items: baseline;
-  gap: 5px;
+  gap: 10px;
   font-size: 11px;
   line-height: 1.4;
   color: var(--text-secondary);

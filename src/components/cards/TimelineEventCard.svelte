@@ -50,7 +50,7 @@
   const metadata = $derived(
     [event.typeLabel, event.gachaLabel, event.rerun && 'Rerun', event.predicted && 'Predicted']
       .filter(Boolean)
-      .join(' · ')
+      .join(', ')
   );
 
   function togglePlan(clickEvent: MouseEvent) {
@@ -141,7 +141,7 @@
     <h3>{event.title}</h3>
     <div
       class="schedule"
-      title={hasRace ? event.raceLines?.join(' · ') : event.context || event.dateLabel}
+      title={hasRace ? event.raceLines?.join('\n') : event.context || event.dateLabel}
     >
       <Icon
         name="calendar"

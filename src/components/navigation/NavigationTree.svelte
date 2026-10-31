@@ -168,7 +168,7 @@
         class="navigation-tip"
         aria-hidden="true"
       >
-        {item.badge ? `${item.label} · ${item.badge}` : item.label}
+        {item.badge ? `${item.label} (${item.badge})` : item.label}
       </span>
 
       {#if item.children?.length && openItems[item.id]}

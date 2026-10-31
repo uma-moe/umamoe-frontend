@@ -146,7 +146,7 @@
                 <span>
                   <strong>{option.name}</strong>
                   <small>
-                    {option.subLabel} · {percent(option.rate, 2)}
+                    {option.subLabel}, {percent(option.rate, 2)}
                     {inferred ? 'estimated ' : ''}per pull
                   </small>
                 </span>
@@ -163,7 +163,7 @@
             class="picker-count"
             role="status"
           >
-            {goals.length} selected · {options.length} available
+            {goals.length} selected, {options.length} available
           </small>
         </div>
       </InspectPopover>
@@ -187,9 +187,9 @@
             {#if hasResults}
               {goal.actualCopies === undefined
                 ? 'Copies not recorded'
-                : `${goal.actualCopies} actual`} · {requirement(goal)}
+                : `${goal.actualCopies} actual`}, {requirement(goal)}
             {:else}
-              {goal.option.subLabel} · {percent(goal.odds?.pickupRate, 2)}
+              {goal.option.subLabel}, {percent(goal.odds?.pickupRate, 2)}
               {stepUp ? 'per random pull' : inferred ? 'estimated per pull' : 'per pull'}
             {/if}
           </small>

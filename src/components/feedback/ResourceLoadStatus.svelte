@@ -15,7 +15,9 @@
     role="status"
   >
     <Spinner size={14} />
-    <span>{cached ? 'Using cached resources; refreshing...' : 'Still fetching resources...'}</span>
+    <span>
+      {cached ? 'Using cached resources while refreshing...' : 'Still fetching resources...'}
+    </span>
   </div>
 {/if}
 {#if error}

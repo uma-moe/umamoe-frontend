@@ -99,7 +99,7 @@ export class DatabaseUqlState {
       this.queryData = await (await import('@/lib/inheritance/uql/query-data')).loadUqlQueryData();
     } catch {
       this.queryDataError =
-        'UQL names could not be loaded. Your query is preserved; reload to retry.';
+        'UQL names could not be loaded. Your query is preserved. Reload to retry.';
     } finally {
       this.queryDataLoading = false;
       this.#source.onsettled();

@@ -121,7 +121,7 @@ test('Gray Week shows all published rates at their original precision', async ({
   const dialog = page.getByRole('dialog');
   await expect(dialog.getByText('0.1764% per pull', { exact: true })).toHaveCount(5);
   await expect(dialog.getByText('0.1765% per pull', { exact: true })).toHaveCount(12);
-  await expect(dialog.getByText('3★ pool 3.00% · Published banner rates')).toBeVisible();
+  await expect(dialog.getByText('3★ pool 3.00%, Published banner rates')).toBeVisible();
 });
 
 test('each Aries Cup retains the artwork and news source for its own edition', async ({ page }) => {

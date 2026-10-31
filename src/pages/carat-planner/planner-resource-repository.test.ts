@@ -111,7 +111,7 @@ it.each([false, true])(
       expect(plan.enabledIncomeRuleIds).toEqual(ids.length ? ['daily-jewel-pack'] : []);
       expect(activeIncomeAssumptionCount(plan, data.income.rules)).toBe(ids.length ? 1 : 0);
       expect(enabledIncomeTotalLabel(plan, data.income.rules, [])).toBe(
-        ids.length ? '+50 / day · +500 paid / 30 days' : ''
+        ids.length ? '+50 / day, +500 paid / 30 days' : ''
       );
       const ledger = buildPlannerLedger(plan, data, '2026-12-19');
       expect(

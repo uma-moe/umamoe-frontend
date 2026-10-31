@@ -87,11 +87,11 @@ describe('Angular planner reward groups', () => {
       );
 
     expect(plan.enabledRewardIds).toEqual([]);
-    expect(summary()).toEqual({ count: 5, totalLabel: '2,405 Carats · 3 tickets' });
+    expect(summary()).toEqual({ count: 5, totalLabel: '2,405 Carats, 3 tickets' });
     selectPlannerCampaign(plan, campaigns[0]!, false, data);
-    expect(summary()).toEqual({ count: 7, totalLabel: '2,405 Carats · 3 tickets' });
+    expect(summary()).toEqual({ count: 7, totalLabel: '2,405 Carats, 3 tickets' });
     plan.disabledEventIds.push('story-event-301');
-    expect(summary()).toEqual({ count: 6, totalLabel: '1,805 Carats · 1 ticket' });
+    expect(summary()).toEqual({ count: 6, totalLabel: '1,805 Carats, 1 ticket' });
     plan.freePullCampaignSelections.anniversary = '__excluded__';
     expect(summary().count).toBe(5);
   });

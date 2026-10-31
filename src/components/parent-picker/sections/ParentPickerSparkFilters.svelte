@@ -44,7 +44,10 @@
               >
                 <FilterChip
                   label={resolved.name +
-                    ' · ' +
+                    ' ' +
+                    factor.minLevel +
+                    (max === factor.minLevel ? '' : '–' + max) +
+                    '★ (' +
                     {
                       combined: 'Combined',
                       any: 'Any slot',
@@ -52,10 +55,7 @@
                       p1: 'P1',
                       p2: 'P2'
                     }[factor.scope] +
-                    ' ' +
-                    factor.minLevel +
-                    (max === factor.minLevel ? '' : '–' + max) +
-                    '★'}
+                    ')'}
                   selected
                   removable
                   onclick={() => onedit(index)}

@@ -54,7 +54,7 @@
           value: node.id.split(':').pop()!,
           label: node.name,
           shortLabel: 'GP' + node.roleLabel.split(' ').pop()!,
-          description: node.roleLabel.replace(' legacy ', ' · Grandparent '),
+          description: node.roleLabel.replace(' legacy ', ' grandparent '),
           image: node.image
         }))
       ]
@@ -118,13 +118,13 @@
       class="source-name"
       title={source === 'family'
         ? 'Combined stars from this veteran and both parents.'
-        : selectedSparkSource?.label + ' · ' + selectedSparkSource?.description}
+        : selectedSparkSource?.label + ', ' + selectedSparkSource?.description}
     >
       {#if source === 'family'}
         Own + P1 + P2
       {:else}
         {selectedSparkSource?.label}
-        <span>{' · ' + selectedSparkSource?.description}</span>
+        <span>{', ' + selectedSparkSource?.description}</span>
       {/if}
     </p>
   </header>

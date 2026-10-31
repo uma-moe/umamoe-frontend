@@ -197,7 +197,7 @@ test('Parent picker keeps OR alternatives within their colors and restores the g
     picker.getByRole('region', { name: 'Aptitude filters', exact: true })
   ).not.toContainText('Stamina');
 
-  await picker.getByRole('button', { name: 'Speed · Own 1–3★', exact: true }).click();
+  await picker.getByRole('button', { name: 'Speed 1–3★ (Own)', exact: true }).click();
   const editor = page.getByRole('dialog', { name: 'Edit spark filter', exact: true });
   await editor.getByRole('radio', { name: 'P1', exact: true }).click();
   await editor.getByRole('button', { name: 'Save filter', exact: true }).click();

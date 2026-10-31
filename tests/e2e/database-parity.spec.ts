@@ -148,13 +148,13 @@ test('Database race schedule keeps Angular calendar encoding and backend saddle 
     .first()
     .click();
 
-  await expect(page.getByText('1 selected race · one race per calendar slot')).toBeVisible();
+  await expect(page.getByText('1 selected race, one race per calendar slot')).toBeVisible();
   await expect.poll(() => filteredRequest).toContain('main_win_saddle=');
   await expect.poll(() => new URL(page.url()).searchParams.get('filters')).not.toBeNull();
   await page.getByRole('button', { name: 'Remove Arima Kinen' }).click();
   await page.getByRole('button', { name: 'Add race: Classic Year, Dec Late', exact: true }).click();
   await page.getByRole('button', { name: 'Select Arima Kinen', exact: true }).click();
-  await expect(page.getByText('1 selected race · one race per calendar slot')).toBeVisible();
+  await expect(page.getByText('1 selected race, one race per calendar slot')).toBeVisible();
   const schedule = page.locator('.schedule-filter .race-schedule');
   await expect(schedule.locator('.race.inline')).toHaveCount(1);
   expect((await schedule.locator('.race.inline').boundingBox())!.height).toBeLessThan(40);
@@ -657,7 +657,7 @@ test('Database synchronizes result display controls and exposes source affinity 
   await expect(source).not.toBeVisible();
   // Affinity inspection must not also select the parent underneath it.
   await expect(
-    first.getByTitle('Focus primary parent sparks; click again to clear')
+    first.getByTitle('Focus primary parent sparks. Click again to clear.')
   ).toHaveAttribute('aria-pressed', 'false');
 
   await first.getByRole('button', { name: 'Per Inh.', exact: true }).click();
@@ -666,11 +666,11 @@ test('Database synchronizes result display controls and exposes source affinity 
   await expect(cards.getByRole('button', { name: 'Per Run', exact: true })).toHaveCount(2);
   await first.getByRole('button', { name: '★ Stars', exact: true }).click();
   await expect(cards.getByRole('button', { name: '× Occurrences', exact: true })).toHaveCount(2);
-  await first.getByTitle('Focus primary parent sparks; click again to clear').click();
+  await first.getByTitle('Focus primary parent sparks. Click again to clear.').click();
   await expect(first.getByRole('button', { name: '× Occurrences', exact: true })).toHaveCount(0);
   await expect(first.locator('.factor-source[data-owner="main"]')).not.toHaveCount(0);
   await expect(first.locator('.factor-source[data-owner="left"]')).toHaveCount(0);
-  await first.getByTitle('Focus primary parent sparks; click again to clear').click();
+  await first.getByTitle('Focus primary parent sparks. Click again to clear.').click();
   await expect(first.getByRole('button', { name: '× Occurrences', exact: true })).toBeVisible();
 
   const whiteSections = cards
@@ -769,9 +769,9 @@ test('Database highlights selected factors without highlighting other parent sou
     'border-color',
     'rgb(255, 215, 0)'
   );
-  await card.getByTitle('Focus primary parent sparks; click again to clear').click();
+  await card.getByTitle('Focus primary parent sparks. Click again to clear.').click();
   await expect(card.locator('.matched-filter')).toHaveCount(0);
-  await card.getByTitle('Focus primary parent sparks; click again to clear').click();
+  await card.getByTitle('Focus primary parent sparks. Click again to clear.').click();
   await expect(card.locator('.matched-filter')).toHaveCount(1);
 });
 

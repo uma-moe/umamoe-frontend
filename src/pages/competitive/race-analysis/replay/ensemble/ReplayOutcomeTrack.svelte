@@ -227,7 +227,7 @@
     <span>
       {whole ? 'Whole course' : 'Following ' + Math.round(low) + '–' + Math.round(high) + ' m'}
     </span>
-    <span>Final spurt from {Math.round(spurt.start)} m · Mean marker</span>
+    <span>Final spurt from {Math.round(spurt.start)} m</span>
   </div>
 </div>
 

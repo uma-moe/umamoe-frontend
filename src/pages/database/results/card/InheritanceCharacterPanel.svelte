@@ -42,7 +42,7 @@
         type="button"
         aria-pressed={activeFocus === 'main'}
         onclick={() => onselect('main')}
-        title="Focus primary parent sparks; click again to clear"
+        title="Focus primary parent sparks. Click again to clear."
       >
         <Artwork
           src={main?.image}
@@ -76,7 +76,7 @@
           type="button"
           aria-pressed={activeFocus === 'left'}
           onclick={() => onselect('left')}
-          title="Focus Legacy 1 sparks; click again to clear"
+          title="Focus Legacy 1 sparks. Click again to clear."
         >
           <Artwork
             src={left?.image}
@@ -98,7 +98,7 @@
           type="button"
           aria-pressed={activeFocus === 'right'}
           onclick={() => onselect('right')}
-          title="Focus Legacy 2 sparks; click again to clear"
+          title="Focus Legacy 2 sparks. Click again to clear."
         >
           <Artwork
             src={right?.image}

@@ -53,7 +53,7 @@
   <ChartFrame
     {id}
     title="Deck composition"
-    description="Support slots per deck · most used combinations"
+    description="Support slots per deck in the most used combinations"
   >
     {#snippet actions()}
       {#if onmore}
@@ -83,7 +83,7 @@
         {:else if column.key === 'share'}
           <span
             class="share"
-            title={Number(row.uses).toLocaleString() + ' recorded decks · ' + row.name}
+            title={Number(row.uses).toLocaleString() + ' recorded decks use ' + row.name}
           >
             {row.share}
           </span>

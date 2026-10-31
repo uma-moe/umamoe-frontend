@@ -30,7 +30,7 @@
 </script>
 
 <aside>
-  <span role="status">Demo preview · Sample data</span>
+  <span role="status">Demo preview with sample data</span>
   <a href="/profile/123456789012">Demo profile</a>
   <a href="/veterans">Veteran browser</a>
   <Button

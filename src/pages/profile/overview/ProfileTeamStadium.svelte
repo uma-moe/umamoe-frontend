@@ -169,7 +169,7 @@
       class="stadium-position"
       role="status"
     >
-      {stadiumGroup.distance} · {stadiumIndex + 1} / {stadiumGroups.length}
+      {stadiumGroup.distance}, {stadiumIndex + 1} of {stadiumGroups.length}
     </span>
     <span class="stadium-next">
       <Button

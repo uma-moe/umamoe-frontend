@@ -148,7 +148,7 @@ export function normalizePlannerIncomeRules(
         scenario_option: option,
         default_enabled: false,
         provenance: 'configured',
-        description: `Alternates repeat promotion to Class ${lower + 1} and demotion to Class ${lower}; excludes first-time promotion bonuses.`
+        description: `Alternates repeat promotion to Class ${lower + 1} and demotion to Class ${lower}. First-time promotion bonuses are not included.`
       });
   }
 

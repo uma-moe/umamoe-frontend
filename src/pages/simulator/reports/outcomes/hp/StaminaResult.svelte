@@ -73,7 +73,7 @@
           TURN_NAMES[course.turn]
         ]
           .filter(Boolean)
-          .join(' · ')
+          .join(', ')
       : ''
   );
   const percent = (count: number, of: number) => (count / Math.max(1, of)) * 100 + '%';
@@ -180,7 +180,7 @@
         {blocked ||
           (busy
             ? 'Racing her 100 times…'
-            : 'Set her up and press Calculate HP; from then on the result follows every change.')}
+            : 'Set her up and press Calculate HP. After that, the result follows every change.')}
       </p>
     {/if}
     {#if error && !busy && onretry}<Button
@@ -200,7 +200,7 @@
         <dd>
           {#if needed}<strong>≈ {whole(needed.p50)}</strong>
             <small>
-              {whole(needed.p90)} for 9 races in 10 · she has {whole(runner?.stamina)}
+              {whole(needed.p90)} for 9 races in 10, she has {whole(runner?.stamina)}
             </small>{:else}—{/if}
         </dd>
       </div>
@@ -208,7 +208,7 @@
           <dt>Worst race in 10</dt>
           <dd>
             <strong class:bad={spread.spare.p10 < 0}>{spare(spread.spare.p10)}</strong>
-            <small>at the spurt check ·</small>
+            <small>at the spurt check,</small>
             <strong class:bad={spread.finish.p10 < 0}>{left(spread.finish.p10)}</strong>
             <small>at the finish</small>
           </dd>
@@ -218,7 +218,7 @@
         <dd>
           <strong>{formatRaceTime(spread.time, 2)}</strong>
           {#if spread.races > 1}<small>
-              median{spread.rushed ? ' · rushed in ' + spread.rushed + ' races' : ''}
+              median{spread.rushed ? ', rushed in ' + spread.rushed + ' races' : ''}
             </small>{/if}
         </dd>
       </div>

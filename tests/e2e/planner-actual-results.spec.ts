@@ -118,7 +118,7 @@ test('actual results preserve the plan and carry savings forward through edits a
   await copies.press('Escape');
   await expect(editor).not.toBeVisible();
   await expect(edit).toBeFocused();
-  await expect(row.locator('.goal-previews')).toContainText('3 planned · 4 actual');
+  await expect(row.locator('.goal-previews')).toContainText('3 planned, 4 actual');
   await row.getByLabel('Pickup goals for Kitasan Black Support', { exact: true }).click();
   await expect(row.locator('.selected-goal[data-pickup-id="30028"] .individual-chance')).toHaveText(
     'Met'

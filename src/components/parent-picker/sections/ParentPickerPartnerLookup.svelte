@@ -66,11 +66,11 @@
   <div class="partner-hints">
     <span>
       <strong>Practice ID:</strong>
-      9-digit code from the in-game share button · expires after 24h
+      9-digit code from the in-game share button that expires after 24h
     </span>
     <span>
       <strong>Trainer ID:</strong>
-      permanent 12-digit account ID · can be anyone's
+      anyone's permanent 12-digit account ID
     </span>
   </div>
   {#if !$authUser}

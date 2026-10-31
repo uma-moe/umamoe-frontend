@@ -85,8 +85,8 @@
             {@const display = resource ? supportCardDisplay(resource) : undefined}
             {@const type = resource ? supportType(resource) : undefined}
             <li
-              title={(display ? display.character + ' · ' + display.title : 'Support ' + card.id) +
-                ' · limit break ' +
+              title={(display ? display.character + ', ' + display.title : 'Support ' + card.id) +
+                ', limit break ' +
                 card.lb}
             >
               <span class="support-art">
@@ -157,7 +157,7 @@
                   description:
                     parent.positionId === branch * 10
                       ? 'Parent ' + branch
-                      : 'P' + branch + ' · Grandparent ' + (parent.positionId % 10),
+                      : 'Grandparent ' + (parent.positionId % 10) + ' of parent ' + branch,
                   image: portrait(parent.cardId)
                 }))}
               />

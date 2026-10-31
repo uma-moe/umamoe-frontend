@@ -123,7 +123,7 @@
       return (
         preset.facts
           .map((fact) => [fact.primary, fact.secondary].filter(Boolean).join(' '))
-          .join(' · ') || 'Course not announced yet'
+          .join(', ') || 'Course not announced yet'
       );
     }
 
@@ -138,7 +138,7 @@
       preset.candidates.length > 1 ? preset.candidates.length + ' layouts' : undefined
     ]
       .filter(Boolean)
-      .join(' · ');
+      .join(', ');
   }
 
   function choose(event: TimelineRecord) {
@@ -207,7 +207,7 @@
   {:else if !item.preset.candidates.length}
     <p class="hint">
       The published description doesn’t name an exact course. The preset loads the conditions it
-      has; choose the course on the form afterwards.
+      has. Choose the course on the form afterwards.
     </p>
   {/if}
 {/snippet}
@@ -327,7 +327,7 @@
   {#snippet actions()}
     <DialogStatus>
       {#if chosen}
-        <strong>CM {chosen.number} · {chosen.event.title}</strong>
+        <strong>CM {chosen.number} {chosen.event.title}</strong>
         {#if needsLayout}
           <span class="blocked">Choose the course layout.</span>
         {:else}

@@ -176,7 +176,7 @@
   >
     <p>
       Based on periodic club snapshots, including accounts with zero scores. Scores show unusual
-      activity, not proof of botting; even 99/100 can reflect an outlier.
+      activity, not proof of botting. Even 99/100 can reflect an outlier.
     </p>
   </Banner>
   {#if !viewerId}

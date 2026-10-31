@@ -85,7 +85,7 @@ export function skillRows(
         variantCount: overview?.variants?.[r.id]?.length ?? 1,
         variants: (overview?.variants?.[r.id] ?? [r.id])
           .map((id) => name(id) + ' ' + id)
-          .join(' · '),
+          .join(', '),
         activation: r.active / Math.max(1, r.owned),
         winrate: r.active ? r.wins / r.active : NaN,
         teamWinrate: r.active ? r.teamWins / r.active : NaN,

@@ -156,7 +156,7 @@
           <small>from the gate</small>
         {:else if neverFires}
           {Math.round(point.rate * 100)}%
-          <small>if forced · mean {meanLabel}</small>
+          <small>if forced, mean {meanLabel}</small>
         {:else}
           {Math.round(point.rate * 100)}%
           <small>mean {meanLabel}</small>
@@ -181,7 +181,7 @@
       {#if index > 0}
         <span class="or">or</span>
       {/if}
-      <p>{@render numberText(alternative.effects.join(' · '))}</p>
+      <p>{@render numberText(alternative.effects.join(', '))}</p>
       <small>{@render numberText(alternative.duration)}</small>
     {:else}
       <p class="unavailable">Numeric effect data unavailable.</p>
@@ -203,7 +203,7 @@
         {#if index > 0}
           <span class="or">or</span>
         {/if}
-        <p>{@render numberText(alternative.join(' · '))}</p>
+        <p>{@render numberText(alternative.join(', '))}</p>
       {/each}
     </section>
   {/if}

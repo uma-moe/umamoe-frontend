@@ -390,7 +390,7 @@
         </strong>
         <span>
           {course
-            ? trackName(course.race_track_id) + ' · ' + describeCourse(course)
+            ? trackName(course.race_track_id) + ' ' + describeCourse(course)
             : 'Course unchanged'}
         </span>
       {:else if error || field?.error}

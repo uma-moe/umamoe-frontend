@@ -33,11 +33,6 @@ p {
   flex-wrap: wrap;
   margin-bottom: 6px;
 }
-.results-context {
-  margin: 0;
-  font-size: 11px;
-  color: var(--text-secondary);
-}
 .results :global(table) {
   font-size: 13px;
 }
@@ -285,9 +280,6 @@ small {
   }
 }
 @media (max-width: 800px) {
-  .results-context {
-    font-size: 10px;
-  }
   .runner-name {
     gap: 6px;
     font-size: 13px;

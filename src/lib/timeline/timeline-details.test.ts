@@ -79,8 +79,8 @@ describe('Angular Timeline detail parity', () => {
 
   it('keeps compact card race lines and context distinct from the richer detail facts', () => {
     const legend = event({ eventType: 'legend_race', description: '3200m - Long - Turf' });
-    expect(timelineCardRaceLines(legend)).toEqual(['3200m · Long · Turf']);
-    expect(timelineCardContext(legend)).toBe('3200m · Long · Turf');
+    expect(timelineCardRaceLines(legend)).toEqual(['3200m, Long, Turf']);
+    expect(timelineCardContext(legend)).toBe('3200m, Long, Turf');
     expect(timelineRaceEventFacts(legend).map((fact) => fact.label)).toEqual([
       'Course',
       'Distance'
@@ -91,22 +91,22 @@ describe('Angular Timeline detail parity', () => {
     });
 
     expect(timelineCardRaceLines(compact)).toEqual([
-      'Tokyo · Turf',
-      '1600m · Mile · Counterclockwise',
-      'Spring · Sunny · Firm'
+      'Tokyo, Turf',
+      '1600m, Mile, Counterclockwise',
+      'Spring, Sunny, Firm'
     ]);
-    expect(timelineCardContext(compact)).toBe('Tokyo · 1600m · Mile · Turf');
+    expect(timelineCardContext(compact)).toBe('Tokyo, 1600m, Mile, Turf');
     const split = event({
       eventType: 'league_of_heroes',
       description: '<p>Tokyo - Turf<br>1600m - Mile - Counterclockwise<br>Firm - Spring - Sunny</p>'
     });
 
     expect(timelineCardRaceLines(split)).toEqual([
-      'Tokyo · Turf',
-      '1600m · Mile · Counterclockwise',
-      'Firm · Spring · Sunny'
+      'Tokyo, Turf',
+      '1600m, Mile, Counterclockwise',
+      'Firm, Spring, Sunny'
     ]);
-    expect(timelineCardContext(split)).toBe('Tokyo · 1600m · Mile · Turf');
+    expect(timelineCardContext(split)).toBe('Tokyo, 1600m, Mile, Turf');
     expect(timelineCardRaceLines(event({ description: compact.description }))).toEqual([]);
     expect(timelineCardContext(event())).toBe('');
   });
@@ -221,8 +221,8 @@ describe('Angular Timeline detail parity', () => {
       )
     ).toEqual([
       ['Course', 'Tokyo', 'Turf'],
-      ['Distance', '1600m', 'Mile · Counterclockwise'],
-      ['Conditions', 'Firm · Spring · Sunny', undefined]
+      ['Distance', '1600m', 'Mile, Counterclockwise'],
+      ['Conditions', 'Firm, Spring, Sunny', undefined]
     ]);
     expect(
       facts(
@@ -231,8 +231,8 @@ describe('Angular Timeline detail parity', () => {
       )
     ).toEqual([
       ['Course', 'Nakayama', 'Turf'],
-      ['Distance', '1200m', 'Short · Right · Outside'],
-      ['Conditions', 'Winter · Daytime', undefined]
+      ['Distance', '1200m', 'Short, Right, Outside'],
+      ['Conditions', 'Winter, Daytime', undefined]
     ]);
     expect(facts('legend_race', '3200m - Long - Turf')).toEqual([
       ['Course', 'Turf', undefined],

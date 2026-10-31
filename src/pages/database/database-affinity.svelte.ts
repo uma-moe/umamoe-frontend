@@ -85,7 +85,7 @@ export class DatabaseAffinity {
       this.engine = new VeteranAffinityEngine(await veteranAffinityRepository.load(refresh));
     } catch {
       this.error =
-        'Local affinity calculations are unavailable. Records and filters still work; scores without a target use the stored record value.';
+        'Local affinity calculations are unavailable. Records and filters still work. Scores without a target use the stored record value.';
     }
   };
 }

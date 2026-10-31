@@ -175,7 +175,7 @@
     if (filters.supportCardId)
       add(
         'support',
-        `Support: ${supportOptions.find((option) => Number(option.id) === filters.supportCardId)?.title ?? filters.supportCardId}${filters.minLimitBreak ? ` · LB${filters.minLimitBreak}` : ''}`,
+        `Support: ${supportOptions.find((option) => Number(option.id) === filters.supportCardId)?.title ?? filters.supportCardId}${filters.minLimitBreak ? `, LB${filters.minLimitBreak}` : ''}`,
         'support',
         () => {
           filters.supportCardId = undefined;

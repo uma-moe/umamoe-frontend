@@ -178,14 +178,14 @@
     {#each ['parent', 'grandparent', 'greatgrandparent'] as scope}
       {#each filters.include[scope as AncestorScope] ?? [] as id}
         <FilterChip
-          label={`Include ${characters.get(id)?.name ?? id} · ${scopeLabels[scope as AncestorScope]}`}
+          label={`Include ${characters.get(id)?.name ?? id} (${scopeLabels[scope as AncestorScope]})`}
           selected
           removable
           onremove={() => filters.removeAncestor(scope as AncestorScope, id)}
         />
       {/each}{#each filters.exclude[scope as AncestorScope] ?? [] as id}
         <FilterChip
-          label={`Exclude ${characters.get(id)?.name ?? id} · ${scopeLabels[scope as AncestorScope]}`}
+          label={`Exclude ${characters.get(id)?.name ?? id} (${scopeLabels[scope as AncestorScope]})`}
           selected
           removable
           onremove={() => filters.removeAncestor(scope as AncestorScope, id, true)}

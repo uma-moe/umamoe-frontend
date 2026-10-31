@@ -85,8 +85,8 @@
   const incomeCount = $derived(activeIncomeAssumptionCount(plan, resources.income.rules));
   const incomePeriod = $derived(
     income.preview
-      ? '30-day preview'
-      : 'Through ' +
+      ? 'in a 30-day preview'
+      : 'through ' +
           new Intl.DateTimeFormat('en-US', {
             month: 'short',
             day: 'numeric',
@@ -101,21 +101,20 @@
       label: 'Balance',
       icon: 'paid',
       description:
+        plan.balances.freeJewels.toLocaleString('en-US') +
+        ' Carats on ' +
         new Intl.DateTimeFormat('en-US', {
           month: 'short',
           day: 'numeric',
           year: 'numeric',
           timeZone: 'UTC'
-        }).format(new Date(plan.projectionStartDate + 'T00:00:00Z')) +
-        ' · ' +
-        plan.balances.freeJewels.toLocaleString('en-US') +
-        ' Carats'
+        }).format(new Date(plan.projectionStartDate + 'T00:00:00Z'))
     },
     {
       id: 'income',
       label: 'Income',
       icon: 'chart',
-      description: loading ? 'Loading income…' : incomePeriod + ' · ' + income.totalLabel
+      description: loading ? 'Loading income…' : income.totalLabel + ' ' + incomePeriod
     },
     {
       id: 'rewards',
@@ -124,7 +123,7 @@
       description:
         rewardSummary.count +
         ' counted automatically' +
-        (rewardSummary.totalLabel ? ' · ' + rewardSummary.totalLabel : '')
+        (rewardSummary.totalLabel ? ' (' + rewardSummary.totalLabel + ')' : '')
     }
   ]);
 </script>

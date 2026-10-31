@@ -323,7 +323,7 @@
     <span class="results-heading">
       {loading
         ? 'Finding clubs…'
-        : `${visibleClubs.length} clubs${joinStyle !== 'all' || openSpots || policy !== 'all' ? ` · ${result?.items.length ?? 0} on this page` : ''}`}
+        : `${visibleClubs.length} clubs${joinStyle !== 'all' || openSpots || policy !== 'all' ? `, ${result?.items.length ?? 0} on this page` : ''}`}
     </span>
     {#if search || joinStyle !== 'all' || openSpots || policy !== 'all' || sortBy !== 'rank' || sortOrder !== 'asc'}
       <Button

@@ -21,13 +21,13 @@ export function timelineCardRaceLines(event: TimelineRecord): string[] {
   const compact = parseCompactRaceLine(raceLine);
   if (compact)
     return buildRaceFacts(compact).map((fact) =>
-      [fact.primary, fact.secondary].filter(Boolean).join(' · ')
+      [fact.primary, fact.secondary].filter(Boolean).join(', ')
     );
   const courseLine = lines.find((line) => line !== raceLine && /\b(?:turf|dirt)\b/i.test(line));
   const conditions = lines.find((line) => line !== raceLine && line !== courseLine);
   return [courseLine, raceLine, conditions]
     .filter((line): line is string => Boolean(line))
-    .map((line) => splitRaceParts(line).join(' · '));
+    .map((line) => splitRaceParts(line).join(', '));
 }
 
 export function timelineCardContext(event: TimelineRecord): string {
@@ -44,7 +44,7 @@ export function timelineCardContext(event: TimelineRecord): string {
       compact.surface
     ]
       .filter(Boolean)
-      .join(' · ');
+      .join(', ');
   const distance = splitRaceParts(raceLine);
   const course = splitRaceParts(
     lines.find((line) => line !== raceLine && /\b(?:turf|dirt)\b/i.test(line)) ?? ''
@@ -52,7 +52,7 @@ export function timelineCardContext(event: TimelineRecord): string {
 
   return (course.length ? [course[0], distance[0], distance[1], course[1]] : distance.slice(0, 3))
     .filter(Boolean)
-    .join(' · ');
+    .join(', ');
 }
 
 export function timelineRaceEventFacts(event: TimelineRecord): TimelineEventFact[] {
@@ -104,7 +104,7 @@ interface ParsedRaceInformation {
 
 function buildRaceFacts(info: ParsedRaceInformation): TimelineEventFact[] {
   const facts: TimelineEventFact[] = [];
-  const distanceSecondary = [info.distanceCategory, info.direction].filter(Boolean).join(' · ');
+  const distanceSecondary = [info.distanceCategory, info.direction].filter(Boolean).join(', ');
 
   if (info.venue || info.surface) {
     facts.push({
@@ -125,7 +125,7 @@ function buildRaceFacts(info: ParsedRaceInformation): TimelineEventFact[] {
   if (info.conditions.length) {
     facts.push({
       label: 'Conditions',
-      primary: info.conditions.map(titleCase).join(' · '),
+      primary: info.conditions.map(titleCase).join(', '),
       icon: 'partly_cloudy_day'
     });
   }
@@ -160,7 +160,7 @@ function parseCompactRaceLine(line: string): ParsedRaceInformation | null {
   return {
     venue: match[1]!.replace(/[,:]+$/, '').trim(),
     surface: titleCase(match[2]!),
-    direction: directions.join(' · ') || undefined,
+    direction: directions.join(', ') || undefined,
     distance: match[3]!,
     distanceCategory: match[4] ? normalizeDistanceCategory(match[4]) : undefined,
     conditions

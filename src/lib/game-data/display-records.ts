@@ -50,7 +50,7 @@ async function characters(): Promise<GameDataEntry[]> {
       id: entry.id,
       kind: 'characters',
       title: entry.name,
-      detail: `Character · ${entry.release_date || 'Release unknown'}`,
+      detail: `Character, ${entry.release_date || 'release unknown'}`,
       tags: [`${entry.rarity}★`],
       rarity: entry.rarity,
       releaseDate: entry.release_date,
@@ -66,7 +66,7 @@ async function supports(): Promise<GameDataEntry[]> {
       id: entry.id,
       kind: 'supports',
       title: entry.name,
-      detail: `${supportTypes[entry.type] ?? entry.type} support · ${entry.release_date || 'Release unknown'}`,
+      detail: `${supportTypes[entry.type] ?? entry.type} support, ${entry.release_date || 'release unknown'}`,
       tags: [
         supportTypes[entry.type] ?? entry.type,
         entry.rarity === 3 ? 'SSR' : entry.rarity === 2 ? 'SR' : 'R'

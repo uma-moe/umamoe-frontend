@@ -189,7 +189,7 @@
     </div>
     <p class="disclaimer">
       <Icon name="info" /> Each pickup uses its published rate. Uncap Crystals replace copies after the
-      first; available exchange copies are shared across selected goals after the pulls.
+      first. Available exchange copies are shared across selected goals after the pulls.
     </p>
   {/if}
 </section>

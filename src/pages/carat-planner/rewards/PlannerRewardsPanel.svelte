@@ -147,7 +147,7 @@
       ? campaign.totalPulls.toLocaleString('en-US') + ' pulls on ' + campaign.stockDestination.title
       : campaign.allocations
           .map((item) => item.pulls.toLocaleString('en-US') + ' pulls on ' + item.title)
-          .join(' · ');
+          .join(', ');
   }
 </script>
 
@@ -259,9 +259,9 @@
               </div>
               <div class="benefits">
                 <span>
-                  {campaign.totalPulls.toLocaleString('en-US')} banner-limited pulls total{#if campaign.pullsPerDay}
-                    · {campaign.pullsPerDay} per day
-                  {/if} · one shared campaign
+                  {campaign.totalPulls.toLocaleString('en-US')} banner-limited pulls in one shared campaign{campaign.pullsPerDay
+                    ? ', ' + campaign.pullsPerDay + ' per day'
+                    : ''}
                 </span>
               </div>
               <div class="actions">

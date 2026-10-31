@@ -72,13 +72,9 @@
         <p class="uql-doc-kicker">Quick start</p>
         <h5>Compose predicates over inheritance data.</h5>
         <p>
-          UQL filters each database row with readable field and factor names. The editor supplies <span
-            class="uql-doc-inline-code"
-          >
-            where
-          </span>
-          ; enter the predicate only. Autocomplete exposes the available fields, values, and operators
-          at the cursor.
+          UQL filters each database row with readable field and factor names. Enter only the
+          predicate, since the editor adds <span class="uql-doc-inline-code">where</span>
+          for you. Autocomplete exposes the available fields, values, and operators at the cursor.
         </p>
       </header>
 
@@ -132,7 +128,7 @@
           Add <code>x</code>
           to count parents carrying a factor:
           <code>Groundwork = 3x</code>
-          . Stars and occurrences can be combined. Main counts 0–1; the full lineage counts 0–3.
+          . Stars and occurrences can be combined. Main counts 0–1 and the full lineage counts 0–3.
         </p>
         <p class="uql-doc-example-intro">Click an example to add it to the query:</p>
         <div class="uql-doc-example-row">
@@ -202,7 +198,7 @@
           </span>
           <span>
             <span class="uql-doc-inline-code">lineage white</span>
-            ranks by lineage depth; it does not require every slot to match. Use explicit scoped predicates
+            ranks by lineage depth and does not require every slot to match. Use explicit scoped predicates
             for a hard three-way requirement.
           </span>
         </p>
@@ -218,8 +214,8 @@
           </div>
         </div>
         <p>
-          Everything UQL accepts, grouped like the database filters. Readable names are shown first;
-          backend-style underscore names remain valid.
+          Everything UQL accepts, grouped like the database filters. Readable names are shown first,
+          and backend-style underscore names remain valid.
         </p>
 
         <div class="uql-doc-reference-layout">

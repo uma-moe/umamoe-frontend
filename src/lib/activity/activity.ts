@@ -88,7 +88,7 @@ function rateMetric(
       all: 'All-time rate'
     }[key],
     value: decimalNumber(value?.careers_per_hour ?? fallback),
-    hint: `careers/hour · ${wholeNumber(value?.sample_count ?? 0)} samples, ${formatDuration(value?.sample_seconds ?? 0)} observed`
+    hint: `careers/hour from ${wholeNumber(value?.sample_count ?? 0)} samples over ${formatDuration(value?.sample_seconds ?? 0)}`
   };
 }
 

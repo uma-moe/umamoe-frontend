@@ -75,7 +75,7 @@
     const parts = meeting.meta.course.split(/\s+[-–·]\s+/);
     const repeatsId = parts[0]?.toLowerCase() === meeting.cmId.toLowerCase();
 
-    return (repeatsId ? parts.slice(1) : parts).join(' · ');
+    return (repeatsId ? parts.slice(1) : parts).join(', ');
   }
 
   async function loadCurrentMeeting() {

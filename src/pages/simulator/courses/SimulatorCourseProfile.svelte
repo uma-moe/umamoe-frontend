@@ -266,9 +266,9 @@
             <i style:background={selected.color}></i>
             <strong>{selected.label}</strong>
             <span>
-              {range(selected.start, selected.end)} · {Math.round(
+              {range(selected.start, selected.end)} ({Math.round(
                 selected.end - selected.start
-              ).toLocaleString('en-US')} m
+              ).toLocaleString('en-US')} m)
             </span>
           {:else}
             Hover a section to highlight it on the track.

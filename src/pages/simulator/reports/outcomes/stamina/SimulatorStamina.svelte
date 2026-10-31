@@ -95,7 +95,7 @@
       state={chart ? 'ready' : 'empty'}
       emptyTitle="HP by distance unavailable"
       emptyDetail="This batch has no per-race telemetry. Run it again to see HP over the race."
-      description="HP left as a share of maximum HP at every point of the course, for each runner's median race. The followed runner's middle 80% of races is shaded; select a runner in either table to follow her. The coloured bands are the race phases; the last spurt is decided when the late race starts."
+      description="HP left as a share of maximum HP at every point of the course, for each runner's median race. The followed runner's middle 80% of races is shaded. Select a runner in either table to follow her. The coloured bands are the race phases, and the last spurt is decided when the late race starts."
     >
       {#if chart}
         <LazyEChartsSurface

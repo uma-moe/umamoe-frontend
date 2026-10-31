@@ -138,9 +138,9 @@
 >
   <ChartFrame
     id="simulation-mean-replay"
-    title={'Mean race' + (races ? ' · ' + races : '')}
+    title={'Mean race' + (races ? ' over ' + races : '')}
     state={ensemble && Replay ? 'ready' : waiting ? 'loading' : 'empty'}
-    description="Every runner at her average position at the same race time, over the sampled races. Field spread shows how far behind each race’s leader she is; the graph draws every race faintly behind the average, and the skill rows share its clock. Select a runner in the field to follow her. Press Play to run the race from the start."
+    description="Every runner at her average position at the same race time, over the sampled races. Field spread shows how far behind each race’s leader she is. The graph draws every race faintly behind the average, and the skill rows share its clock. Select a runner in the field to follow her. Press Play to run the race from the start."
     emptyTitle={built?.error ? 'Mean race unavailable' : 'Race telemetry unavailable'}
     emptyDetail={built?.error ??
       (course

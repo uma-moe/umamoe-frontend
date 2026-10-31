@@ -244,7 +244,7 @@ for (const scenario of [
       .scrollIntoViewIfNeeded();
 
     await expect(
-      page.getByRole('figure', { name: 'Member progression · cumulative' })
+      page.getByRole('figure', { name: 'Member progression (cumulative)' })
     ).toBeVisible();
 
     await page.getByRole('region', { name: 'Club members', exact: true }).scrollIntoViewIfNeeded();

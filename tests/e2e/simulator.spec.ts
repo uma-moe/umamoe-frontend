@@ -1034,12 +1034,12 @@ test.skip('CM Data opens a Veteran search with common benchmark opponents, seeds
   await expect(search.getByText(/races two of these \d+ leading teams/)).toBeVisible();
   // Every Veteran with stats is picked to start with: four builds of three characters make two teams.
   await expect(search.getByRole('region', { name: 'Your Veterans' })).toContainText(
-    '4 picked · 2 teams'
+    '4 picked, 2 teams'
   );
 
   await search.getByLabel('Races per team', { exact: true }).fill('4');
   await search.getByRole('button', { name: 'Find the best team', exact: true }).click();
-  await expect(search.getByText('8 of 8 races · done', { exact: true })).toBeVisible();
+  await expect(search.getByText('8 of 8 races done', { exact: true })).toBeVisible();
   const best = search.getByRole('region', { name: 'Best teams' });
   await expect(best).toContainText('75.0%');
   await expect(best).toContainText('places 1.25 on average');
@@ -1108,15 +1108,15 @@ test.skip('Veteran collection search evaluates every legal team and imports the 
   await page.getByRole('button', { name: 'Find my best team', exact: true }).click();
   const search = page.getByRole('dialog', { name: 'Find my best team', exact: true });
   const pool = search.getByRole('region', { name: 'Your Veterans' });
-  await expect(pool).toContainText('4 picked · 2 teams');
+  await expect(pool).toContainText('4 picked, 2 teams');
   // Unticking one Special Week build leaves one team; ticking it again brings both back.
   await pool.getByRole('checkbox', { name: 'Special Week' }).first().uncheck();
-  await expect(pool).toContainText('3 picked · 1 team');
+  await expect(pool).toContainText('3 picked, 1 team');
   await pool.getByRole('checkbox', { name: 'Special Week' }).first().check();
-  await expect(pool).toContainText('4 picked · 2 teams');
+  await expect(pool).toContainText('4 picked, 2 teams');
   await search.getByLabel('Races per team', { exact: true }).fill('2');
   await search.getByRole('button', { name: 'Find the best team', exact: true }).click();
-  await expect(search.getByText('4 of 4 races · done', { exact: true })).toBeVisible();
+  await expect(search.getByText('4 of 4 races done', { exact: true })).toBeVisible();
   await search.getByRole('button', { name: 'Race this team', exact: true }).click();
   await expect(page.locator('.field .runner')).toHaveCount(9);
   expect(calls).toHaveLength(1);
@@ -1636,7 +1636,7 @@ test('HP calculator races her many times and answers with how often she spurts a
   await expect(rushed).toContainText(/in \d+% of races, by her wit/);
   // The plan is on the course before calculating: where recovery can land.
   const lanes = page.getByRole('group', { name: 'Where it happens on the course' });
-  await expect(lanes.getByRole('img', { name: /Recovery: 1 gold, in mid race/ })).toHaveCount(1);
+  await expect(lanes.getByRole('img', { name: /Recovery \(1 gold\) in mid race/ })).toHaveCount(1);
   // The race is one row of five: track, course, ground, race format and the last spurt. They line up with her five
   // stats, or with every other column when all ten runner fields share one row.
   const lefts = (ids: string) =>
@@ -2063,7 +2063,7 @@ test('Build search prices the skills on offer by hint and answers with the skill
   await expect(maestro.locator('.value')).toContainText('+1.60');
   await expect(maestro.locator('.value')).toHaveAttribute(
     'title',
-    '+1.60 L in this build · Fires in 100% of races, first mid race (~1,030 m) · raced alone through her whole race'
+    '+1.60 L in this build. Fires in 100% of races, first mid race (~1,030 m). Valued by racing her alone through her whole race'
   );
 
   // Both build options and their skill lists stay visible for direct comparison.
@@ -2072,7 +2072,7 @@ test('Build search prices the skills on offer by hint and answers with the skill
   const pick = builds.getByRole('article', { name: '1st', exact: true });
   await expect(pick).toContainText('Recommended build');
   await expect(pick).toContainText('+1.6');
-  await expect(pick.locator('.score')).toHaveAttribute('title', 'Checked in 64 races: +0.42 s');
+  await expect(pick.locator('.score')).toHaveAttribute('title', '+0.42 s when checked in 64 races');
   // The next build's worth is its own; on the pick's line it holds only Corner Recovery ○ of the chain.
   const runnerUp = builds.getByRole('article', { name: '2nd', exact: true });
   await expect(runnerUp).toContainText('+0.90');
@@ -2097,7 +2097,7 @@ test('Build search prices the skills on offer by hint and answers with the skill
 
   await page.keyboard.press('Escape');
   const runBar = page.getByRole('region', { name: 'Plan skills', exact: true });
-  await expect(runBar.getByRole('status')).toContainText('1 skill · 272 SP');
+  await expect(runBar.getByRole('status')).toContainText('1 skill for 272 SP');
   expect(sent?.sp_budget).toBe(1200);
   expect(sent?.mode).toBe('cm');
   expect((sent as unknown as { hp_changes: unknown }).hp_changes).toEqual([
@@ -2144,12 +2144,12 @@ test('Build search prices the skills on offer by hint and answers with the skill
   // Worth stays in lengths; the races that check a build count runners beaten in those fields.
   await expect(pick.locator('.score')).toHaveAttribute(
     'title',
-    'Checked in 64 races: +0.42 runners beaten'
+    '+0.42 runners beaten when checked in 64 races'
   );
   await aboutButton.click();
   await expect(about).toContainText('She raced in 32 races recorded at this CM');
   await page.keyboard.press('Escape');
-  await expect(runBar.getByRole('status')).toContainText('1 skill · 272 SP');
+  await expect(runBar.getByRole('status')).toContainText('1 skill for 272 SP');
   field = false;
   // A skill that can never fire for her here (another distance, style, track or day) is skipped, and says why.
   inert = true;
@@ -2280,10 +2280,10 @@ test('Build codes load the runner, the course, the goal and what she can buy on 
   await expect(dialog).toContainText('not a link');
   await dialog.getByLabel('Build code', { exact: true }).fill(code);
   await expect(dialog).toContainText('Turf 2500m');
-  await expect(dialog).toContainText('Good · Rainy · Autumn · Evening');
+  await expect(dialog).toContainText('Good, Rainy, Autumn, Evening');
   await expect(dialog).toContainText('254,000 fans');
-  await expect(dialog).toContainText('1,450 SP · Fast Learner');
-  await expect(dialog).toContainText('Team Trials · Long');
+  await expect(dialog).toContainText('1,450 SP, Fast Learner');
+  await expect(dialog).toContainText('Team Trials (Long)');
   await expect(dialog).not.toContainText('against');
   await dialog.getByRole('button', { name: 'Load', exact: true }).click();
   await expect(dialog).toBeHidden();

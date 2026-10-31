@@ -220,9 +220,6 @@
                 </strong>
               </span>
             {/if}
-            {#if club.yesterdayFans && gain !== undefined}
-              <span class="gains-sep">·</span>
-            {/if}
             {#if gain !== undefined}
               <span class="gain-item">
                 <span class="label">Today</span>

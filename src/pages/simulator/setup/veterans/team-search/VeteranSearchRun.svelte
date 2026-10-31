@@ -49,7 +49,7 @@
       <strong>{races.toLocaleString('en-US')}</strong>
       races
       {#if races > SLOW_RACES}
-        <span class="warn">That takes a while; pick fewer Veterans or races.</span>
+        <span class="warn">That takes a while. Pick fewer Veterans or races.</span>
       {/if}
     </p>
   </div>

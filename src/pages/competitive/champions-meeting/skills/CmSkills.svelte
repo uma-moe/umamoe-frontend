@@ -161,7 +161,7 @@
       ]}
     />
     <p>
-      {number(usage?.totalPlayers ?? overview.players)} players · {number(overview.races)} simulated races
+      {number(usage?.totalPlayers ?? overview.players)} players, {number(overview.races)} simulated races
     </p>
   </div>
   {#if usageError}

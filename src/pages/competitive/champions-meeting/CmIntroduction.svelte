@@ -7,7 +7,7 @@
     'These are simulated results, not the original race outcomes.',
     'Player appearances are weighted equally.',
     'Associated team win rate includes wins by an Uma’s teammates.',
-    'Player counts can overlap; use the minimum-player filters and confidence intervals to judge sample size.'
+    'Player counts can overlap. Use the minimum-player filters and confidence intervals to judge sample size.'
   ];
 
   const buildSteps = [

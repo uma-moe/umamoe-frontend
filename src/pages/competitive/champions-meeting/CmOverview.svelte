@@ -34,7 +34,7 @@
 
 <div class="overview-heading">
   <h2>The meeting at a glance</h2>
-  <span>{represented} Uma outfits · {data.archetypes.length} style compositions</span>
+  <span>{represented} Uma outfits in {data.archetypes.length} style compositions</span>
 </div>
 <div class="meeting-overview">
   <ChartFrame
@@ -99,7 +99,7 @@
       </Button>
     {/snippet}
     <div class="column-head">
-      <span>Uma · outfit</span>
+      <span>Uma</span>
       <span>Field share</span>
     </div>
     {#each umas as uma}
@@ -124,7 +124,7 @@
             <i
               style:width={(pair.pop / uma.share) * 100 + '%'}
               style:background={colors[pair.style]}
-              title={styleNames[pair.style] + ' · ' + pct(pair.pop) + ' field share'}
+              title={styleNames[pair.style] + ', ' + pct(pair.pop) + ' field share'}
             ></i>
           {/each}
         </span>
@@ -168,7 +168,7 @@
               {styleNames[id]}
             </span>
           {/each}
-          <small>{pct(team.teamPop)} team share · {number(team.owners)} players</small>
+          <small>{pct(team.teamPop)} team share, {number(team.owners)} players</small>
         </span>
         <span class="team-result">
           <strong>{pct(team.team)}</strong>

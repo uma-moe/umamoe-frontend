@@ -120,7 +120,7 @@ test('Income summary includes every resource and dated reward through the last p
   await expect(summary).toContainText('Sep 1, 2026 – Sep 30, 2026');
   await summary.locator('summary').click();
   await expect(incomeTab).toHaveAccessibleDescription(
-    'Through Sep 30, 2026 · +7,300 Carats · +4 tickets · +4 shards · +3 Uncap Crystals'
+    '+7,300 Carats, +4 tickets, +4 shards, +3 Uncap Crystals through Sep 30, 2026'
   );
   for (const [currency, amount] of Object.entries({
     free_jewels: '+6,800',
@@ -336,7 +336,7 @@ test('Planner keeps dated deductions when editing and reopening income, and upda
 
   await page.goto('/timeline?tab=carat-planner');
   const funding = page.locator('[data-target-id="first"] .funding');
-  await expect(funding.locator('small').first()).toHaveText('150 Carats short · 0 from resources');
+  await expect(funding.locator('small').first()).toHaveText('150 Carats short, 0 from resources');
   await expect(funding.locator('strong')).toHaveText(/0\s*\/\s*1 funded/);
   const incomeTab = page
     .getByRole('tablist', { name: 'Planner assumptions' })
@@ -352,9 +352,9 @@ test('Planner keeps dated deductions when editing and reopening income, and upda
   await amounts.first().fill('-50');
   await expect(funding).toContainText('1 funded');
   await amounts.first().fill('-300');
-  await expect(funding.locator('small').first()).toHaveText('150 Carats short · 0 from resources');
+  await expect(funding.locator('small').first()).toHaveText('150 Carats short, 0 from resources');
   await page.reload();
-  await expect(funding.locator('small').first()).toHaveText('150 Carats short · 0 from resources');
+  await expect(funding.locator('small').first()).toHaveText('150 Carats short, 0 from resources');
   await page.getByRole('button', { name: /Plan assumptions/ }).click();
   await incomeTab.click();
   await expect(amounts.first()).toHaveValue('-300');

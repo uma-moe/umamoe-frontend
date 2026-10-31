@@ -65,7 +65,7 @@
         : 'Published banner rates'
     ]
       .filter(Boolean)
-      .join(' · ')
+      .join(', ')
   );
 
   const pickups = $derived.by(() => {

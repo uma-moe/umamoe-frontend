@@ -33,7 +33,7 @@
 >
   <header>
     <strong>Field spread</strong>
-    <span>Gap to each race’s leader · Lower is better</span>
+    <span>Gap to each race’s leader</span>
     <div class="legend">
       <i class="dot"></i>
       Mean
@@ -79,7 +79,7 @@
           aria-label={runner.name +
             ': mean gap ' +
             row.mean.toFixed(1) +
-            ' metres; middle 80% ' +
+            ' metres, middle 80% ' +
             row.p10.toFixed(1) +
             '–' +
             row.p90.toFixed(1) +
@@ -114,7 +114,7 @@
     {/each}
   </div>
   <p>
-    Aligned by elapsed time; gaps are calculated within each race. Field gaps freeze when that
+    Aligned by elapsed time. Gaps are calculated within each race. Field gaps freeze when that
     race’s winner finishes.
   </p>
 </section>

@@ -360,7 +360,8 @@
       {/if}
       <div class="infield">
         <span class="infield-course">
-          Demo race · {courseName} · {raceDistance.toLocaleString()} m · {surface}
+          Demo race at {courseName}, {surface}
+          {raceDistance.toLocaleString()} m
         </span>
         <time>{formatRaceTime(time, 1)}</time>
         <span class="infield-phase">{phase}</span>
