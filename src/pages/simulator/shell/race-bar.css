@@ -533,6 +533,17 @@
     align-items: end;
   }
 }
+/* Wide enough for everything on one row: the course keeps room for its names, the conditions and fields their own
+   widths. */
+@container race-fields (min-width:1600px) {
+  .has-extra .controls {
+    grid-template-columns: minmax(380px, 1fr) auto auto;
+    grid-template-areas: 'course conditions extra';
+  }
+  .has-extra .conditions {
+    flex-wrap: nowrap;
+  }
+}
 /* Too narrow for the four conditions on one line: two by two, rather than three and one left over. */
 @container race-fields (min-width:561px) and (max-width:779px) {
   .has-extra .conditions {
