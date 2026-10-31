@@ -74,6 +74,19 @@
 .race-form :global(section.profile.compact .outline) {
   padding-block: 8px;
 }
+/* A row of their own under the conditions: stretched to the same edge, the seed widest for its number. */
+@container race-fields (min-width:561px) and (max-width:999px) {
+  .run-fields {
+    grid-template-columns: minmax(0, 0.8fr) minmax(0, 1.3fr) minmax(0, 1fr);
+  }
+}
+/* The one-row layout on a 1080p screen: room for a four-digit count and a ten-digit seed, no more. */
+@container race-fields (min-width:1280px) and (max-width:1599px) {
+  .run-fields {
+    grid-template-columns: 88px 164px auto;
+    gap: 10px;
+  }
+}
 /* A phone: the sample count and gates in the conditions' two columns, the seed and its long number on a row of its own. */
 @container race-form (max-width:560px) {
   .run-fields {

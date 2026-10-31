@@ -533,22 +533,57 @@
     align-items: end;
   }
 }
-/* Wide enough for everything on one row: the course keeps room for its names, the conditions and fields their own
-   widths. */
-@container race-fields (min-width:1600px) {
+/* Wide enough for everything on one row: the course takes what the conditions and fields leave. */
+@container race-fields (min-width:1280px) {
   .has-extra .controls {
-    grid-template-columns: minmax(380px, 1fr) auto auto;
+    grid-template-columns: minmax(250px, 1fr) auto auto;
     grid-template-areas: 'course conditions extra';
+    column-gap: 12px;
   }
   .has-extra .conditions {
     flex-wrap: nowrap;
   }
 }
-/* Too narrow for the four conditions on one line: two by two, rather than three and one left over. */
-@container race-fields (min-width:561px) and (max-width:779px) {
+/* One row on a 1080p screen: tighter segments and gaps, and the pickers without their outlines, as on a phone. */
+@container race-fields (min-width:1280px) and (max-width:1599px) {
+  .has-extra .course-row {
+    grid-template-columns: minmax(0, 0.8fr) minmax(0, 1.2fr);
+    gap: 10px;
+  }
+  .has-extra .course-picker :global(input) {
+    padding-left: 10px;
+    padding-right: 26px;
+  }
+  .has-extra .selected-outline {
+    display: none;
+  }
+  .has-extra .conditions {
+    gap: 10px;
+  }
+  .has-extra .conditions :global(.segments button) {
+    min-width: 28px;
+  }
+  .has-extra .ground :global(.segments button) {
+    padding-inline: 5px;
+  }
+}
+/* Once the conditions have a row of their own, they fill it in equal columns, four or two by two, so every row of
+   the form ends at the same edge. */
+@container race-fields (min-width:561px) and (max-width:1279px) {
   .has-extra .conditions {
     display: grid;
-    grid-template-columns: repeat(2, max-content);
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+  .has-extra .conditions :global(.segments) {
+    width: 100%;
+  }
+  .has-extra .conditions :global(.segments button) {
+    flex: 1;
+  }
+}
+@container race-fields (min-width:561px) and (max-width:779px) {
+  .has-extra .conditions {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 }
 @container race-fields (max-width:560px) {
