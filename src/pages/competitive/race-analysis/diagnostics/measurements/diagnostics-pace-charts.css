@@ -11,7 +11,10 @@ p {
   display: grid;
   grid-template-columns: minmax(0, 1.45fr) minmax(0, 1fr);
   gap: 10px;
-  align-items: start;
+}
+.pace-report {
+  display: flex;
+  flex-direction: column;
 }
 .measurement-legend {
   display: flex;
@@ -39,8 +42,18 @@ p {
   margin-left: auto;
   font-size: 10px;
 }
+/* The chart takes the card's remaining height without adding to it, so the row keeps the height of
+   the taller section chart instead of growing with each resize. */
 .pace-chart {
+  position: relative;
+  flex: 1;
   min-width: 0;
+  min-height: 180px;
+}
+.pace-chart :global(.lazy-surface) {
+  position: absolute;
+  inset: 0;
+  min-height: 0;
 }
 .section-chart {
   position: relative;

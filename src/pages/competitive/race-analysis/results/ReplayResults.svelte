@@ -8,6 +8,7 @@
     hpRemainingColor,
     moodIcon,
     moodName,
+    runningStyleIcon,
     runningStyleName
   } from '@/lib/race/replay/race-display';
   import { loadSkills, type SkillData } from '@/lib/game-data/skills/skills';
@@ -186,14 +187,26 @@
         {/if}
       {:else if col.key === 'style'}
         {@const mood = moodName(r.raw.motivation)}
+        {@const styleIcon = runningStyleIcon(r.result?.runningStyle)}
         <span class="style-mood">
-          <span
-            class="style-pill"
-            style:--style-color={styleColors[r.result?.runningStyle ?? 0]}
-            title={String(row.style)}
-          >
-            {runningStyleName(r.result?.runningStyle, true)}
-          </span>
+          {#if styleIcon}
+            <img
+              class="style-icon"
+              src={styleIcon}
+              alt={String(row.style)}
+              title={String(row.style)}
+              width="34"
+              height="34"
+            />
+          {:else}
+            <span
+              class="style-pill"
+              style:--style-color={styleColors[r.result?.runningStyle ?? 0]}
+              title={String(row.style)}
+            >
+              {runningStyleName(r.result?.runningStyle, true)}
+            </span>
+          {/if}
           {#if mood}
             <img
               class="mood"

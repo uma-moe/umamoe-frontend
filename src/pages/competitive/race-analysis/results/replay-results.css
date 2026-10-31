@@ -168,7 +168,7 @@ small {
   align-items: center;
   gap: 6px;
 }
-/* The game's style chip: a ring in the style colour around the short style name. */
+/* Runaway has no game badge, so it keeps a drawn chip: a ring in the style colour around the name. */
 .style-pill {
   display: inline-grid;
   place-items: center;
@@ -183,6 +183,7 @@ small {
   color: var(--text-primary);
   background: color-mix(in srgb, var(--style-color) 16%, transparent);
 }
+.style-icon,
 .mood {
   flex: none;
   width: 34px;

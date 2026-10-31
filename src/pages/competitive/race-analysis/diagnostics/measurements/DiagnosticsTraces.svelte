@@ -39,28 +39,43 @@
   // Matches diagnostics-traces.css, where the decisions sit beside the reference and HP column.
   const besideTraces = new MediaQuery('min-width: 1251px');
 
-  let traceHeight = $state(0);
+  /** A long decision table keeps at least this height beside a short trace column. */
+  const MIN_DECISION_TABLE_HEIGHT = 240;
+
   let decisionPanel = $state<HTMLElement>();
   let decisionTable = $state<HTMLDivElement>();
+  let panelHeight = $state(0);
+  let tableHeight = $state(0);
 
-  /** Beside the trace column the decisions scroll within its height instead of stopping at nine rows. */
-  const decisionHeight = $derived.by(() => {
-    if (!besideTraces.current || !decisionPanel || !decisionTable || !traceHeight) return undefined;
+  /**
+   * Beside the trace column the decision card takes the row's height instead of setting it, so the
+   * trace column decides how tall both are and the table scrolls within the card. A shorter trace
+   * column stretches to the card's minimum instead. Undefined while stacked or collapsed.
+   */
+  const decisionLayout = $derived.by(() => {
+    if (!besideTraces.current || !decisionPanel || !decisionTable || !tableHeight) return undefined;
 
     // The table starts below the decisions heading and ends above the card's padding; neither inset
     // changes with the table's height.
-    const tableBottom = decisionTable.offsetTop + decisionTable.offsetHeight;
-    const bottomInset = decisionPanel.offsetHeight - tableBottom;
-    return Math.max(240, traceHeight - decisionTable.offsetTop - bottomInset);
+    const panelStyle = getComputedStyle(decisionPanel);
+    const tableTop = decisionTable.offsetTop;
+    const bottomInset = parseFloat(panelStyle.paddingBottom);
+    const borders =
+      parseFloat(panelStyle.borderTopWidth) + parseFloat(panelStyle.borderBottomWidth);
+
+    // The table is never bounded below the minimum, so a shorter one is showing all its rows.
+    const shortestTable = Math.min(MIN_DECISION_TABLE_HEIGHT, tableHeight);
+
+    return {
+      minHeight: borders + tableTop + shortestTable + bottomInset,
+      tableHeight: Math.max(MIN_DECISION_TABLE_HEIGHT, panelHeight - tableTop - bottomInset)
+    };
   });
 </script>
 
 <div class="detail-traces">
   <!-- The short reference lists leave room beside the decisions for the HP changes. -->
-  <div
-    class="trace-column"
-    bind:clientHeight={traceHeight}
-  >
+  <div class="trace-column">
     <div class="reference-panel">
       {#each [{ title: 'Position keeping', spans: horse.positionKeepReferenceSpans ?? [], key: 'referenceHorseIndex' }, { title: 'Race pacemakers', spans: capture.detailed?.annotations.paceMakerSpans ?? [], key: 'horseIndex' }] as group}
         <section class="detail-panel report-card reference-group">
@@ -206,7 +221,10 @@
   </div>
   <section
     class="detail-panel report-card detail-table position-decisions"
+    class:fills-row={decisionLayout !== undefined}
+    style:min-height={decisionLayout ? decisionLayout.minHeight + 'px' : undefined}
     bind:this={decisionPanel}
+    bind:clientHeight={panelHeight}
   >
     <Disclosure
       id={id + '-position-decisions'}
@@ -215,7 +233,10 @@
       compact
       open
     >
-      <div bind:this={decisionTable}>
+      <div
+        bind:this={decisionTable}
+        bind:clientHeight={tableHeight}
+      >
         <DiagnosticsEventTable
           value={horse.positionKeepDecisions ?? []}
           title="Position-keep decisions"
@@ -229,7 +250,7 @@
           {capture}
           {index}
           {skillNames}
-          maxHeight={decisionHeight}
+          maxHeight={decisionLayout?.tableHeight}
           {onseek}
           {onselect}
         />

@@ -67,6 +67,13 @@
     ],
     veterans: ['M8 4h8v4H8z', 'M6 8h12l-1 13H7L6 8Z', 'M9 12h6', 'M12 9v6'],
     race: ['M4 19c4-7 7-10 16-14', 'm14 3 2 2-2 2', 'M5 15h5', 'M3 19h5'],
+    // A racecourse: an oval track whose finish line rises into the winning post's flag.
+    course: [
+      'M7 9h10a5.5 5.5 0 0 1 0 11H7A5.5 5.5 0 0 1 7 9Z',
+      'M8 12.75h8a1.75 1.75 0 0 1 0 3.5H8a1.75 1.75 0 0 1 0-3.5Z',
+      'M15 12.75V3',
+      'M15 3.5h5l-1.5 2 1.5 2h-5'
+    ],
     timeline: ['M12 7v5l3 2', 'M21 12a9 9 0 1 1-3-6.7', 'M18 2v4h4'],
     community: [
       'M8 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8Z',

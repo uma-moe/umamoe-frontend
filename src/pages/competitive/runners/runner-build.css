@@ -58,20 +58,21 @@ small {
   justify-content: space-between;
   gap: 8px;
 }
-.section-heading > span {
-  font-size: 10px;
-  color: var(--text-secondary);
-}
+/* The totals describe the Stats heading, like the counts beside the report's other headings. */
 .stat-totals {
   display: inline-flex;
   align-items: baseline;
-  gap: 10px;
+  gap: 6px;
+  margin-left: 3px;
 }
-.section-heading strong {
-  font-size: 11px;
-  margin-left: 4px;
+.stat-total {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 0.25em;
+}
+.stat-total strong {
   color: var(--text-primary);
-  font-weight: 600;
+  font-weight: 700;
   font-variant-numeric: tabular-nums;
 }
 .compact .skills-section {

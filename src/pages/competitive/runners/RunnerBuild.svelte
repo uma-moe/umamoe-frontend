@@ -202,16 +202,20 @@
     <section class="stat-overview">
       {#if compact}
         <header class="section-heading">
-          <h3>Stats</h3>
-          <span class="stat-totals">
-            <span>
-              Total stats <strong>{totalStats.toLocaleString('en-US')}</strong>
+          <h3>
+            Stats
+            <span class="stat-totals">
+              <span class="stat-total">
+                <strong>{totalStats.toLocaleString('en-US')}</strong>
+                <span>total</span>
+              </span>
+              <span aria-hidden="true">·</span>
+              <SkillPoints
+                value={skillPoints}
+                note={LEARNED_SKILL_POINTS_NOTE}
+              />
             </span>
-            <SkillPoints
-              value={skillPoints}
-              note={LEARNED_SKILL_POINTS_NOTE}
-            />
-          </span>
+          </h3>
         </header>
       {/if}
       <StatStrip

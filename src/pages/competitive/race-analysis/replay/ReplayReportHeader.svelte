@@ -52,7 +52,7 @@
   <div class="replay-title">
     <span class="replay-icon">
       <Icon
-        name="race"
+        name="course"
         size={22}
       />
     </span>

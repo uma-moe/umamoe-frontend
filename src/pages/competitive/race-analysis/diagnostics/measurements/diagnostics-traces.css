@@ -4,12 +4,12 @@ p {
   color: var(--text-secondary);
   line-height: 1.5;
 }
+/* Both columns fill the row; the trace column's grid rows share any height the decisions need. */
 .detail-traces {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
   min-width: 0;
   gap: 10px;
-  align-items: start;
 }
 .trace-column,
 .reference-panel {
@@ -17,9 +17,13 @@ p {
   gap: 10px;
   min-width: 0;
 }
-/* The offset parent of the decision table, whose height is measured from the top of the row. */
+/* The offset parent of the decision table, whose top is measured inside the card. */
 .position-decisions {
   position: relative;
+}
+/* Size containment drops the table from the row's height; the card's minimum keeps room for it. */
+.position-decisions.fills-row {
+  contain: size;
 }
 .detail-footnote {
   margin-top: 2px;

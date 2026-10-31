@@ -5,6 +5,7 @@ import {
   moodIcon,
   moodName,
   ordinalPlace,
+  runningStyleIcon,
   runningStyleName,
   trackDetailName
 } from './race-display';
@@ -56,6 +57,23 @@ describe('shared race display semantics', () => {
     expect(moods).toEqual(['Awful', 'Bad', 'Normal', 'Good', 'Great']);
     expect(moodName('5')).toBe('Great');
     expect(moodIcon('Great')).toBe('/game-assets/textures/great.webp');
+  });
+
+  it('uses the game badge for each basic running style', () => {
+    const icons = [1, 2, 3, 4].map(runningStyleIcon);
+
+    expect(icons).toEqual([
+      '/game-assets/textures/front.webp',
+      '/game-assets/textures/pace.webp',
+      '/game-assets/textures/late.webp',
+      '/game-assets/textures/end.webp'
+    ]);
+  });
+
+  it('has no style badge for Runaway or an unrecorded style', () => {
+    const icons = [5, 0, undefined].map(runningStyleIcon);
+
+    expect(icons).toEqual([undefined, undefined, undefined]);
   });
 
   it('leaves an unrecorded or out-of-range mood unnamed', () => {

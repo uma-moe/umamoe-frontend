@@ -45,6 +45,22 @@ export function runningStyleName(value?: number, compact = false): string {
   );
 }
 
+/** The game has style badges for the four basic styles only; Runaway has none. */
+const styleIconNames: Record<number, string> = {
+  1: 'front',
+  2: 'pace',
+  3: 'late',
+  4: 'end'
+};
+
+/** The game's round style badge, such as PACE; undefined for styles without one. */
+export function runningStyleIcon(value?: number): string | undefined {
+  const name = styleIconNames[value ?? 0];
+  if (name === undefined) return undefined;
+
+  return '/game-assets/textures/' + name + '.webp';
+}
+
 const moodNames = ['Awful', 'Bad', 'Normal', 'Good', 'Great'] as const;
 
 export type MoodName = (typeof moodNames)[number];

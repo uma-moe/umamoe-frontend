@@ -21,6 +21,9 @@
     onseek: (time: number) => void;
   } = $props();
 
+  /** The pace chart fills its card, which is as tall as the section chart beside it. */
+  let paceChartHeight = $state(180);
+
   const averageRng = $derived(
     sectionRows.length
       ? sectionRows.reduce((total, row) => total + row.rng, 0) / sectionRows.length
@@ -53,11 +56,14 @@
       <small>Select a time to watch it in replay.</small>
     </div>
     {#if sampleRows.some((row) => typeof row.targetSpeed === 'number' || typeof row.acceleration === 'number')}
-      <div class="pace-chart">
+      <div
+        class="pace-chart"
+        bind:clientHeight={paceChartHeight}
+      >
         <LazyEChartsSurface
           option={paceChart}
           label="Simulator pace over time"
-          height={180}
+          height={paceChartHeight}
           onaxisclick={onseek}
         />
       </div>

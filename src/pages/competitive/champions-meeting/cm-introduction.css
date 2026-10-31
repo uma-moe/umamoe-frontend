@@ -1,0 +1,123 @@
+/* Drawn like "The meeting at a glance" above it: the same heading and surface cards. */
+.introduction {
+  margin-top: 24px;
+}
+h2 {
+  margin: 0 0 12px;
+  font-size: 18px;
+}
+.guide-cards {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 14px;
+}
+.guide-card {
+  display: grid;
+  align-content: start;
+  gap: 12px;
+  min-width: 0;
+  padding: 12px 14px;
+  border-radius: var(--radius-lg);
+  background: var(--surface-1);
+}
+.guide-card header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding-bottom: 8px;
+  border-bottom: 1px solid var(--border-subtle);
+}
+h3 {
+  margin: 0;
+  font-size: 15px;
+}
+.guide-card header :global(.ui-button) {
+  flex: none;
+}
+
+.neutral-rates {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+  margin: 0;
+}
+.neutral-rates > div {
+  display: grid;
+  gap: 2px;
+  padding: 8px 12px;
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-md);
+  background: var(--surface-2);
+}
+.neutral-rates dt {
+  color: var(--text-secondary);
+  font-size: 11px;
+}
+.neutral-rates dd {
+  margin: 0;
+  font-size: 20px;
+  font-weight: 650;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.02em;
+}
+
+.guide-rows {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.guide-rows > li {
+  padding: 9px 0;
+  border-bottom: 1px solid var(--border-subtle);
+  color: var(--text-primary);
+  font-size: 12px;
+  line-height: 1.5;
+}
+.guide-rows > li:last-child {
+  border-bottom: 0;
+}
+.build-steps {
+  counter-reset: build-step;
+}
+.build-steps > li {
+  display: grid;
+  grid-template-columns: 24px minmax(0, 1fr);
+  column-gap: 10px;
+  align-items: start;
+  counter-increment: build-step;
+}
+.build-steps > li::before {
+  content: counter(build-step);
+  grid-row: span 2;
+  display: grid;
+  place-items: center;
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  background: var(--color-accent-soft);
+  color: var(--accent-primary);
+  font-size: 11px;
+  font-weight: 700;
+}
+.build-steps strong {
+  font-size: 13px;
+  font-weight: 600;
+}
+.build-steps span {
+  color: var(--text-secondary);
+}
+
+@media (max-width: 1000px) {
+  .guide-cards {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+@media (max-width: 480px) {
+  .guide-card {
+    padding: 10px;
+  }
+  .guide-card header {
+    flex-wrap: wrap;
+  }
+}

@@ -12,7 +12,7 @@
 >
   <div class="course">
     <Icon
-      name="race"
+      name="course"
       size={22}
     />
     <div>

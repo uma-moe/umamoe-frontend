@@ -68,10 +68,12 @@
     background: color-mix(in srgb, var(--surface-1) 82%, #69b7ee);
   }
   /* The compact skill chip of the report, shrunk to label height. Only the name part is backed, so the
-     course does not show through its translucent rarity colours while the icon keeps its own shape. */
+     course does not show through its translucent rarity colours while the icon keeps its own shape.
+     A flex box sizes the backing to the chip; as a line box it would add descender space below it. */
   .callout.skill {
     position: relative;
     isolation: isolate;
+    display: flex;
     max-width: 170px;
     padding: 0;
     overflow: visible;

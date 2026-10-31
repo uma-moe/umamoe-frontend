@@ -79,6 +79,9 @@
     border-bottom: 1px solid var(--border-subtle);
     background: color-mix(in srgb, var(--runner-color) 7%, transparent);
   }
+  .build-card.framed :global(.build.compact > .build-content) {
+    padding-top: 8px;
+  }
   .build-card :global(.race-style) {
     color: var(--runner-color);
   }

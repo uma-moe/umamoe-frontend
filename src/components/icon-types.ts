@@ -4,6 +4,7 @@ export type IconName =
   | 'book'
   | 'veterans'
   | 'race'
+  | 'course'
   | 'timeline'
   | 'community'
   | 'discord'

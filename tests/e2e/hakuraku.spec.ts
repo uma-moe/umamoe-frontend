@@ -4083,7 +4083,7 @@ test('automatic resimulation falls back on failure and exposes simulator decisio
   await expect(details.locator('.outcome-summary')).toContainText('Delayed');
   await expect(analysis.getByRole('tablist')).toHaveCount(0);
   await expect(analysis.locator('.runner-card .build')).toHaveClass(/compact/);
-  await expect(analysis.locator('.runner-card .stat-overview')).toContainText('Total stats');
+  await expect(analysis.locator('.runner-card .stat-overview')).toContainText(/[\d,]+ total/);
   await expect(analysis.getByRole('combobox', { name: 'Inspect runner', exact: true })).toHaveCount(
     0
   );
