@@ -125,8 +125,13 @@
   /* One grid for every tone keeps the columns full instead of leaving a gap after each colour. */
   .rows {
     display: grid;
-    grid-template-columns: repeat(3, minmax(0, 1fr));
-    container-type: inline-size;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  /* Same column breakpoint as the veteran card's learned skills, so both lists line up. */
+  @container veteran-card (min-width: 544px) {
+    .rows {
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+    }
   }
   .rows .spark-group {
     display: contents;
@@ -141,18 +146,16 @@
     padding-block: 3px;
     border-radius: 6px;
   }
+  /* A wrapped name would make its row taller than its neighbours; the chip's title keeps the full name. */
   .rows .spark-filter :global(.name) {
     flex: 1;
+    overflow: hidden;
+    white-space: nowrap;
   }
   .rows > .white-count,
   .rows > .white-more {
     grid-column: 1 / -1;
     justify-self: start;
-  }
-  @container (max-width: 376px) {
-    .rows {
-      grid-template-columns: repeat(2, minmax(0, 1fr));
-    }
   }
   .spark-filter {
     max-width: 100%;

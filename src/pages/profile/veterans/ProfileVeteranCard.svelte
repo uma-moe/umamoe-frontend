@@ -308,7 +308,7 @@
     border: 1px solid var(--border-primary);
     border-radius: 10px;
     background: var(--card-surface-bg);
-    container-type: inline-size;
+    container: veteran-card / inline-size;
   }
   .veteran-card:hover {
     border-color: var(--border-secondary);
@@ -386,8 +386,14 @@
   .skill-list {
     min-width: 0;
     display: grid;
-    grid-template-columns: repeat(3, minmax(0, 1fr));
+    grid-template-columns: repeat(2, minmax(0, 1fr));
     gap: 4px;
+  }
+  /* A third column only once each column (~170px) fits a full skill name and its grade. */
+  @container veteran-card (min-width: 544px) {
+    .skill-list {
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+    }
   }
   .skill-filter {
     min-width: 0;
@@ -435,16 +441,10 @@
   .skill-filter :global(.skill-chip img) {
     width: 26px;
     height: 26px;
-    align-self: center;
   }
   .skill-filter :global(.skill-body) {
     min-height: 26px;
     align-items: center;
-  }
-  .skill-filter :global(.skill-name) {
-    white-space: normal;
-    overflow: visible;
-    line-height: 1.25;
   }
   footer {
     display: flex;
@@ -487,11 +487,6 @@
   }
   .card-open:focus-visible {
     outline-offset: -2px;
-  }
-  @container (max-width: 400px) {
-    .skill-list {
-      grid-template-columns: repeat(2, minmax(0, 1fr));
-    }
   }
   @container (max-width:330px) {
     .card-open {
