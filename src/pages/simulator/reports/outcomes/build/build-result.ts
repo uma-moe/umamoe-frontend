@@ -86,8 +86,8 @@ export function lengthsText(lengths: number, digits = 2, unit = true): string {
 /** What a skill's worth means for her: it helps, adds nothing, or costs her. */
 export type WorthState = 'helps' | 'nothing' | 'costs';
 
-export function worthState(value: number, unit: 'lengths' | 'score' = 'lengths'): WorthState {
-  const threshold = unit === 'score' ? 1e-8 : NOTHING;
+export function worthState(value: number, unit: SkillUnit = 'lengths'): WorthState {
+  const threshold = unit === 'lengths' ? NOTHING : 1e-8;
   if (value > threshold) return 'helps';
   if (value < -threshold) return 'costs';
   return 'nothing';
@@ -216,7 +216,7 @@ function heldSkill(offers: PricedOffer[], key: number, held: number[]): HeldSkil
 
 /** How the theory values a skill: its source and whether it waits for her other skills. */
 interface Valuation {
-  source: TheoryOffer['source'] | V5PurchaseValue['source'] | 'unknown';
+  source: TheoryOffer['source'] | V5PurchaseValue['source'] | 'races' | 'unknown';
   countGated: boolean;
 }
 
@@ -271,6 +271,9 @@ export interface ListedSkill {
   bought: boolean;
 }
 
+/** What a skill's worth is in: theorized lengths, V5's score, or seconds a race search measured. */
+export type SkillUnit = 'lengths' | 'score' | 'seconds';
+
 /** The result as the page shows it: the theorized builds, the pick first, and every skill on offer. */
 export interface TheorizedResult {
   builds: TheorizedBuild[];
@@ -278,7 +281,7 @@ export interface TheorizedResult {
   /** The largest absolute contribution in the report. */
   scale: number;
   phaseBounds: number[];
-  skillUnit: 'lengths' | 'score';
+  skillUnit: SkillUnit;
   theory?: OptimizeTheory;
   model?: OptimizeModel;
 }
@@ -308,6 +311,7 @@ export function theorizedResult({
   offers: PricedOffer[];
 }): TheorizedResult | undefined {
   if (result.model !== undefined) return v5Result(result, offers);
+  if (result.theory === undefined) return racedResult(result, offers);
   const theory = theoryOf(result);
   if (!theory) return undefined;
 
@@ -465,7 +469,7 @@ export function leftoverSp({
   offers: PricedOffer[];
   inert: Set<number>;
   skills: ListedSkill[];
-  skillUnit?: 'lengths' | 'score';
+  skillUnit?: SkillUnit;
 }) {
   if (!pick || budget === undefined) return undefined;
 
@@ -478,7 +482,7 @@ export function leftoverSp({
   const worth = new Map(skills.map((skill) => [skill.key, skill.value]));
   const useless = affordable.filter((index) => {
     const value = worth.get(index);
-    return value !== undefined && value <= (skillUnit === 'score' ? 1e-8 : NOTHING);
+    return value !== undefined && value <= (skillUnit === 'lengths' ? NOTHING : 1e-8);
   });
 
   return {
@@ -659,6 +663,100 @@ function v5Result(result: OptimizeResult, offers: PricedOffer[]): TheorizedResul
         ...skills.map((s) => Math.abs(s.value ?? 0))
       ) || 1
   };
+}
+
+/**
+ * Read a race search's report (Team Trials) into the comparison cards: each finalist by the seconds the check says it
+ * saves her, the pick's skills by what each adds to it, and every skill on offer by what it saves bought alone.
+ */
+function racedResult(result: OptimizeResult, offers: PricedOffer[]): TheorizedResult | undefined {
+  if (result.objective !== 'finish_time') return undefined;
+  const finalists = result.report.finalists.slice(0, COMPARED_BUILDS);
+  if (!finalists.length) return undefined;
+
+  const rows = compareRows(finalists, offers);
+  const ordered = [...rows.shared, ...rows.differ];
+  const raced: Valuation = { source: 'races', countGated: false };
+  const untimed = { races: 0, rate: 0, mean_m: null };
+  const builds = finalists.map((finalist, index): TheorizedBuild => {
+    // Only the pick carries what each of its purchases adds.
+    const worth = new Map(
+      (finalist.contributions ?? []).flatMap((c) =>
+        c.purchases.map((p) => [p, c.gain.mean] as const)
+      )
+    );
+    const cells = ordered
+      .flatMap((row): BuildCell[] => {
+        const held = row.held[index]!;
+        if (!held.length) return [];
+        return [
+          {
+            skill: heldSkill(offers, row.chain[0]!, held),
+            value: worth.get(held[0]!),
+            fire: untimed,
+            valuation: raced,
+            locked: held.some((p) => offers[p]?.locked === true),
+            differs: index > 0 && held.join() !== row.held[0]!.join()
+          }
+        ];
+      })
+      .sort((a, b) => (b.value ?? -Infinity) - (a.value ?? -Infinity));
+    return {
+      finalist,
+      unit: 'seconds',
+      value: (finalist.validation_gain ?? finalist.gain)?.mean,
+      winRate: measuredMean(finalist.validation ?? finalist.search, 'win_rate'),
+      count: cells.length,
+      cells,
+      skipped: ordered.flatMap((row) =>
+        index > 0 && row.held[0]!.length && !row.held[index]!.length ? [row.top.skill.name] : []
+      )
+    };
+  });
+  const picked = new Set(finalists[0]!.build.purchases);
+  const skills = (result.report.impacts ?? [])
+    .flatMap((impact): ListedSkill[] => {
+      const offer = offers[impact.purchase];
+      if (!offer) return [];
+      return [
+        {
+          key: impact.purchase,
+          offer,
+          cost: offer.cost,
+          value: impact.alone.mean,
+          fire: untimed,
+          valuation: raced,
+          locked: offer.locked === true,
+          bought: picked.has(impact.purchase)
+        }
+      ];
+    })
+    .sort((a, b) => (b.value ?? -Infinity) - (a.value ?? -Infinity) || a.key - b.key);
+  return {
+    builds,
+    skills,
+    skillUnit: 'seconds',
+    phaseBounds: [],
+    scale:
+      Math.max(
+        0,
+        ...builds.flatMap((b) => b.cells.map((c) => Math.abs(c.value ?? 0))),
+        ...skills.map((s) => Math.abs(s.value ?? 0))
+      ) || 1
+  };
+}
+
+/** How a race search got there, in a sentence or two: the builds it raced and the races that checked the best. */
+export function raceTally(result: OptimizeResult): string {
+  const report = result.report;
+  return (
+    'The race search raced ' +
+    report.candidates_evaluated.toLocaleString('en-US') +
+    ' builds on her courses, then raced its best and her build as it is again on fresh seeds to check them: ' +
+    report.simulations.toLocaleString('en-US') +
+    ' races in all. Skill values are seconds saved in those races: in the pick, what each skill adds there; in the ' +
+    'list, what each saves bought alone.'
+  );
 }
 
 /** Display the value in its actual unit, keeping unknown values distinct from zero. */

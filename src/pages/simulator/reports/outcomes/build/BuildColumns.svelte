@@ -2,12 +2,18 @@
   import type { Snippet } from 'svelte';
   import BuildColumnHead from './BuildColumnHead.svelte';
   import BuildSkillRow from './BuildSkillRow.svelte';
-  import { checkText, contributionScale, racedGap, type TheorizedBuild } from './build-result';
+  import {
+    checkText,
+    contributionScale,
+    racedGap,
+    type SkillUnit,
+    type TheorizedBuild
+  } from './build-result';
 
   /** Equivalent build cards, kept visible in the server's original order. */
   interface Props {
     builds: TheorizedBuild[];
-    skillUnit?: 'lengths' | 'score';
+    skillUnit?: SkillUnit;
     phaseBounds: number[];
     field: boolean;
     checkRaces: number;
@@ -16,6 +22,11 @@
 
   let { builds, skillUnit = 'lengths', phaseBounds, field, checkRaces, tools }: Props = $props();
 
+  const UNIT_TITLE: Record<SkillUnit, string> = {
+    lengths: 'Lengths gained',
+    score: 'Skill score',
+    seconds: 'Seconds saved'
+  };
   const ordinal = (rank: number) => rank + (['st', 'nd', 'rd'][rank - 1] ?? 'th');
 
   /** How far a build trails the pick in the optimizer's comparison races. */
@@ -92,7 +103,7 @@
       class="key"
       title="A full bar marks the largest skill contribution within that build. Each build has its own scale; bar width does not show build strength or win probability."
     >
-      {skillUnit === 'score' ? 'Skill score' : 'Lengths gained'} · bars scaled within each build
+      {UNIT_TITLE[skillUnit]} · bars scaled within each build
     </span>
     {#if tools}<div class="tools">{@render tools()}</div>{/if}
   </header>

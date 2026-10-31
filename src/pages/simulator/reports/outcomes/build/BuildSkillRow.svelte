@@ -3,7 +3,7 @@
   import { skillImage } from '@/lib/game-data/skills/skills';
   import type { TheoryFire, V5PurchaseValue } from '../../../simulator-repository';
   import { skillTier, type PricedOffer } from '../../../setup/build/skill-offers';
-  import { fireText, valueText, winText, worthState } from './build-result';
+  import { fireText, valueText, winText, worthState, type SkillUnit } from './build-result';
   import SkillPoints from '@/components/game/SkillPoints.svelte';
 
   /** A compact skill row with its relative contribution drawn behind the text. */
@@ -14,13 +14,13 @@
     cost: number;
     /** Lengths it gains her, in the build or on her own. */
     value: number | undefined;
-    unit?: 'lengths' | 'score';
+    unit?: SkillUnit;
     measurement?: V5PurchaseValue['measured'];
     /** The same as estimated win points (0–1), when the service sends them. */
     win?: number;
     fire: TheoryFire & { races?: number };
     /** `prior`: valued from recorded CM races, as it acts on the field. */
-    source: 'physics' | 'prior' | V5PurchaseValue['source'] | 'unknown';
+    source: 'physics' | 'prior' | V5PurchaseValue['source'] | 'races' | 'unknown';
     countGated: boolean;
     locked?: boolean;
     /** The largest contribution in this build or skill list, represented by a full background bar. */
@@ -62,6 +62,7 @@
       ranker: 'V5 with trained move ranker',
       posterior: 'V5 with paired race feedback',
       recovery_races: 'paired recovery race estimate',
+      races: 'measured in races, paired over her build as it is',
       unknown: 'No individual score reported'
     }[source]
   );

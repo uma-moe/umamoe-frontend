@@ -284,13 +284,11 @@ describe('theorized builds', () => {
     expect(rates).toEqual([0.381, 0.357]);
   });
 
-  it('reads no answer from a response without a theory it can read', () => {
-    const older = result({ schema_version: 7, theory: undefined });
+  it('reads no answer from a response whose theory it cannot read', () => {
     const broken = result({
       theory: { ...theory, finalists: [{ purchases: [0] }] } as unknown as OptimizeTheory
     });
 
-    expect(theorizedResult({ result: older, offers })).toBeUndefined();
     expect(theorizedResult({ result: broken, offers })).toBeUndefined();
   });
 

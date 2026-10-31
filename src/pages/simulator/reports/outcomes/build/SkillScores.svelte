@@ -1,13 +1,18 @@
 <script lang="ts">
   import { skillImage } from '@/lib/game-data/skills/skills';
   import BuildSkillRow from './BuildSkillRow.svelte';
-  import { contributionScale, type ListedSkill, type RuledOutSkill } from './build-result';
+  import {
+    contributionScale,
+    type ListedSkill,
+    type RuledOutSkill,
+    type SkillUnit
+  } from './build-result';
 
   /** Keep scored and inactive offers visible below the build comparison. */
   interface Props {
     skills: ListedSkill[];
     ruledOut: RuledOutSkill[];
-    skillUnit?: 'lengths' | 'score';
+    skillUnit?: SkillUnit;
     phaseBounds: number[];
   }
 

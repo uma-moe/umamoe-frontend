@@ -12,6 +12,7 @@
     inertPurchases,
     leftoverSp,
     ruledOutSkills,
+    raceTally,
     searchTally,
     v5Tally,
     type TheorizedResult
@@ -94,7 +95,7 @@
     if (!result || !theorized) return THEORY_METHOD;
 
     if (theorized.model) return [...where, v5Tally(result, theorized.model)].join(' ');
-    if (!theorized.theory) return '';
+    if (!theorized.theory) return [...where, raceTally(result)].join(' ');
     return [
       THEORY_METHOD,
       fieldText(theorized.theory),
