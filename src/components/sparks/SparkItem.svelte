@@ -155,10 +155,14 @@
     --spark-rgb: 76 175 80;
     --spark-color: var(--accent-secondary);
   }
+  /* A doubled gold ring over the tone's own tint, so a match stands out among blue, pink and green sparks. */
   .spark.matched {
     --spark-border-color: var(--color-gold);
-    box-shadow: 0 0 8px rgb(255 215 0 / 0.3);
-    background: linear-gradient(45deg, rgb(255 215 0 / 0.1), rgb(255 215 0 / 0.05));
+    box-shadow:
+      inset 0 0 0 1px var(--color-gold),
+      0 0 8px rgb(255 215 0 / 0.4);
+    background:
+      linear-gradient(rgb(255 215 0 / 0.16), rgb(255 215 0 / 0.16)), rgb(var(--spark-rgb) / 0.15);
   }
   .level {
     flex: 0 0 auto;

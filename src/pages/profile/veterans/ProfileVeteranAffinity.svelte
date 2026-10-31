@@ -126,7 +126,7 @@
   }
   .affinity-parent {
     min-width: 0;
-    min-height: 34px;
+    min-height: 28px;
     display: flex;
     align-items: center;
     gap: 5px;
@@ -142,8 +142,8 @@
   }
   .affinity-parent img {
     flex: none;
-    width: 28px;
-    height: 32px;
+    width: 24px;
+    height: 27px;
     object-fit: contain;
   }
   .affinity-parent-name {

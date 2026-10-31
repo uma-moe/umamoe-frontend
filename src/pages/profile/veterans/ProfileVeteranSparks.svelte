@@ -126,6 +126,7 @@
   .rows {
     display: grid;
     grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 3px 4px;
   }
   /* Same column breakpoint as the veteran card's learned skills, so both lists line up. */
   @container veteran-card (min-width: 544px) {
@@ -142,7 +143,7 @@
   }
   .rows .spark-filter :global(.spark) {
     width: 100%;
-    min-height: 26px;
+    min-height: 24px;
     padding-block: 3px;
     border-radius: 6px;
   }

@@ -305,7 +305,7 @@
   }
   .tiles {
     width: 100%;
-    gap: 6px;
+    gap: 4px;
     padding: 0;
     background: transparent;
   }
@@ -330,8 +330,14 @@
     display: grid;
   }
   .tiles :global(.aptitude-tile) {
+    min-height: 26px;
+    padding-block: 2px;
     padding-inline: 4px;
     font-size: 10px;
+  }
+  .tiles :global(.aptitude) {
+    width: 20px;
+    height: 20px;
   }
   @container (max-width: 380px) {
     .tiles .aptitude-group {
@@ -339,7 +345,7 @@
       gap: 4px;
     }
     .tiles :global(.aptitude-tile) {
-      min-height: 28px;
+      min-height: 24px;
       gap: 2px;
       padding-inline: 3px;
       font-size: 9px;

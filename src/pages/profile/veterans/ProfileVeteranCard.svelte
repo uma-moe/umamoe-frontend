@@ -387,7 +387,7 @@
     min-width: 0;
     display: grid;
     grid-template-columns: repeat(2, minmax(0, 1fr));
-    gap: 4px;
+    gap: 3px 4px;
   }
   /* A third column only once each column (~170px) fits a full skill name and its grade. */
   @container veteran-card (min-width: 544px) {
@@ -408,10 +408,13 @@
     text-align: left;
     cursor: pointer;
   }
+  /* The same gold ring as a matched spark. */
   .skill-filter.matched :global(.skill-body) {
     border-color: var(--color-gold);
-    box-shadow: 0 0 8px rgb(255 215 0 / 0.3);
-    background: linear-gradient(45deg, rgb(255 215 0 / 0.1), rgb(255 215 0 / 0.05));
+    box-shadow:
+      inset 0 0 0 1px var(--color-gold),
+      0 0 8px rgb(255 215 0 / 0.4);
+    background: linear-gradient(rgb(255 215 0 / 0.16), rgb(255 215 0 / 0.16)), var(--skill-bg);
   }
   .card-affinity {
     display: grid;
@@ -435,15 +438,9 @@
     display: none;
   }
   .skill-filter :global(.skill-chip) {
-    min-height: 26px;
     font-size: 10px;
   }
-  .skill-filter :global(.skill-chip img) {
-    width: 26px;
-    height: 26px;
-  }
   .skill-filter :global(.skill-body) {
-    min-height: 26px;
     align-items: center;
   }
   footer {

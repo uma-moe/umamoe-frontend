@@ -290,14 +290,14 @@ dd small {
 }
 .tile-stats > div,
 .tile-stats > div + div {
-  min-height: 48px;
+  min-height: 36px;
   display: grid;
   grid-template-columns: auto auto;
   grid-template-rows: auto auto;
   justify-content: center;
   align-items: center;
-  gap: 4px;
-  padding: 6px 2px;
+  gap: 0 4px;
+  padding: 3px 2px;
   border: 1px solid color-mix(in srgb, var(--stat-color) 22%, var(--border-subtle));
   border-radius: var(--radius-sm);
   background: color-mix(in srgb, var(--stat-color) 9%, var(--surface-2));
@@ -312,26 +312,26 @@ dd small {
   grid-column: 2;
   grid-row: 1;
   color: var(--text-primary);
-  font-size: 15px;
+  font-size: 14px;
   font-weight: 650;
-  line-height: 1.2;
+  line-height: 1.15;
 }
 .tile-stats dt {
   grid-column: 1 / -1;
   grid-row: 2;
   color: var(--text-secondary);
-  font-size: 10px;
+  font-size: 9.5px;
   font-weight: 400;
   letter-spacing: 0;
-  line-height: 1.3;
+  line-height: 1.2;
   text-transform: capitalize;
 }
 @container (max-width: 380px) {
   .tile-stats > div,
   .tile-stats > div + div {
-    min-height: 44px;
-    gap: 3px;
-    padding: 5px 1px;
+    min-height: 34px;
+    gap: 0 3px;
+    padding: 3px 1px;
   }
   .tile-stats img {
     width: 12px;
