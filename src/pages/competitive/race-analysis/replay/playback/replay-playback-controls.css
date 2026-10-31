@@ -126,14 +126,19 @@ h3 {
     margin: 0;
   }
 }
+/* A phone gives the transport its own full row, so the step buttons never slide under the tools. */
 @container playback (max-width: 520px) {
   .playback-controls {
-    grid-template-columns: auto minmax(0, 1fr);
+    grid-template-columns: minmax(0, 1fr) auto;
     grid-template-areas:
-      'transport tools'
-      'clock state'
+      'transport transport'
+      'clock tools'
+      'state state'
       'actions actions';
     gap: 8px;
+  }
+  .transport > :global(.ui-button) {
+    flex: 1 1 0;
   }
   .playback-tools {
     justify-self: end;
@@ -144,6 +149,7 @@ h3 {
   }
   .playback-state {
     justify-content: flex-start;
+    margin: 0;
     font-size: 10px;
   }
   .transport .button-text {

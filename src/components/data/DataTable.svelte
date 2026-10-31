@@ -3,6 +3,7 @@
   import { untrack, type Snippet } from 'svelte';
   import InspectPopover from '../overlays/InspectPopover.svelte';
   import { virtualScroll, type VirtualRange } from '@/lib/virtual-scroll';
+  import { rowHeadingCount } from './row-headings';
 
   export interface TableColumn {
     key: string;
@@ -32,6 +33,8 @@
     rowKey?: string;
     rowDetail?: Snippet<[Record<string, string | number>]>;
     onvisiblerows?: (rows: Record<string, string | number>[]) => void;
+    /** How a phone shows a table too wide for it: rows stacked under their names, or columns that scroll. */
+    phoneLayout?: 'stack' | 'scroll';
   }
 
   let {
@@ -52,11 +55,31 @@
     expandedRow,
     rowKey = 'id',
     rowDetail,
-    onvisiblerows
+    onvisiblerows,
+    phoneLayout = 'stack'
   }: Props = $props();
+
+  const PHONE_QUERY = '(max-width: 767px)';
+  // Stacked rows are no longer laid out as a table, so they state its roles outright.
+  const STACKED_ROLES = {
+    table: 'table',
+    group: 'rowgroup',
+    row: 'row',
+    header: 'columnheader',
+    cell: 'cell'
+  } as const;
 
   let virtualRange = $state<VirtualRange>({ start: 0, end: 0 });
   let container = $state<HTMLDivElement>();
+  let tableElement = $state<HTMLTableElement>();
+  let stacked = $state(false);
+
+  const headingCount = $derived(phoneLayout === 'stack' ? rowHeadingCount(columns) : undefined);
+
+  // The last of the heading columns, which takes the free width on a stacked row's first line.
+  const nameColumn = $derived(headingCount === undefined ? -1 : headingCount - 1);
+
+  const roles = $derived(stacked ? STACKED_ROLES : undefined);
 
   const ordered = $derived.by(() => {
     const column = columns.find((c) => c.key === sortKey);
@@ -95,6 +118,48 @@
   $effect(() => {
     const visible = ordered.slice(virtualRange.start, virtualRange.end);
     untrack(() => onvisiblerows?.(visible));
+  });
+
+  // A phone stacks the rows of a table that would otherwise hide columns to the side. The one-line width is
+  // remembered when it overflows, so the columns return only once there is room for all of them.
+  $effect(() => {
+    const wrap = container;
+    const table = tableElement;
+    if (!wrap || !table || headingCount === undefined) {
+      stacked = false;
+      return;
+    }
+
+    const phone = matchMedia(PHONE_QUERY);
+    let oneLineWidth = 0;
+
+    const fitRows = () => {
+      if (!phone.matches) {
+        stacked = false;
+        return;
+      }
+
+      if (stacked) {
+        stacked = wrap.clientWidth < oneLineWidth;
+        return;
+      }
+
+      const overflowing = wrap.scrollWidth > wrap.clientWidth + 1;
+      if (overflowing) {
+        oneLineWidth = wrap.scrollWidth;
+        stacked = true;
+      }
+    };
+
+    const resize = new ResizeObserver(fitRows);
+    resize.observe(wrap);
+    resize.observe(table);
+    phone.addEventListener('change', fitRows);
+    untrack(fitRows);
+    return () => {
+      resize.disconnect();
+      phone.removeEventListener('change', fitRows);
+    };
   });
 
   function clickRow(event: MouseEvent, row: Record<string, string | number>) {
@@ -137,18 +202,24 @@
   class:expandable={!!rowDetail}
   class:bounded={maxHeight || fill}
   class:fill
+  class:stacked
   style:max-height={maxHeight ? maxHeight + 'px' : undefined}
   bind:this={container}
   role="region"
   aria-label={caption + ' scroll area'}
   tabindex={maxHeight || fill ? 0 : undefined}
 >
-  <table aria-rowcount={rows.length + 1 + (expandedIndex >= 0 ? 1 : 0)}>
+  <table
+    bind:this={tableElement}
+    role={roles?.table}
+    aria-rowcount={rows.length + 1 + (expandedIndex >= 0 ? 1 : 0)}
+  >
     <caption class="sr-only">{caption}</caption>
-    <thead>
-      <tr>
+    <thead role={roles?.group}>
+      <tr role={roles?.row}>
         {#each columns as column}
           <th
+            role={roles?.header}
             class:secondary={column.priority === 'secondary'}
             class:numeric={column.numeric}
             scope="col"
@@ -188,6 +259,7 @@
       </tr>
     </thead>
     <tbody
+      role={roles?.group}
       use:virtualScroll={{
         items: ordered,
         key: (row) => row[rowKey] ?? row,
@@ -200,6 +272,7 @@
       {#each ordered.slice(virtualRange.start, virtualRange.end) as row, index (virtualRange.start + index)}
         <!-- svelte-ignore a11y_click_events_have_key_events a11y_no_noninteractive_element_interactions (The cell action button supplies the same keyboard interaction while preserving table semantics.) -->
         <tr
+          role={roles?.row}
           class:interactive={!!onrowclick}
           onclick={onrowclick ? (event) => clickRow(event, row) : undefined}
           data-virtual-index={virtualRange.start + index}
@@ -208,10 +281,13 @@
             2 +
             (expandedIndex >= 0 && expandedIndex < virtualRange.start + index ? 1 : 0)}
         >
-          {#each columns as column}
+          {#each columns as column, columnIndex}
             <td
+              role={roles?.cell}
               class:secondary={column.priority === 'secondary'}
               class:numeric={column.numeric}
+              class:row-heading={columnIndex <= nameColumn}
+              class:row-name={columnIndex === nameColumn}
               data-label={column.label}
             >
               {#if cell}
@@ -224,17 +300,24 @@
         </tr>
         {#if rowDetail && expandedIndex === virtualRange.start + index}
           <tr
+            role={roles?.row}
             class="detail-row"
             data-virtual-index={virtualRange.start + index}
             aria-rowindex={virtualRange.start + index + 3}
           >
-            <td colspan={columns.length}><div class="row-detail">{@render rowDetail(row)}</div></td>
+            <td
+              role={roles?.cell}
+              colspan={columns.length}
+            >
+              <div class="row-detail">{@render rowDetail(row)}</div>
+            </td>
           </tr>
         {/if}
       {/each}
       {#if !rows.length}
-        <tr>
+        <tr role={roles?.row}>
           <td
+            role={roles?.cell}
             colspan={columns.length}
             class="empty"
           >
@@ -400,5 +483,116 @@
     .secondary {
       display: none;
     }
+  }
+  /*
+   * Phones tighten the cells so more columns fit before a table stacks or scrolls; their scrollbars overlay the
+   * content, so no room is kept for one.
+   */
+  @media (max-width: 767px) {
+    th,
+    td {
+      padding: 8px;
+    }
+    .bounded {
+      padding-inline-end: 0;
+    }
+  }
+  /*
+   * A stacked row puts the columns that name it on its first line and the other values on the line beneath; each
+   * value but the name carries its column's label. The header becomes a row of sort buttons.
+   */
+  .stacked table,
+  .stacked thead,
+  .stacked tbody {
+    display: block;
+  }
+  .stacked tr {
+    display: flex;
+    flex-wrap: wrap;
+  }
+  .stacked th,
+  .stacked td {
+    min-height: 0;
+    padding: 0;
+    border: 0;
+    text-align: left;
+  }
+  /* A minimum width that a page sets for the one-line grid would keep stacked rows overflowing. */
+  .table-wrap.stacked table {
+    min-width: 0;
+  }
+  .stacked thead tr {
+    gap: 4px;
+    padding: 6px 8px;
+    border-bottom: 1px solid var(--color-border);
+    background: var(--color-surface-2);
+  }
+  /* Each header chip takes its label's width; column widths that pages set for the one-line grid do not apply. */
+  .stacked th {
+    position: static;
+    flex: 0 0 max-content;
+    background: none;
+  }
+  /* A column that cannot be sorted is named on each of its values instead. */
+  .stacked th:not([aria-sort]) {
+    display: none;
+  }
+  .stacked .sort {
+    min-height: 26px;
+    gap: 4px;
+    padding: 0 8px;
+    border: 1px solid var(--color-border);
+    border-radius: 999px;
+    background: var(--color-surface-1);
+  }
+  .stacked th[aria-sort='ascending'] .sort,
+  .stacked th[aria-sort='descending'] .sort {
+    border-color: var(--color-accent);
+  }
+  .stacked tbody tr {
+    align-items: flex-start;
+    gap: 3px 14px;
+    padding: 8px 10px;
+    border-bottom: 1px solid var(--color-border);
+  }
+  .stacked tbody tr:last-child,
+  .stacked tbody tr:has(+ :global(tr[aria-hidden='true']:last-child)) {
+    border-bottom: 0;
+  }
+  /* Breaks the line between the row's heading and its values. */
+  .stacked tbody tr:not(.detail-row)::after {
+    content: '';
+    order: 1;
+    flex-basis: 100%;
+  }
+  .stacked .row-name {
+    flex: 1 1 0;
+    min-width: 0;
+    white-space: normal;
+  }
+  .stacked td:not(.row-heading) {
+    order: 2;
+    min-width: 4.5rem;
+  }
+  .stacked td:not(.row-name)[data-label]:not([data-label=''])::before {
+    content: attr(data-label);
+    display: block;
+    margin-bottom: 1px;
+    color: var(--color-text-muted);
+    font-size: 10px;
+    font-weight: 600;
+    letter-spacing: 0.025em;
+    text-transform: uppercase;
+  }
+  /* Detail and empty-state cells span the row. */
+  .stacked td:not([data-label]) {
+    flex-basis: 100%;
+  }
+  .stacked tbody tr.detail-row {
+    padding: 0;
+  }
+  .stacked td.empty {
+    padding: var(--space-8);
+    text-align: center;
   }
 </style>

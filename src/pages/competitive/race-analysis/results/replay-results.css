@@ -78,6 +78,21 @@ p {
 .results :global(.column-help .trigger) {
   min-width: 16px;
 }
+/* Stacked on a phone, cells drop the column sizing: the finish and gate sit beside the runner and each value
+   reads left under its label. */
+.results :global(.table-wrap.stacked.compact :is(th, td)) {
+  width: auto;
+  height: auto;
+  padding: 0;
+  text-align: left;
+}
+/* The focused runner's accent marks the whole stacked row rather than its first value. */
+.results :global(.table-wrap.stacked tbody tr:has(.runner-name.focused)) {
+  box-shadow: inset 2px 0 var(--accent-primary);
+}
+.results :global(.table-wrap.stacked tbody tr:has(.runner-name.focused) td:first-child) {
+  box-shadow: none;
+}
 .results :global(tbody tr:has(.runner-name.focused)) {
   background: var(--color-accent-soft);
 }

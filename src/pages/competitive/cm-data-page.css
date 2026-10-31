@@ -26,11 +26,16 @@
   --inspect-popover-width: 260px;
   flex: none;
 }
+.display-settings :global(.trigger) {
+  border: 1px solid var(--factor-field-border);
+  border-radius: var(--radius-md);
+  background: var(--factor-field-bg);
+}
 .display-trigger {
   display: flex;
   gap: 6px;
   align-items: center;
-  padding: 10px;
+  padding: 8px 10px;
   color: var(--text-secondary);
   font-size: 11px;
 }
@@ -53,8 +58,11 @@
 .stack :global(.surface .chart-heading) {
   flex: 1 1 200px;
 }
-.stack :global(.surface .chart-tools) {
-  margin-left: auto;
+/* Narrow cards start their wrapped tools under the title, as ChartFrame lays them out. */
+@container chart-frame (min-width: 561px) {
+  .stack :global(.surface .chart-tools) {
+    margin-left: auto;
+  }
 }
 .stack :global(.surface:not(.compact) figcaption) {
   padding-bottom: 10px;

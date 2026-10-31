@@ -158,7 +158,12 @@
     .heading-meta > span {
       font-size: 11px;
     }
+    /* Beside the title the actions keep to the end; wrapped below it they take the full row. */
+    .page-heading > div:first-child {
+      flex: 999 1 auto;
+    }
     .page-actions {
+      flex: 1 1 auto;
       justify-content: flex-start;
       gap: 4px;
     }

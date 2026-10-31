@@ -2239,10 +2239,13 @@ test('race analysis is one continuous report with preserved selection and compac
 
   const inspect = results.getByRole('button', { name: /^Inspect / }).first();
   const inspectedName = (await inspect.getAttribute('aria-label'))!.slice(8);
+  const inspected = results.getByRole('button', { name: 'Inspect ' + inspectedName, exact: true });
   await inspect.click();
   await expect(page.getByRole('dialog', { name: 'Runner details', exact: true })).toHaveCount(0);
   await expect(page.locator('.runner-card')).toContainText(inspectedName);
-  await expect(inspect).toHaveAttribute('aria-pressed', 'true');
+  // Inspecting jumps to the runner analysis, which can leave the inspected row outside the rendered window.
+  await openRaceSection(page, 'Race results');
+  await expect(inspected).toHaveAttribute('aria-pressed', 'true');
   await expect(page.locator('.runner-panel .runner-snapshot')).toHaveCount(0);
   await expect(page.locator('.replay-panel .runner-snapshot')).toHaveCount(1);
   await page.getByRole('button', { name: 'Skill activity details', exact: true }).click();

@@ -434,6 +434,20 @@
     max-width: 40ch;
     font-size: 10px;
   }
+  /* A narrow card wraps its tools under the title; they start below it instead of floating at the far edge. */
+  @container chart-frame (max-width: 560px) {
+    figcaption {
+      flex-wrap: wrap;
+    }
+    .chart-heading {
+      flex: 1 1 auto;
+    }
+    .chart-tools,
+    .chart-actions,
+    .legend {
+      justify-content: flex-start;
+    }
+  }
   @container chart-frame (max-width: 420px) {
     figcaption button {
       width: 36px;

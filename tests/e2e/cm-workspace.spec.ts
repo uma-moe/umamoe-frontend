@@ -318,10 +318,15 @@ test('skill details expand within the selected row and comparison stays independ
   const count = new Set(fixture.skills.rows.map((r: number[]) => r[0])).size;
   await expect(table).toHaveAttribute('aria-rowcount', String(count + 1));
   expect(await table.locator('tbody tr[data-virtual-index]').count()).toBeLessThan(count);
-  const rowHeights = await table
-    .locator('tbody tr[data-virtual-index]')
-    .evaluateAll((rows) => rows.map((row) => row.getBoundingClientRect().height));
-  expect(Math.max(...rowHeights)).toBeLessThanOrEqual(34);
+  // A phone stacks each skill above its values; wider screens keep one compact line per skill.
+  if (page.viewportSize()!.width < 768) {
+    await expect(page.locator('.skill-list .table-wrap')).toHaveClass(/stacked/);
+  } else {
+    const rowHeights = await table
+      .locator('tbody tr[data-virtual-index]')
+      .evaluateAll((rows) => rows.map((row) => row.getBoundingClientRect().height));
+    expect(Math.max(...rowHeights)).toBeLessThanOrEqual(34);
+  }
   await page
     .locator('.skill-list')
     .screenshot({ path: info.outputPath('cm-skill-list-compact.png') });
@@ -750,8 +755,10 @@ test('skill outcomes distinguish repeated procs, variants and selected first-act
     expect((await expanded.boundingBox())!.height).toBeLessThanOrEqual(560);
   }
 
-  const listRow = page.locator('.skill-list tr[data-virtual-index]:not(.detail-row)').first();
-  expect((await listRow.boundingBox())!.height).toBeLessThanOrEqual(34);
+  if (page.viewportSize()!.width >= 768) {
+    const listRow = page.locator('.skill-list tr[data-virtual-index]:not(.detail-row)').first();
+    expect((await listRow.boundingBox())!.height).toBeLessThanOrEqual(34);
+  }
   const activationRates = expanded.getByRole('rowgroup', {
     name: 'Activation and double-proc rates'
   });

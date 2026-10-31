@@ -148,14 +148,24 @@ p {
     padding-block: 4px;
     gap: 4px;
   }
+  /* Equal section buttons in one row of three, or two rows of two once Session analysis joins them. */
   .report-links {
     width: 100%;
-    gap: 2px;
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 4px;
+  }
+  .report-links:has(> :global(:nth-child(4))) {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
   .report-navigation :global(.ui-button) {
-    font-size: 10px;
-    min-height: 30px;
+    font-size: 11px;
+    min-height: 32px;
     padding-inline: 6px;
+  }
+  /* The sticky bar stays one compact row: the labels alone name the sections. */
+  .report-links :global(.ui-button svg) {
+    display: none;
   }
   .report-navigation > :global(.ui-button) {
     margin-left: auto;

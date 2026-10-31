@@ -206,6 +206,21 @@ h4 i {
 .rooms :global(td) {
   padding: 3px 4px;
 }
+/* On a phone the room grid fits its width: cells tighten, labels shrink and their sort arrows sit beneath them. */
+@media (max-width: 767px) {
+  .rooms :global(.table-wrap.compact :is(th, td)) {
+    padding-inline: 4px;
+  }
+  .rooms :global(.table-wrap.compact th) {
+    font-size: 10px;
+    letter-spacing: 0;
+    white-space: normal;
+  }
+  .rooms :global(.sort) {
+    flex-direction: column;
+    gap: 0;
+  }
+}
 .room-count {
   display: block;
   min-width: 24px;

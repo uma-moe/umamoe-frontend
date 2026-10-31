@@ -144,6 +144,53 @@
   text-align: center;
   padding-right: 4px;
 }
+/*
+ * Stacked on a phone, the comparison button joins the skill on the first line, which makes room by narrowing the
+ * skill chip and naming alternatives without their icon. The activation breakdown takes the last line with each
+ * style's rate beneath its name.
+ */
+.skill-table :global(.stacked tr > td[data-label='Compare']:not(.row-heading)) {
+  order: 0;
+  min-width: max-content;
+}
+.skill-table :global(.stacked tr > td[data-label='Compare']:not(.row-heading)::before) {
+  content: none;
+}
+.skill-table :global(.stacked .skill-label) {
+  --skill-chip-width: 140px;
+  width: auto;
+  grid-template-columns: auto;
+}
+.skill-table :global(.stacked .skill-label.with-variants) {
+  grid-template-columns: auto max-content;
+}
+.skill-table :global(.stacked .variant-alternatives > :first-child) {
+  display: none;
+}
+.skill-table :global(.stacked tr > td[data-label='Activations']) {
+  order: 3;
+  flex-basis: 100%;
+}
+.skill-table :global(.stacked .activation-summary) {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 4px 8px;
+}
+.skill-table :global(.stacked .style-procs) {
+  flex-basis: 100%;
+  grid-template-columns: repeat(auto-fit, minmax(48px, 1fr));
+  margin-left: 0;
+  padding-left: 0;
+  border-left: 0;
+}
+.skill-table :global(.stacked .style-procs > span) {
+  grid-template-columns: 6px auto;
+  justify-content: start;
+}
+.skill-table :global(.stacked .style-procs strong) {
+  grid-column: 1 / -1;
+}
 .skill-detail {
   padding: 8px 8px 12px;
   border-top: 1px solid var(--border-subtle);

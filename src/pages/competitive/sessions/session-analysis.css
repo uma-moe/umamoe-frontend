@@ -99,8 +99,11 @@
   gap: 1px 10px;
   min-width: 0;
 }
-.session-panels :global(.surface .chart-tools) {
-  margin-left: auto;
+/* Narrow cards start their wrapped tools under the title, as ChartFrame lays them out. */
+@container chart-frame (min-width: 561px) {
+  .session-panels :global(.surface .chart-tools) {
+    margin-left: auto;
+  }
 }
 .session-panels :global(.surface figcaption p) {
   margin: 0;

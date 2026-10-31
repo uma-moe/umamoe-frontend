@@ -133,6 +133,13 @@
   .composition-table :global(td) {
     padding-block: 5px;
   }
+  /* Stacked on a phone, the win rate takes a line of its own for its bar. */
+  .composition-table :global(.stacked .rate-scale) {
+    display: none;
+  }
+  .composition-table :global(.stacked tr > td[data-label='Team wins']) {
+    flex-basis: 100%;
+  }
   .composition {
     display: flex;
     gap: 7px;

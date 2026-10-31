@@ -208,6 +208,7 @@
         compact
         fill
         caption="SQL query results"
+        phoneLayout="scroll"
         {columns}
         rows={shown}
         emptyMessage={filter.trim()

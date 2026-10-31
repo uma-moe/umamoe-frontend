@@ -51,6 +51,7 @@
     plain
     compact
     caption="Changed rows in {name}"
+    phoneLayout="scroll"
     {columns}
     {rows}
     maxHeight={440}

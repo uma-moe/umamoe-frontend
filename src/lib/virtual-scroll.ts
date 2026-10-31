@@ -321,13 +321,23 @@ export function virtualScroll<T>(host: HTMLElement, initial: Options<T>) {
   }
 
   function rebuild() {
+    const fallback = unmeasuredHeight();
     offsets = [0];
     for (let index = 0; index < items.length; index += columns) {
       let height = 0;
       for (let column = index; column < Math.min(index + columns, items.length); column++)
-        height = Math.max(height, heights.get(column) ?? options.estimate ?? 300);
+        height = Math.max(height, heights.get(column) ?? fallback);
       offsets.push(offsets[offsets.length - 1]! + height + gap);
     }
+  }
+
+  /** Items not rendered yet take the mean measured height, so rows taller than the estimate keep the scroll length close. */
+  function unmeasuredHeight() {
+    if (heights.size === 0) return options.estimate ?? 300;
+
+    let measuredSum = 0;
+    for (const height of heights.values()) measuredSum += height;
+    return measuredSum / heights.size;
   }
 
   function rowAt(offset: number) {

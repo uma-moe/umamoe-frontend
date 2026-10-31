@@ -1,6 +1,7 @@
 <script lang="ts">
   import Icon from '../Icon.svelte';
   import type { IconName } from '../icon-types';
+  import { createTextMeasure, phoneTabIconsFit, type MeasureText } from './phone-tab-strip';
 
   export interface TabItem {
     id: string;
@@ -36,10 +37,35 @@
     onchange
   }: Props = $props();
 
+  // The faded edge of a scrolling row, which the active tab is kept clear of.
+  const EDGE_FADE = 28;
+
   let root = $state<HTMLElement>();
   let rootWidth = $state(0);
+  let measureText = $state<MeasureText>();
+  let tabsBefore = $state(false);
+  let tabsAfter = $state(false);
 
   const navigation = $derived(items.some((item) => item.href));
+
+  const pills = $derived(navigation || variant === 'pills');
+
+  // The group's padding is left out of the width its tabs share.
+  const phoneIconsFit = $derived(
+    phoneTabIconsFit(items, {
+      width: rootWidth - 8,
+      gap: pills && !compact ? 4 : 2,
+      fontSize: compact ? 11 : 12,
+      measureText
+    })
+  );
+
+  function markHiddenTabs() {
+    if (!root) return;
+    const lastScrollLeft = root.scrollWidth - root.clientWidth;
+    tabsBefore = root.scrollLeft > 1;
+    tabsAfter = root.scrollLeft < lastScrollLeft - 1;
+  }
 
   function select(id: string) {
     value = id;
@@ -82,15 +108,36 @@
     value;
     items;
     rootWidth;
+    phoneIconsFit;
     if (!root) return;
     const active = root.querySelector<HTMLElement>('[aria-selected="true"],[aria-current="page"]');
     if (!active) return;
     const left =
-      active.getBoundingClientRect().left - root.getBoundingClientRect().left + root.scrollLeft;
+      active.getBoundingClientRect().left -
+      root.getBoundingClientRect().left +
+      root.scrollLeft -
+      EDGE_FADE;
 
-    const right = left + active.offsetWidth;
+    const right = left + active.offsetWidth + 2 * EDGE_FADE;
     if (left < root.scrollLeft) root.scrollLeft = left;
     else if (right > root.scrollLeft + root.clientWidth) root.scrollLeft = right - root.clientWidth;
+  });
+
+  // Scrolling moves the faded edges; so does any change in the size of the row or its tabs.
+  $effect(() => {
+    items;
+    if (!root) return;
+    const resize = new ResizeObserver(markHiddenTabs);
+    resize.observe(root);
+    for (const tab of root.children) resize.observe(tab);
+    return () => resize.disconnect();
+  });
+
+  // Whether the icons fit on a phone is worked out from the labels' width in the tabs' own font, which differs
+  // between platforms.
+  $effect(() => {
+    const tab = root?.querySelector('.tab');
+    if (tab) measureText = createTextMeasure(tab);
   });
 </script>
 
@@ -120,11 +167,16 @@
   {id}
   class="tabs"
   class:compact
-  class:navigation={navigation || variant === 'pills'}
+  class:navigation={pills}
   class:underline={variant === 'underline'}
   class:detailed={items.some((item) => item.description !== undefined)}
+  class:text-only={!phoneIconsFit}
+  class:fade-start={tabsBefore}
+  class:fade-end={tabsAfter}
+  style:--edge-fade={EDGE_FADE + 'px'}
   role={navigation ? undefined : 'tablist'}
   aria-label={label}
+  onscroll={markHiddenTabs}
 >
   {#each items as item, index}
     {#if item.href}
@@ -318,28 +370,6 @@
       font-size: 11px;
     }
   }
-  /* A phone shows every tab: a group that does not fit wraps rather than scrolling tabs out of view. */
-  @media (max-width: 767px) {
-    .tabs {
-      flex-wrap: wrap;
-      overflow-x: visible;
-    }
-    .tab,
-    .navigation .tab,
-    .detailed .tab {
-      min-height: 30px;
-    }
-    .navigation .tab {
-      flex: 1 1 auto;
-      min-width: 0;
-      padding-inline: 10px;
-      font-size: 12px;
-    }
-    .tab :global(svg) {
-      width: 16px;
-      height: 16px;
-    }
-  }
   .compact {
     padding: 2px;
     gap: 2px;
@@ -366,10 +396,52 @@
     width: auto;
     padding: 0;
   }
+  /* A row that scrolls fades out on each side that holds more tabs. */
+  .fade-start {
+    mask-image: linear-gradient(to right, transparent, #000 var(--edge-fade));
+  }
+  .fade-end {
+    mask-image: linear-gradient(to left, transparent, #000 var(--edge-fade));
+  }
+  .fade-start.fade-end {
+    mask-image: linear-gradient(
+      to right,
+      transparent,
+      #000 var(--edge-fade),
+      #000 calc(100% - var(--edge-fade)),
+      transparent
+    );
+  }
+  /*
+   * A phone keeps each group on one row. Tabs that fit share the row equally, none narrower than its label; a
+   * longer group scrolls sideways. Icons give way when they would cost a label its place.
+   */
   @media (max-width: 767px) {
+    .tabs {
+      width: 100%;
+      flex-wrap: nowrap;
+      overflow-x: auto;
+      overscroll-behavior-x: contain;
+    }
+    .tabs .tab {
+      flex: 1 0 0;
+      min-width: max-content;
+      min-height: 34px;
+      padding-inline: 10px;
+      font-size: 12px;
+      white-space: nowrap;
+    }
     .compact .tab {
-      flex: 1 1 auto;
       min-height: 30px;
+      padding-inline: 8px;
+      font-size: 11px;
+    }
+    .tab :global(svg) {
+      width: 16px;
+      height: 16px;
+    }
+    .text-only .tab :global(svg) {
+      display: none;
     }
   }
 </style>
