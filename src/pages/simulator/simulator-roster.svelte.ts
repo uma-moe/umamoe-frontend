@@ -4,10 +4,20 @@ import { createExampleRace } from './simulator-example';
 
 let characters: CharacterData[] = [];
 
-export const simulatorRoster = $state<{ umas: SimulatorUma[]; configured: boolean }>({
-  umas: createExampleRace().umas,
-  configured: false
-});
+/** The most runners a race takes. */
+const MAX_FIELD = 18;
+
+/** The field this browser last used: its runners and their team colors. */
+const FIELD_STORAGE_KEY = 'uma.simulator.field';
+
+/** The field a visit starts with: the one kept from last time, else the example. */
+const kept = restoreField();
+
+export const simulatorRoster = $state<{ umas: SimulatorUma[]; configured: boolean }>(
+  kept
+    ? { umas: kept.umas, configured: true }
+    : { umas: createExampleRace().umas, configured: false }
+);
 
 /** Manual runners start with distinct characters from the released resource catalog. */
 export function createRosterUma(fallbackName = 'Uma'): SimulatorUma {
@@ -43,8 +53,11 @@ export function importSimulatorUmas(umas: SimulatorUma[], replace = false): void
   simulatorRoster.configured = true;
 }
 
-/** The most runners a race takes. */
-const MAX_FIELD = 18;
+/** Empties the field, which stays empty: a cleared field is kept, so a reload does not bring the example back. */
+export function clearSimulatorField(): void {
+  simulatorRoster.umas = [];
+  simulatorRoster.configured = true;
+}
 
 /**
  * A saved or imported field: every runner that reads as the field keeps them, each with an id of its own, and the
@@ -69,11 +82,13 @@ export function restoreSimulatorField(saved: { field: unknown[]; teamColors?: un
   if (umas.length > MAX_FIELD)
     throw new Error('A race can contain at most 18 Uma, but this code has ' + umas.length + '.');
 
+  return { umas, teamColors: readTeamColors(saved.teamColors) };
+}
+
+/** The team colors of a saved field that are valid: an id in 1..255 and a hex color. */
+function readTeamColors(value: unknown): Record<number, string> {
   const teamColors: Record<number, string> = {};
-  const colors =
-    saved.teamColors && typeof saved.teamColors === 'object'
-      ? Object.entries(saved.teamColors)
-      : [];
+  const colors = value && typeof value === 'object' ? Object.entries(value) : [];
   for (const [key, color] of colors) {
     const id = Number(key);
     const valid = Number.isInteger(id) && id >= 1 && id <= 255;
@@ -81,7 +96,26 @@ export function restoreSimulatorField(saved: { field: unknown[]; teamColors?: un
       teamColors[id] = color.toLowerCase();
   }
 
-  return { umas, teamColors };
+  return teamColors;
+}
+
+/**
+ * The field kept from last time, when it still reads: an empty field is a cleared one and stays empty. Anything
+ * unreadable, or a browser without storage, leaves the example field.
+ */
+function restoreField(): { umas: SimulatorUma[]; teamColors: Record<number, string> } | undefined {
+  try {
+    const saved: unknown = JSON.parse(localStorage.getItem(FIELD_STORAGE_KEY) ?? 'null');
+    if (!saved || typeof saved !== 'object') return undefined;
+
+    const { field, teamColors } = saved as { field?: unknown; teamColors?: unknown };
+    if (!Array.isArray(field)) return undefined;
+    if (!field.length) return { umas: [], teamColors: readTeamColors(teamColors) };
+
+    return restoreSimulatorField({ field, teamColors });
+  } catch {
+    return undefined;
+  }
 }
 
 const defaultTeamColors = [
@@ -92,9 +126,24 @@ const defaultTeamColors = [
   ['Rose', '#ec8f9e']
 ] as const;
 
-export const simulatorTeamColors = $state<Record<number, string>>(
-  Object.fromEntries(defaultTeamColors.map(([, color], index) => [index + 1, color]))
-);
+export const simulatorTeamColors = $state<Record<number, string>>({
+  ...Object.fromEntries(defaultTeamColors.map(([, color], index) => [index + 1, color])),
+  ...kept?.teamColors
+});
+
+/** Keeps the field and its team colors in this browser; call it from an effect so every change is kept. */
+export function saveSimulatorField(): void {
+  const data = JSON.stringify({
+    field: $state.snapshot(simulatorRoster.umas),
+    teamColors: $state.snapshot(simulatorTeamColors)
+  });
+
+  try {
+    localStorage.setItem(FIELD_STORAGE_KEY, data);
+  } catch {
+    /* Storage can be full or disabled; the field still works for this visit. */
+  }
+}
 
 export function simulatorTeamColor(id?: number): string {
   return id

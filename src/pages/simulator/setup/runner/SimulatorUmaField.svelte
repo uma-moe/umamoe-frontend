@@ -24,11 +24,12 @@
   import { simulatorUmaSummary, type SimulatorUma } from '../../simulator-uma';
   import {
     simulatorRoster,
+    clearSimulatorField,
     createRosterUma,
     ensureSimulatorRoster,
     importSimulatorUmas
   } from '../../simulator-roster.svelte';
-  import { selectedCourse } from '../../simulator-session.svelte';
+  import { selectedCourse, simulatorSession } from '../../simulator-session.svelte';
   import SkillPoints, { LEARNED_SKILL_POINTS_NOTE } from '@/components/game/SkillPoints.svelte';
 
   let {
@@ -116,6 +117,14 @@
     if (simulatorRoster.umas.length <= 2) return;
     simulatorRoster.umas = simulatorRoster.umas.filter((item) => item.id !== uma.id);
     simulatorRoster.configured = true;
+  }
+
+  /** Empties the field, rather than the two runners a race needs; the page says what to do next. */
+  function clearField() {
+    if (!window.confirm('Remove all ' + simulatorRoster.umas.length + ' runners?')) return;
+
+    clearSimulatorField();
+    simulatorSession.umaId = '';
   }
 
   function duplicate(uma: SimulatorUma) {
@@ -235,8 +244,21 @@
     />
 
     {@render extraActions?.()}
+    <Button
+      variant="ghost"
+      size="sm"
+      icon="close"
+      ariaLabel="Clear field"
+      disabled={!simulatorRoster.umas.length}
+      onclick={clearField}
+    >
+      Clear field
+    </Button>
   {/snippet}
   <div class="field">
+    {#if !simulatorRoster.umas.length}
+      <p class="empty-field">The field is empty. Add Uma, or import a field to race.</p>
+    {/if}
     <div class="runners">
       {#each simulatorRoster.umas as uma, index (uma.id)}
         {@const summary = simulatorUmaSummary(uma, index, course)}

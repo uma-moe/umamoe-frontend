@@ -2,6 +2,12 @@
   min-width: 0;
   container: setup-field / inline-size;
 }
+.empty-field {
+  margin: 0;
+  padding: 12px 2px;
+  font-size: 12px;
+  color: var(--text-secondary);
+}
 /* One card per runner, on one grid. A wide card keeps everything on two lines, and the field only adds a column when
    every card can stay wide; a phone stacks the same parts. Her name is 13px, everything else 11px. */
 .runners {

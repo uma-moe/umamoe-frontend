@@ -8,7 +8,11 @@
   import RunnerSummary from '@/pages/competitive/runners/RunnerSummary.svelte';
   import SimulatorUmaEditor from '../setup/runner/editor/SimulatorUmaEditor.svelte';
   import { simulatorUmaSummary } from '../simulator-uma';
-  import { simulatorRoster, ensureSimulatorRoster } from '../simulator-roster.svelte';
+  import {
+    simulatorRoster,
+    ensureSimulatorRoster,
+    saveSimulatorField
+  } from '../simulator-roster.svelte';
   import {
     courseDataErrorVisible,
     dismissCourseDataError,
@@ -36,10 +40,14 @@
 
   const panel = $derived(panels.find((item) => item.id === panelId));
   const course = $derived(selectedCourse());
+  /** Undefined while the field is empty, as a cleared field leaves it. */
   const uma = $derived(
     simulatorRoster.umas.find((item) => item.id === simulatorSession.umaId) ??
-      simulatorRoster.umas[0]!
+      simulatorRoster.umas[0]
   );
+
+  // Keep the field this browser last raced, from every simulator page that changes it.
+  $effect(saveSimulatorField);
 
   onMount(() => {
     void ensureSimulatorCourses();
@@ -83,7 +91,7 @@
       {/each}
     </div>
   {/if}
-  {#if showUma}
+  {#if showUma && uma}
     <div class="uma-row">
       {#if simulatorRoster.umas.length > 1}
         <div class="uma-picker">
@@ -117,16 +125,18 @@
   {/if}
   {@render children()}
 </div>
-<SimulatorUmaEditor
-  {uma}
-  bind:open={umaOpen}
-  onsave={(value) => {
-    simulatorRoster.umas = simulatorRoster.umas.map((item) =>
-      item.id === value.id ? value : item
-    );
-    simulatorRoster.configured = true;
-  }}
-/>
+{#if uma}
+  <SimulatorUmaEditor
+    {uma}
+    bind:open={umaOpen}
+    onsave={(value) => {
+      simulatorRoster.umas = simulatorRoster.umas.map((item) =>
+        item.id === value.id ? value : item
+      );
+      simulatorRoster.configured = true;
+    }}
+  />
+{/if}
 <Dialog
   open={!!panel}
   title={panel?.label ?? 'Setup'}
