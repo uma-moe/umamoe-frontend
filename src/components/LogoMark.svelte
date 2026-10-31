@@ -138,7 +138,7 @@
           />
           <use href={'#' + id + '-head'} />
           <use href={'#' + id + '-mane'} />
-          <g class="trace-white">
+          <g class="trace-ink">
             <animate
               attributeName="opacity"
               values="1;1;0;0"
@@ -196,8 +196,12 @@
     fill: none;
     stroke-dasharray: 1;
   }
-  .trace-white {
+  /* The outline is first traced in the page's contrast colour, then fades to the gradient before the fill. */
+  .trace-ink {
     stroke: #fff;
+  }
+  :global(:root[data-theme='light']) .trace-ink {
+    stroke: #000;
   }
   /* A sub-pixel stroke only blurs a small mark's edge. */
   .fill-only .art {
