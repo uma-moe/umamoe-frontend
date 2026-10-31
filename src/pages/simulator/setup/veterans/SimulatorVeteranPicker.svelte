@@ -9,7 +9,7 @@
   import Icon from '@/components/Icon.svelte';
   import DialogStatus from '../../shell/DialogStatus.svelte';
   import SimulatorRunnerFace from '../../reports/SimulatorRunnerFace.svelte';
-  import type { SimulatorUma } from '../../simulator-uma';
+  import { simulatorBuildKey, type SimulatorUma } from '../../simulator-uma';
   import { selectedCourse } from '../../simulator-session.svelte';
   import VeteranList from './VeteranList.svelte';
   import { loadVeteranEntries, placeVeteran, type VeteranEntry } from './veteran-entries';
@@ -23,7 +23,8 @@
     course,
     onselect,
     onselectMany,
-    room = 18
+    room = 18,
+    placed = []
   }: {
     open?: boolean;
     course?: RaceCourse;
@@ -32,6 +33,8 @@
     onselectMany?: (umas: SimulatorUma[]) => void;
     /** How many the page can still take. */
     room?: number;
+    /** Runners the page already has; a Veteran with the same build shows as already added. */
+    placed?: SimulatorUma[];
   } = $props();
 
   const uid = $props.id();
@@ -48,6 +51,12 @@
     return selected.flatMap((key) => byKey.get(key) ?? []);
   });
   const fitCourse = $derived(course ?? selectedCourse());
+  const added = $derived.by(() => {
+    const placedBuilds = new Set(placed.map(simulatorBuildKey));
+    return entries
+      .filter((entry) => placedBuilds.has(simulatorBuildKey(entry.uma)))
+      .map((entry) => entry.key);
+  });
 
   $effect(() => {
     if (open) {
@@ -176,6 +185,7 @@
         course={fitCourse}
         mode={multi ? 'multi' : 'single'}
         bind:selected
+        {added}
         max={room}
         onchoose={choose}
       />

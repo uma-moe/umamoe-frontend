@@ -18,9 +18,12 @@
   }: Props = $props();
 </script>
 
+<!-- Pointer steps for a number field. The keyboard steps the field itself with the arrow keys, so tabbing moves from
+     field to field and skips these buttons. -->
 <span class="number-stepper">
   <button
     type="button"
+    tabindex="-1"
     aria-label={increaseLabel}
     disabled={increaseDisabled}
     onpointerdown={(event) => event.preventDefault()}
@@ -33,6 +36,7 @@
   </button>
   <button
     type="button"
+    tabindex="-1"
     aria-label={decreaseLabel}
     disabled={decreaseDisabled}
     onpointerdown={(event) => event.preventDefault()}

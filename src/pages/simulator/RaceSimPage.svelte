@@ -430,7 +430,7 @@
         <Button
           variant="secondary"
           size="sm"
-          icon="race"
+          icon="play"
           disabled={busy || !canRun}
           onclick={() => send(true)}
         >

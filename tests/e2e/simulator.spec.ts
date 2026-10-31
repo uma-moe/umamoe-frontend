@@ -873,10 +873,63 @@ test('Default comparison uses complete CM builds and Veterans is a collection pi
   const picker = page.getByRole('dialog', { name: 'Choose from Veterans', exact: true });
   await expect(picker).toBeVisible();
   await expect(picker.locator('input[type=file]')).toHaveCount(0);
-  await expect(picker.getByRole('link', { name: 'Manage veterans', exact: true })).toHaveAttribute(
+  // An empty collection points to the Veterans page, where the game export is uploaded.
+  await expect(picker.getByRole('link', { name: 'Go to Veterans', exact: true })).toHaveAttribute(
     'href',
     '/veterans'
   );
+});
+
+test('Veterans already in the race field show as added in the picker', async ({ page }) => {
+  const imports = [100101, 100201].map((card, index) => ({
+    ...veteran,
+    id: 100 + index,
+    member_id: null,
+    trained_chara_id: 90001 + index,
+    card_id: card,
+    skill_array: [],
+    skills: []
+  }));
+
+  await page.goto('/veterans');
+  await page.locator('.collection-controls input[type=file]').setInputFiles({
+    name: 'veterans.json',
+    mimeType: 'application/json',
+    buffer: Buffer.from(JSON.stringify({ veterans: imports }))
+  });
+  await expect(page.locator('.feedback')).toContainText('2');
+
+  await page.goto('/simulator/race');
+  const picker = page.getByRole('dialog', { name: 'Choose from Veterans', exact: true });
+  const openPicker = async () => {
+    await page.getByRole('button', { name: 'Import', exact: true }).click();
+    await page.getByRole('menuitem', { name: 'Choose from Veterans', exact: true }).click();
+    await expect(picker.locator('.row')).toHaveCount(2);
+  };
+
+  await openPicker();
+  const chosenName = await picker.locator('.row .name').first().innerText();
+  await picker.locator('.row').first().getByRole('checkbox').check();
+  await picker.getByRole('button', { name: 'Add 1 to the field', exact: true }).click();
+  await expect(picker).toBeHidden();
+
+  await openPicker();
+  const chosenRow = picker.locator('.row', {
+    has: page.locator('.name', { hasText: chosenName })
+  });
+  const otherRow = picker.locator('.row', {
+    hasNot: page.locator('.name', { hasText: chosenName })
+  });
+
+  await expect(chosenRow.locator('.added-tag')).toHaveText('Added');
+  await expect(chosenRow.getByRole('checkbox')).toBeChecked();
+  await expect(chosenRow.getByRole('checkbox')).toBeDisabled();
+  await expect(otherRow.locator('.added-tag')).toHaveCount(0);
+  await expect(otherRow.getByRole('checkbox')).not.toBeChecked();
+  await expect(otherRow.getByRole('checkbox')).toBeEnabled();
+  await expect(
+    picker.getByRole('button', { name: 'Add to the field', exact: true })
+  ).toBeDisabled();
 });
 
 // Find my best team is hidden for the initial release; restore with its buttons.

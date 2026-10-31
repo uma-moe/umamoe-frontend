@@ -367,6 +367,7 @@
   bind:open={veteransOpen}
   onselectMany={addVeterans}
   room={simulatorRoster.configured ? 18 - simulatorRoster.umas.length : 18}
+  placed={simulatorRoster.configured ? simulatorRoster.umas : []}
 />
 {#if editing}
   <SimulatorUmaEditor

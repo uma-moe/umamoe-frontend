@@ -23,6 +23,7 @@
     course,
     mode = 'single',
     selected = $bindable([]),
+    added = [],
     max,
     compact = false,
     onchoose
@@ -32,6 +33,8 @@
     mode?: 'single' | 'multi';
     /** The ticked Veterans' keys, in multi mode. */
     selected?: string[];
+    /** Keys of Veterans already where the list adds to, such as the race field: marked, and never ticked again. */
+    added?: string[];
     /** How many can be ticked at most. */
     max?: number;
     /** Leaves out the stats, for a narrow column. */
@@ -47,6 +50,7 @@
 
   const shown = $derived(shownVeterans(entries, query, style, sort, course));
   const ticked = $derived(new Set(selected));
+  const alreadyAdded = $derived(new Set(added));
   const full = $derived(max !== undefined && selected.length >= max);
 
   function toggle(entry: VeteranEntry, on: boolean) {
@@ -89,6 +93,9 @@
     </span>
     <span class="name">{entry.uma.name}</span>
     <span class="details">
+      {#if alreadyAdded.has(entry.key)}
+        <span class="added-tag">Added</span>
+      {/if}
       {#if entry.summary.detail}
         <span>{entry.summary.detail}</span>
       {/if}
@@ -241,19 +248,21 @@
     >
       {#each shown.slice(0, limit) as entry (entry.key)}
         {@const on = ticked.has(entry.key)}
+        {@const isAdded = alreadyAdded.has(entry.key)}
         <li
           class="row"
           class:on
-          class:off={mode === 'multi' && !on && full}
+          class:added={isAdded}
+          class:off={mode === 'multi' && !on && !isAdded && full}
         >
           {#if mode === 'multi'}
             <span class="tick">
               <Checkbox
                 id="{uid}-{entry.key}"
-                label={'Tick ' + entry.uma.name}
+                label={isAdded ? entry.uma.name + ' is already added' : 'Tick ' + entry.uma.name}
                 hideLabel
-                checked={on}
-                disabled={!on && full}
+                checked={on || isAdded}
+                disabled={isAdded || (!on && full)}
                 onchange={(checked) => toggle(entry, checked)}
               />
             </span>

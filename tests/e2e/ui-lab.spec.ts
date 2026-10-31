@@ -135,6 +135,14 @@ test('number fields share chevrons and preserve native stepping', async ({ page 
   await expect(decrease).toBeEnabled();
   await decrease.click();
   await expect(number).toHaveValue('0');
+
+  // The arrow keys step the field, so Tab leaves it for the next control instead of its chevrons.
+  await number.focus();
+  await page.keyboard.press('Tab');
+  await expect(number).not.toBeFocused();
+  await expect(increase).not.toBeFocused();
+  await expect(decrease).not.toBeFocused();
+
   for (const label of ['Read only number', 'Disabled number']) {
     await expect(
       page.getByRole('button', { name: `Increase ${label}`, exact: true })

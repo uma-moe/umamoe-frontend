@@ -3,7 +3,14 @@ import type { Build, Summary } from '@/pages/competitive/hakuraku-types';
 import type { RaceRunner } from '@/lib/race/capture/race-capture-parser';
 import type { RaceCourse } from '@/lib/game-data/racing/courses';
 import { aptitudeGrade } from '@/lib/profile/profile-display';
-import { createTrainee, RUNNING_STYLES, traineeStats, type Trainee } from './setup/trainee';
+import {
+  createTrainee,
+  RUNNING_STYLES,
+  traineeAptitudes,
+  traineeRunningStyle,
+  traineeStats,
+  type Trainee
+} from './setup/trainee';
 import type { MonteCarloSkillInput } from './requests/race-sim-request';
 
 export interface SimulatorUma {
@@ -99,6 +106,24 @@ export function restoreSimulatorUma(value: unknown, fallback: SimulatorUma): Sim
 
 function isSavedRecord(value: unknown): value is Record<string, unknown> {
   return value !== null && typeof value === 'object' && !Array.isArray(value);
+}
+
+/**
+ * What makes two runners the same build, whatever they are called: her card, trained stats, running style,
+ * aptitudes and learned skills. Mood, team and gate are race settings, so they are left out.
+ */
+export function simulatorBuildKey(uma: SimulatorUma): string {
+  const skills = uma.skills
+    .map((skill) => skill.skillId * 10 + (skill.level ?? 1))
+    .sort((a, b) => a - b);
+
+  return JSON.stringify([
+    uma.cardId ?? 0,
+    traineeStats(uma.trainee),
+    traineeRunningStyle(uma.trainee),
+    traineeAptitudes(uma.trainee),
+    skills
+  ]);
 }
 
 export function simulatorUmaFromVeteran(veteran: ProfileVeteran, name: string): SimulatorUma {
