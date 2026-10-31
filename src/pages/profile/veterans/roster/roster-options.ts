@@ -1,4 +1,4 @@
-import { getRankInfoFromLabel } from '@/lib/rank';
+import { getRankInfoFromLabel, rankIconPath } from '@/lib/rank';
 import type { AncestorScope, VeteranSortField } from '@/lib/profile/veterans/profile-veterans';
 
 export type StatField = 'speed' | 'stamina' | 'power' | 'guts' | 'wiz';
@@ -60,10 +60,7 @@ export const gradeOptions = [
   ...['S', 'A', 'B', 'C', 'D', 'E', 'F', 'G'].map((value) => ({
     value,
     label: value === 'S' ? 'S' : `${value}+`,
-    image:
-      '/game-assets/textures/uma_ranks/utx_ico_statusrank_' +
-      String(getRankInfoFromLabel(value).iconIndex).padStart(2, '0') +
-      '.webp'
+    image: rankIconPath(getRankInfoFromLabel(value).iconIndex)
   }))
 ];
 

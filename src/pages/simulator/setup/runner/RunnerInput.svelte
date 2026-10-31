@@ -1,48 +1,43 @@
 <script lang="ts">
-  import type { Snippet } from 'svelte';
-  import Button from '@/components/controls/Button.svelte';
-  import Menu from '@/components/navigation/Menu.svelte';
   import SelectField from '@/components/controls/SelectField.svelte';
   import TextField from '@/components/controls/TextField.svelte';
+  import type { AptitudeGradeValue } from '@/components/game/AptitudeGrade.svelte';
+  import Menu from '@/components/navigation/Menu.svelte';
   import type { RaceCourse } from '@/lib/game-data/racing/courses';
-  import { runningStyleName } from '@/lib/race/replay/race-display';
-  import SimulatorRunnerFace from '../../reports/SimulatorRunnerFace.svelte';
+  import { moodIcon, runningStyleName } from '@/lib/race/replay/race-display';
+  import { getRankInfoFromLabel, getStatRankInfo, rankIconPath } from '@/lib/rank';
   import { APTITUDE_GRADES } from '../../requests/stamina-request';
   import type { SimulatorUma } from '../../simulator-uma';
   import SimSection from '../../shell/SimSection.svelte';
   import SimulatorUmaEditor from './editor/SimulatorUmaEditor.svelte';
+  import OwnedSkills from './OwnedSkills.svelte';
+  import RunnerCharacterPicker from './RunnerCharacterPicker.svelte';
   import SimulatorVeteranPicker from '../veterans/SimulatorVeteranPicker.svelte';
   import { GREEN_BONUS, withBonus, type HpPlan } from '../hp/hp-plan';
   import { RUNNING_STYLES } from '../trainee';
 
   /**
    * The runner, typed in directly: stats (with what green skills make them, when the page counts those), running
-   * style, mood and her aptitudes for this course. Veterans or the full editor fill in a whole build at once, skills
-   * included. Shared by the HP calculator and Build search.
+   * style, mood and her aptitudes for this course. Her character, stat and aptitude grades carry the game's icons;
+   * the skills she owns sit under the fields with their own editor. Shared by the HP calculator and Build search.
    */
   let {
     uma = $bindable(),
     green,
     course,
-    idPrefix = 'hp',
     note,
     onbuild,
-    oncode,
-    children
+    oncode
   }: {
     uma: SimulatorUma;
     /** Green skills by the stat they raise, as the HP calculator counts them; left out, the stats stand alone. */
     green?: HpPlan['green'];
     course?: RaceCourse;
-    /** Keeps field ids apart between pages. */
-    idPrefix?: string;
     note?: string;
-    /** A whole build was loaded or edited. */
+    /** Her build changed under the page's own controls, so the page can recount it. */
     onbuild?: (uma: SimulatorUma) => void;
     /** Opens the page's build code dialog. */
     oncode?: () => void;
-    /** More about her under the fields, such as the skills she owns. */
-    children?: Snippet;
   } = $props();
 
   let veteransOpen = $state(false),
@@ -56,17 +51,31 @@
     ['wisdom', 'Wit', 'wit']
   ] as const;
 
+  const uid = $props.id();
+
   const STYLE_OPTIONS = RUNNING_STYLES.map((value, index) => ({
     value,
     label: runningStyleName(index + 1)
   }));
 
-  const MOOD_OPTIONS = ['Great', 'Good', 'Normal', 'Bad', 'Awful'].map((label, index) => ({
-    value: String(5 - index),
-    label
+  // Mood and grades with their in-game icons, as the editor shows them.
+  const MOOD_OPTIONS = (['Great', 'Good', 'Normal', 'Bad', 'Awful'] as const).map(
+    (label, index) => ({
+      value: String(5 - index),
+      label,
+      image: moodIcon(label)
+    })
+  );
+
+  const GRADE_OPTIONS = APTITUDE_GRADES.map((grade) => ({
+    value: grade,
+    label: grade,
+    image: rankIconPath(getRankInfoFromLabel(grade).iconIndex)
   }));
 
-  const GRADE_OPTIONS = APTITUDE_GRADES.map((grade) => ({ value: grade, label: grade }));
+  const styleIndex = $derived(
+    RUNNING_STYLES.indexOf(uma.trainee.runningStyle as (typeof RUNNING_STYLES)[number])
+  );
 
   /** The stat with its green skills, when it has any. */
   function withGreens(key: (typeof STATS)[number][0]) {
@@ -78,11 +87,7 @@
 
   // Her aptitudes for this course and style, each one entry of the trainee's full grid.
   const aptitudes = $derived.by(() => {
-    const style = RUNNING_STYLES.indexOf(
-      uma.trainee.runningStyle as (typeof RUNNING_STYLES)[number]
-    );
-
-    return [
+    const entries = [
       {
         id: 'distance',
         label: 'Distance',
@@ -99,9 +104,14 @@
         id: 'style',
         label: 'Style',
         list: 'styleAptitudes',
-        index: style === 4 ? 0 : Math.max(0, style)
+        index: styleIndex === 4 ? 0 : Math.max(0, styleIndex)
       }
     ] as const;
+
+    return entries.map((entry) => ({
+      ...entry,
+      grade: (uma.trainee[entry.list][entry.index] ?? 'A') as AptitudeGradeValue
+    }));
   });
 
   function load(value: SimulatorUma) {
@@ -116,13 +126,6 @@
   {note}
 >
   {#snippet actions()}
-    {#if uma.cardId}<span class="identity">
-        <SimulatorRunnerFace
-          cardId={uma.cardId}
-          size={24}
-        />
-        {uma.name}
-      </span>{/if}
     <Menu
       label="Import"
       menuLabel="Import a runner"
@@ -133,29 +136,31 @@
       ]}
       onselect={(id) => (id === 'code' ? oncode?.() : (veteransOpen = true))}
     />
-    <Button
-      variant="secondary"
-      size="sm"
-      icon="edit"
-      onclick={() => (editorOpen = true)}
-    >
-      Edit build
-    </Button>
   {/snippet}
   <div class="runner-fields">
     <div class="fields stats">
+      <div class="picker-slot">
+        <span class="picker-label">Uma</span>
+        <RunnerCharacterPicker
+          {uma}
+          onchange={() => onbuild?.(uma)}
+        />
+      </div>
       {#each STATS as [key, label, icon]}
         {@const effective = withGreens(key)}
+        {@const rank = getStatRankInfo(Number(uma.trainee[key]))}
         <div class="stat">
           <TextField
-            id="{idPrefix}-{key}"
+            id="{uid}-{key}"
             {label}
             type="number"
             min={1}
             max={3000}
-            prefixImage="/assets/images/icon/stats/{icon}.webp"
+            labelImage="/assets/images/icon/stats/{icon}.webp"
+            prefixImage={rankIconPath(rank.iconIndex)}
             bind:value={uma.trainee[key]}
           />
+          <span class="sr-only">{label} rank {rank.label}</span>
           {#if effective !== undefined}<small
               class="effective"
               title="{effective.toLocaleString('en-US')} with green skills"
@@ -168,29 +173,36 @@
     </div>
     <div class="fields">
       <SelectField
-        id="{idPrefix}-style"
+        id="{uid}-style"
         label="Running style"
         options={STYLE_OPTIONS}
         bind:value={uma.trainee.runningStyle}
+        onchange={() => onbuild?.(uma)}
       />
       <SelectField
-        id="{idPrefix}-mood"
+        id="{uid}-mood"
         label="Mood"
+        imageOnly
         options={MOOD_OPTIONS}
         bind:value={uma.trainee.motivation}
       />
       {#each aptitudes as aptitude (aptitude.id)}
         <SelectField
-          id="{idPrefix}-aptitude-{aptitude.id}"
-          label="{aptitude.label} aptitude"
+          id="{uid}-aptitude-{aptitude.id}"
+          label={aptitude.label}
+          imageOnly
           options={GRADE_OPTIONS}
-          value={uma.trainee[aptitude.list][aptitude.index] ?? 'A'}
+          value={aptitude.grade}
           onchange={(grade) => (uma.trainee[aptitude.list][aptitude.index] = grade)}
         />
       {/each}
     </div>
   </div>
-  {@render children?.()}
+  <OwnedSkills
+    {uma}
+    onedit={() => (editorOpen = true)}
+    onchange={() => onbuild?.(uma)}
+  />
 </SimSection>
 
 <SimulatorVeteranPicker
@@ -199,6 +211,8 @@
 />
 <SimulatorUmaEditor
   {uma}
+  {course}
+  focusSkills
   bind:open={editorOpen}
   onsave={load}
 />
@@ -211,7 +225,11 @@
   }
   @container sim-form (min-width: 1280px) {
     .runner-fields {
-      grid-template-columns: repeat(10, minmax(0, 1fr));
+      /* Her character, five stats, then her running style with room for its name, the mood icon with only what it
+         needs, and the three aptitudes, which take less room. */
+      grid-template-columns:
+        minmax(0, 1.15fr) repeat(5, minmax(0, 1fr)) minmax(0, 1.35fr)
+        minmax(80px, 0.6fr) repeat(3, minmax(0, 0.8fr));
     }
     .runner-fields > .fields {
       display: contents;
@@ -223,6 +241,33 @@
     gap: 8px 12px;
     --control-height: var(--setup-control-height, 36px);
   }
+  .fields.stats {
+    grid-template-columns: auto repeat(5, minmax(0, 1fr));
+  }
+  .fields:not(.stats) {
+    grid-template-columns: minmax(0, 1.35fr) minmax(80px, 0.6fr) repeat(3, minmax(0, 0.8fr));
+  }
+  .picker-slot {
+    display: grid;
+    gap: 4px;
+    min-width: 0;
+  }
+  .picker-label {
+    color: var(--color-text);
+    font-size: 12px;
+    font-weight: 600;
+    line-height: 1.2;
+  }
+  .stats {
+    align-items: start;
+  }
+  .stat {
+    position: relative;
+    display: grid;
+    gap: 4px;
+    min-width: 0;
+    container: hp-stat / inline-size;
+  }
   .fields :global(.field) {
     gap: 4px;
   }
@@ -233,19 +278,15 @@
   .fields :global(.select-control) {
     font-size: 13px;
   }
-  .stats {
-    align-items: start;
-  }
+  /* The stat input shares its width with the rank icon and the steppers; keep enough for four digits. */
   .stats :global(input) {
+    padding-left: 38px;
+    padding-right: 30px;
     font-weight: 650;
     font-variant-numeric: tabular-nums;
   }
-  .stat {
-    position: relative;
-    display: grid;
-    gap: 4px;
-    min-width: 0;
-    container: hp-stat / inline-size;
+  .stats :global(.prefix-icon) {
+    left: 12px;
   }
   /* The stat with its greens, on the label line so it takes no row of its own. */
   .effective {
@@ -258,19 +299,17 @@
     color: var(--color-green);
     font-variant-numeric: tabular-nums;
   }
-  .identity {
-    display: inline-flex;
-    align-items: center;
-    gap: 6px;
-    font-size: 12px;
-    font-weight: 600;
-  }
-  /* A phone: all five stats still in one row, without their icons; style and mood share a line, the three
-     aptitudes the next. */
+  /* A phone: all five stats still in one row; style and mood share a line, the three aptitudes the next. */
   @container sim-form (max-width:560px) {
     .runner-fields,
     .fields {
       gap: 6px 8px;
+    }
+    .fields.stats {
+      grid-template-columns: repeat(5, minmax(0, 1fr));
+    }
+    .picker-slot {
+      grid-column: 1 / -1;
     }
     .fields:not(.stats) {
       grid-template-columns: repeat(6, minmax(0, 1fr));
@@ -282,14 +321,28 @@
     .fields:not(.stats) > :global(*:nth-child(-n + 2)) {
       grid-column: span 3;
     }
-    /* The phone's number pad sets a stat, so its steppers make room for all four digits. */
-    .stats :global(.prefix-icon),
+    /* The phone's number pad sets a stat, so the steppers make room for the four digits and their grade. */
     .stats :global(.number-controls) {
       display: none;
     }
     .stats :global(input),
     .stats :global(input.has-prefix) {
-      padding-inline: 8px 4px;
+      padding-inline: 4px;
+    }
+    .stats :global(input.has-prefix) {
+      padding-left: 23px;
+    }
+    .stats :global(.prefix-icon) {
+      left: 5px;
+      width: 14px;
+      height: 14px;
+    }
+    .fields :global(.field-label.with-image) {
+      gap: 3px;
+    }
+    .fields :global(.label-icon) {
+      width: 12px;
+      height: 12px;
     }
   }
 </style>

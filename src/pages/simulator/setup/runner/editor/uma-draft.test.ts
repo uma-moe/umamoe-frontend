@@ -1,3 +1,4 @@
+import type { SkillData } from '@/lib/game-data/skills/skills';
 import { describe, expect, it } from 'vitest';
 import { createSimulatorUma } from '../../../simulator-uma';
 import {
@@ -5,9 +6,20 @@ import {
   draftProblem,
   fansInvalid,
   gateInvalid,
+  inheritedUniqueSkillId,
+  missingCharacterUnique,
+  selectableOwnedSkill,
   statInvalid,
   swapCharacterUnique
 } from './uma-draft';
+
+const skill = (overrides: Partial<SkillData>): SkillData => ({
+  skill_id: 100001,
+  name: 'Skill',
+  rarity: 1,
+  icon: '',
+  ...overrides
+});
 
 const noEntry = { gate: '', fans: '' };
 
@@ -83,5 +95,42 @@ describe('uma draft', () => {
     });
 
     expect(swapped).toEqual([]);
+  });
+
+  it('offers her card unique only while she does not own it', () => {
+    expect(missingCharacterUnique({ cardId: 100201, skills: [] }, () => true)).toBe(100021);
+    expect(
+      missingCharacterUnique(
+        { cardId: 100201, skills: [{ skillId: 100021, level: 1 }] },
+        () => true
+      )
+    ).toBeUndefined();
+    expect(missingCharacterUnique({ cardId: 100201, skills: [] }, () => false)).toBeUndefined();
+    expect(missingCharacterUnique({ skills: [] }, () => true)).toBeUndefined();
+  });
+
+  it('reads the inherited copy of a card unique', () => {
+    expect(inheritedUniqueSkillId(100101)).toBe(900011);
+    expect(inheritedUniqueSkillId(100602)).toBe(910061);
+  });
+
+  it('allows only her own personal unique', () => {
+    const personal = skill({ skill_id: 100011, rarity: 5, unique: true });
+
+    expect(selectableOwnedSkill(personal, 100101)).toBe(true);
+    expect(selectableOwnedSkill(personal, 100201)).toBe(false);
+    expect(selectableOwnedSkill(personal, undefined)).toBe(false);
+  });
+
+  it('allows inherited uniques except her own', () => {
+    const inherited = skill({ skill_id: 900021, unique: true, inherited: true });
+    const ownInherited = skill({ skill_id: 900011, unique: true, inherited: true });
+    const normal = skill({ skill_id: 200012, rarity: 1 });
+
+    expect(selectableOwnedSkill(inherited, 100101)).toBe(true);
+    expect(selectableOwnedSkill(ownInherited, 100101)).toBe(false);
+    expect(selectableOwnedSkill(normal, 100101)).toBe(true);
+    expect(selectableOwnedSkill(inherited, undefined)).toBe(true);
+    expect(selectableOwnedSkill(normal, undefined)).toBe(true);
   });
 });

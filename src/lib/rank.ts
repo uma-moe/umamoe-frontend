@@ -23,6 +23,15 @@ function token(tier: RankInfo['tier']) {
   return `var(--rank-${tier.toLowerCase()})`;
 }
 
+/** The game's square rank badge for a status-rank icon index. */
+export function rankIconPath(iconIndex: number): string {
+  return (
+    '/game-assets/textures/uma_ranks/utx_ico_statusrank_' +
+    String(iconIndex).padStart(2, '0') +
+    '.webp'
+  );
+}
+
 export function getRankInfo(rarity: number): RankInfo {
   const index = Math.max(0, Math.min(97, Math.trunc(rarity) - 1));
   if (index < 18) {
@@ -80,6 +89,47 @@ export function getRankInfoFromScore(score: number): RankInfo {
   ];
 
   return getRankInfo(thresholds.find((entry) => score >= entry[0])?.[1] ?? 1);
+}
+
+/**
+ * Basic stats rank G to SS+ by the minimum value that earns each one, then the ultra ranks ten points at a time past
+ * the 1200 cap: 1201-1210 is UG0, up to US9 at 2000 and beyond.
+ */
+const statThresholds: Array<[number, number]> = [
+  [1150, 18],
+  [1100, 17],
+  [1050, 16],
+  [1000, 15],
+  [900, 14],
+  [800, 13],
+  [700, 12],
+  [600, 11],
+  [500, 10],
+  [400, 9],
+  [350, 8],
+  [300, 7],
+  [250, 6],
+  [200, 5],
+  [150, 4],
+  [100, 3],
+  [51, 2],
+  [1, 1]
+];
+
+const STAT_RANK_CAP = 1200;
+const STAT_ULTRA_POINTS = 10;
+const STAT_ULTRA_RARITY_MAX = 98;
+
+/** The rank a basic stat value earns, such as S at 1000 or SS+ at 1150. */
+export function getStatRankInfo(value: number): RankInfo {
+  if (!Number.isFinite(value) || value < 1) return getRankInfo(1);
+
+  if (value > STAT_RANK_CAP) {
+    const rarity = 19 + Math.floor((value - STAT_RANK_CAP - 1) / STAT_ULTRA_POINTS);
+    return getRankInfo(Math.min(rarity, STAT_ULTRA_RARITY_MAX));
+  }
+
+  return getRankInfo(statThresholds.find(([minimum]) => value >= minimum)?.[1] ?? 1);
 }
 
 export function getRankInfoFromLabel(label: string): RankInfo {

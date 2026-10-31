@@ -35,6 +35,8 @@
     clearLabel?: string;
     emptyValue?: string;
     prefixIcon?: IconName;
+    /** Focus the input when it should be ready to type, without opening the suggestions. */
+    autofocus?: boolean;
     optionContent?: Snippet<[ComboboxOption]>;
     onchange?: (value: string) => void;
   }
@@ -59,6 +61,7 @@
     clearLabel = 'Clear search',
     emptyValue,
     prefixIcon,
+    autofocus = false,
     optionContent,
     onchange
   }: Props = $props();
@@ -70,6 +73,21 @@
   let open = $state(false);
   let editing = $state(false);
   let activeIndex = $state(0);
+  /** The autofocus below is not the reader asking for suggestions, so it does not open them. */
+  let skipFocusOpen = false;
+
+  $effect(() => {
+    if (!autofocus) return;
+
+    const frame = requestAnimationFrame(() => {
+      if (!input) return;
+      skipFocusOpen = true;
+      input.focus({ preventScroll: true });
+      skipFocusOpen = false;
+    });
+
+    return () => cancelAnimationFrame(frame);
+  });
 
   const selected = $derived(options.find((option) => option.value === value));
   const expanded = $derived(open && query.trim().length >= minQueryLength);
@@ -289,6 +307,7 @@
       oninput={handleInput}
       onclick={show}
       onfocus={() => {
+        if (skipFocusOpen) return;
         show();
         if (!action) input.select();
       }}

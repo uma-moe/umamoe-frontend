@@ -8,7 +8,6 @@
   import SkillOffers from './setup/build/SkillOffers.svelte';
   import BuildCodeDialog from './setup/build/code/BuildCodeDialog.svelte';
   import BuildGoal from './setup/build/BuildGoal.svelte';
-  import BuildOwnedSkills from './setup/build/BuildOwnedSkills.svelte';
   import BuildSearchBar from './setup/build/BuildSearchBar.svelte';
   import { explainBuildError, formNumber } from './setup/build/build-run';
   import {
@@ -281,12 +280,9 @@
       <RunnerInput
         bind:uma={buildSearch.uma}
         {course}
-        idPrefix="build"
         note="Her stats at the end of the career"
         oncode={() => (codeOpen = true)}
-      >
-        <BuildOwnedSkills {skillLookup} />
-      </RunnerInput>
+      />
       <BuildGoal
         {teamTrials}
         bind:budgetHere={budgetInSetup}
