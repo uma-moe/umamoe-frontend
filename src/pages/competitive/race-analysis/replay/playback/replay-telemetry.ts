@@ -428,6 +428,8 @@ export function telemetryOption(chart: TelemetryChart, expanded: boolean): EChar
           },
           itemStyle: { color: signal.color },
           z: r.index === runner?.index ? 3 : 1,
+          // Hover emphasis lifts a line above the rest, renumbering the SVG clip paths after it; Safari then stops painting them.
+          emphasis: { disabled: true },
           tooltip: {
             valueFormatter: (value: unknown) =>
               typeof value === 'number'

@@ -620,7 +620,29 @@ for (const count of [2, 9, 18])
         ).toHaveText(['Combined', 'Speed', 'HP', 'Gap']);
 
         await meanReplay.locator('.telemetry-track').scrollIntoViewIfNeeded();
-        await expect(meanReplay.locator('.telemetry-track .chart-host svg')).toHaveCount(1);
+        const telemetry = meanReplay.locator('.telemetry-track .chart-host svg');
+        await expect(telemetry).toHaveCount(1);
+        // Hovering must not reorder the lines: Safari stops painting lines whose clip paths are renumbered.
+        const clippedLines = () =>
+          telemetry
+            .locator('g[clip-path]')
+            .evaluateAll((groups) =>
+              groups.map(
+                (group) =>
+                  group.getAttribute('clip-path') +
+                  ' ' +
+                  group.firstElementChild?.getAttribute('d')?.length
+              )
+            );
+
+        const restingLines = await clippedLines();
+        const plot = (await telemetry.boundingBox())!;
+        for (let x = plot.x + 2; x < plot.x + plot.width - 2; x += 4) {
+          await page.mouse.move(x, plot.y + plot.height / 2);
+          expect(await clippedLines()).toEqual(restingLines);
+        }
+
+        await page.mouse.move(0, 0);
         // Skills sit on the replay's own clock and follow the runner picked in the field spread.
         const skills = meanReplay.getByRole('region', {
           name: 'Skills over the race',

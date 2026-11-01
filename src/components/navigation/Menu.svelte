@@ -303,6 +303,8 @@
     inset: auto;
     box-sizing: border-box;
     width: max-content;
+    /* Safari 26 stretches a fixed grid with the popover's fit-content height to the viewport (WebKit bug 270334). */
+    height: auto;
     min-width: min(200px, calc(100vw - 16px));
     max-width: calc(100vw - 16px);
     max-height: calc(100dvh - 16px);
