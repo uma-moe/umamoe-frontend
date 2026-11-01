@@ -25,11 +25,6 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - branch: svelte-rewrite
-            resources_ref: main
-            timeline_url: https://beta.uma.moe/resources/current/banner_timeline.json.gz
-            site_origin: https://beta.uma.moe
-            deploy: true
           - branch: main
             resources_ref: main
             timeline_url: https://uma.moe/resources/current/banner_timeline.json.gz
