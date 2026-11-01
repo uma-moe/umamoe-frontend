@@ -27,8 +27,10 @@
     clearSimulatorField,
     createRosterUma,
     ensureSimulatorRoster,
+    claimRunner,
     importSimulatorUmas,
-    ownRunners
+    ownRunners,
+    saveFieldRunner
   } from '../../simulator-roster.svelte';
   import { selectedCourse, simulatorSession } from '../../simulator-session.svelte';
   import SkillPoints, { LEARNED_SKILL_POINTS_NOTE } from '@/components/game/SkillPoints.svelte';
@@ -133,6 +135,7 @@
     copy.id = crypto.randomUUID();
     copy.name += ' copy';
     copy.frameOrder = undefined;
+    claimRunner(copy);
     simulatorRoster.umas.push(copy);
     simulatorRoster.configured = true;
   }
@@ -298,6 +301,7 @@
               label={'Assign team for ' + uma.name}
               onchange={(id) => {
                 uma.teamId = id;
+                claimRunner(uma);
                 simulatorRoster.configured = true;
               }}
             />
@@ -384,14 +388,7 @@
     uma={editing}
     {adding}
     bind:open={editorOpen}
-    onsave={(uma) => {
-      if (simulatorRoster.umas.some((item) => item.id === uma.id))
-        simulatorRoster.umas = simulatorRoster.umas.map((item) =>
-          item.id === uma.id ? uma : item
-        );
-      else if (simulatorRoster.umas.length < 18) simulatorRoster.umas.push(uma);
-      simulatorRoster.configured = true;
-    }}
+    onsave={saveFieldRunner}
   />
 {/if}
 

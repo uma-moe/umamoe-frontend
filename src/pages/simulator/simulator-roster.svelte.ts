@@ -45,6 +45,25 @@ export function isExampleRunner(uma: SimulatorUma): boolean {
   return uma.source === EXAMPLE_SOURCE;
 }
 
+/** An example runner the user edits or copies is theirs from then on, so imports keep it. */
+export function claimRunner(uma: SimulatorUma): void {
+  if (isExampleRunner(uma)) delete uma.source;
+}
+
+/** Saves a runner from the editor: in her place when she is already in the field, otherwise added. */
+export function saveFieldRunner(uma: SimulatorUma): void {
+  claimRunner(uma);
+
+  const placed = simulatorRoster.umas.some((item) => item.id === uma.id);
+  if (placed) {
+    simulatorRoster.umas = simulatorRoster.umas.map((item) => (item.id === uma.id ? uma : item));
+  } else if (simulatorRoster.umas.length < MAX_FIELD) {
+    simulatorRoster.umas.push(uma);
+  }
+
+  simulatorRoster.configured = true;
+}
+
 /** The runners the user placed, without the example ones an import makes room for. */
 export function ownRunners(): SimulatorUma[] {
   return simulatorRoster.umas.filter((uma) => !isExampleRunner(uma));

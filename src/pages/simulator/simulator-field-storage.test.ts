@@ -102,6 +102,16 @@ describe('the field this browser last raced', () => {
     expect(simulatorRoster.umas.map((uma) => uma.name)).toEqual(['Seiun Sky', 'Pick']);
   });
 
+  it('keeps an edited example runner when a build joins the field', async () => {
+    const { importSimulatorUmas, saveFieldRunner, simulatorRoster } = await rosterModule();
+    const edited = { ...simulatorRoster.umas[0]!, name: 'Tuned example' };
+    saveFieldRunner(edited);
+
+    importSimulatorUmas([runner('Pick', 'a')]);
+
+    expect(simulatorRoster.umas.map((uma) => uma.name)).toEqual(['Tuned example', 'Pick']);
+  });
+
   it('adds a build beside the runners already placed', async () => {
     const { importSimulatorUmas, simulatorRoster } = await rosterModule();
     importSimulatorUmas([runner('Seiun Sky', 'a'), runner('Silence Suzuka', 'b')]);

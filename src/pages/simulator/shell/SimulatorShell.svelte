@@ -11,6 +11,7 @@
   import {
     simulatorRoster,
     ensureSimulatorRoster,
+    saveFieldRunner,
     saveSimulatorField
   } from '../simulator-roster.svelte';
   import {
@@ -128,12 +129,7 @@
   <SimulatorUmaEditor
     {uma}
     bind:open={umaOpen}
-    onsave={(value) => {
-      simulatorRoster.umas = simulatorRoster.umas.map((item) =>
-        item.id === value.id ? value : item
-      );
-      simulatorRoster.configured = true;
-    }}
+    onsave={saveFieldRunner}
   />
 {/if}
 <Dialog
