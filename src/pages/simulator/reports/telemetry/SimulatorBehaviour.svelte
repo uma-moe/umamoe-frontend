@@ -83,7 +83,7 @@
     ' races play out. Start is her average start delay. Position is her average place when the mid race and the late race begin. Green means she usually moves up. Blocked and rushed show how often it happens and, in those races, for how long. Downhill is the average time in downhill mode, which saves HP. Position fights and duels show how often she gets into one, and are left out when none of the runners shown does. Bars compare the runners shown.'}
 >
   <div class="scroll">
-    <table>
+    <table style:--values={5 + states.length}>
       <thead>
         <tr>
           <th
@@ -293,20 +293,63 @@
     border-radius: 3px;
     background: var(--runner);
   }
+  /* A phone gives each runner two lines: her name, then every value under its column label, so nothing scrolls away. */
   @media (max-width: 600px) {
+    table,
+    thead,
+    tbody {
+      display: block;
+    }
+    tr {
+      display: grid;
+      grid-template-columns: repeat(var(--values), minmax(0, 1fr));
+      align-items: start;
+      gap: 2px 6px;
+    }
+    tbody tr {
+      padding: 6px 0;
+    }
     th,
     td {
-      padding-inline: 4px;
+      padding: 0;
+      white-space: normal;
     }
-    .who {
-      min-width: 96px;
+    thead th,
+    .num {
+      text-align: left;
     }
-    .who :global(.face) {
+    thead small {
+      display: block;
+    }
+    thead .runner {
       display: none;
     }
+    tbody th,
+    tbody td {
+      height: auto;
+    }
+    tbody .runner {
+      grid-column: 1 / -1;
+      width: auto;
+      padding: 0 0 2px;
+    }
+    .who {
+      min-width: 0;
+    }
+    .move {
+      flex-wrap: wrap;
+      gap: 0 3px;
+    }
     .meter {
-      min-width: 28px;
-      max-width: 28px;
+      display: none;
+    }
+    .meter-cell {
+      display: grid;
+      gap: 0;
+    }
+    .meter-cell :is(b, small) {
+      min-width: 0;
+      text-align: left;
     }
   }
 </style>

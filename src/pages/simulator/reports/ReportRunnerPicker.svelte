@@ -17,6 +17,8 @@
   }
 
   let { label, sources, active, umas, summary: runnerSummary, onselect }: Props = $props();
+
+  const activeSummary = $derived(runnerSummary?.(active));
 </script>
 
 <div
@@ -26,10 +28,14 @@
 >
   {#each sources as runner (runner)}
     {@const summary = runnerSummary?.(runner)}
+    <!-- A phone shows only her portrait, so the name, style and badge are also given as the label. -->
     <button
       type="button"
       role="radio"
       aria-checked={runner === active}
+      aria-label={[umas[runner]!.name, runnerStyle(umas[runner]!), summary?.badge]
+        .filter(Boolean)
+        .join(', ')}
       class="runner"
       class:active={runner === active}
       style:--runner={runnerColor(runner)}
@@ -54,6 +60,18 @@
     </button>
   {/each}
 </div>
+<p
+  class="picked-runner"
+  style:--runner={runnerColor(active)}
+  aria-hidden="true"
+>
+  <i class="dot"></i>
+  <strong>{umas[active]!.name}</strong>
+  <em>{runnerStyle(umas[active]!)}</em>
+  {#if activeSummary}
+    <small title={activeSummary.title}>{activeSummary.badge}</small>
+  {/if}
+</p>
 
 <style>
   /* Full-width runner picker in the same style as the report's other tab groups: one bar, the selected tab tinted. */
@@ -110,7 +128,8 @@
     font-style: normal;
     font-weight: 400;
   }
-  .runner small {
+  .runner small,
+  .picked-runner small {
     display: inline-grid;
     place-items: center;
     flex: none;
@@ -128,7 +147,8 @@
     white-space: nowrap;
     font-variant-numeric: tabular-nums;
   }
-  .runner.active small {
+  .runner.active small,
+  .picked-runner small {
     color: var(--accent-primary);
     background: rgb(var(--accent-primary-rgb) / 0.12);
     border-color: rgb(var(--accent-primary-rgb) / 0.32);
@@ -140,15 +160,51 @@
     border-radius: 50%;
     background: var(--runner);
   }
+  .picked-runner {
+    display: none;
+  }
+  /* A phone shows the runners as one row of portraits that fits the width, with the selected runner named beneath. */
   @media (max-width: 600px) {
     .runners {
       display: flex;
-      overflow-x: auto;
-      scrollbar-width: none;
+      flex-wrap: wrap;
+      gap: 3px;
+      margin-bottom: 0;
     }
     .runner {
-      flex: none;
-      max-width: 220px;
+      flex: 1 0 30px;
+      max-width: 48px;
+      justify-content: center;
+      min-height: 38px;
+      padding: 0 0 3px;
+      box-shadow: inset 0 -2px var(--runner);
+    }
+    .runner :global(.face) {
+      width: 30px;
+      height: 30px;
+    }
+    .runner > :is(.dot, .runner-name, small) {
+      display: none;
+    }
+    .picked-runner {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      min-width: 0;
+      margin: 6px 2px 8px;
+      font-size: 13px;
+      white-space: nowrap;
+    }
+    .picked-runner strong {
+      min-width: 0;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      font-weight: 650;
+    }
+    .picked-runner em {
+      color: var(--text-secondary);
+      font-size: 11px;
+      font-style: normal;
     }
   }
 </style>

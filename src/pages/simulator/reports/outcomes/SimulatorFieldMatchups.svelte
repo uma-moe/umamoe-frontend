@@ -44,6 +44,7 @@
   title="Head-to-head"
   description={'How often the runner on the left finishes ahead of the runner at the top, in the same races. Blue means she usually beats her, red means she usually loses, and the stronger the colour the clearer the result. Pale cells are close to even. Runners are in win-rate order. Hover a cell for the 95% interval and the average finish-time difference.'}
 >
+  <p class="reading">Left runner finishes ahead of top runner, % of races</p>
   <div class="scroll">
     <table
       class="matrix"
@@ -199,6 +200,14 @@
     vertical-align: bottom;
     padding: 0 8px 4px 4px !important;
   }
+  /* A field too wide for the card scrolls under its runner column, so every row stays named. */
+  .corner,
+  .who {
+    position: sticky;
+    left: 0;
+    z-index: 1;
+    background: var(--card-surface-bg, var(--surface-1));
+  }
   .corner small {
     font-size: 10px;
     font-weight: 400;
@@ -250,6 +259,9 @@
   }
   td.self {
     background: repeating-linear-gradient(45deg, transparent 0 4px, var(--border-subtle) 4px 5px);
+  }
+  .reading {
+    display: none;
   }
   .section-gap {
     margin-top: 8px;
@@ -314,16 +326,43 @@
     font-size: 10px;
     color: var(--text-secondary);
   }
+  /* A phone names each runner by portrait on both axes, so nine runners fit without scrolling sideways. */
   @media (max-width: 600px) {
+    .reading {
+      display: block;
+      margin: 0 0 6px;
+      font-size: 10px;
+      color: var(--text-secondary);
+    }
+    .matrix {
+      min-width: calc(34px + var(--count) * 30px);
+      font-size: 12px;
+    }
     .corner {
-      width: 130px;
+      width: 34px;
+    }
+    .corner small,
+    .who :is(.dot, b),
+    td small {
+      display: none;
+    }
+    .who {
+      padding-right: 2px !important;
+    }
+    .who span {
+      justify-content: center;
+      border-bottom: 2px solid var(--runner);
     }
     .opponent :global(.face) {
       width: 28px;
       height: 28px;
     }
-    .who b {
-      max-width: 78px;
+    .who :global(.face) {
+      width: 26px;
+      height: 26px;
+    }
+    td {
+      height: 30px;
     }
     .team {
       grid-template-columns: minmax(0, 1fr) 48px;

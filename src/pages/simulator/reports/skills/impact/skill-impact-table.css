@@ -198,6 +198,23 @@ sup {
     grid-row: 2;
     height: 10px;
   }
+  /* The axis is hidden, so the bar sits in an empty track that spans the scale, with only its zero line kept. */
+  .gain-row > .track::before {
+    content: '';
+    position: absolute;
+    inset-inline: 0;
+    top: 2px;
+    height: 6px;
+    border-radius: 3px;
+    background: var(--surface-3, var(--border-subtle));
+  }
+  .gain-row .grid:not(.zero) {
+    display: none;
+  }
+  .gain-row .grid.zero {
+    top: 1px;
+    bottom: 1px;
+  }
   .gain-row > .value {
     grid-column: 2;
     grid-row: 1 / 3;

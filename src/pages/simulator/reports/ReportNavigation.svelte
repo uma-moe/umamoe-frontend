@@ -100,6 +100,8 @@
   const runnerName = (source: number) => umas[source]!.name;
   // The sticky bar shows who is being compared with whom as portraits; the names are in its tooltip.
   const compared = $derived(scoped.filter((source) => source !== reference));
+  // A phone shows three portraits so the scope, unit and comparison share one row under the tabs.
+  const shownFaces = $derived(navWidth && navWidth < 600 ? 3 : 5);
   const list = (names: string[]) =>
     names.length > 1 ? names.slice(0, -1).join(', ') + ' and ' + names.at(-1) : (names[0] ?? '');
 
@@ -164,7 +166,7 @@
         document.getElementById('simulation-field-overview')?.scrollIntoView({ block: 'start' })}
     >
       <span class="faces">
-        {#each compared.slice(0, 5) as source (source)}<span
+        {#each compared.slice(0, shownFaces) as source (source)}<span
             class="ring"
             style:--runner={runnerColor(source)}
           >
@@ -172,7 +174,9 @@
               cardId={umas[source]!.cardId}
               size={24}
             />
-          </span>{/each}{#if compared.length > 5}<small>+{compared.length - 5}</small>{/if}
+          </span>{/each}{#if compared.length > shownFaces}<small>
+            +{compared.length - shownFaces}
+          </small>{/if}
       </span>
       <small>vs</small>
       <span

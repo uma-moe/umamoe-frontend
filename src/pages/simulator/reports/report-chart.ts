@@ -131,29 +131,11 @@ export function courseChart(
         ]
       }
     });
-  // Two or more runners get a legend, so a line is never told apart by its colour alone.
-  const legend =
-    rows.length > 1
-      ? {
-          legend: {
-            bottom: 0,
-            left: 'center',
-            selectedMode: false,
-            icon: 'roundRect',
-            itemWidth: 12,
-            itemHeight: 3,
-            itemGap: 14,
-            textStyle: { color, fontSize: 10 },
-            data: rows.map((row) => row.name)
-          }
-        }
-      : {};
-
   return {
     ...baseChartOption(dark),
     animation: false,
-    grid: { left: 48, right: 12, top: 18, bottom: rows.length > 1 ? 44 : 24 },
-    ...legend,
+    // The runners' legend is RunnerLegend under the chart, so the plot keeps only the axis labels' space.
+    grid: { left: 48, right: 12, top: 18, bottom: 24 },
     tooltip: {
       trigger: 'axis',
       ...theme.tooltip,

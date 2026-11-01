@@ -5,6 +5,7 @@
   import LazyEChartsSurface from '@/components/charts/LazyEChartsSurface.svelte';
   import { theme } from '@/stores/theme';
   import { courseChart } from '../report-chart';
+  import RunnerLegend from '../RunnerLegend.svelte';
   import { RACE_PHASES } from '../outcomes/stamina-report';
   import { LENGTH_METRES, referenceSpeeds, type MarginUnit } from '../simulation-comparison';
   import type { ReportBand, SimulationReport } from '../simulation-report';
@@ -212,11 +213,14 @@
         : 'Lengths use ' + name(reference) + '’s speed at that point (1 L = 2.5 m).') +
       ' Each line is her median race. The followed runner’s middle 80% of races is shaded. The coloured bands are the race phases.'}
   >
-    {#if gapChart}<LazyEChartsSurface
+    {#if gapChart}
+      <LazyEChartsSurface
         option={gapChart}
         label={'Gap to ' + name(reference) + ' by course distance'}
         height={240}
-      />{/if}
+      />
+      <RunnerLegend runners={gapRows} />
+    {/if}
   </ChartFrame>
   <ChartFrame
     id="simulation-move-course"
@@ -234,11 +238,14 @@
         }))}
         bind:value={metric}
       />{/snippet}
-    {#if moveChart}<LazyEChartsSurface
+    {#if moveChart}
+      <LazyEChartsSurface
         option={moveChart}
         label={metrics[metric]!.label + ' by course distance'}
         height={240}
-      />{/if}
+      />
+      <RunnerLegend runners={moveRows} />
+    {/if}
   </ChartFrame>
 </div>
 

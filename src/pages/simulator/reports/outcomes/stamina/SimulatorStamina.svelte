@@ -4,6 +4,7 @@
   import { theme } from '@/stores/theme';
   import { RACE_PHASES, hpByDistance, staminaReport } from '../stamina-report';
   import { hpCourseChart } from '../../report-chart';
+  import RunnerLegend from '../../RunnerLegend.svelte';
   import { staminaInput } from './stamina-view';
   import StaminaHpBudget from './StaminaHpBudget.svelte';
   import StaminaRaces from './StaminaRaces.svelte';
@@ -103,6 +104,7 @@
           label="HP left by course distance for each runner"
           height={Math.max(190, Math.min(260, 92 + budgets.length * 30))}
         />
+        <RunnerLegend runners={curves} />
       {/if}
     </ChartFrame>
   </div>

@@ -28,9 +28,9 @@ controls.
   use 8px inner padding below 768px.
 - **Controls on the title row.** A section's controls sit on its title row. When they do not fit, secondary options
   collapse into a menu button beside the primary control instead of wrapping onto another row.
-- **One row per control group.** Segmented controls, filters and tab groups stay on one row from iPhone SE (320 to
-  375px) up: give options short labels for phones, scroll the group as a last resort with its cut-off side faded, or
-  turn it into a select. Two related toggles share one row.
+- **One row per control group.** Segmented controls, filters and tab groups stay on one row from a 320px phone and
+  the iPhone SE (375px) up: give options short labels for phones, scroll the group as a last resort with its cut-off
+  side faded, or turn it into a select. Two related toggles share one row.
 - **One line per table row.** Tables never stack rows into label and value cards. On phones a wide table scrolls
   sideways under a pinned identity column, such as a rank with a portrait, a skill chip or a compact composition,
   that takes well under half of the visible width. Headings and cell values stay on one line; a long name in a

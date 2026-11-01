@@ -198,16 +198,55 @@
   font-size: 10px;
   color: var(--text-secondary);
 }
-/* Phones scroll the timeline sideways under sticky labels; the key lives in the info popover there. */
+/*
+ * A phone's label column is only wide enough for a short track name, so each skill names itself on a line above
+ * its lane, with how often it fires at the end; the lane keeps the replay's columns. The key lives in the info
+ * popover there.
+ */
 @media (max-width: 700px) {
+  .line.head,
+  .line.row {
+    grid-template-areas:
+      'label label value'
+      '. track .';
+    row-gap: 0;
+  }
+  .line.head {
+    grid-template-areas: 'label label value';
+  }
   .label {
-    position: sticky;
-    left: 0;
-    z-index: 5;
-    padding-right: 6px;
+    grid-area: label;
+    min-height: 16px;
+    padding-right: 16px;
+  }
+  .line.always {
+    grid-template-areas:
+      'label label label'
+      'list list list';
+    padding-block: 4px;
+  }
+  .always .list {
+    grid-area: list;
+  }
+  .line > .value {
+    grid-area: value;
+    justify-self: end;
+    white-space: nowrap;
   }
   .head .key {
-    visibility: hidden;
+    display: none;
+  }
+  .row {
+    height: auto;
+  }
+  .row .track {
+    grid-area: track;
+    height: 18px;
+  }
+  .lane,
+  .heat {
+    top: 3px;
+    bottom: 3px;
   }
 }
 .spurt-window {

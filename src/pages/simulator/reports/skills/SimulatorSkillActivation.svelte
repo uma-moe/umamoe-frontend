@@ -384,6 +384,7 @@
   .phone .line.head {
     top: calc(var(--utility-height, 0px) + var(--report-nav-offset, 0px));
     grid-template-rows: auto;
+    box-shadow: 0 6px 6px -6px rgb(0 0 0 / 0.4);
   }
   .phone .line.head > :is(.skill-head, .unit) {
     grid-row: 1;
@@ -404,8 +405,13 @@
   .stacked .line:not(.head) {
     margin-top: 10px;
   }
+  /* Pinned, the label line and the row gap under it slide up beneath the report bar, so only the faces stay over the list. */
   .stacked .line.head {
-    grid-template-rows: auto auto;
+    --head-labels: 18px;
+    top: calc(
+      var(--utility-height, 0px) + var(--report-nav-offset, 0px) - var(--head-labels) - 3px
+    );
+    grid-template-rows: var(--head-labels) auto;
   }
   .stacked .line.head > :is(.skill-head, .unit),
   .stacked .skill {
