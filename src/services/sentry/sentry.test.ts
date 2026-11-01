@@ -120,7 +120,9 @@ it('measures verification separately and ends the named pageload after critical 
   expect(JSON.stringify(vi.mocked(Sentry.startInactiveSpan).mock.calls)).not.toContain('private');
 });
 
-it('adds provider labels without guessing ownership from a URL embedded in an error', async () => {
+it('labels providers in mixed stacks without guessing ownership from a URL embedded in an error', async () => {
+  const application = { filename: location.origin + '/app/synthetic.js', lineno: 1 };
+
   for (const [host, vendor] of [
     ['cdn.fuseplatform.net', 'publift'],
     ['imasdk.googleapis.com', 'google-ads'],
@@ -138,12 +140,14 @@ it('adds provider labels without guessing ownership from a URL embedded in an er
     const result = await sentryOptions.beforeSend!(
       {
         type: undefined,
-        tags: { third_party_code: true },
         exception: {
           values: [
             {
               stacktrace: {
-                frames: [{ filename: `https://${host}/synthetic.js?private=1`, lineno: 1 }]
+                frames: [
+                  application,
+                  { filename: `https://${host}/synthetic.js?private=1`, lineno: 1 }
+                ]
               }
             }
           ]
@@ -152,7 +156,7 @@ it('adds provider labels without guessing ownership from a URL embedded in an er
       {}
     );
 
-    expect(result?.tags).toMatchObject({ 'error.provider': vendor, 'error.source': 'third-party' });
+    expect(result?.tags).toMatchObject({ 'error.provider': vendor, 'error.source': 'mixed' });
   }
 
   const unknown = await sentryOptions.beforeSend!(
@@ -175,11 +179,13 @@ it('adds provider labels without guessing ownership from a URL embedded in an er
 it('correlates failed requests by error identity and records safe request and capability context', async () => {
   document.documentElement.dataset.appPhase = 'mounted';
   const first = new TypeError('Load failed'),
-    second = new TypeError('Load failed');
+    second = new TypeError('Load failed'),
+    providerRequest = new TypeError('Load failed');
 
   for (const [error, url] of [
     [first, '/search/query?token=secret#plan'],
-    [second, 'https://user:password@cdn.fuseplatform.net/synthetic?token=secret']
+    [second, 'https://user:password@cdn.example.invalid/synthetic?token=secret'],
+    [providerRequest, 'https://cdn.fuseplatform.net/synthetic']
   ] as const) {
     sentryOptions.beforeBreadcrumb!(
       { category: 'fetch', level: 'error', data: { url, method: 'GET' } },
@@ -212,19 +218,17 @@ it('correlates failed requests by error identity and records safe request and ca
   });
 
   expect(result?.contexts?.browser_capabilities).toHaveProperty('array_to_sorted');
-  const vendor = await sentryOptions.beforeSend!(
+  const external = await sentryOptions.beforeSend!(
     { type: undefined },
     { originalException: second }
   );
 
-  expect(vendor?.tags).toMatchObject({
-    'error.provider': 'publift',
-    'network.target': 'external',
-    'error.source': 'third-party',
-    third_party_code: true
-  });
+  expect(external?.tags?.['network.target']).toBe('external');
+  expect(JSON.stringify(external?.contexts?.failed_request)).not.toMatch(/secret|password|user:/);
+  expect(
+    await sentryOptions.beforeSend!({ type: undefined }, { originalException: providerRequest })
+  ).toBeNull();
 
-  expect(JSON.stringify(vendor?.contexts?.failed_request)).not.toMatch(/secret|password|user:/);
   const apiWithVendorFrame = await sentryOptions.beforeSend!(
     {
       type: undefined,
@@ -242,7 +246,6 @@ it('correlates failed requests by error identity and records safe request and ca
   );
 
   expect(apiWithVendorFrame?.tags?.['network.target']).toBe('api');
-  expect(apiWithVendorFrame?.tags?.['error.actionability']).toBeUndefined();
   const unrelated = await sentryOptions.beforeSend!(
     { type: undefined },
     { originalException: new TypeError('Load failed') }
@@ -262,25 +265,26 @@ it('correlates failed requests by error identity and records safe request and ca
   expect(module?.tags?.third_party_code).toBeUndefined();
 });
 
-it('classifies provider-only callbacks without excluding application frames or verification failures', async () => {
+it('drops provider-only callbacks without excluding application frames or verification failures', async () => {
   const vendor = { filename: 'https://ajs-assets.ftstatic.com/synthetic.js', lineno: 1 };
 
   const application = { filename: location.origin + '/app/synthetic.js', lineno: 1 };
 
   const wrapper = { ...application, function: 'sentryWrapped' };
 
-  for (const [frames, source] of [
-    [[wrapper, vendor], 'third-party'],
-    [[application, vendor], 'mixed']
-  ] as const) {
-    const result = await sentryOptions.beforeSend!(
-      { type: undefined, exception: { values: [{ stacktrace: { frames: [...frames] } }] } },
-      {}
-    );
+  const providerCallback = await sentryOptions.beforeSend!(
+    { type: undefined, exception: { values: [{ stacktrace: { frames: [wrapper, vendor] } }] } },
+    {}
+  );
 
-    expect(result?.tags?.['error.source']).toBe(source);
-    expect(Boolean(result?.tags?.third_party_code)).toBe(source === 'third-party');
-  }
+  expect(providerCallback).toBeNull();
+  const mixedCallback = await sentryOptions.beforeSend!(
+    { type: undefined, exception: { values: [{ stacktrace: { frames: [application, vendor] } }] } },
+    {}
+  );
+
+  expect(mixedCallback?.tags?.['error.source']).toBe('mixed');
+  expect(mixedCallback?.tags?.third_party_code).toBeUndefined();
 
   const spoofed = await sentryOptions.beforeSend!(
     {
@@ -314,12 +318,7 @@ it('classifies provider-only callbacks without excluding application frames or v
       {}
     );
 
-    expect(event?.tags).toMatchObject({
-      'error.source': 'third-party',
-      'error.actionability': 'provider',
-      'error.provider': 'flashtalking'
-    });
-
+    expect(event).toBeNull();
     const mixed = await sentryOptions.beforeSend!(
       {
         type: undefined,
@@ -332,7 +331,6 @@ it('classifies provider-only callbacks without excluding application frames or v
     );
 
     expect(mixed?.tags?.['error.source']).toBe('mixed');
-    expect(mixed?.tags?.['error.actionability']).toBeUndefined();
     expect(mixed?.tags?.third_party_code).toBeUndefined();
   }
 
@@ -345,7 +343,6 @@ it('classifies provider-only callbacks without excluding application frames or v
   );
 
   expect(critical).not.toBeNull();
-  expect(critical?.tags?.['error.actionability']).toBeUndefined();
   const missingLines = await sentryOptions.beforeSend!(
     {
       type: undefined,
@@ -358,12 +355,50 @@ it('classifies provider-only callbacks without excluding application frames or v
     {}
   );
 
-  expect(missingLines?.tags).toMatchObject({
-    'error.stack': 'missing',
-    'error.source': 'third-party',
-    'error.actionability': 'provider',
-    'error.provider': 'ias'
-  });
+  expect(missingLines).toBeNull();
+});
+
+it('drops tagged errors from unlisted external scripts but keeps same-origin scripts and API failures', async () => {
+  const unlisted = { filename: 'https://ads.example.invalid/bid.js', lineno: 1 };
+
+  const inlineDocument = { filename: location.origin + '/', lineno: 1 };
+
+  const externalScript = await sentryOptions.beforeSend!(
+    {
+      type: undefined,
+      tags: { third_party_code: true },
+      exception: { values: [{ stacktrace: { frames: [unlisted] } }] }
+    },
+    {}
+  );
+
+  expect(externalScript).toBeNull();
+  const inlineScript = await sentryOptions.beforeSend!(
+    {
+      type: undefined,
+      tags: { third_party_code: true },
+      exception: { values: [{ stacktrace: { frames: [inlineDocument, unlisted] } }] }
+    },
+    {}
+  );
+
+  expect(inlineScript?.tags?.['error.source']).toBe('third-party');
+  const apiError = new TypeError('Load failed');
+  sentryOptions.beforeBreadcrumb!(
+    { category: 'fetch', level: 'error', data: { url: '/api/test', method: 'GET' } },
+    { data: apiError }
+  );
+
+  const apiFailure = await sentryOptions.beforeSend!(
+    {
+      type: undefined,
+      tags: { third_party_code: true },
+      exception: { values: [{ stacktrace: { frames: [unlisted] } }] }
+    },
+    { originalException: apiError }
+  );
+
+  expect(apiFailure?.tags?.['network.target']).toBe('api');
 });
 
 it('keeps verification failures and errors with no usable stack in the critical error stream', async () => {

@@ -42,6 +42,17 @@ function provider(value: string): string | undefined {
   )?.[0];
 }
 
+// Provider callbacks can include our bundled Sentry wrapper. That wrapper
+// does not make an otherwise external stack application code.
+function isSentryFrame(frame: Sentry.StackFrame, url: URL): boolean {
+  return (
+    frame.function === 'sentryWrapped' ||
+    // Production wrappers are minified; source maps are applied after beforeSend.
+    /\/node_modules\/@sentry\//.test(url.pathname) ||
+    /^\/app\/sentry-sdk-[\w-]+\.js$/.test(url.pathname)
+  );
+}
+
 function pageState() {
   return {
     online: navigator.onLine,
@@ -147,23 +158,21 @@ export const sentryOptions: Sentry.BrowserOptions = {
         .map((frame) => provider(frame.filename ?? ''))
         .find(Boolean) ?? (request ? provider(String(request.url)) : undefined);
 
-    // Provider callbacks can include our bundled Sentry wrapper. That wrapper
-    // does not make an otherwise external stack application code.
-    const hasApplicationFrame = frames.some((frame) => {
-      if (frame.function === 'sentryWrapped') return false;
+    const sameOriginFrameUrls = frames.flatMap((frame) => {
       const url = safeUrl(frame.filename ?? '');
-      if (!url) return false;
+      if (!url) return [];
       const parsed = new URL(url);
-      // Production wrappers are minified; source maps are applied after beforeSend.
-      if (
-        /\/node_modules\/@sentry\//.test(parsed.pathname) ||
-        /^\/app\/sentry-sdk-[\w-]+\.js$/.test(parsed.pathname)
-      )
-        return false;
-      return (
-        parsed.origin === location.origin && /^\/(app|src|node_modules)\//.test(parsed.pathname)
-      );
+      if (parsed.origin !== location.origin || isSentryFrame(frame, parsed)) return [];
+      return [parsed];
     });
+
+    const hasApplicationFrame = sameOriginFrameUrls.some((url) =>
+      /^\/(app|src|node_modules)\//.test(url.pathname)
+    );
+
+    const sameOriginRequest = request
+      ? new URL(String(request.url)).origin === location.origin
+      : false;
 
     const providerOnly =
       vendor &&
@@ -171,12 +180,17 @@ export const sentryOptions: Sentry.BrowserOptions = {
       !hasApplicationFrame &&
       event.tags?.['error.kind'] !== 'module-load' &&
       !event.exception?.values?.some((value) => value.type === 'TurnstileError') &&
-      (!request || new URL(String(request.url)).origin !== location.origin);
+      !sameOriginRequest;
 
     if (hasApplicationFrame && event.tags) delete event.tags.third_party_code;
-    if (providerOnly) {
-      event.tags = { ...event.tags, third_party_code: true };
-    }
+
+    const externalOnly =
+      Boolean(event.tags?.third_party_code) &&
+      sameOriginFrameUrls.length === 0 &&
+      !sameOriginRequest;
+
+    // Ad, analytics and other provider scripts fail on their own; we cannot act on those reports.
+    if (providerOnly || externalOnly) return null;
 
     const externalScript = [...frames]
       .reverse()
@@ -205,7 +219,6 @@ export const sentryOptions: Sentry.BrowserOptions = {
       'network.online': request?.online ?? state.online,
       'page.lifecycle': request?.lifecycle ?? state.lifecycle,
       'error.stack': hasStack ? 'available' : 'missing',
-      ...(providerOnly ? { 'error.actionability': 'provider' } : {}),
       ...(vendor ? { 'error.provider': vendor } : {}),
       ...(externalScript ? { 'error.script_host': new URL(externalScript).hostname } : {})
     };
