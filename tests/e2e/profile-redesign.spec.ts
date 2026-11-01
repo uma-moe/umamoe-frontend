@@ -258,6 +258,14 @@ test('Team Stadium cycles complete distance squads with three desktop columns an
   await expect(panel).toHaveAccessibleName('Sprint');
   await expect(panel.locator('.stadium-member')).toHaveCount(3);
   await expect(panel.locator('.stats > div')).toHaveCount(15);
+  // Each stat tile is tinted by its stat, as on a Veteran's card.
+  const firstStatTones = await panel
+    .locator('.stadium-member')
+    .first()
+    .locator('.stats > div')
+    .evaluateAll((tiles) => tiles.map((tile) => tile.getAttribute('data-tone')));
+
+  expect(firstStatTones).toEqual(['speed', 'stamina', 'power', 'guts', 'wit']);
   await expect(panel.locator('.skill-chip')).toHaveCount(3);
   await expect(panel.locator('.skill-name').first()).toHaveText('Right-Handed ◎');
   await panel

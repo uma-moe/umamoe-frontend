@@ -2,15 +2,14 @@
   import { characterImagePath, type CharacterData } from '@/lib/game-data/characters';
   import { loadSkills, type SkillData } from '@/lib/game-data/skills/skills';
   import {
-    aptitudeGrade,
     groupStadiumMembers,
     runningStyleName,
     scenarioName,
     totalStats
   } from '@/lib/profile/profile-display';
-  import type { AptitudeItem } from '@/components/game/AptitudeGrid.svelte';
   import type { VeteranUiRecord } from '@/components/game/veteran-ui-types';
   import ProfileVeteranCard from '../veterans/ProfileVeteranCard.svelte';
+  import { veteranAptitudes, veteranStatTiles } from '../veterans/roster/roster-records';
   import Button from '@/components/controls/Button.svelte';
   import Tabs from '@/components/navigation/Tabs.svelte';
   import ProfileVeteranDialog from '../veterans/details/ProfileVeteranDialog.svelte';
@@ -51,71 +50,6 @@
       .catch(() => (skillError = 'Skill names could not be loaded.'));
   });
 
-  function aptitudes(member: StadiumMember | ProfileVeteran): AptitudeItem[] {
-    return [
-      {
-        id: 'turf',
-        label: 'Turf',
-        grade: aptitudeGrade(member.proper_ground_turf),
-        group: 'Track'
-      },
-      {
-        id: 'dirt',
-        label: 'Dirt',
-        grade: aptitudeGrade(member.proper_ground_dirt),
-        group: 'Track'
-      },
-      {
-        id: 'sprint',
-        label: 'Sprint',
-        grade: aptitudeGrade(member.proper_distance_short),
-        group: 'Distance'
-      },
-      {
-        id: 'mile',
-        label: 'Mile',
-        grade: aptitudeGrade(member.proper_distance_mile),
-        group: 'Distance'
-      },
-      {
-        id: 'middle',
-        label: 'Medium',
-        grade: aptitudeGrade(member.proper_distance_middle),
-        group: 'Distance'
-      },
-      {
-        id: 'long',
-        label: 'Long',
-        grade: aptitudeGrade(member.proper_distance_long),
-        group: 'Distance'
-      },
-      {
-        id: 'front',
-        label: 'Front',
-        grade: aptitudeGrade(member.proper_running_style_nige),
-        group: 'Style'
-      },
-      {
-        id: 'pace',
-        label: 'Pace',
-        grade: aptitudeGrade(member.proper_running_style_senko),
-        group: 'Style'
-      },
-      {
-        id: 'late',
-        label: 'Late',
-        grade: aptitudeGrade(member.proper_running_style_sashi),
-        group: 'Style'
-      },
-      {
-        id: 'end',
-        label: 'End',
-        grade: aptitudeGrade(member.proper_running_style_oikomi),
-        group: 'Style'
-      }
-    ];
-  }
-
   function summary(member: StadiumMember | ProfileVeteran): VeteranUiRecord {
     return {
       id: String(member.id),
@@ -127,14 +61,9 @@
       detail: runningStyleName(member.running_style),
       affinity: Number.NaN,
       sparks: [],
-      aptitudes: aptitudes(member),
+      aptitudes: veteranAptitudes(member),
       stats: [
-        ...(['speed', 'stamina', 'power', 'guts', 'wiz'] as const).map((id) => ({
-          id,
-          label: id === 'wiz' ? 'Wit' : id[0]!.toUpperCase() + id.slice(1),
-          value: (member[id] ?? 0).toLocaleString(),
-          icon: '/assets/images/icon/stats/' + (id === 'wiz' ? 'wit' : id) + '.webp'
-        })),
+        ...veteranStatTiles(member),
         { id: 'total', label: 'Total', value: totalStats(member).toLocaleString() }
       ]
     };

@@ -10,10 +10,17 @@ import {
 import type { profileVeteranAffinity } from '@/lib/profile/veterans/profile-veteran-metrics';
 import { getRankInfoFromScore } from '@/lib/rank';
 import type { AptitudeItem } from '@/components/game/AptitudeGrid.svelte';
+import type { StatStripItem } from '@/components/game/StatStrip.svelte';
 import type { VeteranUiRecord } from '@/components/game/veteran-ui-types';
 import type { LineageBranch, LineageNodeData } from '@/components/lineage/lineage-types';
-import type { ProfileVeteran, SuccessionChara } from '../../profile-repository';
-import { aptitudeFields, statFields, statIcon } from './roster-options';
+import type { ProfileVeteran, StadiumMember, SuccessionChara } from '../../profile-repository';
+import {
+  aptitudeFields,
+  statFields,
+  statIcon,
+  type AptitudeField,
+  type StatField
+} from './roster-options';
 
 export type VeteranAffinity = ReturnType<typeof profileVeteranAffinity>;
 
@@ -44,12 +51,24 @@ export function factorGroups(items: ReturnType<typeof resolveVeteranFactors>) {
     .filter((group) => group.items.length);
 }
 
-export function veteranAptitudes(v: ProfileVeteran): AptitudeItem[] {
+/** Her ten aptitudes; a Team Stadium runner records them as a Veteran does. */
+export function veteranAptitudes(v: Pick<StadiumMember, AptitudeField>): AptitudeItem[] {
   return aptitudeFields.map((field) => ({
     id: field.id,
     label: field.label,
     group: field.group,
     grade: aptitudeGrade(v[field.id])
+  }));
+}
+
+/** Her five stats as tiles tinted by each stat's colour; a Team Stadium runner records them as a Veteran does. */
+export function veteranStatTiles(v: Pick<StadiumMember, StatField>): StatStripItem[] {
+  return statFields.map((field) => ({
+    id: field.id,
+    label: field.label,
+    value: (v[field.id] ?? 0).toLocaleString(),
+    tone: field.id === 'wiz' ? 'wit' : field.id,
+    icon: statIcon(field.id)
   }));
 }
 
@@ -77,13 +96,7 @@ export function veteranSummary(
         : 'Main = P1 + P2. Each parent includes base affinity and shared G1 wins.',
     aptitudes: veteranAptitudes(v),
     stats: [
-      ...statFields.map((field) => ({
-        id: field.id,
-        label: field.label,
-        value: (v[field.id] ?? 0).toLocaleString(),
-        tone: field.id === 'wiz' ? ('wit' as const) : field.id,
-        icon: statIcon(field.id)
-      })),
+      ...veteranStatTiles(v),
       { id: 'total', label: 'Total', value: item.total.toLocaleString() }
     ],
     sparks: factorGroups(item.factors),

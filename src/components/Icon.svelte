@@ -67,6 +67,15 @@
     ],
     veterans: ['M8 4h8v4H8z', 'M6 8h12l-1 13H7L6 8Z', 'M9 12h6', 'M12 9v6'],
     race: ['M4 19c4-7 7-10 16-14', 'm14 3 2 2-2 2', 'M5 15h5', 'M3 19h5'],
+    // Team Stadium: a stadium bowl around its field, its stands split into sections, a pennant on either side.
+    stadium: [
+      'M2 12a10 3.5 0 1 0 20 0 10 3.5 0 1 0-20 0Z',
+      'M6.5 12a5.5 1.6 0 1 0 11 0 5.5 1.6 0 1 0-11 0Z',
+      'M2 12v4a10 3.5 0 0 0 20 0v-4',
+      'M7 15v4m5-3.5v4m5-4.5v4',
+      'M5 9.5V4l3.5 1.25L5 6.5',
+      'M19 9.5V4l-3.5 1.25L19 6.5'
+    ],
     // A racecourse: an oval track whose finish line rises into the winning post's flag.
     course: [
       'M7 9h10a5.5 5.5 0 0 1 0 11H7A5.5 5.5 0 0 1 7 9Z',

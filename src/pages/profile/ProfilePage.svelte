@@ -319,7 +319,7 @@
         >
           <header class="section-heading">
             <Icon
-              name="race"
+              name="stadium"
               size={20}
             />
             <h2 id="profile-stadium-title">Team Stadium</h2>

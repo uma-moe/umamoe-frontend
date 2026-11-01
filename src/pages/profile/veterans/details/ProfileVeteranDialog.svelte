@@ -159,7 +159,7 @@
   {/if}
   {#snippet actions()}
     <Button
-      icon="race"
+      icon="stopwatch"
       variant="secondary"
       loading={simBusy}
       onclick={simulate}

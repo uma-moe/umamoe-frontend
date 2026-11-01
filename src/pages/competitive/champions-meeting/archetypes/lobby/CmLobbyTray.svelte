@@ -76,7 +76,7 @@
       </button>
       <Button
         size="sm"
-        icon="race"
+        icon="stopwatch"
         loading={lobby.opening}
         disabled={!lobby.count || lobby.pending.length > 0}
         onclick={lobby.openInSimulator}
