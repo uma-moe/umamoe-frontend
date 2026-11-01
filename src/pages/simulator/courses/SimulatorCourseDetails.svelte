@@ -20,6 +20,9 @@
 
   const selected = $derived(selectedCourse());
 
+  const courseLabel = $derived(selected ? describeCourse(selected) : undefined);
+  const trackLabel = $derived(selected ? trackName(selected.race_track_id) : 'Course breakdown');
+
   $effect(() => {
     if (!open || !selected) return;
     const id = selected.course_id;
@@ -70,13 +73,11 @@
 
 <Dialog
   bind:open
-  title="Course breakdown"
+  title={trackLabel}
+  description={courseLabel}
   maxWidth="1000px"
   maxHeight="90dvh"
 >
-  {#if selected}
-    <h3>{trackName(selected.race_track_id)}, {describeCourse(selected)}</h3>
-  {/if}
   {#if loading}
     <Spinner
       centered
@@ -85,19 +86,24 @@
   {:else if error}
     <p role="alert">{error}</p>
   {:else if course}
-    <SimulatorCourseProfile course={selected} />
-    <DataTable
-      caption="Course sections and slopes"
-      plain
-      compact
-      {rows}
-      columns={[
-        { key: 'section', label: 'Section' },
-        { key: 'start', label: 'Start (m)', numeric: true },
-        { key: 'end', label: 'End (m)', numeric: true },
-        { key: 'slope', label: 'Slope', numeric: true }
-      ]}
+    <SimulatorCourseProfile
+      course={selected}
+      embedded
     />
+    <div class="sections">
+      <DataTable
+        caption="Course sections and slopes"
+        plain
+        compact
+        {rows}
+        columns={[
+          { key: 'section', label: 'Section' },
+          { key: 'start', label: 'Start (m)', numeric: true },
+          { key: 'end', label: 'End (m)', numeric: true },
+          { key: 'slope', label: 'Slope', numeric: true }
+        ]}
+      />
+    </div>
   {:else}
     <p>Course details are unavailable.</p>
   {/if}
@@ -112,9 +118,8 @@
 </Dialog>
 
 <style>
-  h3 {
-    font-size: 16px;
-    margin: 0 0 12px;
+  .sections {
+    margin-top: 8px;
   }
   p {
     font-size: 11px;
