@@ -26,11 +26,14 @@
   let {
     number = 3,
     skillLookup,
+    released,
     owned = [],
     showBudget = true
   }: {
     number?: number;
     skillLookup: Map<number, SkillData>;
+    /** Skills out on Global; the search offers only these. */
+    released: ReadonlySet<number>;
     /** Skills she already has, which upgrades build on. */
     owned?: number[];
     /** Her SP, fans and Fast Learner sit here, above the skills, unless the Setup row has room for them. */
@@ -44,12 +47,13 @@
   const total = $derived(offers.priced.reduce((sum, offer) => sum + offer.cost, 0));
   const budget = $derived(Number(buildSearch.budget) || 0);
 
-  // Everything she could buy and does not have or have on offer yet: inherited uniques but not her own unique, priced
-  // in the catalog.
+  // Everything out on Global she could buy and does not have or have on offer yet: inherited uniques but not her own
+  // unique, priced in the catalog.
   const options = $derived<ComboboxOption[]>(
     [...skillLookup.values()]
       .filter(
         (skill) =>
+          released.has(skill.skill_id) &&
           (isInheritedUnique(skill) || !skill.unique) &&
           skill.name &&
           baseCost(skill) != null &&

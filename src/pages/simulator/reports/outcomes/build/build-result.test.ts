@@ -401,6 +401,18 @@ describe('worth in words', () => {
     ]);
   });
 
+  it('says what the simulator lacks to race each skill it cannot process', () => {
+    const cant = [
+      { purchase: 1, why: ['unknown skill'] },
+      { purchase: 2, why: ['needs a skill it cannot process'] }
+    ];
+
+    expect(ruledOutSkills(cant, offers).map((skill) => skill.needs)).toEqual([
+      'skill data the simulator does not have yet',
+      'a skill the simulator cannot race yet'
+    ]);
+  });
+
   it('tells how many builds the theory valued, and the races that checked them', () => {
     const tally = searchTally(result(), theory);
     const unchecked = result();

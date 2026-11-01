@@ -1,6 +1,6 @@
 <script lang="ts">
   import { onMount } from 'svelte';
-  import { loadSkills, type SkillData } from '@/lib/game-data/skills/skills';
+  import { loadReleasedSkillIds, loadSkills, type SkillData } from '@/lib/game-data/skills/skills';
   import { buildOptimizeRequest, type OptimizeBody } from './requests/optimize-request';
   import { simulatorRepository, type OptimizeResult } from './simulator-repository';
   import { buildRaces, fieldWhere } from './setup/build/build-races';
@@ -50,6 +50,8 @@
   const TEAM_TRIALS_RACE_TYPE = 14;
 
   let skillLookup = $state.raw(new Map<number, SkillData>());
+  /** Skills out on Global; only these can be added to the offer. */
+  let released = $state.raw<ReadonlySet<number>>(new Set());
   let run = $state<{
     result: OptimizeResult;
     offers: PricedOffer[];
@@ -95,9 +97,11 @@
     openLinkedCode();
 
     let active = true;
-    void loadSkills()
-      .then((value) => {
-        if (active) skillLookup = value;
+    void Promise.all([loadSkills(), loadReleasedSkillIds()])
+      .then(([value, ids]) => {
+        if (!active) return;
+        skillLookup = value;
+        released = ids;
       })
       .catch((reason: unknown) => {
         if (active)
@@ -351,6 +355,7 @@
       <SkillOffers
         number={3}
         {skillLookup}
+        {released}
         {owned}
         showBudget={!budgetInSetup}
       />

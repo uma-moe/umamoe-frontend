@@ -70,9 +70,13 @@
   const pickBuild = $derived(builds[0]);
   const pick = $derived(pickBuild?.finalist);
 
-  const inertSet = $derived(inertPurchases(unavailable ? [] : result?.inert));
+  const inertSet = $derived(
+    inertPurchases(unavailable ? [] : [...(result?.inert ?? []), ...(result?.cant_process ?? [])])
+  );
   /** Skills on offer that can never fire for her here, so the theory never valued them. */
   const ruledOut = $derived(ruledOutSkills(unavailable ? [] : result?.inert, offers));
+  /** Skills on offer the simulator cannot race yet, left out of the search. */
+  const unprocessed = $derived(ruledOutSkills(unavailable ? [] : result?.cant_process, offers));
   const leftover = $derived(
     leftoverSp({
       pick,
@@ -239,6 +243,7 @@
       <SkillScores
         skills={theorized.skills}
         {ruledOut}
+        {unprocessed}
         skillUnit={theorized.skillUnit}
         phaseBounds={theorized.phaseBounds}
       />
