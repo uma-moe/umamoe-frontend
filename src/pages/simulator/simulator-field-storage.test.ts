@@ -78,6 +78,62 @@ describe('the field this browser last raced', () => {
     expect(simulatorRoster.configured).toBe(false);
   });
 
+  it('keeps the example field replaceable after a reload', async () => {
+    const first = await rosterModule();
+    first.saveSimulatorField();
+
+    const { importSimulatorUmas, simulatorRoster } = await rosterModule();
+    expect(simulatorRoster.configured).toBe(false);
+
+    importSimulatorUmas([runner('Pick', 'a'), runner('Runner-up', 'b')]);
+
+    expect(simulatorRoster.umas.map((uma) => uma.name)).toEqual(['Pick', 'Runner-up']);
+  });
+
+  it('drops only the example runners when a build joins the field', async () => {
+    const { importSimulatorUmas, simulatorRoster } = await rosterModule();
+    const exampleCount = simulatorRoster.umas.length;
+    simulatorRoster.umas.push(runner('Seiun Sky', 'own'));
+    simulatorRoster.configured = true;
+
+    importSimulatorUmas([runner('Pick', 'a')]);
+
+    expect(exampleCount).toBeGreaterThan(1);
+    expect(simulatorRoster.umas.map((uma) => uma.name)).toEqual(['Seiun Sky', 'Pick']);
+  });
+
+  it('adds a build beside the runners already placed', async () => {
+    const { importSimulatorUmas, simulatorRoster } = await rosterModule();
+    importSimulatorUmas([runner('Seiun Sky', 'a'), runner('Silence Suzuka', 'b')]);
+
+    importSimulatorUmas([runner('Pick', 'c')]);
+
+    expect(simulatorRoster.umas.map((uma) => uma.name)).toEqual([
+      'Seiun Sky',
+      'Silence Suzuka',
+      'Pick'
+    ]);
+  });
+
+  it('reads an example field saved without the flag as the example', async () => {
+    const example = (await rosterModule()).simulatorRoster.umas;
+    storage.setItem(KEY, JSON.stringify({ field: example, teamColors: {} }));
+
+    const { simulatorRoster } = await rosterModule();
+
+    expect(simulatorRoster.configured).toBe(false);
+  });
+
+  it('keeps an edited example field once it is configured', async () => {
+    const first = await rosterModule();
+    first.simulatorRoster.configured = true;
+    first.saveSimulatorField();
+
+    const { simulatorRoster } = await rosterModule();
+
+    expect(simulatorRoster.configured).toBe(true);
+  });
+
   it('empties the field and keeps it empty', async () => {
     const { clearSimulatorField, saveSimulatorField, simulatorRoster } = await rosterModule();
     expect(simulatorRoster.umas.length).toBeGreaterThan(1);

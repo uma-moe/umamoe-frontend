@@ -2351,7 +2351,9 @@ test('Build codes load the runner, the course, the goal and what she can buy on 
   }, code);
 
   await expect(dialog.getByText('Runners', { exact: true })).toBeVisible();
-  await expect(dialog).toContainText('Replaces the example field with both runners');
+  await expect(dialog).toContainText(
+    'both runners to the race field in place of the example runners'
+  );
   await dialog.getByRole('button', { name: 'Load', exact: true }).click();
   await expect(page.locator('.field .runner')).toHaveCount(2);
   await expect(page.locator('.field .runner').first()).toContainText('Special Week');

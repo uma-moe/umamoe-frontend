@@ -27,7 +27,8 @@
     clearSimulatorField,
     createRosterUma,
     ensureSimulatorRoster,
-    importSimulatorUmas
+    importSimulatorUmas,
+    ownRunners
   } from '../../simulator-roster.svelte';
   import { selectedCourse, simulatorSession } from '../../simulator-session.svelte';
   import SkillPoints, { LEARNED_SKILL_POINTS_NOTE } from '@/components/game/SkillPoints.svelte';
@@ -375,8 +376,8 @@
 <SimulatorVeteranPicker
   bind:open={veteransOpen}
   onselectMany={addVeterans}
-  room={simulatorRoster.configured ? 18 - simulatorRoster.umas.length : 18}
-  placed={simulatorRoster.configured ? simulatorRoster.umas : []}
+  room={18 - ownRunners().length}
+  placed={ownRunners()}
 />
 {#if editing}
   <SimulatorUmaEditor

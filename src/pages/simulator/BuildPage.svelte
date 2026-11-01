@@ -310,7 +310,10 @@
     } catch (reason) {
       raceError =
         reason instanceof Error ? reason.message : 'Could not add her to the Race sim field.';
+      return;
     }
+
+    openRaceSim();
   }
 
   function raceMissing(): void {

@@ -1,6 +1,6 @@
 import { createSimulatorUma, restoreSimulatorUma, type SimulatorUma } from './simulator-uma';
 import { loadReleasedCharacters, type CharacterData } from '@/lib/game-data/characters';
-import { createExampleRace } from './simulator-example';
+import { createExampleRace, EXAMPLE_SOURCE } from './simulator-example';
 
 let characters: CharacterData[] = [];
 
@@ -13,7 +13,7 @@ const kept = restoreField();
 
 export const simulatorRoster = $state<{ umas: SimulatorUma[]; configured: boolean }>(
   kept
-    ? { umas: kept.umas, configured: true }
+    ? { umas: kept.umas, configured: kept.configured }
     : { umas: createExampleRace().umas, configured: false }
 );
 
@@ -41,9 +41,18 @@ export async function ensureSimulatorRoster(): Promise<void> {
   }
 }
 
-/** A whole team/lobby explicitly replaces the current field. Individual builds append. */
+export function isExampleRunner(uma: SimulatorUma): boolean {
+  return uma.source === EXAMPLE_SOURCE;
+}
+
+/** The runners the user placed, without the example ones an import makes room for. */
+export function ownRunners(): SimulatorUma[] {
+  return simulatorRoster.umas.filter((uma) => !isExampleRunner(uma));
+}
+
+/** A whole team/lobby explicitly replaces the current field. Individual builds take the example runners' place. */
 export function importSimulatorUmas(umas: SimulatorUma[], replace = false): void {
-  const existing = replace || !simulatorRoster.configured ? [] : simulatorRoster.umas;
+  const existing = replace ? [] : ownRunners();
   if (existing.length + umas.length > 18)
     throw new Error('A race can contain at most 18 Uma. Remove a runner first.');
   simulatorRoster.umas = [...existing, ...umas];
@@ -96,17 +105,27 @@ function readTeamColors(value: unknown): Record<number, string> {
   return teamColors;
 }
 
-function restoreField(): { umas: SimulatorUma[]; teamColors: Record<number, string> } | undefined {
+function restoreField():
+  { umas: SimulatorUma[]; teamColors: Record<number, string>; configured: boolean } | undefined {
   try {
     const saved: unknown = JSON.parse(localStorage.getItem(FIELD_STORAGE_KEY) ?? 'null');
     if (!saved || typeof saved !== 'object') return undefined;
 
-    const { field, teamColors } = saved as { field?: unknown; teamColors?: unknown };
+    const { field, teamColors, configured } = saved as {
+      field?: unknown;
+      teamColors?: unknown;
+      configured?: unknown;
+    };
     if (!Array.isArray(field)) return undefined;
     // An empty field was cleared on purpose, so it stays empty.
-    if (!field.length) return { umas: [], teamColors: readTeamColors(teamColors) };
+    if (!field.length)
+      return { umas: [], teamColors: readTeamColors(teamColors), configured: true };
 
-    return restoreSimulatorField({ field, teamColors });
+    const restored = restoreSimulatorField({ field, teamColors });
+    // Fields saved before the flag existed still read as the example while every runner comes from it.
+    const userField =
+      typeof configured === 'boolean' ? configured : !restored.umas.every(isExampleRunner);
+    return { ...restored, configured: userField };
   } catch {
     return undefined;
   }
@@ -129,7 +148,8 @@ export const simulatorTeamColors = $state<Record<number, string>>({
 export function saveSimulatorField(): void {
   const data = JSON.stringify({
     field: $state.snapshot(simulatorRoster.umas),
-    teamColors: $state.snapshot(simulatorTeamColors)
+    teamColors: $state.snapshot(simulatorTeamColors),
+    configured: simulatorRoster.configured
   });
 
   try {

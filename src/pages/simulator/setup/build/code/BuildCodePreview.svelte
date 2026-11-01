@@ -1,7 +1,7 @@
 <script lang="ts">
   import { describeCourse, trackName, type RaceCourse } from '@/lib/game-data/racing/courses';
   import type { SkillData } from '@/lib/game-data/skills/skills';
-  import { simulatorRoster } from '../../../simulator-roster.svelte';
+  import { isExampleRunner, simulatorRoster } from '../../../simulator-roster.svelte';
   import {
     GROUND_OPTIONS,
     SEASON_OPTIONS,
@@ -78,10 +78,12 @@
     if (whole) return WHOLE[target](runners.length);
 
     if (target === 'race') {
+      const replacesExample = simulatorRoster.umas.some(isExampleRunner);
       return (
-        (simulatorRoster.configured ? 'Adds ' : 'Replaces the example field with ') +
+        'Adds ' +
         (runners.length === 1 ? 'her' : 'both runners') +
-        (simulatorRoster.configured ? ' to the race field' : '') +
+        ' to the race field' +
+        (replacesExample ? ' in place of the example runners' : '') +
         ' and sets the course.'
       );
     }

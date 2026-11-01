@@ -329,6 +329,8 @@ export const EXAMPLE_RACE_SETTINGS = {
   startTime: '2'
 };
 
+export const EXAMPLE_SOURCE = 'CM example';
+
 export function createExampleRace() {
   return {
     ...EXAMPLE_RACE_SETTINGS,
@@ -339,7 +341,7 @@ export function createExampleRace() {
           { cards, meta: { courseDistance: 'Long', courseSurface: 'Turf' } },
           index + 1
         ),
-        source: 'CM example'
+        source: EXAMPLE_SOURCE
       }))
     )
   };
