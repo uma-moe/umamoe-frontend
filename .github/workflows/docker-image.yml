@@ -519,11 +519,77 @@ jobs:
           # Production used to rsync straight from the export; keep dotfiles so --delete removes nothing new.
           include-hidden-files: true
 
+  release:
+    name: Check Release Kind
+    # The timeline sync commits WebP images, their manifests and its state files every day. A push
+    # to the default branch whose only changes since the last production deploy are that data
+    # deploys through beta-auto and production-auto, which need no approval and serve the default
+    # branch only. Everything else, including a sync on top of code that hasn't been released yet,
+    # waits in beta / production.
+    if: github.event_name != 'pull_request'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      deployments: read
+    outputs:
+      data_only: ${{ steps.check.outputs.data_only }}
+    steps:
+      - name: Compare with the last production deploy
+        id: check
+        # If the check itself fails, the deploy falls back to the approval environments.
+        continue-on-error: true
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+          DEFAULT_BRANCH: ${{ github.event.repository.default_branch }}
+        run: |
+          set -euo pipefail
+          # The files sync-timeline-images.yml commits.
+          data_paths='^(src/assets/timeline-images/.+\.(webp|json)|timeline-image-sync/[^/]+\.json)$'
+
+          # Newest successful deployment to an environment, as "created_at sha".
+          latest_success() {
+            gh api "repos/$GITHUB_REPOSITORY/deployments?environment=$1&per_page=30" \
+              --jq '.[] | "\(.id) \(.sha) \(.created_at)"' |
+              while read -r id sha created; do
+                state=$(gh api "repos/$GITHUB_REPOSITORY/deployments/$id/statuses?per_page=1" --jq '.[0].state // ""')
+                if [[ "$state" == success || "$state" == inactive ]]; then
+                  echo "$created $sha"
+                  break
+                fi
+              done
+          }
+
+          data_only=false
+          if [[ "$GITHUB_EVENT_NAME" == push && "$GITHUB_REF" == "refs/heads/$DEFAULT_BRANCH" ]]; then
+            deployed=$({ latest_success production; latest_success production-auto; } | sort -r | head -1 | cut -d' ' -f2)
+            if [[ -z "$deployed" ]]; then
+              echo "No earlier production deploy found."
+            else
+              compare="repos/$GITHUB_REPOSITORY/compare/$deployed...$GITHUB_SHA"
+              read -r status count < <(gh api "$compare" --jq '"\(.status) \(.files | length)"')
+              changed=$(gh api "$compare" --jq '.files[] | .filename, (.previous_filename // empty)')
+              other=$(grep -vE "$data_paths" <<< "$changed" || true)
+              echo "Production runs ${deployed:0:7}. Compared with it, this push is '$status' with $count changed file(s)."
+              # The compare API lists at most 300 files; a longer list is never just sync data.
+              if [[ "$status" == ahead && "$count" -lt 300 && -n "$changed" && -z "$other" ]]; then
+                data_only=true
+              elif [[ -n "$other" ]]; then
+                echo "Changed besides sync data:"
+                head -20 <<< "$other" | sed 's/^/  /'
+              fi
+            fi
+          fi
+          echo "Sync data only: $data_only"
+          echo "data_only=$data_only" >> "$GITHUB_OUTPUT"
+
   deploy_beta:
     if: github.event_name != 'pull_request' && needs.build.outputs.deploy_target == 'beta'
-    needs: build
+    needs:
+      - build
+      - release
     runs-on: ubuntu-latest
-    environment: beta
+    environment: ${{ needs.release.outputs.data_only == 'true' && 'beta-auto' || 'beta' }}
     steps:
       - name: Download shell artifact
         uses: actions/download-artifact@v4
@@ -668,9 +734,10 @@ jobs:
     needs:
       - build
       - build_production
+      - release
       - deploy_beta
     runs-on: ubuntu-latest
-    environment: production
+    environment: ${{ needs.release.outputs.data_only == 'true' && 'production-auto' || 'production' }}
     steps:
       - name: Download production shell artifact
         uses: actions/download-artifact@v4
