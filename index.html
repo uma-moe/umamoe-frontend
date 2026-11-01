@@ -79,25 +79,37 @@
           if (compatibilityBuild && source.indexOf('-legacy-') === -1) return false;
           return source.indexOf(location.origin + '/app/') === 0 || source.indexOf(location.origin + '/src/') === 0 || source.indexOf(location.origin + '/node_modules/') === 0;
         }
-        function stackSource(error) {
-          // Fetch errors can start in Sentry's native-call wrapper; use the actual caller.
+        function stackSources(error) {
           var lines = error && typeof error.stack === 'string' ? error.stack.split('\n') : [];
+          var sources = [];
           for (var i = 0; i < lines.length; i++) {
             var frame = lines[i].match(/^(?:\s*at\s+.*?|[^@]*@)([a-z][a-z0-9+.-]*:(?:\/\/)?[^\s)]+)/i);
-            if (frame && !isSentrySource(frame[1])) return frame[1];
+            if (frame) sources.push(frame[1]);
           }
+          return sources;
+        }
+        function stackSource(error) {
+          // Fetch errors can start in Sentry's native-call wrapper; use the actual caller.
+          var sources = stackSources(error);
+          for (var i = 0; i < sources.length; i++) if (!isSentrySource(sources[i])) return sources[i];
           return '';
+        }
+        function isAppFailure(error, filename) {
+          // Ads, providers and extensions fail inside their own call chains; only full app crashes get this screen.
+          var sources = stackSources(error);
+          for (var i = 0; i < sources.length; i++) if (sources[i].indexOf(location.origin + '/') !== 0) return false;
+          return isAppSource(stackSource(error) || filename);
         }
         window.addEventListener('umamoe:app-error', function (event) { show(event.detail); });
         window.addEventListener('error', function (event) {
           var script = event.target;
           if (script && script.tagName === 'SCRIPT' && isAppSource(script.src)) show('An application file could not be downloaded. Check your connection and reload.', { filename: script.src });
-          else if (isAppSource(stackSource(event.error) || event.filename)) show(event.error || event.message, event);
+          else if (isAppFailure(event.error, event.filename)) show(event.error || event.message, event);
         }, true);
         window.addEventListener('unhandledrejection', function (event) {
           // Superseded requests are expected cancellations, including rejections leaked by fetch observers.
           if (event.reason && event.reason.name === 'AbortError') return;
-          if (isAppSource(stackSource(event.reason))) show(event.reason);
+          if (isAppFailure(event.reason)) show(event.reason);
         });
       }());
     </script>

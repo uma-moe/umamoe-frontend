@@ -132,7 +132,17 @@ export default defineConfig(async ({ mode, command }) => {
       // Compiled code belongs to the shell artifact; /assets is deployed separately.
       assetsDir: 'app',
       manifest: true,
-      sourcemap: uploadSourceMaps ? 'hidden' : !['production', 'beta'].includes(mode)
+      sourcemap: uploadSourceMaps ? 'hidden' : !['production', 'beta'].includes(mode),
+      rollupOptions: {
+        output: {
+          // The crash fallback and Sentry's filters recognise SDK wrapper frames by this file name.
+          // @sentry/svelte stays out: its Svelte runtime import would follow it into this chunk.
+          manualChunks: (id) =>
+            /[\\/]node_modules[\\/]@sentry(-internal[\\/]|[\\/](core|browser)[\\/])/.test(id)
+              ? 'sentry-sdk'
+              : undefined
+        }
+      }
     },
     server: {
       host: '127.0.0.1',

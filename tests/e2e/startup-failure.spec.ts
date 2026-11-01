@@ -105,6 +105,10 @@ test('app runtime errors are visible while unrelated third-party errors are igno
         location.origin +
         '/app/sentry-sdk-test.js:17:10452)\n    at callback (https://cdn.fuseplatform.net/prebid/fixture.js:12:35110)',
       'apply@' + location.origin + '/app/sentry-sdk-test.js:17:10452\n@[native code]',
+      // A wrapper bundled into a differently named chunk still runs on behalf of the provider.
+      'apply@' +
+        location.origin +
+        '/app/reportPageLoaded-test.js:17:10533\n@[native code]\ni@https://cdn.fuseplatform.net/prebid/fixture.js:12:35110\n#e@https://cdn.fuseplatform.net/prebid/fixture.js:60:3912',
       'Error: Extension failure\n    at callback (chrome-extension://example/content.js:1:2)\n    at sentryWrapped (' +
         location.origin +
         '/app/sentry-sdk-test.js:3:4)',
@@ -227,11 +231,8 @@ test('optional page warming stops when the document head has been removed', asyn
   expect(errors).toEqual([]);
 });
 
-test('Sentry records and tags wrapped provider errors without showing the fatal screen', async ({
-  page
-}) => {
+test('Sentry drops wrapped provider errors without showing the fatal screen', async ({ page }) => {
   const events: {
-    tags?: Record<string, unknown>;
     exception?: { values?: { value?: string }[] };
     contexts?: { failed_request?: { url?: string } };
   }[] = [];
@@ -258,52 +259,12 @@ test('Sentry records and tags wrapped provider errors without showing the fatal 
     })
   );
 
-  await page.addScriptTag({ url: 'https://provider.invalid/widget.js' });
-  await page.evaluate(() => window.dispatchEvent(new Event('fixture:provider')));
-  await expect
-    .poll(
-      () =>
-        events.map((event) => ({
-          tags: event.tags,
-          errors: event.exception?.values?.map((value) => value.value)
-        })),
-      { timeout: 10_000 }
-    )
-    .toContainEqual({
-      tags: expect.objectContaining({
-        third_party_code: true,
-        'error.source': 'third-party',
-        'error.script_host': 'provider.invalid'
-      }),
-      errors: ['Synthetic provider failure']
-    });
-
   await page.route('https://ajs-assets.ftstatic.com/ftUtils.js', (route) =>
     route.fulfill({
       contentType: 'application/javascript',
       body: 'window.addEventListener("fixture:creative", function () { setTimeout(function () { throw new TypeError("Synthetic creative failure"); }, 0); });'
     })
   );
-
-  await page.addScriptTag({ url: 'https://ajs-assets.ftstatic.com/ftUtils.js' });
-  await page.evaluate(() => window.dispatchEvent(new Event('fixture:creative')));
-  await expect
-    .poll(
-      () =>
-        events.map((event) => ({
-          tags: event.tags,
-          errors: event.exception?.values?.map((value) => value.value)
-        })),
-      { timeout: 10_000 }
-    )
-    .toContainEqual({
-      tags: expect.objectContaining({
-        'error.source': 'third-party',
-        'error.provider': 'flashtalking',
-        'error.actionability': 'provider'
-      }),
-      errors: ['Synthetic creative failure']
-    });
 
   // Real failed fetches put Sentry's apply wrapper first on iPhone, as in the report.
   await page.route('https://id5-sync.com/api/config/prebid', (route) => route.abort('failed'));
@@ -314,21 +275,37 @@ test('Sentry records and tags wrapped provider errors without showing the fatal 
     })
   );
 
-  await page.addScriptTag({ url: 'https://cdn.fuseplatform.net/prebid/fixture.js' });
-  await page.evaluate(() => window.dispatchEvent(new Event('fixture:id5')));
-  await expect
-    .poll(
-      () => events.map((event) => ({ tags: event.tags, url: event.contexts?.failed_request?.url })),
-      { timeout: 10_000 }
-    )
-    .toContainEqual({
-      tags: expect.objectContaining({
-        'error.source': 'third-party',
-        'error.actionability': 'provider',
-        'error.kind': 'network'
-      }),
-      url: 'https://id5-sync.com/api/config/prebid'
-    });
+  for (const url of [
+    'https://provider.invalid/widget.js',
+    'https://ajs-assets.ftstatic.com/ftUtils.js',
+    'https://cdn.fuseplatform.net/prebid/fixture.js'
+  ]) {
+    await page.addScriptTag({ url });
+  }
+
+  const id5Failure = page.waitForEvent('requestfailed', (request) =>
+    request.url().startsWith('https://id5-sync.com/')
+  );
+
+  await page.evaluate(() => {
+    for (const name of ['fixture:provider', 'fixture:creative', 'fixture:id5'])
+      window.dispatchEvent(new Event(name));
+  });
+
+  await id5Failure;
+  // A later same-origin failure still reaches Sentry, so the provider events had their chance.
+  await page.addScriptTag({
+    content: 'setTimeout(function () { throw new Error("Synthetic page failure"); }, 0);'
+  });
+
+  const reportedErrors = () =>
+    events.flatMap((event) => event.exception?.values?.map((value) => value.value) ?? []);
+  await expect.poll(reportedErrors, { timeout: 10_000 }).toContain('Synthetic page failure');
+  expect(reportedErrors()).not.toContain('Synthetic provider failure');
+  expect(reportedErrors()).not.toContain('Synthetic creative failure');
+  expect(events.map((event) => event.contexts?.failed_request?.url)).not.toContain(
+    'https://id5-sync.com/api/config/prebid'
+  );
 
   await expect(page.locator('#app-error')).toBeHidden();
 });

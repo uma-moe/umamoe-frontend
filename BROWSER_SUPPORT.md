@@ -34,8 +34,11 @@ Older-browser verification must use a production build, not Vite's dev server.
 The independent HTML fallback handles app startup, rendering and uncaught
 runtime failures. It offers reload and support links, includes browser/build
 details, omits URL query strings and does not clear saved plans. Page download
-failures also retain the existing in-app retry screen. Third-party script errors
-do not trigger the app fallback on their own.
+failures also retain the existing in-app retry screen. The fallback is reserved
+for app crashes: an error whose stack passes through another origin's script
+(ads, providers, extensions) never triggers it. All Sentry SDK code is bundled
+into `sentry-sdk-*` chunks so the fallback and Sentry's filters can skip its
+wrapper frames.
 
 Run `npm run build`, then `npm run test:e2e -- tests/e2e/browser-compatibility.spec.ts tests/e2e/startup-failure.spec.ts --project=chromium`.
 Set `PLAYWRIGHT_BASE_URL` to an existing preview server to avoid rebuilding.
