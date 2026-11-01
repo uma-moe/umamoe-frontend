@@ -1,7 +1,7 @@
 {
   "name": "umamoe-frontend",
-  "version": "2.1.0",
-  "buildNumberBase": 374,
+  "version": "2.2.0",
+  "buildNumberBase": 573,
   "description": "Mobile-first Svelte frontend for uma.moe",
   "type": "module",
   "scripts": {

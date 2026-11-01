@@ -31,7 +31,7 @@ export interface UpdateEntry {
 export const UPDATE_LOG: UpdateEntry[] = [
   {
     title: 'Hakuraku comes to uma.moe',
-    version: '2.1',
+    version: '2.2',
     date: '2026-10-29',
     summary:
       'A new home for racing: Hakuraku’s race analysis, CM data and research join uma.moe, with new tools to simulate races, compare skills and plan builds.',
