@@ -1,0 +1,5 @@
+# Every change to the default branch needs a review from @Tunnelbliick.
+# Deploy secrets only reach workflows running on the default branch, so this
+# file plus the branch ruleset keep CI/CD under the owner's control.
+*         @Tunnelbliick
+/.github/ @Tunnelbliick
