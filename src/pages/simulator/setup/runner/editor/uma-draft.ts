@@ -62,11 +62,7 @@ export function inheritedUniqueSkillId(cardId: number): number {
   return characterUniqueSkillId(cardId) + 800000;
 }
 
-/**
- * Whether a skill belongs in her owned list through the picker. Personal uniques belong to one Uma, so another
- * runner's unique never shows up here; her own is added with her character. Her inherited copy is out too, since a
- * runner cannot inherit her own unique.
- */
+/** Personal uniques belong to one Uma and a runner cannot inherit her own, so neither shows up in the picker. */
 export function selectableOwnedSkill(skill: SkillData, cardId: number | undefined): boolean {
   if (cardId === undefined) return Boolean(skill.inherited) || (!skill.unique && skill.rarity < 4);
 
@@ -78,10 +74,7 @@ export function selectableOwnedSkill(skill: SkillData, cardId: number | undefine
   return skill.skill_id !== inheritedUniqueSkillId(cardId);
 }
 
-/**
- * Her card's unique skill when she doesn't own it yet and the skill data knows it, so the Owns row can offer it back
- * after a removal; undefined when she has no card, already owns it or the skill is unknown.
- */
+/** Her card's unique when she does not own it, so the Owns row can offer it back. */
 export function missingCharacterUnique(
   uma: Pick<SimulatorUma, 'cardId' | 'skills'>,
   knownSkill: (skillId: number) => boolean

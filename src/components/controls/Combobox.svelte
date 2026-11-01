@@ -35,7 +35,7 @@
     clearLabel?: string;
     emptyValue?: string;
     prefixIcon?: IconName;
-    /** Focus the input when it should be ready to type, without opening the suggestions. */
+    /** Focuses the input on mount without opening the suggestions. */
     autofocus?: boolean;
     optionContent?: Snippet<[ComboboxOption]>;
     onchange?: (value: string) => void;
@@ -73,7 +73,7 @@
   let open = $state(false);
   let editing = $state(false);
   let activeIndex = $state(0);
-  /** The autofocus below is not the reader asking for suggestions, so it does not open them. */
+  /** Set while autofocusing, so that focus does not open the suggestions. */
   let skipFocusOpen = false;
 
   $effect(() => {

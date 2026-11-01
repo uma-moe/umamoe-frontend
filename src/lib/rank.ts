@@ -23,7 +23,6 @@ function token(tier: RankInfo['tier']) {
   return `var(--rank-${tier.toLowerCase()})`;
 }
 
-/** The game's square rank badge for a status-rank icon index. */
 export function rankIconPath(iconIndex: number): string {
   return (
     '/game-assets/textures/uma_ranks/utx_ico_statusrank_' +
@@ -120,7 +119,6 @@ const STAT_RANK_CAP = 1200;
 const STAT_ULTRA_POINTS = 10;
 const STAT_ULTRA_RARITY_MAX = 98;
 
-/** The rank a basic stat value earns, such as S at 1000 or SS+ at 1150. */
 export function getStatRankInfo(value: number): RankInfo {
   if (!Number.isFinite(value) || value < 1) return getRankInfo(1);
 

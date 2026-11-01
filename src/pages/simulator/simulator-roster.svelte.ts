@@ -7,10 +7,8 @@ let characters: CharacterData[] = [];
 /** The most runners a race takes. */
 const MAX_FIELD = 18;
 
-/** The field this browser last used: its runners and their team colors. */
 const FIELD_STORAGE_KEY = 'uma.simulator.field';
 
-/** The field a visit starts with: the one kept from last time, else the example. */
 const kept = restoreField();
 
 export const simulatorRoster = $state<{ umas: SimulatorUma[]; configured: boolean }>(
@@ -53,7 +51,7 @@ export function importSimulatorUmas(umas: SimulatorUma[], replace = false): void
   simulatorRoster.configured = true;
 }
 
-/** Empties the field, which stays empty: a cleared field is kept, so a reload does not bring the example back. */
+/** Saved as empty too, so a reload does not bring the example field back. */
 export function clearSimulatorField(): void {
   simulatorRoster.umas = [];
   simulatorRoster.configured = true;
@@ -85,7 +83,6 @@ export function restoreSimulatorField(saved: { field: unknown[]; teamColors?: un
   return { umas, teamColors: readTeamColors(saved.teamColors) };
 }
 
-/** The team colors of a saved field that are valid: an id in 1..255 and a hex color. */
 function readTeamColors(value: unknown): Record<number, string> {
   const teamColors: Record<number, string> = {};
   const colors = value && typeof value === 'object' ? Object.entries(value) : [];
@@ -99,10 +96,6 @@ function readTeamColors(value: unknown): Record<number, string> {
   return teamColors;
 }
 
-/**
- * The field kept from last time, when it still reads: an empty field is a cleared one and stays empty. Anything
- * unreadable, or a browser without storage, leaves the example field.
- */
 function restoreField(): { umas: SimulatorUma[]; teamColors: Record<number, string> } | undefined {
   try {
     const saved: unknown = JSON.parse(localStorage.getItem(FIELD_STORAGE_KEY) ?? 'null');
@@ -110,6 +103,7 @@ function restoreField(): { umas: SimulatorUma[]; teamColors: Record<number, stri
 
     const { field, teamColors } = saved as { field?: unknown; teamColors?: unknown };
     if (!Array.isArray(field)) return undefined;
+    // An empty field was cleared on purpose, so it stays empty.
     if (!field.length) return { umas: [], teamColors: readTeamColors(teamColors) };
 
     return restoreSimulatorField({ field, teamColors });
@@ -131,7 +125,7 @@ export const simulatorTeamColors = $state<Record<number, string>>({
   ...kept?.teamColors
 });
 
-/** Keeps the field and its team colors in this browser; call it from an effect so every change is kept. */
+/** Run it in an effect so every change to the field is saved. */
 export function saveSimulatorField(): void {
   const data = JSON.stringify({
     field: $state.snapshot(simulatorRoster.umas),

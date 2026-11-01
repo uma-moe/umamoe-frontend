@@ -11,13 +11,9 @@
   import type { SimulatorUma } from '../../simulator-uma';
   import { swapCharacterUnique } from './editor/uma-draft';
 
-  /**
-   * Her character, picked in place: the card sets her name and swaps the old card's unique for the new one. It opens
-   * the same character list the build editor used, so a runner starts with the right card before any skills are added.
-   */
+  /** Picking a card sets her name and swaps the old card's unique for the new one. */
   interface Props {
     uma: SimulatorUma;
-    /** Her character changed, for pages that recount her build. */
     onchange?: () => void;
   }
 
@@ -110,7 +106,6 @@
 />
 
 <style>
-  /* The Runner row's control height, so it lines up with the stat fields beside it. */
   .uma-picker {
     height: var(--control-height, 36px);
     max-width: 100%;

@@ -19,17 +19,12 @@
     field: boolean;
     checkRaces: number;
     tools?: Snippet;
-    /** Adds one build to the Race sim field. */
     onrace?: (build: TheorizedBuild) => void;
-    /** Adds both builds at once, so they race each other. */
     onraceall?: () => void;
-    /** The builds already added to the field, by their place in `builds`, so their button adds nothing twice. */
+    /** Indices into `builds` already in the field. */
     raced?: number[];
-    /** Opens the Race sim, where the added builds are. */
     onopenrace?: () => void;
-    /** Why adding a build failed, said under the cards. */
     raceError?: string;
-    /** Why the builds cannot be raced yet; empty when they can. */
     raceBlocked?: string;
   }
 

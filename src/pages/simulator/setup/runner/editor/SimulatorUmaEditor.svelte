@@ -49,7 +49,6 @@
     course?: RaceCourse;
     /** A new runner for the field rather than changes to one already there. */
     adding?: boolean;
-    /** Puts the cursor in the skill search when the dialog opens, for the Owns row's Add skills action. */
     focusSkills?: boolean;
     open?: boolean;
     onsave: (uma: SimulatorUma) => void;

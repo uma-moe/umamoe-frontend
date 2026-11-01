@@ -50,17 +50,12 @@
     /** The setup changed since this search. */
     stale?: boolean;
     onretry?: () => void;
-    /** Adds a build to the Race sim field; both builds can go, so they race each other. */
     onrace?: (build: TheorizedBuild) => void;
-    /** Adds both builds at once. */
     onraceall?: () => void;
-    /** The builds already in the field, so their button does not add them twice. */
+    /** Indices of the builds already in the field. */
     raced?: number[];
-    /** Opens the Race sim, where the builds now are. */
     onopenrace?: () => void;
-    /** Why adding a build to the field failed. */
     raceError?: string;
-    /** Why the builds cannot be raced yet; empty when they can. */
     raceBlocked?: string;
   } = $props();
 

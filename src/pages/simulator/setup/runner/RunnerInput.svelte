@@ -34,7 +34,6 @@
     green?: HpPlan['green'];
     course?: RaceCourse;
     note?: string;
-    /** Her build changed under the page's own controls, so the page can recount it. */
     onbuild?: (uma: SimulatorUma) => void;
     /** Opens the page's build code dialog. */
     oncode?: () => void;
@@ -58,7 +57,6 @@
     label: runningStyleName(index + 1)
   }));
 
-  // Mood and grades with their in-game icons, as the editor shows them.
   const MOOD_OPTIONS = (['Great', 'Good', 'Normal', 'Bad', 'Awful'] as const).map(
     (label, index) => ({
       value: String(5 - index),
@@ -225,8 +223,6 @@
   }
   @container sim-form (min-width: 1280px) {
     .runner-fields {
-      /* Her character, five stats, then her running style with room for its name, the mood icon with only what it
-         needs, and the three aptitudes, which take less room. */
       grid-template-columns:
         minmax(0, 1.15fr) repeat(5, minmax(0, 1fr)) minmax(0, 1.35fr)
         minmax(80px, 0.6fr) repeat(3, minmax(0, 0.8fr));
@@ -302,7 +298,6 @@
     color: var(--color-green);
     font-variant-numeric: tabular-nums;
   }
-  /* A phone: all five stats still in one row; style and mood share a line, the three aptitudes the next. */
   @container sim-form (max-width:560px) {
     .runner-fields,
     .fields {

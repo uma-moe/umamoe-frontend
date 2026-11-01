@@ -3,7 +3,6 @@ import { createSimulatorUma, type SimulatorUma } from './simulator-uma';
 
 const KEY = 'uma.simulator.field';
 
-/** Storage as a browser without one would not have it: a map the module writes to and reads back. */
 function memoryStorage() {
   const data = new Map<string, string>();
   return {
@@ -17,7 +16,7 @@ const runner = (name: string, id: string): SimulatorUma => ({ ...createSimulator
 
 let storage: ReturnType<typeof memoryStorage>;
 
-/** The module keeps this browser's field, so every test reads it fresh. */
+/** Reimported, so each test restores the field from storage again. */
 async function rosterModule() {
   vi.resetModules();
   return import('./simulator-roster.svelte');
@@ -57,7 +56,7 @@ describe('the field this browser last raced', () => {
     expect(simulatorRoster.umas.map((uma) => uma.name)).toEqual(['Seiun Sky', 'Silence Suzuka']);
     expect(simulatorRoster.configured).toBe(true);
     expect(simulatorTeamColors[2]).toBe('#123456');
-    // A color that is not one stays out, and the defaults are still there.
+    // 'red' is not a hex color, so team 3 keeps its default.
     expect(simulatorTeamColors[3]).toBe('#e8ad63');
   });
 

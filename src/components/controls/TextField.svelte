@@ -21,7 +21,6 @@
     autocomplete?: HTMLInputAttributes['autocomplete'];
     inputmode?: 'none' | 'text' | 'decimal' | 'numeric' | 'tel' | 'search' | 'email' | 'url';
     hideLabel?: boolean;
-    /** An image shown after the label text, such as the stat's own icon. */
     labelImage?: string;
     prefixIcon?: IconName;
     suffixIcon?: IconName;

@@ -119,7 +119,6 @@
     simulatorRoster.configured = true;
   }
 
-  /** Empties the field, rather than the two runners a race needs; the page says what to do next. */
   function clearField() {
     if (!window.confirm('Remove all ' + simulatorRoster.umas.length + ' runners?')) return;
 

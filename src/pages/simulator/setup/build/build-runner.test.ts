@@ -23,7 +23,6 @@ const { priced: offers, purchases } = offerPurchases(
   catalog
 );
 
-/** She owns Focus, which Concentration upgrades. */
 const her: SimulatorUma = {
   ...createSimulatorUma('Dantsu Flame'),
   skills: [{ skillId: 200432, level: 1 }]
@@ -60,7 +59,6 @@ describe('her build as a racer', () => {
     expect(runner.source).toBe(BUILD_RUNNER_SOURCE);
     expect(runner.teamId).toBeUndefined();
     expect(runner.frameOrder).toBeUndefined();
-    // Her trainee is copied, not shared with the build setup.
     expect(runner.trainee).not.toBe(her.trainee);
     expect(runner.trainee.speed).toBe(her.trainee.speed);
   });

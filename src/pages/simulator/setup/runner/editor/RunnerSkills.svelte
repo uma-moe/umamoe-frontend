@@ -20,7 +20,6 @@
     idPrefix: string;
     /** Her card, so her own inherited unique stays out of the picker. */
     cardId?: number;
-    /** Put the cursor in the search when the dialog opens. */
     autofocus?: boolean;
   }
 
@@ -52,7 +51,6 @@
       });
   });
 
-  /** Everything she could add: no personal uniques, nothing she already has, and no duplicate. */
   const options = $derived(
     [...skillLookup.values()]
       .filter(
@@ -217,7 +215,6 @@
     padding: 0;
     list-style: none;
   }
-  /* The chip and, for her unique, its level stay on one line; the chip takes the remaining width. */
   .picked li {
     display: flex;
     align-items: center;

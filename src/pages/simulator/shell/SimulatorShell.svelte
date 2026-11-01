@@ -40,13 +40,12 @@
 
   const panel = $derived(panels.find((item) => item.id === panelId));
   const course = $derived(selectedCourse());
-  /** Undefined while the field is empty, as a cleared field leaves it. */
   const uma = $derived(
     simulatorRoster.umas.find((item) => item.id === simulatorSession.umaId) ??
       simulatorRoster.umas[0]
   );
 
-  // Keep the field this browser last raced, from every simulator page that changes it.
+  // In the shell, so every simulator tab saves the field.
   $effect(saveSimulatorField);
 
   onMount(() => {

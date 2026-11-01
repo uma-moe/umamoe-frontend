@@ -11,12 +11,9 @@
   import type { SimulatorUma } from '../../simulator-uma';
   import { missingCharacterUnique } from './editor/uma-draft';
 
-  /** The skills she owns, on one line under her stats, with the way to edit them in place. */
   interface Props {
     uma: SimulatorUma;
-    /** Opens the full Edit Uma dialog, which is where her skills are changed. */
     onedit?: () => void;
-    /** Her skill list changed from the row itself, for pages that count it. */
     onchange?: () => void;
   }
 
@@ -24,7 +21,6 @@
 
   let skillLookup = $state.raw(new Map<number, SkillData>());
 
-  /** Her card's unique when it is not in the list, so it can be put back without opening the dialog. */
   const uniqueSkillId = $derived(
     missingCharacterUnique(uma, (skillId) => skillLookup.has(skillId))
   );
@@ -109,7 +105,6 @@
 </div>
 
 <style>
-  /* The label and every chip centred on one 24px line, wrapping as a group; the button keeps the row's end. */
   .owned {
     display: flex;
     flex-wrap: wrap;
@@ -163,7 +158,6 @@
     font-size: 12px;
     color: var(--text-secondary);
   }
-  /* Her card's unique, offered back as a quiet chip when it is not in the list yet. */
   .add-unique {
     height: 24px;
     min-height: 24px;
@@ -194,8 +188,7 @@
     height: 24px;
     object-fit: contain;
   }
-  /* The row's chips are 24px; the action keeps their height instead of making the line taller. Its border is the
-     visible one, as the chips' filled faces are, so it does not read smaller beside them. */
+  /* Keeps the chips' 24px height instead of making the line taller. */
   .add-skill {
     height: 24px;
     min-height: 24px;
