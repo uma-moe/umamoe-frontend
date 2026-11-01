@@ -8,7 +8,6 @@ on:
 
 permissions:
   contents: write
-  actions: write
 
 concurrency:
   group: sync-timeline-images
@@ -34,7 +33,6 @@ jobs:
             resources_ref: main
             timeline_url: https://uma.moe/resources/current/banner_timeline.json.gz
             site_origin: https://uma.moe
-            deploy: true
     steps:
       - name: Check out frontend
         uses: actions/checkout@v4
@@ -97,11 +95,6 @@ jobs:
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git commit -m "chore: sync timeline images"
           git push origin "HEAD:${{ matrix.branch }}"
+          # The push itself starts docker-image.yml (deploy-key pushes trigger workflows), which
+          # deploys the new assets; when only this data changed it does so without approval.
           echo "changed=true" >> "$GITHUB_OUTPUT"
-
-      - name: Deploy updated artwork
-        if: steps.commit.outputs.changed == 'true' && matrix.deploy
-        shell: bash
-        env:
-          GH_TOKEN: ${{ github.token }}
-        run: gh workflow run docker-image.yml --ref "${{ matrix.branch }}" --field deploy_assets=true
