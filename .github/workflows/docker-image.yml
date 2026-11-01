@@ -308,157 +308,13 @@ jobs:
           path: ${{ runner.temp }}/assets-export/assets/
           if-no-files-found: error
 
-  deploy_beta:
-    if: github.event_name != 'pull_request' && needs.build.outputs.deploy_target == 'beta'
+  build_production:
+    name: Build Production Shell
+    # The production bundle has its own build:prod config. It is built while beta waits for approval,
+    # so a failing production build shows up before any deploy and the production deploy only ships it.
+    if: github.event_name != 'pull_request' && needs.build.outputs.deploy_target == 'beta' && (github.ref_name == 'main' || github.ref_name == 'master')
     needs: build
     runs-on: ubuntu-latest
-    environment: beta
-    steps:
-      - name: Download shell artifact
-        uses: actions/download-artifact@v4
-        with:
-          name: shell-site
-          path: ${{ runner.temp }}/shell-site
-
-      - name: Download assets artifact
-        if: needs.build.outputs.should_deploy_assets == 'true'
-        uses: actions/download-artifact@v4
-        with:
-          name: asset-site
-          path: ${{ runner.temp }}/asset-site
-
-      - name: Mask deployment metadata
-        shell: bash
-        env:
-          DEPLOY_HOST: ${{ secrets.DEPLOY_HOST }}
-          DEPLOY_KNOWN_HOSTS: ${{ secrets.DEPLOY_KNOWN_HOSTS }}
-          REMOTE_SHELL_DIR: ${{ env.BETA_REMOTE_SHELL_DIR }}
-          REMOTE_ASSETS_DIR: ${{ env.BETA_REMOTE_ASSETS_DIR }}
-        run: |
-          set -euo pipefail
-
-          mask_value() {
-            local value="$1"
-            if [[ -n "$value" ]]; then
-              echo "::add-mask::$value"
-            fi
-          }
-
-          mask_value "$DEPLOY_HOST"
-          mask_value "$REMOTE_SHELL_DIR"
-          mask_value "$REMOTE_ASSETS_DIR"
-
-          while IFS= read -r known_host_line; do
-            mask_value "$known_host_line"
-            read -r known_host _ key_body _ <<< "$known_host_line"
-            mask_value "$known_host"
-            mask_value "$key_body"
-          done <<< "$DEPLOY_KNOWN_HOSTS"
-
-      - name: Start SSH agent
-        shell: bash
-        env:
-          DEPLOY_SSH_KEY: ${{ secrets.DEPLOY_SSH_KEY }}
-        run: |
-          set -euo pipefail
-          eval "$(ssh-agent -s)" >/dev/null
-          echo "SSH_AUTH_SOCK=$SSH_AUTH_SOCK" >> "$GITHUB_ENV"
-          echo "SSH_AGENT_PID=$SSH_AGENT_PID" >> "$GITHUB_ENV"
-          ssh-add - <<< "$DEPLOY_SSH_KEY" >/dev/null 2>&1
-
-      - name: Configure known hosts
-        shell: bash
-        env:
-          DEPLOY_KNOWN_HOSTS: ${{ secrets.DEPLOY_KNOWN_HOSTS }}
-        run: |
-          set -euo pipefail
-          mkdir -p ~/.ssh
-          chmod 700 ~/.ssh
-          printf '%s\n' "$DEPLOY_KNOWN_HOSTS" > ~/.ssh/known_hosts
-          chmod 600 ~/.ssh/known_hosts
-          printf '%s\n' 'Host *' '  ControlMaster auto' '  ControlPersist 60s' '  ControlPath ~/.ssh/deploy-%C' > ~/.ssh/config
-          chmod 600 ~/.ssh/config
-
-      - name: Ensure remote shell directory exists
-        shell: bash
-        env:
-          DEPLOY_HOST: ${{ secrets.DEPLOY_HOST }}
-          DEPLOY_PORT: ${{ secrets.DEPLOY_PORT || '22' }}
-          REMOTE_SHELL_DIR: ${{ env.BETA_REMOTE_SHELL_DIR }}
-        run: |
-          set -euo pipefail
-          ssh -o LogLevel=ERROR -p "$DEPLOY_PORT" "$DEPLOY_USER@$DEPLOY_HOST" \
-            "mkdir -p '$REMOTE_SHELL_DIR'"
-
-      - name: Ensure remote asset directories are writable
-        if: needs.build.outputs.should_deploy_assets == 'true'
-        shell: bash
-        env:
-          DEPLOY_HOST: ${{ secrets.DEPLOY_HOST }}
-          DEPLOY_PORT: ${{ secrets.DEPLOY_PORT || '22' }}
-          REMOTE_ASSETS_DIR: ${{ env.BETA_REMOTE_ASSETS_DIR }}
-        run: |
-          set -euo pipefail
-          ssh -o LogLevel=ERROR -p "$DEPLOY_PORT" "$DEPLOY_USER@$DEPLOY_HOST" \
-            "set -e;
-             mkdir -p '$REMOTE_ASSETS_DIR/data' '$REMOTE_ASSETS_DIR/images' '$REMOTE_ASSETS_DIR/timeline-images';
-             # Writable parents can still contain files owned by another user.
-             docker run --rm -v '$REMOTE_ASSETS_DIR/data:/target/data' -v '$REMOTE_ASSETS_DIR/images:/target/images' -v '$REMOTE_ASSETS_DIR/timeline-images:/target/timeline-images' alpine:3.20 chown -R \"\$(id -u):\$(id -g)\" /target/data /target/images /target/timeline-images;
-             # Statistics may be a protected mount managed outside this deploy.
-             chmod -R u+rwX '$REMOTE_ASSETS_DIR/data' '$REMOTE_ASSETS_DIR/images' '$REMOTE_ASSETS_DIR/timeline-images';
-             for writable_dir in '$REMOTE_ASSETS_DIR/data' '$REMOTE_ASSETS_DIR/images' '$REMOTE_ASSETS_DIR/timeline-images'; do
-               write_test=\"\$writable_dir/.rsync-write-test\";
-               if ! touch \"\$write_test\" 2>/dev/null; then
-                 echo \"Remote asset directory is not writable by the deploy user: \$writable_dir\" >&2;
-                 exit 1;
-               fi;
-               rm -f \"\$write_test\";
-             done"
-
-      - name: Deploy beta shell bundle
-        shell: bash
-        env:
-          DEPLOY_HOST: ${{ secrets.DEPLOY_HOST }}
-          DEPLOY_PORT: ${{ secrets.DEPLOY_PORT || '22' }}
-        run: |
-          # ponytail: retain immutable chunks for open tabs; add age-based cleanup if disk usage grows.
-          rsync -az --delete --delay-updates \
-            --filter 'P /app/***' \
-            --exclude 'assets/' \
-            --exclude 'statistics/' \
-            -e "ssh -o LogLevel=ERROR -p $DEPLOY_PORT" \
-            "${{ runner.temp }}/shell-site/" \
-            "$DEPLOY_USER@$DEPLOY_HOST:${{ env.BETA_REMOTE_SHELL_DIR }}/"
-
-      - name: Deploy beta assets bundle
-        if: needs.build.outputs.should_deploy_assets == 'true'
-        shell: bash
-        env:
-          DEPLOY_HOST: ${{ secrets.DEPLOY_HOST }}
-          DEPLOY_PORT: ${{ secrets.DEPLOY_PORT || '22' }}
-        run: |
-          # Avoid --inplace: stale remote files may not be writable by the deploy user.
-          for relative_dir in \
-            images \
-            timeline-images; do
-            source_dir="${{ runner.temp }}/asset-site/${relative_dir}"
-            if [[ -d "$source_dir" ]]; then
-              ssh -o LogLevel=ERROR -p "$DEPLOY_PORT" "$DEPLOY_USER@$DEPLOY_HOST" \
-                "mkdir -p '${{ env.BETA_REMOTE_ASSETS_DIR }}/${relative_dir}'"
-              rsync -az --no-perms --no-owner --no-group \
-                -e "ssh -o LogLevel=ERROR -p $DEPLOY_PORT" \
-                "$source_dir/" \
-                "$DEPLOY_USER@$DEPLOY_HOST:${{ env.BETA_REMOTE_ASSETS_DIR }}/${relative_dir}/"
-            fi
-          done
-
-  deploy_production:
-    if: github.event_name != 'pull_request' && needs.build.outputs.deploy_target == 'beta' && (github.ref_name == 'main' || github.ref_name == 'master')
-    needs:
-      - build
-      - deploy_beta
-    runs-on: ubuntu-latest
-    environment: production
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -653,6 +509,174 @@ jobs:
             echo "::error title=PROD app shell version mismatch::index.html does not contain the expected app-build-version meta tag."
             exit 1
           fi
+
+      - name: Upload production shell artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: production-shell-site
+          path: ${{ runner.temp }}/production-shell-export/var/www/html/umamoe/
+          if-no-files-found: error
+          # Production used to rsync straight from the export; keep dotfiles so --delete removes nothing new.
+          include-hidden-files: true
+
+  deploy_beta:
+    if: github.event_name != 'pull_request' && needs.build.outputs.deploy_target == 'beta'
+    needs: build
+    runs-on: ubuntu-latest
+    environment: beta
+    steps:
+      - name: Download shell artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: shell-site
+          path: ${{ runner.temp }}/shell-site
+
+      - name: Download assets artifact
+        if: needs.build.outputs.should_deploy_assets == 'true'
+        uses: actions/download-artifact@v4
+        with:
+          name: asset-site
+          path: ${{ runner.temp }}/asset-site
+
+      - name: Mask deployment metadata
+        shell: bash
+        env:
+          DEPLOY_HOST: ${{ secrets.DEPLOY_HOST }}
+          DEPLOY_KNOWN_HOSTS: ${{ secrets.DEPLOY_KNOWN_HOSTS }}
+          REMOTE_SHELL_DIR: ${{ env.BETA_REMOTE_SHELL_DIR }}
+          REMOTE_ASSETS_DIR: ${{ env.BETA_REMOTE_ASSETS_DIR }}
+        run: |
+          set -euo pipefail
+
+          mask_value() {
+            local value="$1"
+            if [[ -n "$value" ]]; then
+              echo "::add-mask::$value"
+            fi
+          }
+
+          mask_value "$DEPLOY_HOST"
+          mask_value "$REMOTE_SHELL_DIR"
+          mask_value "$REMOTE_ASSETS_DIR"
+
+          while IFS= read -r known_host_line; do
+            mask_value "$known_host_line"
+            read -r known_host _ key_body _ <<< "$known_host_line"
+            mask_value "$known_host"
+            mask_value "$key_body"
+          done <<< "$DEPLOY_KNOWN_HOSTS"
+
+      - name: Start SSH agent
+        shell: bash
+        env:
+          DEPLOY_SSH_KEY: ${{ secrets.DEPLOY_SSH_KEY }}
+        run: |
+          set -euo pipefail
+          eval "$(ssh-agent -s)" >/dev/null
+          echo "SSH_AUTH_SOCK=$SSH_AUTH_SOCK" >> "$GITHUB_ENV"
+          echo "SSH_AGENT_PID=$SSH_AGENT_PID" >> "$GITHUB_ENV"
+          ssh-add - <<< "$DEPLOY_SSH_KEY" >/dev/null 2>&1
+
+      - name: Configure known hosts
+        shell: bash
+        env:
+          DEPLOY_KNOWN_HOSTS: ${{ secrets.DEPLOY_KNOWN_HOSTS }}
+        run: |
+          set -euo pipefail
+          mkdir -p ~/.ssh
+          chmod 700 ~/.ssh
+          printf '%s\n' "$DEPLOY_KNOWN_HOSTS" > ~/.ssh/known_hosts
+          chmod 600 ~/.ssh/known_hosts
+          printf '%s\n' 'Host *' '  ControlMaster auto' '  ControlPersist 60s' '  ControlPath ~/.ssh/deploy-%C' > ~/.ssh/config
+          chmod 600 ~/.ssh/config
+
+      - name: Ensure remote shell directory exists
+        shell: bash
+        env:
+          DEPLOY_HOST: ${{ secrets.DEPLOY_HOST }}
+          DEPLOY_PORT: ${{ secrets.DEPLOY_PORT || '22' }}
+          REMOTE_SHELL_DIR: ${{ env.BETA_REMOTE_SHELL_DIR }}
+        run: |
+          set -euo pipefail
+          ssh -o LogLevel=ERROR -p "$DEPLOY_PORT" "$DEPLOY_USER@$DEPLOY_HOST" \
+            "mkdir -p '$REMOTE_SHELL_DIR'"
+
+      - name: Ensure remote asset directories are writable
+        if: needs.build.outputs.should_deploy_assets == 'true'
+        shell: bash
+        env:
+          DEPLOY_HOST: ${{ secrets.DEPLOY_HOST }}
+          DEPLOY_PORT: ${{ secrets.DEPLOY_PORT || '22' }}
+          REMOTE_ASSETS_DIR: ${{ env.BETA_REMOTE_ASSETS_DIR }}
+        run: |
+          set -euo pipefail
+          ssh -o LogLevel=ERROR -p "$DEPLOY_PORT" "$DEPLOY_USER@$DEPLOY_HOST" \
+            "set -e;
+             mkdir -p '$REMOTE_ASSETS_DIR/data' '$REMOTE_ASSETS_DIR/images' '$REMOTE_ASSETS_DIR/timeline-images';
+             # Writable parents can still contain files owned by another user.
+             docker run --rm -v '$REMOTE_ASSETS_DIR/data:/target/data' -v '$REMOTE_ASSETS_DIR/images:/target/images' -v '$REMOTE_ASSETS_DIR/timeline-images:/target/timeline-images' alpine:3.20 chown -R \"\$(id -u):\$(id -g)\" /target/data /target/images /target/timeline-images;
+             # Statistics may be a protected mount managed outside this deploy.
+             chmod -R u+rwX '$REMOTE_ASSETS_DIR/data' '$REMOTE_ASSETS_DIR/images' '$REMOTE_ASSETS_DIR/timeline-images';
+             for writable_dir in '$REMOTE_ASSETS_DIR/data' '$REMOTE_ASSETS_DIR/images' '$REMOTE_ASSETS_DIR/timeline-images'; do
+               write_test=\"\$writable_dir/.rsync-write-test\";
+               if ! touch \"\$write_test\" 2>/dev/null; then
+                 echo \"Remote asset directory is not writable by the deploy user: \$writable_dir\" >&2;
+                 exit 1;
+               fi;
+               rm -f \"\$write_test\";
+             done"
+
+      - name: Deploy beta shell bundle
+        shell: bash
+        env:
+          DEPLOY_HOST: ${{ secrets.DEPLOY_HOST }}
+          DEPLOY_PORT: ${{ secrets.DEPLOY_PORT || '22' }}
+        run: |
+          # ponytail: retain immutable chunks for open tabs; add age-based cleanup if disk usage grows.
+          rsync -az --delete --delay-updates \
+            --filter 'P /app/***' \
+            --exclude 'assets/' \
+            --exclude 'statistics/' \
+            -e "ssh -o LogLevel=ERROR -p $DEPLOY_PORT" \
+            "${{ runner.temp }}/shell-site/" \
+            "$DEPLOY_USER@$DEPLOY_HOST:${{ env.BETA_REMOTE_SHELL_DIR }}/"
+
+      - name: Deploy beta assets bundle
+        if: needs.build.outputs.should_deploy_assets == 'true'
+        shell: bash
+        env:
+          DEPLOY_HOST: ${{ secrets.DEPLOY_HOST }}
+          DEPLOY_PORT: ${{ secrets.DEPLOY_PORT || '22' }}
+        run: |
+          # Avoid --inplace: stale remote files may not be writable by the deploy user.
+          for relative_dir in \
+            images \
+            timeline-images; do
+            source_dir="${{ runner.temp }}/asset-site/${relative_dir}"
+            if [[ -d "$source_dir" ]]; then
+              ssh -o LogLevel=ERROR -p "$DEPLOY_PORT" "$DEPLOY_USER@$DEPLOY_HOST" \
+                "mkdir -p '${{ env.BETA_REMOTE_ASSETS_DIR }}/${relative_dir}'"
+              rsync -az --no-perms --no-owner --no-group \
+                -e "ssh -o LogLevel=ERROR -p $DEPLOY_PORT" \
+                "$source_dir/" \
+                "$DEPLOY_USER@$DEPLOY_HOST:${{ env.BETA_REMOTE_ASSETS_DIR }}/${relative_dir}/"
+            fi
+          done
+
+  deploy_production:
+    if: github.event_name != 'pull_request' && needs.build.outputs.deploy_target == 'beta' && (github.ref_name == 'main' || github.ref_name == 'master')
+    needs:
+      - build
+      - build_production
+      - deploy_beta
+    runs-on: ubuntu-latest
+    environment: production
+    steps:
+      - name: Download production shell artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: production-shell-site
+          path: ${{ runner.temp }}/production-shell-export/var/www/html/umamoe
 
       - name: Download assets artifact
         if: needs.build.outputs.should_deploy_assets == 'true'
