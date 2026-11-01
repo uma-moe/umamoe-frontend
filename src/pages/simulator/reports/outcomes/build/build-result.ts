@@ -420,7 +420,11 @@ const RULED_OUT: Record<string, string> = {
   'race grade': 'another race grade',
   'running style': 'another running style',
   slope: 'a slope this course lacks',
-  corners: 'corners this course lacks'
+  corners: 'corners this course lacks',
+  // Why the simulator cannot race a skill (`cant_process`).
+  'unknown skill': 'skill data the simulator does not have yet',
+  'unsupported skill': 'conditions the simulator cannot run yet',
+  'needs a skill it cannot process': 'a skill the simulator cannot race yet'
 };
 
 /** A skill on offer that can never fire for her here, and what it needs instead. */
@@ -431,7 +435,10 @@ export interface RuledOutSkill {
   needs: string;
 }
 
-/** The skills on offer that can never fire for her here, with what each needs instead. */
+/**
+ * The skills on offer that can never fire for her here, with what each needs instead. The result's `cant_process`
+ * reads the same way: what the simulator would need to race each.
+ */
 export function ruledOutSkills(
   inert: OptimizeResult['inert'],
   offers: PricedOffer[]

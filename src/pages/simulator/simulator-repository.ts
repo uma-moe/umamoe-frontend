@@ -513,6 +513,11 @@ export interface OptimizeResult {
   fields?: OptimizeFields;
   /** Skills on offer that can never fire for her in these races, left out of the search. */
   inert?: Array<OptimizeInert>;
+  /**
+   * Skills on offer the simulator cannot race, left out instead of failing the search; `why` is `unknown skill`,
+   * `unsupported skill` or `needs a skill it cannot process`.
+   */
+  cant_process?: Array<OptimizeInert>;
   runs_per_variation_per_scenario: number;
   validation_runs_per_finalist_per_scenario: number;
   report: OptimizeReport;

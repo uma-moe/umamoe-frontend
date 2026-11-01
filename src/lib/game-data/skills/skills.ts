@@ -14,9 +14,34 @@ export interface SkillData {
 }
 
 let skillsPromise: Promise<Map<number, SkillData>> | undefined;
+let releasedPromise: Promise<Set<number>> | undefined;
 resourceCache.onUpdate((name) => {
   if (name === 'skills') skillsPromise = undefined;
+  if (name === 'simulator_skills') releasedPromise = undefined;
 });
+
+/**
+ * Skills out on Global: those with Global mechanics, which the simulator races. The text resource also names skills of
+ * cards still to come.
+ */
+export function loadReleasedSkillIds(): Promise<Set<number>> {
+  releasedPromise ??= resourceCache
+    .load<{ skills?: Array<{ skill_id?: unknown }> }>('simulator_skills')
+    .then(
+      (data) =>
+        new Set(
+          (data.skills ?? [])
+            .map((skill) => Number(skill.skill_id))
+            .filter((id) => Number.isSafeInteger(id) && id > 0)
+        )
+    )
+    .catch((error) => {
+      releasedPromise = undefined;
+      throw error;
+    });
+
+  return releasedPromise;
+}
 
 export function skillImage(icon: string | undefined): string | undefined {
   return icon ? `/assets/images/skills/${icon.replace(/\.png$/i, '.webp')}` : undefined;
