@@ -89,8 +89,13 @@
   min-width: 0;
   overflow: hidden;
   font-weight: 600;
-  text-overflow: ellipsis;
   white-space: nowrap;
+}
+/* The ellipsis belongs on the name itself: a flex row only clips its text. */
+.name-text {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 .uma-name :global(.art) {
   flex: none;

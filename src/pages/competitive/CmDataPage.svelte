@@ -154,14 +154,39 @@
 >
   {#snippet actions()}
     {#if snapshot}
-      <div class="dataset-picker">
-        <SelectField
-          id="cm-snapshot"
-          label="Dataset"
-          hideLabel
-          options={snapshots.map((s) => ({ value: s.snapshotId, label: s.label }))}
-          bind:value={snapshotId}
-        />
+      <!-- The display options share the dataset's row, leaving the views their own full-width row. -->
+      <div class="header-controls">
+        <div class="dataset-picker">
+          <SelectField
+            id="cm-snapshot"
+            label="Dataset"
+            hideLabel
+            options={snapshots.map((s) => ({ value: s.snapshotId, label: s.label }))}
+            bind:value={snapshotId}
+          />
+        </div>
+        <div class="display-settings">
+          <InspectPopover
+            label="Display options"
+            align="end"
+          >
+            {#snippet trigger()}
+              <span class="display-trigger">
+                <Icon
+                  name="tune"
+                  size={15}
+                />
+                <span class="display-label">Display</span>
+              </span>
+            {/snippet}
+            <Checkbox
+              id="cm-palette"
+              label="Colorblind palette"
+              bind:checked={colorblind}
+            />
+            <p>Changes running-style colours throughout the analysis.</p>
+          </InspectPopover>
+        </div>
       </div>
     {/if}
   {/snippet}
@@ -201,28 +226,6 @@
           controls="cm-panel"
           variant="pills"
         />
-        <div class="display-settings">
-          <InspectPopover
-            label="Display options"
-            align="end"
-          >
-            {#snippet trigger()}
-              <span class="display-trigger">
-                <Icon
-                  name="tune"
-                  size={15}
-                />
-                <span class="display-label">Display</span>
-              </span>
-            {/snippet}
-            <Checkbox
-              id="cm-palette"
-              label="Colorblind palette"
-              bind:checked={colorblind}
-            />
-            <p>Changes running-style colours throughout the analysis.</p>
-          </InspectPopover>
-        </div>
       </div>
       <div
         id="cm-panel"

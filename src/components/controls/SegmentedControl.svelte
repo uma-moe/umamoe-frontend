@@ -9,6 +9,8 @@
     icon?: IconName;
     /** Game icon standing in for the label. */ image?: string;
     /** Accessible name when `label` is an abbreviation or an icon stands in for text. */ title?: string;
+    /** A shorter label a phone shows, so the control keeps to one row; `label` stays the accessible name. */
+    short?: string;
   }
 
   interface Props {
@@ -77,7 +79,8 @@
       tabindex={option.value === tabStop ? 0 : -1}
       onkeydown={(event) => navigate(event, option.value)}
       aria-checked={value === option.value}
-      aria-label={option.title ?? (option.icon || option.image ? option.label : undefined)}
+      aria-label={option.title ??
+        (option.icon || option.image || option.short ? option.label : undefined)}
       title={option.title ?? (option.icon || option.image ? option.label : undefined)}
       class:selected={value === option.value}
       class:icon-only={option.icon !== undefined || option.image !== undefined}
@@ -95,6 +98,9 @@
           name={option.icon}
           size={18}
         />
+      {:else if option.short}
+        <span class="label-full">{option.label}</span>
+        <span class="label-short">{option.short}</span>
       {:else}
         {option.label}
       {/if}
@@ -126,6 +132,7 @@
     cursor: pointer;
     font-size: var(--font-sm);
     font-weight: 700;
+    white-space: nowrap;
   }
   button:hover:not(:disabled) {
     color: var(--color-text);
@@ -162,21 +169,24 @@
     font-size: 11px;
     font-weight: 600;
   }
-  /* A phone shows every option: a control that does not fit wraps rather than scrolling options out of view. */
+  .label-short {
+    display: none;
+  }
+  /* A phone keeps the control to one row: options share the width under their short labels, and only a control
+     that still cannot fit scrolls sideways. */
   @media (max-width: 767px) {
-    .segments {
-      flex-wrap: wrap;
-      overflow-x: visible;
-    }
     button {
       flex: 1 1 auto;
-    }
-    .compact {
-      height: auto;
-      min-height: var(--control-height);
+      padding-inline: 8px;
     }
     .compact button {
-      min-height: calc(var(--control-height) - 6px);
+      padding-inline: 6px;
+    }
+    .label-full {
+      display: none;
+    }
+    .label-short {
+      display: inline;
     }
   }
 </style>

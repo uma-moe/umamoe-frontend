@@ -13,6 +13,7 @@
   display: flex;
   align-items: center;
   gap: 8px;
+  margin-bottom: 4px;
 }
 .measure-label {
   font-size: 11px;
@@ -86,6 +87,7 @@
   font-size: 11px;
 }
 .table-scroll {
+  position: relative;
   max-width: 100%;
   overflow-x: auto;
   scrollbar-width: thin;
@@ -172,8 +174,40 @@ td.total {
   line-height: 1.5;
   color: var(--text-secondary);
 }
-@media (max-width: 600px) {
+.label-short {
+  display: none;
+}
+/*
+ * A phone pins the row labels, under short names, while the style columns scroll beside them; a variant's chip
+ * narrows to match.
+ */
+@media (max-width: 767px) {
   th:first-child {
-    min-width: 180px;
+    position: sticky;
+    left: 0;
+    z-index: 1;
+    min-width: 0;
+    max-width: 9rem;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    background: var(--surface-1);
+  }
+  td {
+    min-width: 0;
+  }
+  .entries {
+    min-width: 0;
+  }
+  .label-full {
+    display: none;
+  }
+  .label-short {
+    display: inline;
+  }
+  .outcome-skill {
+    --skill-chip-width: 8rem;
+  }
+  .rate-legend {
+    margin-left: 8px;
   }
 }

@@ -140,7 +140,10 @@
   aria-label="Skill activity timeline"
 >
   <div class="strip-label timeline-label">
-    <span>Skill activity</span>
+    <span aria-hidden="true">
+      <span class="label-long">Skill activity</span>
+      <span class="label-short">Skills</span>
+    </span>
     <InspectPopover label="Skill activity details">
       {#snippet trigger()}
         <InfoIcon />

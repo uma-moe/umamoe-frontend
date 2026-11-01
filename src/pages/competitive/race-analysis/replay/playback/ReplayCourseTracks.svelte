@@ -111,12 +111,19 @@
       class="timeline-label"
       title="Elevation relative to the race start"
     >
-      Elevation (m)
+      <span class="label-long">Elevation (m)</span>
+      <span class="label-short">Elev.</span>
     </span>
     <span class="timeline-label">Slope</span>
     <span class="timeline-label">Course</span>
-    <span class="timeline-label">Race phase</span>
-    <span class="timeline-label">Final spurt</span>
+    <span class="timeline-label">
+      <span class="label-long">Race phase</span>
+      <span class="label-short">Phase</span>
+    </span>
+    <span class="timeline-label">
+      <span class="label-long">Final spurt</span>
+      <span class="label-short">Spurt</span>
+    </span>
   </div>
   <div
     bind:this={tracks}

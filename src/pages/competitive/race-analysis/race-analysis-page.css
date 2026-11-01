@@ -88,9 +88,6 @@ li {
   .loaded :global(.page-heading h1) {
     font-size: 22px;
   }
-  .race-workspace {
-    margin-inline: 12px;
-  }
 }
 
 .race-page :global(.ui-button.ui-button--sm:not(.ui-button--ghost)) {

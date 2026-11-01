@@ -2,8 +2,8 @@
   import type { Snippet } from 'svelte';
   import type { ParsedRaceCapture } from '@/lib/race/capture/race-capture-parser';
   import { formatRaceTime, trackDetailName } from '@/lib/race/replay/race-display';
-  import Button from '@/components/controls/Button.svelte';
   import Icon from '@/components/Icon.svelte';
+  import type { IconName } from '@/components/icon-types';
   import type { Course, CourseData } from './replay-course';
 
   let {
@@ -14,6 +14,7 @@
     endTime,
     trackOverride,
     hasSession,
+    current,
     headerActions,
     onjump
   }: {
@@ -24,6 +25,8 @@
     endTime: number;
     trackOverride: string;
     hasSession: boolean;
+    /** The section in view, which its tab marks. */
+    current: string;
     headerActions?: Snippet;
     onjump: (section: string) => void;
   } = $props();
@@ -46,6 +49,24 @@
       .filter(Boolean)
       .join(', ') || 'Conditions were not included in this capture'
   );
+
+  /** A tab's `short` name is the one a phone shows, keeping the bar one row. */
+  type ReportSection = { id: string; icon: IconName; label: string; short: string };
+
+  const raceSections: ReportSection[] = [
+    { id: 'replay', icon: 'race', label: 'Race replay', short: 'Replay' },
+    { id: 'results', icon: 'rankings', label: 'Race results', short: 'Results' },
+    { id: 'runner', icon: 'chart', label: 'Runner analysis', short: 'Runner' }
+  ];
+
+  const sessionSection: ReportSection = {
+    id: 'session',
+    icon: 'users',
+    label: 'Session analysis',
+    short: 'Session'
+  };
+
+  const sections = $derived(hasSession ? [...raceSections, sessionSection] : raceSections);
 </script>
 
 <header class="replay-header">
@@ -91,37 +112,22 @@
   aria-label="Jump to analysis section"
 >
   <div class="report-links">
-    <Button
-      variant="secondary"
-      size="sm"
-      icon="race"
-      onclick={() => onjump('replay')}
-    >
-      Race replay
-    </Button><Button
-      variant="secondary"
-      size="sm"
-      icon="rankings"
-      onclick={() => onjump('results')}
-    >
-      Race results
-    </Button><Button
-      variant="secondary"
-      size="sm"
-      icon="chart"
-      onclick={() => onjump('runner')}
-    >
-      Runner analysis
-    </Button>{#if hasSession}
-      <Button
-        variant="secondary"
-        size="sm"
-        icon="users"
-        onclick={() => onjump('session')}
+    {#each sections as section}
+      <button
+        type="button"
+        class="section-tab"
+        aria-label={section.label}
+        aria-current={current === section.id ? 'location' : undefined}
+        onclick={() => onjump(section.id)}
       >
-        Session analysis
-      </Button>
-    {/if}
+        <Icon
+          name={section.icon}
+          size={15}
+        />
+        <span class="tab-long">{section.label}</span>
+        <span class="tab-short">{section.short}</span>
+      </button>
+    {/each}
   </div>
 </nav>
 

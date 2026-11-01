@@ -176,10 +176,11 @@
   border-radius: 50%;
   background: var(--accent-primary);
 }
+/* The expanded chart always shows its scales, so it keeps room for both right-hand axes whatever the timeline reserves. */
 .telemetry-columns.expanded {
   flex: 1;
   min-height: 0;
-  grid-template-columns: 40px minmax(0, 1fr) var(--timeline-value-width);
+  grid-template-columns: 40px minmax(0, 1fr) 56px;
 }
 .telemetry-columns.expanded .telemetry-track {
   height: 100%;
@@ -233,18 +234,33 @@
     gap: 4px;
     flex-wrap: nowrap;
   }
+  .telemetry-columns:not(.expanded) {
+    row-gap: 8px;
+  }
   .telemetry-reading {
-    position: sticky;
-    left: 0;
-    z-index: 5;
-    background: var(--surface-1);
+    grid-column: 1 / -1;
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(64px, 1fr));
+    gap: 6px 4px;
+    width: auto;
+    contain: none;
+  }
+  .telemetry-columns:not(.expanded) .telemetry-track {
+    grid-row: 2;
   }
   .signal-reading {
+    gap: 1px;
     min-width: 0;
-    padding-left: 7px;
+    padding-left: 6px;
+  }
+  .signal-reading > span {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
   }
   .signal-reading strong {
-    font-size: 18px;
+    font-size: 15px;
+    white-space: nowrap;
   }
   .signal-reading > span,
   .signal-reading strong small {
@@ -253,6 +269,18 @@
   .telemetry :global(.chart-frame.expanded > figcaption) {
     position: static;
     width: auto;
+  }
+  /* The expanded chart hides its title, so the legend leads and the guide joins the controls' row. */
+  .telemetry :global(.chart-frame.expanded .legend) {
+    order: 0;
+    width: 100%;
+  }
+  .telemetry :global(.chart-frame.expanded .chart-heading) {
+    order: 1;
+    width: auto;
+  }
+  .telemetry :global(.chart-frame.expanded .chart-actions) {
+    order: 2;
   }
   .telemetry-columns.expanded {
     min-width: 0;

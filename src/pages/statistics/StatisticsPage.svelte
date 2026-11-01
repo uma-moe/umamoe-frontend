@@ -69,7 +69,7 @@
 
   const allDistances = $derived(dataset?.index.distances ?? Object.keys(stats?.by_distance ?? {}));
   const distanceOptions = $derived([
-    { value: 'all', label: 'All distances' },
+    { value: 'all', label: 'All distances', short: 'All' },
     ...allDistances.map((id) => ({
       value: id,
       label: distanceNames[statisticsDistanceId(id)] ?? title(id)

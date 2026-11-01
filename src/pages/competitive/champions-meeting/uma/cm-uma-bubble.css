@@ -1,33 +1,28 @@
+/* The style legend is the library's checkbox in each style's colour, as the timeline filters are. */
 .legend {
   display: flex;
-  gap: 4px;
   flex-wrap: wrap;
+  gap: 2px 14px;
 }
-.legend button {
-  border: 1px solid var(--factor-field-border);
-  border-radius: var(--radius-md);
-  background: var(--factor-field-bg);
-  color: var(--color-text);
-  font: inherit;
-  font-size: 10px;
-  display: flex;
-  gap: 5px;
-  align-items: center;
-  cursor: pointer;
-  padding: 0 8px;
-  min-height: 24px;
+.legend-item :global(.checkbox) {
+  min-height: 28px;
+  grid-template-columns: 16px minmax(0, 1fr);
+  gap: 6px;
 }
-.legend button:hover {
-  border-color: var(--border-primary);
+.legend-item :global(.box) {
+  width: 16px;
+  height: 16px;
 }
-.legend i {
-  width: 6px;
-  height: 6px;
-  border-radius: 50%;
+.legend-item :global(strong) {
+  font-size: 11px;
+  font-weight: 500;
 }
-.legend .muted {
-  opacity: 0.3;
-  text-decoration: line-through;
+/* A phone splits the style toggles over two even rows. */
+@media (max-width: 600px) {
+  .legend {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
 }
 .bubble-panel {
   display: contents;
@@ -45,6 +40,18 @@
 }
 .bubble-filter > :global(.field) {
   width: 80px;
+}
+.name-short {
+  display: none;
+}
+/* A card too narrow for the title, the picker's label and zoom on one row shortens the label. */
+@container chart-frame (max-width: 720px) {
+  .bubble-filter .name-full {
+    display: none;
+  }
+  .bubble-filter .name-short {
+    display: inline;
+  }
 }
 .bubble-panel :global(.chart-frame.surface:not(.compact) figcaption) {
   display: grid;

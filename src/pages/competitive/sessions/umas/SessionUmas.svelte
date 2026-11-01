@@ -184,7 +184,7 @@
                   alt=""
                   size="xs"
                 />
-                {uma.name}
+                <span class="name-text">{uma.name}</span>
               </span>
               <span class="share-track">
                 <span style:width={(uma.races / mostEntries) * 100 + '%'}>

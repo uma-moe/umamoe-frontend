@@ -2,13 +2,15 @@
   import { virtualScroll, type VirtualRange } from '@/lib/virtual-scroll';
   import DataTable from '@/components/data/DataTable.svelte';
   import ChartFrame from '@/components/charts/ChartFrame.svelte';
+  import PlotZoomControls from '@/components/charts/PlotZoomControls.svelte';
+  import { PlotZoom } from '@/components/charts/plot-zoom.svelte';
   import SelectField from '@/components/controls/SelectField.svelte';
   import SegmentedControl from '@/components/controls/SegmentedControl.svelte';
   import Artwork from '@/components/game/Artwork.svelte';
   import Button from '@/components/controls/Button.svelte';
   import type { Summary, Requirement } from '../../hakuraku-types';
   import { pct, number, styleOrder, styleNames } from '../cm-data';
-  import { compositionQuery } from '../../hakuraku-query';
+  import { compositionQuery, SHORT_STYLE } from '../../hakuraku-query';
   import { portrait } from '../../analysis-view';
   import CmSaturationChart from './CmSaturationChart.svelte';
   import CmComposition from '../CmComposition.svelte';
@@ -33,6 +35,19 @@
     metric = $state('team');
 
   let repDescending = $state(true);
+
+  // The saturation plot's zoom sits in its card's toolbar, beside the view switch.
+  const saturationZoom = new PlotZoom();
+
+  // A phone fits the room grid's seven columns under headings of five letters at most.
+  const ROOM_STYLE_HEADINGS: Record<number, string> = {
+    1: 'Front',
+    2: 'Pace',
+    3: 'Late',
+    4: 'End',
+    5: 'Run',
+    6: 'Debuf'
+  };
 
   function orderReps(key: string) {
     repDescending = metric === key ? !repDescending : key !== 'name';
@@ -80,8 +95,12 @@
     value={scope}
     onchange={(value) => onstyle?.(value)}
     options={[
-      { value: 'all', label: 'All styles' },
-      ...styleOrder.map((id) => ({ value: String(id), label: styleNames[id]! }))
+      { value: 'all', label: 'All styles', short: 'All' },
+      ...styleOrder.map((id) => ({
+        value: String(id),
+        label: styleNames[id]!,
+        short: SHORT_STYLE[id]
+      }))
     ]}
   />
 </div>
@@ -103,9 +122,10 @@
             <Button
               variant="secondary"
               size="sm"
+              ariaPressed={showRates}
               onclick={() => (showRates = !showRates)}
             >
-              {showRates ? 'Hide rates & players' : 'Show rates & players'}
+              Rates & players
             </Button>
           {/if}
         {/snippet}
@@ -203,16 +223,24 @@
             bind:value={saturation}
             label="Saturation view"
           />
+          {#if saturation === 'self'}
+            <PlotZoomControls
+              zoom={saturationZoom}
+              hint={false}
+            />
+          {/if}
         {/snippet}
         {#if saturation === 'self'}
           <CmSaturationChart
             series={scopedStyles.map((id) => ({
               name: styleNames[id]!,
+              short: SHORT_STYLE[id],
               color: colors[id]!,
               buckets: data.saturation[id] ?? []
             }))}
             totalRaces={data.meta.populationRaces}
             label="Per-Uma win rate versus number of the same style"
+            zoom={saturationZoom}
           />
         {:else}
           <div class="cross">
@@ -272,9 +300,10 @@
             ...styleOrder.map((id) => ({
               key: String(id),
               label: styleNames[id]!.split(' ')[0]!,
+              short: ROOM_STYLE_HEADINGS[id],
               numeric: true
             })),
-            { key: 'frequency', label: 'Frequency', numeric: true }
+            { key: 'frequency', label: 'Frequency', short: 'Freq.', numeric: true }
           ]}
           rows={data.rooms.rows.map((room) =>
             Object.assign(
@@ -315,7 +344,7 @@
               options={[
                 { value: 'team', label: 'Team' },
                 { value: 'individual', label: 'Personal' },
-                { value: 'pop', label: 'Most used' }
+                { value: 'pop', label: 'Most used', short: 'Used' }
               ]}
               bind:value={metric}
               label="Representative metric"
@@ -327,9 +356,9 @@
                 label="Minimum style share"
                 bind:value={repMin}
                 options={[
-                  { value: '.005', label: '≥0.5%' },
-                  { value: '.01', label: '≥1%' },
-                  { value: '.02', label: '≥2%' },
+                  { value: '.005', label: '≥0.5%', short: '0.5%' },
+                  { value: '.01', label: '≥1%', short: '1%' },
+                  { value: '.02', label: '≥2%', short: '2%' },
                   { value: '0', label: 'All' }
                 ]}
               />

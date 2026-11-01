@@ -78,23 +78,12 @@ p {
 .results :global(.column-help .trigger) {
   min-width: 16px;
 }
-/* Stacked on a phone, cells drop the column sizing: the finish and gate sit beside the runner and each value
-   reads left under its label. */
-.results :global(.table-wrap.stacked.compact :is(th, td)) {
-  width: auto;
-  height: auto;
-  padding: 0;
-  text-align: left;
-}
-/* The focused runner's accent marks the whole stacked row rather than its first value. */
-.results :global(.table-wrap.stacked tbody tr:has(.runner-name.focused)) {
-  box-shadow: inset 2px 0 var(--accent-primary);
-}
-.results :global(.table-wrap.stacked tbody tr:has(.runner-name.focused) td:first-child) {
-  box-shadow: none;
-}
 .results :global(tbody tr:has(.runner-name.focused)) {
   background: var(--color-accent-soft);
+}
+/* Pinned cells paint over the row, so they layer the same tint on their solid background. */
+.results :global(tbody tr:has(.runner-name.focused) td.pinned) {
+  background: linear-gradient(var(--color-accent-soft), var(--color-accent-soft)), var(--surface-1);
 }
 .results :global(tbody tr:has(.runner-name.focused) td:first-child) {
   box-shadow: inset 2px 0 var(--accent-primary);
@@ -193,10 +182,12 @@ small {
   color: var(--text-primary);
   background: color-mix(in srgb, var(--style-color) 16%, transparent);
 }
+/* Without the global image cap, a squeezed column cannot shrink the icons into the next cell. */
 .style-icon,
 .mood {
   flex: none;
   width: 34px;
+  max-width: none;
   height: 34px;
 }
 .start-badge {
@@ -232,9 +223,18 @@ small {
 .loss {
   color: var(--text-secondary);
 }
+.finish-cell {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
 .finish {
+  min-width: 2ch;
   font-size: 16px;
   font-weight: 700;
+}
+.pinned-portrait {
+  display: none;
 }
 .finish.winner {
   color: var(--accent-warning);
@@ -301,5 +301,49 @@ small {
   }
   .runner-name :global(svg) {
     display: none;
+  }
+}
+/*
+ * A phone keeps one line per runner and pins only the finish with the runner's portrait, so most of the width
+ * scrolls through the results. Headings stay on one line.
+ */
+@media (max-width: 767px) {
+  .results {
+    padding: 8px;
+  }
+  .results :global(th) {
+    font-size: 10px;
+    letter-spacing: 0;
+    text-transform: none;
+    white-space: nowrap;
+  }
+  .results :global(.table-wrap.compact :is(th, td)) {
+    padding: 4px 6px;
+  }
+  .results :global(.table-wrap.compact td) {
+    height: 44px;
+  }
+  .results :global(.table-wrap.compact :is(th, td):is(:first-child, :nth-child(2))) {
+    width: auto;
+    padding-inline: 4px;
+  }
+  .pinned-portrait {
+    display: flex;
+  }
+  .pinned-portrait :global(.art) {
+    width: 30px;
+    height: 30px;
+  }
+  .runner-name :global(.art),
+  .rank-slot:not(:has(*)) {
+    display: none;
+  }
+  .style-icon,
+  .mood {
+    width: 28px;
+    height: 28px;
+  }
+  .style-mood {
+    gap: 4px;
   }
 }

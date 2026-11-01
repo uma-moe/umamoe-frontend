@@ -6,7 +6,9 @@
   import { courseSegments, type Course } from '../replay-course';
   import { replayTimeTicks, timedSection } from '../replay-timeline';
   import ReplayPlaybackControls from './ReplayPlaybackControls.svelte';
+  import ReplayChartTools from './ReplayChartTools.svelte';
   import ReplayCourseTracks from './ReplayCourseTracks.svelte';
+  import ReplayTimelineGuide from './ReplayTimelineGuide.svelte';
 
   let {
     frames,
@@ -23,7 +25,8 @@
     onseek,
     children,
     telemetry,
-    actions
+    actions,
+    menu
   }: {
     frames: ParsedRaceCapture['frames'];
     bounds: ReplayBounds;
@@ -40,7 +43,10 @@
     onseek: (time: number) => void;
     children?: Snippet<[number[]]>;
     telemetry?: Snippet;
+    /** The chart's controls, shown in a desktop toolbar row. */
     actions?: Snippet;
+    /** The same controls behind one button, for a narrower toolbar. */
+    menu?: Snippet;
   } = $props();
 
   let width = $state(0),
@@ -48,6 +54,13 @@
     plotWidth = $state(0),
     scrollArea = $state<HTMLDivElement>(),
     tracks = $state<HTMLDivElement>();
+
+  /** The width at which the toolbar becomes one row with room for the chart view, as in replay-playback-controls.css. */
+  const TOOLBAR_ROW_WIDTH = 900;
+
+  // A desktop toolbar shows the chart view beside playback. Narrower, it folds into a menu beside the speed, so the
+  // chart starts right under the time slider.
+  const chartToolsInRow = $derived(width >= TOOLBAR_ROW_WIDTH);
 
   const displayBounds = $derived({
     ...bounds,
@@ -115,6 +128,17 @@
   );
 </script>
 
+{#snippet chartTools()}
+  <ReplayChartTools
+    tools={actions}
+    ensemble={minimal}
+  />
+{/snippet}
+
+{#snippet guide()}
+  <ReplayTimelineGuide ensemble={minimal} />
+{/snippet}
+
 <section
   bind:clientWidth={width}
   class="playback"
@@ -136,9 +160,9 @@
     {minimal}
     {onplay}
     {onseek}
-    {actions}
+    tools={chartToolsInRow ? chartTools : menu}
+    guide={chartToolsInRow ? undefined : guide}
   />
-  <small class="scroll-hint">Scroll sideways to see the full course and skill timeline</small>
   <!-- svelte-ignore a11y_no_noninteractive_tabindex (The shared horizontal timeline must be reachable with the keyboard.) -->
   <div
     bind:this={scrollArea}

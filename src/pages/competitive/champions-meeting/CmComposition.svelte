@@ -1,6 +1,7 @@
 <script lang="ts">
   import DataTable from '@/components/data/DataTable.svelte';
   import type { TeamRate } from '../hakuraku-types';
+  import { SHORT_STYLE } from '../hakuraku-query';
   import { pct, number, styleNames } from './cm-data';
 
   let {
@@ -68,7 +69,8 @@
             {/if}
             <span>
               <i style:background={colors[id]}></i>
-              {styleNames[id]}
+              <span class="style-long">{styleNames[id]}</span>
+              <span class="style-short">{SHORT_STYLE[id]}</span>
             </span>
           {/each}
           <span class="arrow">↗</span>
@@ -132,13 +134,6 @@
   }
   .composition-table :global(td) {
     padding-block: 5px;
-  }
-  /* Stacked on a phone, the win rate takes a line of its own for its bar. */
-  .composition-table :global(.stacked .rate-scale) {
-    display: none;
-  }
-  .composition-table :global(.stacked tr > td[data-label='Team wins']) {
-    flex-basis: 100%;
   }
   .composition {
     display: flex;
@@ -220,12 +215,39 @@
     white-space: nowrap;
     font-variant-numeric: tabular-nums;
   }
+  .style-short {
+    display: none;
+  }
   @media (max-width: 600px) {
     .composition-table :global(td) {
       padding-inline: 8px;
     }
     .composition {
       font-size: 10px;
+    }
+  }
+  /* A phone names each style briefly, so the composition stays pinned beside its results. */
+  @media (max-width: 767px) {
+    .composition-table :global(table) {
+      min-width: 0;
+    }
+    .composition-table :global(th:nth-child(n)) {
+      width: auto;
+    }
+    .composition {
+      gap: 4px;
+    }
+    .style-long,
+    .arrow {
+      display: none;
+    }
+    .style-short {
+      display: inline;
+    }
+    /* The number carries the win rate; a bar narrow enough to fit would show little more than its baseline tick. */
+    .rate-bar,
+    .rate-scale {
+      display: none;
     }
   }
   .rate-scale {

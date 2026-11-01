@@ -181,6 +181,15 @@
     display: inline-flex;
     vertical-align: middle;
   }
+  /* A phone keeps one line per skill, with the pinned chip narrow enough to leave most of the width to scroll. */
+  @media (max-width: 767px) {
+    .skills-report :global(.skill-chip-cell) {
+      --skill-chip-width: 8rem;
+    }
+    .skills-report :global(th:nth-child(2)) {
+      width: auto;
+    }
+  }
   /* The icon carries the outcome at a glance; its colour repeats it for readers who scan by tone. */
   .skill-status {
     --status-color: var(--text-secondary);

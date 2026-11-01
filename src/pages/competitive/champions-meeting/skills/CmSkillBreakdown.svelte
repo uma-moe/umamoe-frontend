@@ -5,6 +5,7 @@
   import InspectPopover from '@/components/overlays/InspectPopover.svelte';
   import Icon from '@/components/Icon.svelte';
   import { number, pct, styleNames } from '../cm-data';
+  import { SHORT_STYLE } from '../../hakuraku-query';
   import { skillStyles, type SkillOverview, type SkillDetail } from '../cm-exploration';
   import {
     selectedStyles,
@@ -107,9 +108,15 @@
 </script>
 
 {#snippet activationRows(group: (typeof groups)[number])}
-  {#each [{ label: 'Activation rate (1+)', field: 'active' as const }, { label: 'Repeat activation rate (2+)', field: 'repeat' as const }] as metric}
+  {#each [{ label: 'Activation rate (1+)', short: 'Activated (1+)', field: 'active' as const }, { label: 'Repeat activation rate (2+)', short: 'Repeated (2+)', field: 'repeat' as const }] as metric}
     <tr class="activation-row">
-      <th scope="row">{metric.label}</th>
+      <th
+        scope="row"
+        aria-label={metric.label}
+      >
+        <span class="label-full">{metric.label}</span>
+        <span class="label-short">{metric.short}</span>
+      </th>
       {#each columns as key}
         {@const cell = key === 'all' ? group.totals : group.counts[key]}
         <td
@@ -170,6 +177,51 @@
   class:comparison
   aria-label="Skill breakdown"
 >
+  <!-- The measure sits above the table so the row labels keep a narrow column beside the values. -->
+  <div class="measure-select">
+    <span class="measure-label">Outcomes</span>
+    <SelectField
+      id={controlId + '-measure'}
+      label="Outcome measure"
+      hideLabel
+      bind:value={measure}
+      options={[
+        { value: 'winrate', label: 'Individual win rate' },
+        { value: 'teamWinrate', label: 'Team win rate' },
+        { value: 'entries', label: 'Runner entries' },
+        { value: 'wins', label: 'Individual wins' },
+        { value: 'teamWins', label: 'Team wins' }
+      ]}
+    />
+    <InspectPopover
+      label="How skill percentages are calculated"
+      align="start"
+    >
+      {#snippet trigger()}<InfoIcon />{/snippet}
+      <div class="rates-help">
+        <strong>Different rows use different denominators</strong>
+        {#if comparison}
+          <p>
+            Skill rows show entries where any variant activated. Expand a skill for activation
+            rates, variants and inactive entries.
+          </p>
+        {/if}
+        <p>
+          <b>Activation rate:</b>
+          entries that activated at least once ÷ entries that learned the skill. Repeat activation rate
+          counts learned entries with two or more activations.
+        </p>
+        <p>
+          <b>Individual win rate:</b>
+          individual wins ÷ entries in that outcome row. Team win rate uses team wins over the same entries.
+        </p>
+        <p>
+          For example, if 60 of 100 learned entries activated the skill, its activation rate is 60%.
+          If 12 of those 60 entries won, their individual win rate is 20%.
+        </p>
+      </div>
+    </InspectPopover>
+  </div>
   <!-- svelte-ignore a11y_no_noninteractive_tabindex (Scrollable tables must be reachable with the keyboard.) -->
   <div
     class="table-scroll"
@@ -183,57 +235,20 @@
         <tr>
           <th scope="col">
             <span class="sr-only">Activation / outcome</span>
-            <div class="measure-select">
-              <span class="measure-label">Outcomes</span>
-              <SelectField
-                id={controlId + '-measure'}
-                label="Outcome measure"
-                hideLabel
-                bind:value={measure}
-                options={[
-                  { value: 'winrate', label: 'Individual win rate' },
-                  { value: 'teamWinrate', label: 'Team win rate' },
-                  { value: 'entries', label: 'Runner entries' },
-                  { value: 'wins', label: 'Individual wins' },
-                  { value: 'teamWins', label: 'Team wins' }
-                ]}
-              />
-              <InspectPopover
-                label="How skill percentages are calculated"
-                align="start"
-              >
-                {#snippet trigger()}<InfoIcon />{/snippet}
-                <div class="rates-help">
-                  <strong>Different rows use different denominators</strong>
-                  {#if comparison}
-                    <p>
-                      Skill rows show entries where any variant activated. Expand a skill for
-                      activation rates, variants and inactive entries.
-                    </p>
-                  {/if}
-                  <p>
-                    <b>Activation rate:</b>
-                    entries that activated at least once ÷ entries that learned the skill. Repeat activation
-                    rate counts learned entries with two or more activations.
-                  </p>
-                  <p>
-                    <b>Individual win rate:</b>
-                    individual wins ÷ entries in that outcome row. Team win rate uses team wins over the
-                    same entries.
-                  </p>
-                  <p>
-                    For example, if 60 of 100 learned entries activated the skill, its activation
-                    rate is 60%. If 12 of those 60 entries won, their individual win rate is 20%.
-                  </p>
-                </div>
-              </InspectPopover>
-            </div>
           </th>
           {#each columns as key}
-            <th scope="col">
+            <th
+              scope="col"
+              aria-label={key === 'all' ? 'Total' : styleNames[skillStyles[key] ?? 0]}
+            >
               <span class="style-heading">
-                {#if key !== 'all'}<i style:background={colors[skillStyles[key] ?? 0]}></i>{/if}
-                {key === 'all' ? 'Total' : styleNames[skillStyles[key] ?? 0]}
+                {#if key === 'all'}
+                  Total
+                {:else}
+                  <i style:background={colors[skillStyles[key] ?? 0]}></i>
+                  <span class="label-full">{styleNames[skillStyles[key] ?? 0]}</span>
+                  <span class="label-short">{SHORT_STYLE[skillStyles[key] ?? 0]}</span>
+                {/if}
               </span>
             </th>
           {/each}

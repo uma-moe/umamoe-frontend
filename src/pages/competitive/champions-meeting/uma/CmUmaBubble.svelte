@@ -2,6 +2,7 @@
   import type { Pair, Requirement } from '../../hakuraku-types';
   import { pct, number, styleNames, styleOrder } from '../cm-data';
   import { portrait } from '../../analysis-view';
+  import { SHORT_STYLE } from '../../hakuraku-query';
   import ChartFrame from '@/components/charts/ChartFrame.svelte';
   import PlotZoomControls from '@/components/charts/PlotZoomControls.svelte';
   import { PlotSize } from '@/components/charts/plot-size.svelte';
@@ -9,6 +10,7 @@
   import SelectField from '@/components/controls/SelectField.svelte';
   import Artwork from '@/components/game/Artwork.svelte';
   import Button from '@/components/controls/Button.svelte';
+  import Checkbox from '@/components/controls/Checkbox.svelte';
   import EmptyState from '@/components/feedback/EmptyState.svelte';
   import UmaChartPoint from '../../sessions/UmaChartPoint.svelte';
 
@@ -79,6 +81,10 @@
     area.bottom - ((value - yRange.min) / (yRange.max - yRange.min)) * (area.bottom - area.top);
 
   const ordered = $derived([...visible].sort((a, b) => b.pop - a.pop));
+
+  function toggleStyle(id: number) {
+    hidden = hidden.includes(id) ? hidden.filter((hiddenId) => hiddenId !== id) : [...hidden, id];
+  }
 </script>
 
 <div class="bubble-panel">
@@ -93,7 +99,10 @@
   >
     {#snippet actions()}
       <div class="bubble-filter">
-        <span aria-hidden="true">Min. style share</span>
+        <span aria-hidden="true">
+          <span class="name-full">Min. style share</span>
+          <span class="name-short">Min. share</span>
+        </span>
         <SelectField
           hideLabel
           id="cm-bubble-min"
@@ -107,23 +116,35 @@
           ]}
         />
       </div>
+      {#if visible.length}
+        <PlotZoomControls
+          {zoom}
+          hint={false}
+        />
+      {/if}
     {/snippet}
     <div class="bubble-body">
-      <div class="legend">
+      <div
+        class="legend"
+        role="group"
+        aria-label="Visible running styles"
+      >
         {#each styleOrder as id}
-          <button
-            aria-pressed={!hidden.includes(id)}
-            class:muted={hidden.includes(id)}
-            onclick={() =>
-              (hidden = hidden.includes(id) ? hidden.filter((x) => x !== id) : [...hidden, id])}
+          <div
+            class="legend-item"
+            style:--color-accent={colors[id]}
           >
-            <i style:background={colors[id]}></i>
-            {styleNames[id]}
-          </button>
+            <Checkbox
+              id={'cm-bubble-style-' + id}
+              label={SHORT_STYLE[id] ?? styleNames[id] ?? String(id)}
+              ariaLabel={styleNames[id]}
+              checked={!hidden.includes(id)}
+              onchange={() => toggleStyle(id)}
+            />
+          </div>
         {/each}
       </div>
       {#if visible.length}
-        <PlotZoomControls {zoom} />
         <div
           class="plot"
           class:expanded

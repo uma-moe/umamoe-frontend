@@ -314,9 +314,10 @@
     padding-bottom: 8px;
     border-bottom: 1px solid var(--border-subtle);
   }
-  @media (max-width: 600px) {
+  /* A phone's card keeps an 8px inset, so the chart gets the width. */
+  @media (max-width: 767px) {
     .surface {
-      padding: 10px;
+      padding: 8px;
     }
   }
   .compact {
@@ -353,6 +354,11 @@
     flex-wrap: wrap;
     justify-content: flex-end;
     gap: var(--space-2);
+  }
+  /* Expand closes the toolbar at its right edge, as tall as the controls beside it. */
+  .chart-tools > :global(.ui-button) {
+    min-height: var(--control-height);
+    margin-left: auto;
   }
   .chart-heading {
     min-width: 0;
@@ -449,6 +455,9 @@
     .chart-heading {
       flex: 1 1 auto;
     }
+    .chart-tools {
+      flex: 1 1 100%;
+    }
     .chart-tools,
     .chart-actions,
     .legend {
@@ -461,6 +470,14 @@
       padding: 0;
       justify-content: center;
       font-size: 0;
+    }
+    /* A narrow card keeps Expand to its icon; the button's label stays its accessible name. */
+    .chart-tools > :global(.ui-button) {
+      width: var(--control-height);
+      padding: 0;
+    }
+    .chart-tools > :global(.ui-button > span) {
+      display: none;
     }
     .plot {
       min-height: 150px;

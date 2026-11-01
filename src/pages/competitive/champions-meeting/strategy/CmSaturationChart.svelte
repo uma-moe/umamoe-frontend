@@ -1,8 +1,7 @@
 <script lang="ts">
+  import Checkbox from '@/components/controls/Checkbox.svelte';
   import DataTable from '@/components/data/DataTable.svelte';
-  import SegmentedControl from '@/components/controls/SegmentedControl.svelte';
   import Disclosure from '@/components/overlays/Disclosure.svelte';
-  import PlotZoomControls from '@/components/charts/PlotZoomControls.svelte';
   import { PlotSize } from '@/components/charts/plot-size.svelte';
   import { axisTicks, PlotZoom, tickDecimals } from '@/components/charts/plot-zoom.svelte';
   import type { SaturationBucket } from '../../hakuraku-types';
@@ -13,35 +12,35 @@
     totalRaces,
     label,
     small = false,
-    countPicker = true,
-    neutral = 1 / 9
+    neutral = 1 / 9,
+    zoom = new PlotZoom()
   }: {
-    series: { name: string; color: string; buckets: SaturationBucket[] }[];
+    /** `short` names a style in the legend, where the full name is left to assistive tech. */
+    series: { name: string; short?: string; color: string; buckets: SaturationBucket[] }[];
     totalRaces: number;
     label: string;
     small?: boolean;
-    /** Buttons for each room count beside the hover readout; a few captured races read better without. */
-    countPicker?: boolean;
     /** The win rate every runner would share in an even room, drawn as the reference line. */
     neutral?: number;
+    /** The plot's zoom, which the chart's toolbar holds the controls for. */
+    zoom?: PlotZoom;
   } = $props();
 
   const valuesId = $props.id();
   const clipId = valuesId + '-plot';
-  const zoom = new PlotZoom();
 
   const size = new PlotSize({ width: 560, height: 228 });
 
   let hidden = $state<string[]>([]);
 
-  const filtered = $derived(
-    series
-      .filter((s) => !hidden.includes(s.name))
-      .map((s) => ({
-        ...s,
-        buckets: s.buckets.filter((b) => b.races >= Math.max(1, totalRaces * 0.01) && b.entries > 0)
-      }))
+  const reported = $derived(
+    series.map((s) => ({
+      ...s,
+      buckets: s.buckets.filter((b) => b.races >= Math.max(1, totalRaces * 0.01) && b.entries > 0)
+    }))
   );
+
+  const filtered = $derived(reported.filter((s) => !hidden.includes(s.name)));
 
   let selectedCount = $state('');
 
@@ -53,10 +52,9 @@
     counts.includes(Number(selectedCount)) ? Number(selectedCount) : counts[0]
   );
 
-  const readout = $derived(
-    filtered
-      .map((s) => ({ ...s, bucket: s.buckets.find((b) => b.x === inspectedCount) }))
-      .filter((s) => s.bucket)
+  // Every style keeps its place in the legend, hidden or without a bucket at this count, so it can be switched back.
+  const legend = $derived(
+    reported.map((s) => ({ ...s, bucket: s.buckets.find((b) => b.x === inspectedCount) }))
   );
 
   const points = $derived(filtered.flatMap((s) => s.buckets));
@@ -67,10 +65,17 @@
     Math.ceil(Math.max(neutral, ...points.map((b) => Math.max(b.rate, b.ci[1]))) / 0.05) * 0.05
   );
 
-  const area = $derived({ left: 42, right: size.width - 38, top: 14, bottom: size.height - 46 });
   const xRange = $derived(zoom.visible('x', min, max === min ? min + 1 : max));
   const yRange = $derived(zoom.visible('y', 0, yMax));
   const yDecimals = $derived(Math.max(0, tickDecimals(yRange.min * 100, yRange.max * 100)));
+
+  // The plot keeps only the room its labels need: the percentages on the left and the even-room mark on the right.
+  const area = $derived({
+    left: yDecimals > 0 ? 42 : 34,
+    right: size.width - 26,
+    top: 14,
+    bottom: size.height - 46
+  });
 
   const x = (n: number) =>
     area.left +
@@ -81,6 +86,12 @@
   const visibleCounts = $derived(
     counts.filter((count) => count >= xRange.min - 0.001 && count <= xRange.max + 0.001)
   );
+
+  function toggleSeries(name: string) {
+    hidden = hidden.includes(name)
+      ? hidden.filter((hiddenName) => hiddenName !== name)
+      : [...hidden, name];
+  }
 
   function inspect(event: PointerEvent) {
     if (small || !counts.length) return;
@@ -101,48 +112,6 @@
   aria-label={label}
   class:small
 >
-  {#if !small}
-    <div class="chart-controls">
-      <div
-        class="series-controls"
-        aria-label="Visible running styles"
-      >
-        {#each series as item}
-          <button
-            aria-pressed={!hidden.includes(item.name)}
-            onclick={() =>
-              (hidden = hidden.includes(item.name)
-                ? hidden.filter((name) => name !== item.name)
-                : [...hidden, item.name])}
-          >
-            <i style:background={item.color}></i>
-            {item.name}
-          </button>
-        {/each}
-      </div>
-      {#if points.length}
-        <PlotZoomControls {zoom} />
-      {/if}
-    </div>
-  {/if}
-  {#if !small && points.length && countPicker}
-    <div class="inspection-controls">
-      <div class="count-picker">
-        <span>In room</span>
-        <SegmentedControl
-          compact
-          label="Inspect room count"
-          value={String(inspectedCount)}
-          options={counts.map((count) => ({
-            value: String(count),
-            label: String(count),
-            title: count + ' in room'
-          }))}
-          onchange={(value) => (selectedCount = value)}
-        />
-      </div>
-    </div>
-  {/if}
   <div
     class="plot"
     {@attach size.observe}
@@ -277,20 +246,29 @@
       {/if}
     </svg>
   </div>
-  {#if !small && points.length}
-    <div class="readout">
-      <div class="readout-values">
-        {#each readout as row}
-          <div>
-            <span>
-              <i style:background={row.color}></i>
-              {row.name}
-            </span>
-            <strong>{pct(row.bucket!.rate)}</strong>
-            <small>{pct(row.bucket!.ci[0], 2)}–{pct(row.bucket!.ci[1], 2)}</small>
-          </div>
-        {/each}
-      </div>
+  {#if !small}
+    <div
+      class="legend"
+      role="group"
+      aria-label="Visible running styles"
+      style:--legend-columns={legend.length}
+      style:--legend-narrow-columns={Math.ceil(legend.length / 2)}
+    >
+      {#each legend as item, index}
+        <div
+          class="legend-item"
+          style:--color-accent={item.color}
+        >
+          <Checkbox
+            id={valuesId + '-style-' + index}
+            label={item.short ?? item.name}
+            ariaLabel={item.name}
+            description={item.bucket ? pct(item.bucket.rate) : '—'}
+            checked={!hidden.includes(item.name)}
+            onchange={() => toggleSeries(item.name)}
+          />
+        </div>
+      {/each}
     </div>
   {/if}
   {#if !points.length}

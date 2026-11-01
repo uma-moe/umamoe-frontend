@@ -11,10 +11,10 @@ it('heads a row with its name alone when the name comes first', () => {
   expect(rowHeadingCount([{}, { numeric: true }, {}])).toBe(1);
 });
 
-it('leaves a table of numbers unstacked', () => {
+it('pins nothing in a table of numbers', () => {
   expect(rowHeadingCount([{ numeric: true }, { numeric: true }])).toBeUndefined();
 });
 
-it('leaves a table unstacked when its name is the last column', () => {
+it('pins nothing when the name is the last column', () => {
   expect(rowHeadingCount([{ numeric: true }, {}])).toBeUndefined();
 });

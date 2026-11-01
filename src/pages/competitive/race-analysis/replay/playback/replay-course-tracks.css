@@ -149,6 +149,11 @@
   .timeline-values {
     font-size: 9px;
   }
+  /* The value column is only wide enough for the right axis; the terrain and chart already show these. */
+  .elevation-range,
+  .finish {
+    visibility: hidden;
+  }
 }
 .slope-symbol {
   display: none;

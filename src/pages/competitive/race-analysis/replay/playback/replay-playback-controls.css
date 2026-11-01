@@ -1,38 +1,100 @@
+/*
+ * Mobile first: a phone puts playback, its speed and the chart menu on one row, then the clock and race state with
+ * the timeline guide; a tablet fits everything in one row, and a desktop row shows the chart view in full.
+ */
 .playback-controls {
-  display: flex;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto auto;
+  grid-template-areas:
+    'transport speed tools'
+    'position position guide';
   align-items: center;
-  gap: 8px;
+  gap: 6px 4px;
   margin-bottom: 4px;
 }
-.transport,
-.playback-tools,
-.playback-actions {
+/* An ensemble replay only plays, so its play button shares the clock's row. */
+.playback-controls.minimal {
+  grid-template-columns: auto minmax(0, 1fr) auto auto auto;
+  grid-template-areas: 'transport position speed tools guide';
+}
+.transport {
+  grid-area: transport;
   display: flex;
   align-items: center;
   gap: 4px;
-  flex: none;
   min-width: 0;
 }
-.playback-actions {
-  gap: 8px;
+/* The seek buttons read as one control: joined, with a shared outline. */
+.steps {
+  display: flex;
 }
+.playback-controls .steps > :global(.ui-button.ui-button--sm) {
+  border-radius: 0;
+}
+.playback-controls .steps > :global(.ui-button + .ui-button) {
+  margin-left: -1px;
+}
+.playback-controls .steps > :global(.ui-button.ui-button--sm:first-child) {
+  border-radius: 6px 0 0 6px;
+}
+.playback-controls .steps > :global(.ui-button.ui-button--sm:last-child) {
+  border-radius: 0 6px 6px 0;
+}
+.steps > :global(.ui-button:focus-visible) {
+  z-index: 1;
+}
+.speed-select {
+  grid-area: speed;
+  justify-self: end;
+}
+.position {
+  grid-area: position;
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  min-width: 0;
+}
+.playback-tools {
+  grid-area: tools;
+  display: flex;
+  min-width: 0;
+}
+.playback-guide {
+  grid-area: guide;
+  display: flex;
+  justify-content: flex-end;
+}
+/* Every control in the toolbar shares one height, the race page's small-button height. */
 .playback-controls :global(.ui-button) {
+  min-width: 32px;
   min-height: 32px;
+  padding-inline: 8px;
   font-size: 11px;
+}
+/* Button wraps its label in a span; without that box, a label hidden at this width leaves no gap beside the icon. */
+.playback-controls :global(.ui-button > span) {
+  display: contents;
 }
 .playback-controls :global(.ui-button svg) {
   width: 15px;
   height: 15px;
+}
+.speed-select :global(.field) {
+  width: 64px;
+}
+.speed-select :global(.field select),
+.speed-select :global(.field button) {
+  min-height: 32px;
+  padding-block: 4px;
+  padding-inline: 8px 4px;
 }
 
 /* One quiet line: where the leader is and how far is left. */
 .playback-state {
   display: flex;
   align-items: baseline;
-  gap: 0;
-  flex: 1;
   min-width: 0;
-  margin: 0 0 0 4px;
+  margin: 0;
   overflow: hidden;
   font-size: 11px;
   line-height: 16px;
@@ -60,8 +122,6 @@
 }
 
 .playback-clock {
-  flex: none;
-  margin-inline: 4px;
   font-size: 11px;
   color: var(--text-secondary);
   white-space: nowrap;
@@ -72,104 +132,68 @@
   color: var(--text-primary);
   font-weight: 600;
 }
-.speed-select :global(.field) {
-  width: 64px;
-}
-.speed-select :global(.field select),
-.speed-select :global(.field button) {
-  min-height: 32px;
-  padding-block: 4px;
-  padding-inline: 8px 4px;
-}
-p {
-  font-size: 12px;
-  line-height: 1.6;
-  color: var(--text-secondary);
-}
-h3 {
-  font-size: 14px;
-  margin-top: 0;
+.optional-text {
+  display: none;
 }
 
-/* Secondary labels become icons first, then the toolbar splits into rows. */
-@container playback (max-width: 1400px) {
-  .optional-text,
+/* A small phone keeps the race state whole; the time axis already shows where the race ends. */
+@container playback (max-width: 399px) {
   .clock-total {
     display: none;
   }
 }
-@container playback (max-width: 960px) {
-  .playback-controls {
-    display: grid;
-    grid-template-columns: auto minmax(0, 1fr) auto;
-    grid-template-areas:
-      'transport clock tools'
-      'actions state state';
-    gap: 6px 8px;
-  }
-  .transport {
-    grid-area: transport;
-  }
-  .playback-clock {
-    grid-area: clock;
-    justify-self: end;
-  }
-  .playback-tools {
-    grid-area: tools;
-  }
-  .playback-actions {
-    grid-area: actions;
-  }
-  .playback-state {
-    grid-area: state;
-    justify-content: flex-end;
-    margin: 0;
-  }
-}
-/* A phone gives the transport its own full row, so the step buttons never slide under the tools. */
-@container playback (max-width: 520px) {
-  .playback-controls {
-    grid-template-columns: minmax(0, 1fr) auto;
-    grid-template-areas:
-      'transport transport'
-      'clock tools'
-      'state state'
-      'actions actions';
-    gap: 8px;
-  }
-  .transport > :global(.ui-button) {
-    flex: 1 1 0;
-  }
-  .playback-tools {
-    justify-self: end;
-  }
-  .playback-clock {
-    justify-self: start;
-    margin: 0;
-  }
-  .playback-state {
-    justify-content: flex-start;
-    margin: 0;
-    font-size: 10px;
-  }
-  .transport .button-text {
+/* The narrowest phones keep playback on one row: play shows its icon alone, and the steps and speed tighten. */
+@container playback (max-width: 339px) {
+  .transport > :global(.ui-button .button-text) {
     display: none;
   }
-  .playback-controls :global(.ui-button) {
-    min-height: 36px;
-    min-width: 36px;
-    padding-inline: 8px;
-  }
-  .speed-select :global(.field select),
-  .speed-select :global(.field button) {
-    min-height: 36px;
-    height: 36px;
+  .playback-controls .steps > :global(.ui-button.ui-button--sm) {
+    padding-inline: 6px;
   }
   .speed-select :global(.field) {
-    width: 58px;
+    width: 56px;
   }
-  .playback-clock strong {
-    font-size: 14px;
+}
+/* A tablet: playback with its speed and chart menu on the left, the clock and guide at the far end. */
+@container playback (min-width: 560px) {
+  .playback-controls,
+  .playback-controls.minimal {
+    grid-template-columns: auto auto auto minmax(0, 1fr) auto;
+    grid-template-areas: 'transport speed tools position guide';
+    gap: 6px 8px;
+  }
+  .position {
+    display: grid;
+    gap: 1px;
+    justify-items: end;
+    text-align: right;
+  }
+}
+/* A desktop toolbar is one row: playback, then where the replay is, then the chart view at the far end. */
+@container playback (min-width: 900px) {
+  .playback-controls,
+  .playback-controls.minimal {
+    grid-template-columns: auto auto minmax(0, 1fr) auto;
+    grid-template-areas: 'transport speed position tools';
+    gap: 8px 10px;
+  }
+  .position {
+    display: flex;
+    align-items: baseline;
+    gap: 10px;
+    justify-items: start;
+    text-align: left;
+  }
+}
+/* Until the row has room to spare, the total time and the button labels give way to the chart view. */
+@container playback (min-width: 900px) and (max-width: 1399px) {
+  .clock-total {
+    display: none;
+  }
+}
+@container playback (min-width: 1400px) {
+  .optional-text {
+    display: inline;
   }
 }
 @media (min-width: 951px) and (max-height: 1000px) {

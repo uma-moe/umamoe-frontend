@@ -147,6 +147,27 @@ dd {
     padding-left: 4px;
   }
 }
+/* A small phone keeps the Uma column narrow enough to stay pinned beside the numbers: tighter spacing, and a long
+   name truncates on its one line since the portrait already says whose row it is. */
+@media (max-width: 480px) {
+  :global(.table-wrap.compact td:has(> .uma-toggle)) {
+    padding-inline: 4px;
+  }
+  .uma-toggle,
+  .uma-toggle :global(.runner-reference) {
+    gap: 4px;
+  }
+  .uma-toggle :global(.runner-reference .art) {
+    width: 24px;
+    height: 30px;
+  }
+  .uma-toggle :global(.runner-name strong) {
+    width: 4.5rem;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+}
 @media (prefers-reduced-motion: reduce) {
   .chevron {
     transition: none;

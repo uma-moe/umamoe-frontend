@@ -75,6 +75,8 @@
   let report = $state<HTMLElement>(),
     analysisTarget = $state<HTMLElement>();
 
+  let currentSection = $state('replay');
+
   const trackId = $derived(trackOverride || String(capture.courseId ?? ''));
 
   let shapes = $state.raw<Record<string, CourseShape>>(),
@@ -181,6 +183,31 @@
     report
       ?.querySelector<HTMLElement>('[data-report-section="' + section + '"]')
       ?.scrollIntoView({ block: 'start', behavior: 'instant' });
+  }
+
+  /** Follows the reader: the current section is the last one scrolled up to where a jump would land it. */
+  function trackSection() {
+    if (!report) return;
+
+    const page = document.documentElement;
+    const sections = [...report.querySelectorAll<HTMLElement>('[data-report-section]')];
+    const atPageEnd = innerHeight + scrollY >= page.scrollHeight - 2;
+    // A jump lands a section below the page's scroll padding plus its own scroll margin.
+    const pagePadding = Number.parseFloat(getComputedStyle(page).scrollPaddingTop) || 0;
+
+    // A short last section never reaches the top, so the end of the page selects it.
+    let current = atPageEnd ? sections.at(-1) : undefined;
+    if (!current) {
+      current = sections[0];
+      for (const section of sections) {
+        const margin = Number.parseFloat(getComputedStyle(section).scrollMarginTop) || 0;
+        if (section.getBoundingClientRect().top > pagePadding + margin + 1) break;
+        current = section;
+      }
+    }
+
+    const id = current?.dataset.reportSection;
+    if (id !== undefined && id !== currentSection) currentSection = id;
   }
 
   function analyseRunner() {
@@ -302,6 +329,7 @@
 />
 <svelte:window
   onkeydown={keydown}
+  onscroll={overviewOnly ? undefined : trackSection}
   onfullscreenchange={() => (fullscreen = !!document.fullscreenElement)}
 />
 <section
@@ -319,6 +347,7 @@
       endTime={replay.bounds.endTime}
       {trackOverride}
       {hasSession}
+      current={currentSection}
       {headerActions}
       onjump={jump}
     />

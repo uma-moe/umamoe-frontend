@@ -7,13 +7,6 @@ figure {
   min-width: 0;
   margin: 0;
 }
-.chart-controls {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  flex-wrap: wrap;
-  gap: 6px 12px;
-}
 .plot {
   min-height: 240px;
 }
@@ -43,85 +36,39 @@ text {
   stroke-dasharray: 3 4;
   opacity: 0.35;
 }
-.series-controls {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 4px;
-}
-.series-controls button {
-  display: flex;
-  gap: 5px;
-  align-items: center;
-  min-height: 24px;
-  border: 1px solid var(--factor-field-border);
-  border-radius: var(--radius-md);
-  background: var(--factor-field-bg);
-  color: var(--color-text);
-  font: inherit;
-  font-size: 10px;
-  cursor: pointer;
-  padding: 0 8px;
-}
-.series-controls button:hover {
-  border-color: var(--border-primary);
-}
-.series-controls [aria-pressed='false'] {
-  opacity: 0.4;
-  text-decoration: line-through;
-}
-.readout {
-  padding-top: 8px;
-  border-top: 1px solid var(--border-subtle);
-}
-.inspection-controls {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  justify-content: space-between;
-  gap: 8px;
-}
-.count-picker {
-  display: flex;
-  min-width: 0;
-  gap: 8px;
-  align-items: center;
-  font-size: 11px;
-}
-.count-picker > span {
-  flex: none;
-  color: var(--text-secondary);
-}
-.count-picker :global(.segments) {
-  min-width: 0;
-}
-.count-picker :global(.segments button) {
-  min-width: 28px;
-  padding-inline: 6px;
-}
-.readout-values {
+/*
+ * The legend is the library's checkbox in each style's colour, as the timeline filters are; its description reads
+ * out the style's rate at the inspected count, so the legend is also the readout.
+ */
+.legend {
   display: grid;
-  grid-template-columns: repeat(6, minmax(0, 1fr));
-  gap: 8px;
+  grid-template-columns: repeat(var(--legend-columns), minmax(0, 1fr));
+  gap: 2px 8px;
 }
-.readout-values > div {
-  display: grid;
-  grid-template-columns: 1fr auto;
-  gap: 3px 6px;
-  font-variant-numeric: tabular-nums;
+.legend-item :global(.checkbox) {
+  min-height: 32px;
+  grid-template-columns: 16px minmax(0, 1fr);
+  gap: 6px;
 }
-.readout-values span {
-  font-size: 10px;
+.legend-item :global(.box) {
+  width: 16px;
+  height: 16px;
+}
+.legend-item :global(strong) {
+  overflow: hidden;
   color: var(--text-secondary);
+  font-size: 10px;
+  font-weight: 500;
+  line-height: 1.2;
+  white-space: nowrap;
+  text-overflow: ellipsis;
 }
-.readout-values strong {
+.legend-item :global(small) {
+  color: var(--text-primary);
   font-size: 12px;
-  font-weight: 550;
-  letter-spacing: -0.025em;
-}
-.readout-values small {
-  grid-column: 1/-1;
-  font-size: 10px;
-  color: var(--text-secondary);
+  font-weight: 600;
+  line-height: 1.2;
+  font-variant-numeric: tabular-nums;
 }
 p {
   text-align: center;
@@ -144,10 +91,9 @@ i {
   border-radius: 50%;
   margin-right: 4px;
 }
+/* A narrow card splits the styles over two even rows, so no toggle is left alone on the second. */
 @media (max-width: 900px) {
-  .readout-values {
-    grid-template-columns: repeat(3, minmax(0, 1fr));
+  .legend {
+    grid-template-columns: repeat(var(--legend-narrow-columns), minmax(0, 1fr));
   }
-}
-@media (max-width: 600px) {
 }

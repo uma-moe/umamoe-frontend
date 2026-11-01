@@ -64,6 +64,9 @@ export function fieldChart(
                 formatter: 'Equal teams at 33.3%',
                 position: 'insideEndTop',
                 rotate: 0,
+                // Reads rightward from the line, clear of the axis name above the scale on the left.
+                align: 'left',
+                padding: [0, 0, 0, 4],
                 color: ink,
                 fontSize: 10
               }

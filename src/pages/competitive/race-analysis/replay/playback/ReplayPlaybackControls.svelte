@@ -1,13 +1,10 @@
 <script lang="ts">
-  import InfoIcon from '@/components/feedback/InfoIcon.svelte';
   import type { Snippet } from 'svelte';
   import Button from '@/components/controls/Button.svelte';
   import SelectField from '@/components/controls/SelectField.svelte';
-  import InspectPopover from '@/components/overlays/InspectPopover.svelte';
   import { formatRaceTime } from '@/lib/race/replay/race-display';
   import type { ReplayBounds } from '@/lib/race/replay/race-replay';
   import { slopeLabel } from '../replay-timeline';
-  import ReplayTelemetryGuide from './ReplayTelemetryGuide.svelte';
 
   let {
     bounds,
@@ -23,7 +20,8 @@
     minimal,
     onplay,
     onseek,
-    actions
+    tools,
+    guide
   }: {
     bounds: ReplayBounds;
     /** End of the displayed timeline, which may stop at the selected runner's finish. */
@@ -39,7 +37,10 @@
     minimal: boolean;
     onplay: () => void;
     onseek: (time: number) => void;
-    actions?: Snippet;
+    /** The chart view: its controls at the end of a desktop row, or a menu beside the speed. */
+    tools?: Snippet;
+    /** The guide to reading the timeline, ending the clock's line when the chart view is a menu. */
+    guide?: Snippet;
   } = $props();
 
   const trackState = $derived([
@@ -63,8 +64,10 @@
   );
 </script>
 
+<!-- Playback (transport and speed), the chart view, and where the replay is (clock and race state). -->
 <div
   class="playback-controls"
+  class:minimal
   role="toolbar"
   aria-label="Playback and telemetry controls"
 >
@@ -79,99 +82,82 @@
       <span class="button-text">{playing ? 'Pause' : 'Play'}</span>
     </Button>
     {#if !minimal}
-      <Button
-        variant="secondary"
-        size="sm"
-        icon="skip-back"
-        ariaLabel="Restart"
-        onclick={() => onseek(bounds.startTime)}
+      <div
+        class="steps"
+        role="group"
+        aria-label="Seek"
       >
-        <span class="button-text optional-text">Restart</span>
-      </Button>
-      <Button
-        variant="secondary"
-        size="sm"
-        ariaLabel="Back 1 second"
-        onclick={() => onseek(time - 1)}
-      >
-        −1s
-      </Button>
-      <Button
-        variant="secondary"
-        size="sm"
-        ariaLabel="Forward 1 second"
-        onclick={() => onseek(time + 1)}
-      >
-        +1s
-      </Button>
+        <Button
+          variant="secondary"
+          size="sm"
+          icon="skip-back"
+          ariaLabel="Restart"
+          onclick={() => onseek(bounds.startTime)}
+        >
+          <span class="button-text optional-text">Restart</span>
+        </Button>
+        <Button
+          variant="secondary"
+          size="sm"
+          ariaLabel="Back 1 second"
+          onclick={() => onseek(time - 1)}
+        >
+          −1s
+        </Button>
+        <Button
+          variant="secondary"
+          size="sm"
+          ariaLabel="Forward 1 second"
+          onclick={() => onseek(time + 1)}
+        >
+          +1s
+        </Button>
+        <Button
+          variant="secondary"
+          size="sm"
+          icon="flag"
+          ariaLabel="Jump to finish"
+          title="Jump to finish"
+          onclick={() => onseek(endTime)}
+        >
+          <span class="button-text optional-text">Finish</span>
+        </Button>
+      </div>
     {/if}
   </div>
-  <p
-    class="playback-state"
-    title={trackState.join(', ') + ', leader ' + leaderLabel}
-  >
-    <strong class="race-phase">{phase}</strong>
-    {#each trackState.slice(1) as part}
-      <span>{part}</span>
-    {/each}
-    <span class="remaining">{remainingLabel}</span>
-  </p>
-  {#if actions}
-    <div class="playback-actions">{@render actions()}</div>
-  {/if}
-  <span class="playback-clock">
-    <strong>{clockLabel(time)}</strong>
-    <span class="clock-total">
-      / {formatRaceTime(bounds.endTime, 2)}
-    </span>
+  <span class="speed-select">
+    <SelectField
+      id="playback-speed"
+      label="Playback speed"
+      hideLabel
+      options={['0.5', '1', '2', '4', '8'].map((value) => ({ value, label: value + '×' }))}
+      bind:value={speed}
+    />
   </span>
-  <div class="playback-tools">
-    {#if !minimal}
-      <Button
-        variant="secondary"
-        size="sm"
-        icon="flag"
-        ariaLabel="Jump to finish"
-        title="Jump to finish"
-        onclick={() => onseek(endTime)}
-      >
-        <span class="button-text optional-text">Finish</span>
-      </Button>
-    {/if}
-    <span class="speed-select">
-      <SelectField
-        id="playback-speed"
-        label="Playback speed"
-        hideLabel
-        options={['0.5', '1', '2', '4', '8'].map((value) => ({ value, label: value + '×' }))}
-        bind:value={speed}
-      />
+  <div class="position">
+    <span class="playback-clock">
+      <strong>{clockLabel(time)}</strong>
+      <span class="clock-total">
+        / {formatRaceTime(bounds.endTime, 2)}
+      </span>
     </span>
-    <InspectPopover
-      label="How to read the replay timeline"
-      align="end"
+    <p
+      class="playback-state"
+      title={trackState.join(', ') + ', leader ' + leaderLabel}
     >
-      {#snippet trigger()}
-        <InfoIcon />
-      {/snippet}
-      <ReplayTelemetryGuide ensemble={minimal} />
-      <h3>Course and skill timeline</h3>
-      <p>
-        The telemetry graph, course lanes and skill icons use the same replay time axis. Course
-        boundaries mark when the race leader reaches each section. Elevation is relative to the
-        start.
-      </p>
-      <p>
-        Select a course section or race phase to jump to its start. Drag the blue handle to scrub,
-        or focus it and use the arrow keys.
-      </p>
-      <p>
-        The skills below belong to the selected runner. Select an activation to replay it. Skill
-        icons show activation times and highlight while active. Numbered icons group nearby
-        activations. Open Skill activity details for names, exact durations and activation rolls.
-      </p>
-    </InspectPopover>
+      <strong class="race-phase">{phase}</strong>
+      {#each trackState.slice(1) as part}
+        <span>{part}</span>
+      {/each}
+      <span class="remaining">{remainingLabel}</span>
+    </p>
   </div>
+  {#if tools}
+    <div class="playback-tools">{@render tools()}</div>
+  {/if}
+  {#if guide}
+    <div class="playback-guide">{@render guide()}</div>
+  {/if}
 </div>
 
 <style>

@@ -4,6 +4,10 @@
   line-height: 16px;
   color: var(--text-primary);
 }
+/* Each track has a short name for the phone's narrow label column. */
+.playback :global(.label-short) {
+  display: none;
+}
 .playback {
   container: playback / inline-size;
   --timeline-label-width: 160px;
@@ -123,11 +127,21 @@
   border-radius: 4px;
 }
 @media (max-width: 700px) {
-  /* Phones fit the whole race in view instead of scrolling the timeline sideways. */
+  /* Phones fit the whole race in view: short track names leave the plot most of the width. */
   .playback {
-    --timeline-label-width: 100px;
+    --timeline-label-width: 40px;
     --timeline-value-width: 24px;
-    --timeline-column-gap: 6px;
+    --timeline-column-gap: 4px;
+  }
+  .playback :global(.timeline-label) {
+    font-size: 10px;
+    color: var(--text-secondary);
+  }
+  .playback :global(.label-long) {
+    display: none;
+  }
+  .playback :global(.label-short) {
+    display: inline;
   }
   .time-ticks {
     font-size: 11px;
@@ -149,21 +163,6 @@
 .timeline-scroll:focus-visible {
   outline: 2px solid var(--accent-primary);
   outline-offset: 2px;
-}
-.scroll-hint {
-  display: none;
-}
-@media (max-width: 340px) {
-  /* The narrowest phones keep a readable plot and scroll it instead. */
-  .timeline-content {
-    min-width: 330px;
-  }
-  .scroll-hint {
-    display: block;
-    font-size: 10px;
-    color: var(--text-secondary);
-    margin-bottom: 8px;
-  }
 }
 @media (min-width: 951px) {
   .playback {
@@ -195,5 +194,31 @@
 @media (min-width: 951px) and (max-height: 850px) {
   .playback {
     padding-top: 4px;
+  }
+}
+/* The smallest screens give the plot the whole width: track names, side values and axis scales give way. */
+@media (max-width: 480px) {
+  .playback {
+    --timeline-label-width: 0px;
+    --timeline-value-width: 0px;
+    --timeline-column-gap: 0px;
+  }
+  .playback :global(:is(.timeline-label, .timeline-labels, .timeline-values, .strip-count)) {
+    visibility: hidden;
+    overflow: hidden;
+  }
+  /* Without side columns to overhang, the first and last times align inside the plot's edges. */
+  .time-ticks > span:first-child {
+    transform: none;
+  }
+  .time-ticks > span:first-child::after {
+    left: 0;
+  }
+  .time-ticks > span:last-of-type {
+    transform: translateX(-100%);
+  }
+  .time-ticks > span:last-of-type::after {
+    left: auto;
+    right: 0;
   }
 }

@@ -444,4 +444,19 @@
       display: none;
     }
   }
+  /* A small phone tightens the tabs so a group of five or six still fits its row without scrolling. */
+  @media (max-width: 400px) {
+    .tabs .tab {
+      padding-inline: 6px;
+      font-size: 11px;
+    }
+    .compact .tab {
+      padding-inline: 5px;
+    }
+  }
+  @media (max-width: 340px) {
+    .compact .tab {
+      padding-inline: 4px;
+    }
+  }
 </style>

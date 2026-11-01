@@ -144,4 +144,10 @@
       padding-block: 0 calc(var(--bottom-nav-height) + var(--space-4));
     }
   }
+  /* A phone needs every pixel of width: the page frame's gutter is the only one, not doubled by the sections. */
+  @container app-viewport (max-width: 767px) {
+    .app-page:not(.full-bleed) .page-sections {
+      padding-inline: 0;
+    }
+  }
 </style>

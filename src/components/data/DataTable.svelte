@@ -8,6 +8,8 @@
   export interface TableColumn {
     key: string;
     label: string;
+    /** A shorter heading a phone shows, so a narrow table keeps its columns; `label` stays the accessible name. */
+    short?: string;
     numeric?: boolean;
     priority?: 'primary' | 'secondary';
     sortable?: boolean;
@@ -33,8 +35,11 @@
     rowKey?: string;
     rowDetail?: Snippet<[Record<string, string | number>]>;
     onvisiblerows?: (rows: Record<string, string | number>[]) => void;
-    /** How a phone shows a table too wide for it: rows stacked under their names, or columns that scroll. */
-    phoneLayout?: 'stack' | 'scroll';
+    /**
+     * How many leading columns stay in view on a phone while a table too wide for it scrolls sideways. Defaults to
+     * the columns that name a row; 0 pins none.
+     */
+    pinnedColumns?: number;
   }
 
   let {
@@ -56,30 +61,22 @@
     rowKey = 'id',
     rowDetail,
     onvisiblerows,
-    phoneLayout = 'stack'
+    pinnedColumns
   }: Props = $props();
 
   const PHONE_QUERY = '(max-width: 767px)';
-  // Stacked rows are no longer laid out as a table, so they state its roles outright.
-  const STACKED_ROLES = {
-    table: 'table',
-    group: 'rowgroup',
-    row: 'row',
-    header: 'columnheader',
-    cell: 'cell'
-  } as const;
+  // Pinned columns that took more of the width would leave too little room to read the values scrolling beside them.
+  const MAX_PINNED_SHARE = 0.45;
 
   let virtualRange = $state<VirtualRange>({ start: 0, end: 0 });
   let container = $state<HTMLDivElement>();
   let tableElement = $state<HTMLTableElement>();
-  let stacked = $state(false);
+  // Left offsets of the pinned columns; empty while the table fits or the screen is wider than a phone.
+  let pinnedOffsets = $state<number[]>([]);
+  let scrolledAside = $state(false);
+  let moreAside = $state(false);
 
-  const headingCount = $derived(phoneLayout === 'stack' ? rowHeadingCount(columns) : undefined);
-
-  // The last of the heading columns, which takes the free width on a stacked row's first line.
-  const nameColumn = $derived(headingCount === undefined ? -1 : headingCount - 1);
-
-  const roles = $derived(stacked ? STACKED_ROLES : undefined);
+  const pinnedCount = $derived(pinnedColumns ?? rowHeadingCount(columns) ?? 0);
 
   const ordered = $derived.by(() => {
     const column = columns.find((c) => c.key === sortKey);
@@ -120,45 +117,55 @@
     untrack(() => onvisiblerows?.(visible));
   });
 
-  // A phone stacks the rows of a table that would otherwise hide columns to the side. The one-line width is
-  // remembered when it overflows, so the columns return only once there is room for all of them.
+  // A phone keeps a wide table on one line per row and scrolls it sideways under the columns that name each row,
+  // such as a finish position and runner. Pinning only changes where cells paint, so measuring cannot loop.
   $effect(() => {
     const wrap = container;
     const table = tableElement;
-    if (!wrap || !table || headingCount === undefined) {
-      stacked = false;
-      return;
-    }
+    if (!wrap || !table) return;
 
     const phone = matchMedia(PHONE_QUERY);
-    let oneLineWidth = 0;
 
-    const fitRows = () => {
-      if (!phone.matches) {
-        stacked = false;
-        return;
-      }
-
-      if (stacked) {
-        stacked = wrap.clientWidth < oneLineWidth;
-        return;
-      }
-
+    const pinColumns = () => {
       const overflowing = wrap.scrollWidth > wrap.clientWidth + 1;
-      if (overflowing) {
-        oneLineWidth = wrap.scrollWidth;
-        stacked = true;
+      const headerCells = table.tHead?.rows[0]?.cells;
+      if (!phone.matches || !overflowing || pinnedCount === 0 || !headerCells) {
+        if (pinnedOffsets.length) pinnedOffsets = [];
+        return;
       }
+
+      // Summed widths rather than positions, which a pinned cell's own sticky shift would skew.
+      const offsets: number[] = [];
+      let left = 0;
+      for (const cell of [...headerCells].slice(0, pinnedCount)) {
+        offsets.push(left);
+        left += cell.offsetWidth;
+      }
+
+      const pinned = left <= wrap.clientWidth * MAX_PINNED_SHARE ? offsets : [];
+      if (pinned.join() !== pinnedOffsets.join()) pinnedOffsets = pinned;
     };
 
-    const resize = new ResizeObserver(fitRows);
+    const showScrollEdges = () => {
+      scrolledAside = wrap.scrollLeft > 0;
+      moreAside = wrap.scrollLeft + wrap.clientWidth < wrap.scrollWidth - 1;
+    };
+
+    const measure = () => {
+      pinColumns();
+      showScrollEdges();
+    };
+
+    const resize = new ResizeObserver(measure);
     resize.observe(wrap);
     resize.observe(table);
-    phone.addEventListener('change', fitRows);
-    untrack(fitRows);
+    phone.addEventListener('change', measure);
+    wrap.addEventListener('scroll', showScrollEdges, { passive: true });
+    untrack(measure);
     return () => {
       resize.disconnect();
-      phone.removeEventListener('change', fitRows);
+      phone.removeEventListener('change', measure);
+      wrap.removeEventListener('scroll', showScrollEdges);
     };
   });
 
@@ -194,6 +201,15 @@
   }
 </script>
 
+{#snippet heading(column: TableColumn)}
+  {#if column.short}
+    <span class="label-full">{column.label}</span>
+    <span class="label-short">{column.short}</span>
+  {:else}
+    {column.label}
+  {/if}
+{/snippet}
+
 <!-- svelte-ignore a11y_no_noninteractive_tabindex (Scrollable tables must be reachable with the keyboard.) -->
 <div
   class="table-wrap"
@@ -202,7 +218,8 @@
   class:expandable={!!rowDetail}
   class:bounded={maxHeight || fill}
   class:fill
-  class:stacked
+  class:scrolled-aside={scrolledAside}
+  class:more-aside={moreAside}
   style:max-height={maxHeight ? maxHeight + 'px' : undefined}
   bind:this={container}
   role="region"
@@ -211,30 +228,37 @@
 >
   <table
     bind:this={tableElement}
-    role={roles?.table}
     aria-rowcount={rows.length + 1 + (expandedIndex >= 0 ? 1 : 0)}
   >
     <caption class="sr-only">{caption}</caption>
-    <thead role={roles?.group}>
-      <tr role={roles?.row}>
-        {#each columns as column}
+    <thead>
+      <tr>
+        {#each columns as column, columnIndex}
           <th
-            role={roles?.header}
             class:secondary={column.priority === 'secondary'}
             class:numeric={column.numeric}
+            class:pinned={columnIndex < pinnedOffsets.length}
+            class:pinned-edge={columnIndex === pinnedOffsets.length - 1}
+            style:left={columnIndex < pinnedOffsets.length
+              ? pinnedOffsets[columnIndex] + 'px'
+              : undefined}
             scope="col"
             aria-label={column.label}
             aria-sort={columnSort(column)}
           >
             {#if column.sortable === false}
-              {column.label}
+              {@render heading(column)}
             {:else}
               <button
                 class="sort"
+                aria-label={column.short ? column.label : undefined}
                 onclick={() => sort(column)}
               >
-                {column.label}
-                <span aria-hidden="true">
+                {@render heading(column)}
+                <span
+                  class="sort-arrow"
+                  aria-hidden="true"
+                >
                   {sortIndicator(column)}
                 </span>
               </button>
@@ -259,7 +283,6 @@
       </tr>
     </thead>
     <tbody
-      role={roles?.group}
       use:virtualScroll={{
         items: ordered,
         key: (row) => row[rowKey] ?? row,
@@ -272,7 +295,6 @@
       {#each ordered.slice(virtualRange.start, virtualRange.end) as row, index (virtualRange.start + index)}
         <!-- svelte-ignore a11y_click_events_have_key_events a11y_no_noninteractive_element_interactions (The cell action button supplies the same keyboard interaction while preserving table semantics.) -->
         <tr
-          role={roles?.row}
           class:interactive={!!onrowclick}
           onclick={onrowclick ? (event) => clickRow(event, row) : undefined}
           data-virtual-index={virtualRange.start + index}
@@ -283,11 +305,13 @@
         >
           {#each columns as column, columnIndex}
             <td
-              role={roles?.cell}
               class:secondary={column.priority === 'secondary'}
               class:numeric={column.numeric}
-              class:row-heading={columnIndex <= nameColumn}
-              class:row-name={columnIndex === nameColumn}
+              class:pinned={columnIndex < pinnedOffsets.length}
+              class:pinned-edge={columnIndex === pinnedOffsets.length - 1}
+              style:left={columnIndex < pinnedOffsets.length
+                ? pinnedOffsets[columnIndex] + 'px'
+                : undefined}
               data-label={column.label}
             >
               {#if cell}
@@ -300,24 +324,19 @@
         </tr>
         {#if rowDetail && expandedIndex === virtualRange.start + index}
           <tr
-            role={roles?.row}
             class="detail-row"
             data-virtual-index={virtualRange.start + index}
             aria-rowindex={virtualRange.start + index + 3}
           >
-            <td
-              role={roles?.cell}
-              colspan={columns.length}
-            >
+            <td colspan={columns.length}>
               <div class="row-detail">{@render rowDetail(row)}</div>
             </td>
           </tr>
         {/if}
       {/each}
       {#if !rows.length}
-        <tr role={roles?.row}>
+        <tr>
           <td
-            role={roles?.cell}
             colspan={columns.length}
             class="empty"
           >
@@ -356,6 +375,8 @@
     white-space: normal;
   }
   .table-wrap {
+    /* Holds absolutely placed cell content, such as visually hidden labels, so columns scrolled out of view cannot widen the page. */
+    position: relative;
     max-width: 100%;
     overflow-x: auto;
     border: 1px solid var(--color-border);
@@ -446,7 +467,10 @@
     letter-spacing: inherit;
     cursor: pointer;
   }
-  .sort span {
+  .label-short {
+    display: none;
+  }
+  .sort-arrow {
     opacity: 0.5;
   }
   th[aria-sort='ascending'],
@@ -485,114 +509,54 @@
     }
   }
   /*
-   * Phones tighten the cells so more columns fit before a table stacks or scrolls; their scrollbars overlay the
-   * content, so no room is kept for one.
+   * Phones tighten the cells so more columns fit before a table scrolls; their scrollbars overlay the content, so no
+   * room is kept for one.
    */
   @media (max-width: 767px) {
     th,
     td {
-      padding: 8px;
+      padding: 6px 8px;
+    }
+    th {
+      letter-spacing: 0;
+      text-transform: none;
+    }
+    /* Only the sorted column shows its arrow, so narrow columns are not widened by their headers. */
+    th[aria-sort='none'] .sort-arrow {
+      display: none;
+    }
+    .label-full {
+      display: none;
+    }
+    .label-short {
+      display: inline;
     }
     .bounded {
       padding-inline-end: 0;
     }
   }
   /*
-   * A stacked row puts the columns that name it on its first line and the other values on the line beneath; each
-   * value but the name carries its column's label. The header becomes a row of sort buttons.
+   * The columns that name a row stay put while the rest scroll beneath them. They need a solid background for that;
+   * a page whose card is not the default surface sets --table-pinned-bg.
    */
-  .stacked table,
-  .stacked thead,
-  .stacked tbody {
-    display: block;
+  .pinned {
+    position: sticky;
+    z-index: 1;
+    background: var(--table-pinned-bg, var(--color-surface-1));
   }
-  .stacked tr {
-    display: flex;
-    flex-wrap: wrap;
-  }
-  .stacked th,
-  .stacked td {
-    min-height: 0;
-    padding: 0;
-    border: 0;
-    text-align: left;
-  }
-  /* A minimum width that a page sets for the one-line grid would keep stacked rows overflowing. */
-  .table-wrap.stacked table {
-    min-width: 0;
-  }
-  .stacked thead tr {
-    gap: 4px;
-    padding: 6px 8px;
-    border-bottom: 1px solid var(--color-border);
+  th.pinned {
+    z-index: 3;
     background: var(--color-surface-2);
   }
-  /* Each header chip takes its label's width; column widths that pages set for the one-line grid do not apply. */
-  .stacked th {
-    position: static;
-    flex: 0 0 max-content;
-    background: none;
+  .scrolled-aside .pinned-edge {
+    box-shadow: 8px 0 8px -8px rgb(0 0 0 / 0.55);
   }
-  /* A column that cannot be sorted is named on each of its values instead. */
-  .stacked th:not([aria-sort]) {
-    display: none;
+  /* A fade at the right edge says there are more columns to scroll to; an open row's detail stays clear of it. */
+  .more-aside {
+    --edge-fade: 28px;
+    mask-image: linear-gradient(to left, transparent, #000 var(--edge-fade));
   }
-  .stacked .sort {
-    min-height: 26px;
-    gap: 4px;
-    padding: 0 8px;
-    border: 1px solid var(--color-border);
-    border-radius: 999px;
-    background: var(--color-surface-1);
-  }
-  .stacked th[aria-sort='ascending'] .sort,
-  .stacked th[aria-sort='descending'] .sort {
-    border-color: var(--color-accent);
-  }
-  .stacked tbody tr {
-    align-items: flex-start;
-    gap: 3px 14px;
-    padding: 8px 10px;
-    border-bottom: 1px solid var(--color-border);
-  }
-  .stacked tbody tr:last-child,
-  .stacked tbody tr:has(+ :global(tr[aria-hidden='true']:last-child)) {
-    border-bottom: 0;
-  }
-  /* Breaks the line between the row's heading and its values. */
-  .stacked tbody tr:not(.detail-row)::after {
-    content: '';
-    order: 1;
-    flex-basis: 100%;
-  }
-  .stacked .row-name {
-    flex: 1 1 0;
-    min-width: 0;
-    white-space: normal;
-  }
-  .stacked td:not(.row-heading) {
-    order: 2;
-    min-width: 4.5rem;
-  }
-  .stacked td:not(.row-name)[data-label]:not([data-label=''])::before {
-    content: attr(data-label);
-    display: block;
-    margin-bottom: 1px;
-    color: var(--color-text-muted);
-    font-size: 10px;
-    font-weight: 600;
-    letter-spacing: 0.025em;
-    text-transform: uppercase;
-  }
-  /* Detail and empty-state cells span the row. */
-  .stacked td:not([data-label]) {
-    flex-basis: 100%;
-  }
-  .stacked tbody tr.detail-row {
-    padding: 0;
-  }
-  .stacked td.empty {
-    padding: var(--space-8);
-    text-align: center;
+  .more-aside .row-detail {
+    padding-inline-end: var(--edge-fade);
   }
 </style>

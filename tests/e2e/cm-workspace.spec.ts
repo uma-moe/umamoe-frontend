@@ -318,13 +318,14 @@ test('skill details expand within the selected row and comparison stays independ
   const count = new Set(fixture.skills.rows.map((r: number[]) => r[0])).size;
   await expect(table).toHaveAttribute('aria-rowcount', String(count + 1));
   expect(await table.locator('tbody tr[data-virtual-index]').count()).toBeLessThan(count);
-  // A phone stacks each skill above its values; wider screens keep one compact line per skill.
+  // Every screen keeps one compact line per skill; a phone scrolls the values under the pinned skill.
+  const rowHeights = await table
+    .locator('tbody tr[data-virtual-index]')
+    .evaluateAll((rows) => rows.map((row) => row.getBoundingClientRect().height));
   if (page.viewportSize()!.width < 768) {
-    await expect(page.locator('.skill-list .table-wrap')).toHaveClass(/stacked/);
+    await expect(table.locator('tbody td.pinned').first()).toBeVisible();
+    expect(Math.max(...rowHeights)).toBeLessThanOrEqual(48);
   } else {
-    const rowHeights = await table
-      .locator('tbody tr[data-virtual-index]')
-      .evaluateAll((rows) => rows.map((row) => row.getBoundingClientRect().height));
     expect(Math.max(...rowHeights)).toBeLessThanOrEqual(34);
   }
   await page
@@ -743,11 +744,13 @@ test('skill outcomes distinguish repeated procs, variants and selected first-act
     .locator('.outcome-skill .skill-chip')
     .evaluateAll((chips) => chips.map((chip) => chip.getBoundingClientRect().width));
   expect(Math.max(...variantChipWidths) - Math.min(...variantChipWidths)).toBeLessThan(1);
-  await breakdown
+  // The measure picker and its help sit above the scrolling table, within the breakdown section.
+  const breakdownSection = expanded.getByRole('region', { name: 'Skill breakdown', exact: true });
+  await breakdownSection
     .getByRole('button', { name: 'How skill percentages are calculated', exact: true })
     .click();
-  await expect(breakdown.locator('.rates-help')).toContainText('12 of those 60 entries won');
-  await breakdown
+  await expect(breakdownSection.locator('.rates-help')).toContainText('12 of those 60 entries won');
+  await breakdownSection
     .getByRole('button', { name: 'How skill percentages are calculated', exact: true })
     .click();
   await expect(breakdown.locator('.outcome-rows tr').first()).toContainText('30.0%');
@@ -1085,25 +1088,16 @@ test('strategy keeps the familiar chart layout with sortable room data', async (
   await expect(page.locator('.field-insight')).toContainText(
     ((insight.winShare - insight.pop) * 100).toFixed(1) + ' percentage points'
   );
+  // Hovering a count in the plot reads out every style at that count.
   await page
-    .getByRole('radiogroup', { name: 'Inspect room count', exact: true })
-    .getByRole('radio', { name: '2 in room', exact: true })
-    .click();
+    .locator('.saturation circle')
+    .filter({ has: page.locator('title', { hasText: 'Front Runner with 2 in the room' }) })
+    .hover({ force: true });
 
   const frontBucket = fixture.summary.saturation[1].find((bucket: { x: number }) => bucket.x === 2);
   await expect(
-    page.locator('.readout-values>div').filter({ hasText: 'Front Runner' })
-  ).toContainText((frontBucket.rate * 100).toFixed(1) + '%');
-
-  const roomCounts = page.getByRole('radiogroup', { name: 'Inspect room count', exact: true });
-  await expect(roomCounts.getByRole('radio', { name: '2 in room', exact: true })).toHaveAttribute(
-    'aria-checked',
-    'true'
-  );
-  await page.keyboard.press('ArrowLeft');
-  await expect(roomCounts.getByRole('radio', { name: '1 in room', exact: true })).toBeFocused();
-  await page.keyboard.press('ArrowRight');
-  await expect(roomCounts.getByRole('radio', { name: '2 in room', exact: true })).toBeFocused();
+    page.locator('.saturation').getByRole('checkbox', { name: 'Front Runner', exact: true })
+  ).toHaveAccessibleDescription((frontBucket.rate * 100).toFixed(1) + '%');
 
   const inspectValues = page
     .locator('.saturation')
@@ -1210,18 +1204,19 @@ test('CM cards align, room rows stay compact, and standard tabs support keyboard
     }
   }
 
+  // The legend switches a style's line off and back on, and keeps its place either way.
   const saturation = page.locator('.saturation');
-  const front = saturation.getByRole('button', { name: 'Front Runner', exact: true });
-  await front.click();
-  await expect(front).toHaveAttribute('aria-pressed', 'false');
-  await expect(
-    saturation.locator('.readout-values>div').filter({ hasText: 'Front Runner' })
-  ).toHaveCount(0);
+  const front = saturation.getByRole('checkbox', { name: 'Front Runner', exact: true });
+  const lines = saturation.locator('polyline');
+  const shownLines = await lines.count();
 
   await front.click();
-  await expect(
-    saturation.locator('.readout-values>div').filter({ hasText: 'Front Runner' })
-  ).toHaveCount(1);
+  await expect(front).not.toBeChecked();
+  await expect(lines).toHaveCount(shownLines - 1);
+
+  await front.click();
+  await expect(front).toBeChecked();
+  await expect(lines).toHaveCount(shownLines);
 
   expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(
     page.viewportSize()!.width

@@ -106,6 +106,7 @@
     caption="Race results"
     {rows}
     rowKey="id"
+    pinnedColumns={1}
     onrowclick={(row) => inspect(Number(row.id))}
     columns={[
       { key: 'place', label: 'Finish', numeric: true },
@@ -161,13 +162,26 @@
           />
         </button>
       {:else if col.key === 'place'}
-        <strong
-          class="finish"
-          class:winner={row.place === 1}
-          class:podium={row.place === 2 || row.place === 3}
-        >
-          {row.place}
-        </strong>
+        <span class="finish-cell">
+          <strong
+            class="finish"
+            class:winner={row.place === 1}
+            class:podium={row.place === 2 || row.place === 3}
+          >
+            {row.place}
+          </strong>
+          <!-- A phone pins only this column, so the portrait comes along to show whose results scroll beside it. -->
+          <span
+            class="pinned-portrait"
+            aria-hidden="true"
+          >
+            <Artwork
+              src={portrait(r.cardId)}
+              alt=""
+              size="sm"
+            />
+          </span>
+        </span>
       {:else if col.key === 'gate'}
         <span class="value">{row.gate}</span>
       {:else if col.key === 'time'}

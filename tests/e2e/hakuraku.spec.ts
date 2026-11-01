@@ -370,6 +370,23 @@ async function openRaceSection(page: import('@playwright/test').Page, title: str
   await page.getByRole('button', { name: title, exact: true }).click();
 }
 
+/**
+ * Expands the race telemetry from wherever its control sits: the chart toolbar, or a phone's chart menu. Returns the
+ * control focus comes back to when the expanded chart closes.
+ */
+async function expandTelemetry(page: import('@playwright/test').Page) {
+  const expand = page.getByRole('button', { name: 'Expand Race telemetry', exact: true });
+  if (await expand.isVisible()) {
+    await expand.click();
+    return expand;
+  }
+
+  const menu = page.getByRole('button', { name: 'Telemetry display options', exact: true });
+  await menu.click();
+  await expand.click();
+  return menu;
+}
+
 function sessionTab(page: import('@playwright/test').Page, label: string) {
   return page
     .getByRole('tablist', { name: 'Session analysis views', exact: true })
@@ -577,7 +594,7 @@ test('race field follows live positions and locks individual finishes with trimm
     ).toBe('none');
   }
 
-  await page.getByRole('button', { name: 'Expand Race telemetry', exact: true }).click();
+  await expandTelemetry(page);
   await expect(
     page
       .getByRole('dialog', { name: 'Race telemetry', exact: true })
@@ -1401,11 +1418,21 @@ test('race uploads keep replay and session sections together, retaining valid fi
 
   await expect(playback.locator('.chart-host svg')).toBeVisible();
   expect((await playback.locator('.chart-host').boundingBox())!.height).toBeGreaterThanOrEqual(136);
-  await expect(
-    playback
+  // A phone keeps the telemetry metric in the chart menu beside the speed, opened whenever a step needs it.
+  const metricInMenu = info.project.name === 'mobile-chromium';
+  const metricOption = async (name: string) => {
+    const option = playback
       .getByRole('radiogroup', { name: 'Telemetry metric', exact: true })
-      .getByRole('radio', { name: 'Combined', exact: true })
-  ).toHaveAttribute('aria-checked', 'true');
+      .getByRole('radio', { name, exact: true });
+    if (metricInMenu && !(await option.isVisible()))
+      await playback
+        .getByRole('button', { name: 'Telemetry display options', exact: true })
+        .click();
+    return option;
+  };
+
+  await expect(await metricOption('Combined')).toHaveAttribute('aria-checked', 'true');
+  if (metricInMenu) await page.keyboard.press('Escape');
 
   await expect(playback.locator('.signal-reading')).toHaveCount(4);
   expect(await playback.locator('.signal-reading>span').allTextContents()).toEqual([
@@ -1468,24 +1495,16 @@ test('race uploads keep replay and session sections together, retaining valid fi
     })
   ).toBe(true);
 
-  await playback
-    .getByRole('radiogroup', { name: 'Telemetry metric', exact: true })
-    .getByRole('radio', { name: 'Gap', exact: true })
-    .click();
+  await (await metricOption('Gap')).click();
 
   await expect(playback.locator('.telemetry-reading')).toContainText('To leader');
-  await playback
-    .getByRole('radiogroup', { name: 'Telemetry metric', exact: true })
-    .getByRole('radio', { name: 'Speed', exact: true })
-    .click();
+  await (await metricOption('Speed')).click();
 
   await expect(playback.locator('.signal-reading')).toHaveCount(1);
-  await playback
-    .getByRole('radiogroup', { name: 'Telemetry metric', exact: true })
-    .getByRole('radio', { name: 'Combined', exact: true })
-    .click();
+  await (await metricOption('Combined')).click();
 
   await expect(playback.locator('.signal-reading')).toHaveCount(4);
+  if (metricInMenu) await page.keyboard.press('Escape');
   await playback.getByRole('slider', { name: 'Replay time', exact: true }).evaluate((e) => {
     (e as HTMLInputElement).value = '60';
     e.dispatchEvent(new Event('input', { bubbles: true }));
@@ -2189,7 +2208,7 @@ test('race analysis is one continuous report with preserved selection and compac
   const build = page.getByRole('dialog', { name: 'Runner build', exact: true });
   await expect(build).toContainText(name);
   await build.getByRole('button', { name: 'Close dialog', exact: true }).click();
-  await page.getByRole('button', { name: 'Expand Race telemetry', exact: true }).click();
+  const telemetryOpener = await expandTelemetry(page);
   const expanded = page.getByRole('dialog', { name: 'Race telemetry', exact: true });
   await expect(expanded.locator('.chart-host')).toBeVisible();
   await expect
@@ -2217,9 +2236,7 @@ test('race analysis is one continuous report with preserved selection and compac
   ).toBe(true);
 
   await expanded.getByRole('button', { name: 'Close dialog', exact: true }).click();
-  await expect(
-    page.getByRole('button', { name: 'Expand Race telemetry', exact: true })
-  ).toBeFocused();
+  await expect(telemetryOpener).toBeFocused();
 
   await openRaceSection(page, 'Race results');
   const results = page.getByRole('table', { name: 'Race results', exact: true });
@@ -2608,12 +2625,17 @@ test('CM uses Hakuraku charts and captured teams without inventing a replay cata
     page.getByRole('heading', { name: 'Effects of style saturation', exact: true })
   ).toBeVisible();
 
-  const counts = page.getByRole('radiogroup', { name: 'Inspect room count', exact: true });
-  await counts.getByRole('radio', { name: '2 in room', exact: true }).click();
-  await expect(counts.getByRole('radio', { name: '2 in room', exact: true })).toHaveAttribute(
-    'aria-checked',
-    'true'
+  // Hovering a count in the plot reads out every style at that count.
+  await page
+    .locator('.saturation circle')
+    .filter({ has: page.locator('title', { hasText: 'Front Runner with 2 in the room' }) })
+    .hover({ force: true });
+  const frontAtTwo = cmFixture.summary.saturation[1].find(
+    (bucket: { x: number }) => bucket.x === 2
   );
+  await expect(
+    page.locator('.saturation').getByRole('checkbox', { name: 'Front Runner', exact: true })
+  ).toHaveAccessibleDescription((frontAtTwo.rate * 100).toFixed(1) + '%');
 
   const front = cmFixture.summary.styles.find((r: { style: number }) => r.style === 1);
   await expect(page.locator('.style-row').filter({ hasText: 'Front Runner' })).toContainText(

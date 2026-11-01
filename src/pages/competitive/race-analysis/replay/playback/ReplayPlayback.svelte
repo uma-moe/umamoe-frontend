@@ -129,6 +129,22 @@
         {/if}
       {/if}
     {/snippet}
+    {#snippet menu()}
+      {#if !expanded}
+        <!-- Focus returns to this menu when the expanded chart closes; ChartFrame finds it by this id. -->
+        <span id="runner-telemetry-expand">
+          <ReplayTelemetryActions
+            menu
+            bind:metric
+            bind:compare
+            bind:chartEvents
+            detailed={!!replay.capture.detailed}
+            ensemble={!!replay.ensemble}
+            onexpand={replay.ensemble ? undefined : () => (expanded = true)}
+          />
+        </span>
+      {/if}
+    {/snippet}
     {#snippet telemetry()}
       <ReplayTelemetry
         {replay}

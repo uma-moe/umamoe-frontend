@@ -28,8 +28,10 @@
   <span
     class="timeline-label"
     title="Skills activated by the race field in the last 2 seconds"
+    aria-hidden="true"
   >
-    Race activations
+    <span class="label-long">Race activations</span>
+    <span class="label-short">Field</span>
   </span>
   <div
     class="skill-feed-scroll"

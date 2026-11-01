@@ -4,6 +4,8 @@
   import { runningStyleName } from '@/lib/race/replay/race-display';
   import DataTable from '@/components/data/DataTable.svelte';
   import ChartFrame from '@/components/charts/ChartFrame.svelte';
+  import PlotZoomControls from '@/components/charts/PlotZoomControls.svelte';
+  import { PlotZoom } from '@/components/charts/plot-zoom.svelte';
   import Artwork from '@/components/game/Artwork.svelte';
   import CmSaturationChart from '../../champions-meeting/strategy/CmSaturationChart.svelte';
   import SessionKpis from '../SessionKpis.svelte';
@@ -45,6 +47,9 @@
 
   /** Room mixes listed below the average room; the rest are rarer than any reader would compare. */
   const LISTED_ROOMS = 8;
+
+  // The saturation plot's zoom sits in its card's toolbar.
+  const saturationZoom = new PlotZoom();
 
   const baseline = $derived(sessionBaseline(analysis));
   const shares = $derived(styleShares(analysis));
@@ -93,6 +98,7 @@
       .filter((row) => row.strategy > 0)
       .map((row) => ({
         name: runningStyleName(row.strategy),
+        short: runningStyleName(row.strategy, true),
         color: styleColors[row.strategy] ?? 'currentColor',
         buckets: saturationBuckets(row)
       }))
@@ -281,12 +287,18 @@
         SATURATION_MIN_RACES +
         ' races.'}
     >
+      {#snippet actions()}
+        <PlotZoomControls
+          zoom={saturationZoom}
+          hint={false}
+        />
+      {/snippet}
       <CmSaturationChart
         series={saturation}
         totalRaces={analysis.races}
         neutral={baseline.uma / 100}
-        countPicker={false}
         label="Per-Uma win rate versus number of the same style in the room"
+        zoom={saturationZoom}
       />
     </ChartFrame>
     <ChartFrame

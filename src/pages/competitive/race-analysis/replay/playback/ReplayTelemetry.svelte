@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { MediaQuery } from 'svelte/reactivity';
   import InfoIcon from '@/components/feedback/InfoIcon.svelte';
   import type { RaceRunner } from '@/lib/race/capture/race-capture-parser';
   import { hpRemainingColor } from '@/lib/race/replay/race-display';
@@ -39,6 +40,9 @@
     chartEvents?: boolean;
     expanded?: boolean;
   } = $props();
+
+  // Matches the timeline's smallest layout, which drops its label and value columns (replay-timeline.css).
+  const smallestScreen = new MediaQuery('max-width: 480px');
 
   const selectedFinish = $derived(replay.finishTimes.get(replay.runner?.index ?? 0));
   const telemetryFrame = $derived(
@@ -98,7 +102,8 @@
           $theme === 'dark'
         ),
         blocking: telemetryBlocking(replay.blockingSpans, replay.runner, replay.capture.runners),
-        dark: $theme === 'dark'
+        dark: $theme === 'dark',
+        axisScales: expanded || !smallestScreen.current
       },
       expanded
     )

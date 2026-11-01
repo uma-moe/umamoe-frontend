@@ -46,6 +46,8 @@ export interface TelemetryChart {
   phases: MarkArea[];
   blocking: MarkArea[];
   dark: boolean;
+  /** Whether the value axes show their scales; the smallest screens give that room to the plot. */
+  axisScales: boolean;
 }
 
 export function telemetrySignals(dark: boolean, ensemble: boolean): TelemetrySignal[] {
@@ -345,7 +347,7 @@ export function telemetryOption(chart: TelemetryChart, expanded: boolean): EChar
         splitNumber: 4,
         // Combined acceleration has no room for a scale; its live value and tooltip carry it.
         axisLabel: {
-          show: !(multiple && axis === 'acceleration'),
+          show: chart.axisScales && !(multiple && axis === 'acceleration'),
           fontSize: 10,
           color: signal.color,
           margin: 8,

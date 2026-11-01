@@ -206,10 +206,22 @@ h4 i {
 .rooms :global(td) {
   padding: 3px 4px;
 }
-/* On a phone the room grid fits its width: cells tighten, labels shrink and their sort arrows sit beneath them. */
+/*
+ * On a phone the room grid fits its width: six equal style columns beside a fixed share column, lined up under the
+ * averages above. Cells tighten, labels shrink and their sort arrows sit beneath them.
+ */
 @media (max-width: 767px) {
+  .rooms :global(.table-wrap.compact table) {
+    table-layout: fixed;
+  }
+  .rooms :global(.table-wrap.compact th:last-child) {
+    width: 50px;
+  }
   .rooms :global(.table-wrap.compact :is(th, td)) {
-    padding-inline: 4px;
+    padding-inline: 2px;
+  }
+  .rooms :global(.table-wrap.compact td) {
+    font-size: 11px;
   }
   .rooms :global(.table-wrap.compact th) {
     font-size: 10px;
@@ -219,6 +231,10 @@ h4 i {
   .rooms :global(.sort) {
     flex-direction: column;
     gap: 0;
+  }
+  /* A style heading centres over its count blocks. */
+  .rooms :global(.table-wrap.compact th:not(:last-child)) {
+    text-align: center;
   }
 }
 .room-count {
@@ -428,8 +444,19 @@ h4 i {
     grid-template-columns: 1fr;
     gap: 16px;
   }
+  /* Both representative choices share one row; the minimum's name stays its accessible label. */
+  .rep-controls {
+    flex-wrap: nowrap;
+    width: 100%;
+    justify-content: space-between;
+    gap: 6px;
+  }
   .rep-filter {
-    flex-wrap: wrap;
+    flex: 0 1 auto;
+    min-width: 0;
+  }
+  .rep-filter > span {
+    display: none;
   }
   .reps .rep-scroll button {
     grid-template-columns: 30px minmax(0, 1fr) 46px 46px 40px;
@@ -451,4 +478,14 @@ h4 i {
   .room-average-grid small {
     font-size: 9px;
   }
+  .room-count {
+    min-width: 0;
+    padding-block: 3px;
+  }
+}
+/* Shown rates read as a selected toggle, like a chosen segment. */
+.style-overview :global(.ui-button[aria-pressed='true']) {
+  background: rgb(var(--accent-primary-rgb) / 0.12);
+  border-color: rgb(var(--accent-primary-rgb) / 0.3);
+  color: var(--color-accent);
 }

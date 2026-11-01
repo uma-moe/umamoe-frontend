@@ -116,59 +116,68 @@ p {
   z-index: calc(var(--z-header) - 2);
   display: flex;
   align-items: center;
-  justify-content: space-between;
-  gap: 8px;
-  padding: 6px 0;
+  padding: 4px 0;
   background: var(--bg-primary);
   border-bottom: 1px solid var(--border-subtle);
 }
+/* One tab group: the section in view reads as the selected tab. */
 .report-links {
   display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 4px;
+  gap: 2px;
   min-width: 0;
+  padding: 2px;
+  border: 1px solid var(--color-border);
+  border-radius: 8px;
+  background: var(--factor-field-bg);
 }
-.report-navigation :global(.ui-button) {
-  flex: none;
+.section-tab {
+  min-width: 0;
+  min-height: 28px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 0 10px;
+  border: 1px solid transparent;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--factor-field-text);
+  cursor: pointer;
+  font: inherit;
+  font-size: 12px;
+  font-weight: 600;
   white-space: nowrap;
-  font-size: 11px;
-  min-height: 32px;
 }
-.report-links :global(.ui-button) {
-  font-weight: 500;
+.section-tab:hover {
+  color: var(--color-text);
 }
-.report-links :global(.ui-button svg) {
-  width: 15px;
-  height: 15px;
+.section-tab:focus-visible {
+  outline: 0;
+  box-shadow: var(--focus-ring);
 }
+.section-tab[aria-current='location'] {
+  border-color: rgb(var(--accent-primary-rgb) / 0.3);
+  background: rgb(var(--accent-primary-rgb) / 0.12);
+  color: var(--color-accent);
+}
+.tab-short {
+  display: none;
+}
+/* A phone spreads the tabs across the width with short names and no icons, keeping the bar one row. */
 @media (max-width: 767px) {
-  .report-navigation {
-    flex-wrap: wrap;
-    padding-block: 4px;
-    gap: 4px;
-  }
-  /* Equal section buttons in one row of three, or two rows of two once Session analysis joins them. */
   .report-links {
-    width: 100%;
-    display: grid;
-    grid-template-columns: repeat(3, minmax(0, 1fr));
-    gap: 4px;
+    flex: 1;
   }
-  .report-links:has(> :global(:nth-child(4))) {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
+  .section-tab {
+    flex: 1 1 0;
+    padding-inline: 4px;
   }
-  .report-navigation :global(.ui-button) {
-    font-size: 11px;
-    min-height: 32px;
-    padding-inline: 6px;
-  }
-  /* The sticky bar stays one compact row: the labels alone name the sections. */
-  .report-links :global(.ui-button svg) {
+  .section-tab :global(svg),
+  .tab-long {
     display: none;
   }
-  .report-navigation > :global(.ui-button) {
-    margin-left: auto;
+  .tab-short {
+    display: inline;
   }
 }
 @media (min-width: 951px) {
@@ -185,11 +194,5 @@ p {
   .replay-header p {
     font-size: 11px;
     line-height: 16px;
-  }
-  .report-navigation {
-    padding-block: 4px;
-  }
-  .report-navigation :global(.ui-button) {
-    min-height: 32px;
   }
 }

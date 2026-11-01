@@ -71,19 +71,22 @@
 .chevron.open {
   transform: none;
 }
-.skill-table :global(.table-wrap > table > thead > tr > th:first-child),
-.skill-table :global(.table-wrap > table > tbody > tr:not(.detail-row) > td:first-child) {
-  position: sticky;
-  left: 0;
-  background: var(--surface-1);
-  z-index: 1;
-}
-.skill-table :global(.table-wrap > table > thead > tr > th:first-child) {
-  z-index: 3;
-}
-.skill-table :global(.table-wrap > table > tbody > tr.interactive:hover > td:first-child),
-.skill-table :global(.table-wrap > table > tbody > tr.interactive:focus-within > td:first-child) {
-  background: var(--surface-2);
+/* A phone leaves the skill column to the table's own pinning, which lets go of a column too wide to keep in view. */
+@media (min-width: 768px) {
+  .skill-table :global(.table-wrap > table > thead > tr > th:first-child),
+  .skill-table :global(.table-wrap > table > tbody > tr:not(.detail-row) > td:first-child) {
+    position: sticky;
+    left: 0;
+    background: var(--surface-1);
+    z-index: 1;
+  }
+  .skill-table :global(.table-wrap > table > thead > tr > th:first-child) {
+    z-index: 3;
+  }
+  .skill-table :global(.table-wrap > table > tbody > tr.interactive:hover > td:first-child),
+  .skill-table :global(.table-wrap > table > tbody > tr.interactive:focus-within > td:first-child) {
+    background: var(--surface-2);
+  }
 }
 .skill-table :global(.table-wrap > table > tbody > tr:has(.skill-select.active) > td) {
   background: color-mix(in srgb, var(--accent-primary) 6%, var(--surface-1));
@@ -144,67 +147,50 @@
   text-align: center;
   padding-right: 4px;
 }
-/*
- * Stacked on a phone, the comparison button joins the skill on the first line, which makes room by narrowing the
- * skill chip and naming alternatives without their icon. The activation breakdown takes the last line with each
- * style's rate beneath its name.
- */
-.skill-table :global(.stacked tr > td[data-label='Compare']:not(.row-heading)) {
-  order: 0;
-  min-width: max-content;
-}
-.skill-table :global(.stacked tr > td[data-label='Compare']:not(.row-heading)::before) {
-  content: none;
-}
-.skill-table :global(.stacked .skill-label) {
-  --skill-chip-width: 140px;
-  width: auto;
-  grid-template-columns: auto;
-}
-.skill-table :global(.stacked .skill-label.with-variants) {
-  grid-template-columns: auto max-content;
-}
-.skill-table :global(.stacked .variant-alternatives > :first-child) {
-  display: none;
-}
-.skill-table :global(.stacked tr > td[data-label='Activations']) {
-  order: 3;
-  flex-basis: 100%;
-}
-.skill-table :global(.stacked .activation-summary) {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: baseline;
-  gap: 4px 8px;
-}
-.skill-table :global(.stacked .style-procs) {
-  flex-basis: 100%;
-  grid-template-columns: repeat(auto-fit, minmax(48px, 1fr));
-  margin-left: 0;
-  padding-left: 0;
-  border-left: 0;
-}
-.skill-table :global(.stacked .style-procs > span) {
-  grid-template-columns: 6px auto;
-  justify-content: start;
-}
-.skill-table :global(.stacked .style-procs strong) {
-  grid-column: 1 / -1;
-}
 .skill-detail {
   padding: 8px 8px 12px;
   border-top: 1px solid var(--border-subtle);
   white-space: normal;
 }
+/*
+ * The table pins the skill column on a phone only while it takes at most 45% of the width, so the name grows with the
+ * viewport within that share. Grouped variants are left to the opened row, which lists them.
+ */
+@media (max-width: 767px) {
+  .skill-select {
+    gap: 2px;
+  }
+  .chevron :global(svg) {
+    width: 12px;
+    height: 12px;
+  }
+  .skill-select .skill-label {
+    --skill-chip-width: clamp(5.5rem, 40vw - 24px, 9rem);
+    flex: none;
+    grid-template-columns: var(--skill-chip-width);
+    width: var(--skill-chip-width);
+  }
+  .variant-alternatives {
+    display: none;
+  }
+  /* The activation rate leads its cell, so the first screen shows it beside the player count. */
+  .activation-summary {
+    grid-template-columns: 40px 78px auto;
+    gap: 6px;
+  }
+  .activation-summary > span {
+    order: -1;
+    color: var(--text-primary);
+    font-size: 13px;
+    font-weight: 550;
+  }
+  .activation-summary > strong {
+    color: var(--text-secondary);
+    font-size: 12px;
+    font-weight: 400;
+  }
+}
 @media (max-width: 600px) {
-  .skill-label {
-    grid-template-columns: 152px;
-    width: 152px;
-  }
-  .skill-label.with-variants {
-    grid-template-columns: 152px max-content;
-    width: max-content;
-  }
   .skill-detail {
     padding: 8px 0;
   }
