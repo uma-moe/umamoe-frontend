@@ -1,7 +1,7 @@
 <script lang="ts">
   import { onMount } from 'svelte';
   import { loadSkills, type SkillData } from '@/lib/game-data/skills/skills';
-  import { buildOptimizeRequest } from './requests/optimize-request';
+  import { buildOptimizeRequest, type OptimizeBody } from './requests/optimize-request';
   import { simulatorRepository, type OptimizeResult } from './simulator-repository';
   import { buildRaces, fieldWhere } from './setup/build/build-races';
   import RunnerInput from './setup/runner/RunnerInput.svelte';
@@ -34,7 +34,10 @@
   } from './setup/runner/simulator-runner.svelte';
   import { offerPurchases, type PricedOffer } from './setup/build/skill-offers';
   import BuildResult from './reports/outcomes/build/BuildResult.svelte';
-  import { theorizedResult } from './reports/outcomes/build/build-result';
+  import { theorizedResult, type TheorizedBuild } from './reports/outcomes/build/build-result';
+  import { buildRunner } from './setup/build/build-runner';
+  import { importSimulatorUmas } from './simulator-roster.svelte';
+  import { router } from '@/routes/router';
   import SimulatorShell from './shell/SimulatorShell.svelte';
   import {
     selectedRaceInstanceId,
@@ -50,11 +53,17 @@
   let run = $state<{
     result: OptimizeResult;
     offers: PricedOffer[];
+    /** The purchases the search ran with, so a build can be raced with the skills it ends up holding. */
+    purchases: OptimizeBody['purchases'];
     budget: number;
     key: string;
     where: string[];
   } | null>(null);
 
+  /** Why a build could not be added to the Race sim; the builds stay usable. */
+  let raceError = $state('');
+  /** Indices of the result's builds already in the field, so a second press does not add one twice. */
+  let raced = $state.raw<number[]>([]);
   let error = $state('');
   let busy = $state(false);
   /** The Setup row has room for her SP and fans, so the skills on offer leave them out. */
@@ -257,9 +266,12 @@
       });
 
       const response = await simulatorRepository.optimize({ body: { ...body } });
+      raceError = '';
+      raced = [];
       run = {
         result: response.result,
         offers: priced,
+        purchases: body.purchases,
         budget,
         key,
         // Against the course this search raced on, not whatever is picked once it answers.
@@ -276,6 +288,50 @@
       busy = false;
     }
   }
+
+  /**
+   * Adds builds to the Race sim field, which they share with the page, so they race whatever is already there. Each keeps
+   * her own name with the build's, so the pick and the runner-up can be told apart, and the page stays as it is: the
+   * result is not kept once it is left.
+   */
+  function raceBuilds(builds: TheorizedBuild[]): void {
+    if (!run || !current || !builds.length) return;
+    raceError = '';
+
+    const all = theorized?.builds ?? [];
+    const { offers, purchases } = run;
+    const uma = $state.snapshot(simulatorRunner.uma);
+    const runners = builds.map((build) =>
+      buildRunner({
+        uma,
+        offers,
+        purchases,
+        held: build.finalist.build.purchases,
+        label: all[0] === build ? 'Pick' : 'Runner-up'
+      })
+    );
+
+    try {
+      importSimulatorUmas(runners);
+      raced = [...raced, ...builds.map((build) => all.indexOf(build)).filter((i) => i >= 0)];
+    } catch (reason) {
+      raceError =
+        reason instanceof Error ? reason.message : 'Could not add her to the Race sim field.';
+    }
+  }
+
+  /** Adds the builds the field does not hold yet, so a press after one card adds only the other. */
+  function raceMissing(): void {
+    const all = theorized?.builds ?? [];
+    raceBuilds(all.filter((_, index) => !raced.includes(index)));
+  }
+
+  const openRaceSim = () => void router.navigate('/simulator/race');
+
+  /** A build can be raced while it still matches the setup, as the builds beside a stale result no longer do. */
+  const raceBlocked = $derived(
+    !current ? 'Search again first: the setup changed since this result.' : ''
+  );
 </script>
 
 <SimulatorShell
@@ -332,6 +388,12 @@
         {error}
         stale={!!run && !current}
         onretry={blocked ? undefined : send}
+        onrace={(build) => raceBuilds([build])}
+        onraceall={raceMissing}
+        {raced}
+        onopenrace={openRaceSim}
+        {raceError}
+        {raceBlocked}
       />
     </aside>
   </div>

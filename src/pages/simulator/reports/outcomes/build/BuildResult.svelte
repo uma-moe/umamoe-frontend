@@ -15,6 +15,7 @@
     raceTally,
     searchTally,
     v5Tally,
+    type TheorizedBuild,
     type TheorizedResult
   } from './build-result';
 
@@ -28,7 +29,13 @@
     busy = false,
     error = '',
     stale = false,
-    onretry
+    onretry,
+    onrace,
+    onraceall,
+    raced = [],
+    onopenrace,
+    raceError = '',
+    raceBlocked = ''
   }: {
     result?: OptimizeResult;
     /** The result as the theory valued it, its builds the most worth first: the pick. */
@@ -43,6 +50,18 @@
     /** The setup changed since this search. */
     stale?: boolean;
     onretry?: () => void;
+    /** Adds a build to the Race sim field; both builds can go, so they race each other. */
+    onrace?: (build: TheorizedBuild) => void;
+    /** Adds both builds at once. */
+    onraceall?: () => void;
+    /** The builds already in the field, so their button does not add them twice. */
+    raced?: number[];
+    /** Opens the Race sim, where the builds now are. */
+    onopenrace?: () => void;
+    /** Why adding a build to the field failed. */
+    raceError?: string;
+    /** Why the builds cannot be raced yet; empty when they can. */
+    raceBlocked?: string;
   } = $props();
 
   const THEORY_METHOD =
@@ -215,6 +234,12 @@
         {field}
         {checkRaces}
         {tools}
+        {onrace}
+        {onraceall}
+        {raced}
+        {onopenrace}
+        {raceError}
+        {raceBlocked}
       />
       <SkillScores
         skills={theorized.skills}
