@@ -210,6 +210,7 @@ export const sentryOptions: Sentry.BrowserOptions = {
     event.tags = {
       ...event.tags,
       'app.phase': phase,
+      'app.build': document.documentElement.dataset.appBuild ?? 'unknown',
       'error.source': errorSource({
         moduleLoad: event.tags?.['error.kind'] === 'module-load',
         thirdParty: Boolean(event.tags?.third_party_code),

@@ -28,11 +28,13 @@ export async function setSliderValue(slider: Locator, value: number): Promise<vo
 export const test = base.extend<{
   runtimeErrors: void;
   allowPageLoadFailure: boolean;
+  expectedPageErrors: string[];
   interactionAudit: void;
   cachedBrowserProof: boolean;
 }>({
   cachedBrowserProof: [true, { option: true }],
   allowPageLoadFailure: [false, { option: true }],
+  expectedPageErrors: [[], { option: true }],
   interactionAudit: [
     async ({ context }, use, info) => {
       if (process.env.PERF_AUDIT) await auditInteractions(context, info, use);
@@ -111,7 +113,7 @@ export const test = base.extend<{
     }
   },
   runtimeErrors: [
-    async ({ context, allowPageLoadFailure, cachedBrowserProof }, use) => {
+    async ({ context, allowPageLoadFailure, expectedPageErrors, cachedBrowserProof }, use) => {
       await mockAdvertising(context);
       await context.route('https://status.uma.moe/api/v1/endpoints/statuses', (route) =>
         route.fulfill({ json: [{ name: 'API', group: 'uma.moe', results: [{ success: true }] }] })
@@ -139,7 +141,10 @@ export const test = base.extend<{
 
       const errors: string[] = [];
       context.on('page', (page) => {
-        page.on('pageerror', (error) => errors.push(`${page.url()}: ${error.message}`));
+        page.on('pageerror', (error) => {
+          if (!expectedPageErrors.includes(error.message))
+            errors.push(`${page.url()}: ${error.message}`);
+        });
         page.on('console', (message) => {
           if (
             !allowPageLoadFailure &&

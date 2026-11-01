@@ -17,8 +17,9 @@ function collectStaticGraph(key) {
 }
 
 // Include injected entry scripts such as the browser compatibility polyfills.
+// Modern browsers never download the compatibility build's -legacy- files.
 for (const [key, entry] of Object.entries(manifest)) {
-  if (entry.isEntry) collectStaticGraph(key);
+  if (entry.isEntry && !entry.file.includes('-legacy-')) collectStaticGraph(key);
 }
 
 for (const file of files) {

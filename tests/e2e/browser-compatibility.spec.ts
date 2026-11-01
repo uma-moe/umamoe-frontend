@@ -58,6 +58,42 @@ test('legacy startup renders the planner and keeps mobile navigation working', a
   await expect(page.locator('#app-error')).toBeHidden();
 });
 
+test.describe('compatibility build', () => {
+  // The modern entry stops itself with this error before the compatibility build starts.
+  test.use({ expectedPageErrors: ['This browser runs the compatibility build.'] });
+
+  test('browsers below the modern targets run the compatibility build alone', async ({ page }) => {
+    const scripts: string[] = [];
+    page.on('request', (request) => {
+      if (request.resourceType() === 'script') scripts.push(new URL(request.url()).pathname);
+    });
+
+    await page.addInitScript(() => {
+      Reflect.deleteProperty(AbortSignal, 'timeout');
+      Reflect.deleteProperty(Crypto.prototype, 'randomUUID');
+    });
+
+    await mockAffinity(page);
+    await page.goto('/tools/lineage-planner');
+    await page.addStyleTag({ content: '[popover].\\:popover-open { display: block; }' });
+    const target = page.getByRole('button', { name: 'Choose Target', exact: true });
+    await expect(target).toBeVisible();
+    await expect(target).toHaveCount(1);
+    const compatibility = await page.evaluate(() => ({
+      build: document.documentElement.dataset.appBuild,
+      timeout: typeof AbortSignal.timeout,
+      uuid: crypto.randomUUID()
+    }));
+
+    expect(compatibility).toMatchObject({ build: 'compatibility', timeout: 'function' });
+    expect(compatibility.uuid).toMatch(
+      /^[\da-f]{8}-[\da-f]{4}-4[\da-f]{3}-[89ab][\da-f]{3}-[\da-f]{12}$/
+    );
+    expect(scripts.some((path) => path.includes('-legacy-'))).toBe(true);
+    await expect(page.locator('#app-error')).toBeHidden();
+  });
+});
+
 test('polyfilled account menus retain layout, keyboard focus and light dismissal', async ({
   page
 }) => {

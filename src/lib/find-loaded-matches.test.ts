@@ -33,6 +33,26 @@ describe('Find text ranges', () => {
     ]);
   });
 
+  it('maps normalized Unicode without Intl.Segmenter', () => {
+    const segmenter = Intl.Segmenter;
+    Reflect.deleteProperty(Intl, 'Segmenter');
+    try {
+      const host = document.createElement('article');
+      host.textContent = 'ﬀé Ｕｍａ 👑 Ｓｔａｎ İ';
+      expect(findTextRanges(host, 'ffé').map((range) => range.toString())).toEqual(['ﬀé']);
+      expect(findTextRanges(host, 'uma 👑 stan').map((range) => range.toString())).toEqual([
+        'Ｕｍａ 👑 Ｓｔａｎ'
+      ]);
+      expect(findTextRanges(host, 'i̇').map((range) => range.toString())).toEqual(['İ']);
+    } finally {
+      Object.defineProperty(Intl, 'Segmenter', {
+        value: segmenter,
+        configurable: true,
+        writable: true
+      });
+    }
+  });
+
   it('ignores editable fields, scripts, and decorative text', () => {
     const host = document.createElement('article');
     host.innerHTML =

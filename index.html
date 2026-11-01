@@ -15,6 +15,17 @@
     <!-- #seo-content is for crawlers without JavaScript; visitors only ever see the app. -->
     <style>html.js #seo-content{display:none}</style>
     <script>document.documentElement.classList.add('js');</script>
+    <script>
+      // Browsers below the modern targets run the compatibility build: transpiled chunks with full polyfills.
+      (function () {
+        // Unpolyfilled modern features: lookbehind arrived with Safari 16.4, AbortSignal.timeout with Chromium 103, findLast with Firefox 104.
+        var modern = Boolean(window.AbortSignal) && typeof AbortSignal.timeout === 'function' && typeof Array.prototype.findLast === 'function';
+        try { new RegExp('(?<=a)b'); } catch (error) { modern = false; }
+        document.documentElement.dataset.appBuild = modern ? 'modern' : 'compatibility';
+        // Vite's legacy loader otherwise starts the compatibility build only when its own syntax check fails.
+        if (!modern) Object.defineProperty(window, '__vite_is_modern_browser', { get: function () { return false; }, set: function () {} });
+      }());
+    </script>
     <script type="application/ld+json">
       {"@context":"https://schema.org","@type":"WebSite","name":"uma.moe","url":"https://uma.moe/","description":"Mobile-first Umamusume database, Veteran workspace, race analysis, timeline, and planning tools for the global version."}
     </script>
@@ -34,6 +45,7 @@
       // Keep this independent of the app bundle and compatible with older parsers.
       (function () {
         var template = document.getElementById('app-error-template');
+        var compatibilityBuild = document.documentElement.dataset.appBuild === 'compatibility';
         var panel, output;
         function show(error, event) {
           if (!panel) {
@@ -62,7 +74,10 @@
           return typeof source === 'string' && (source.indexOf(location.origin + '/app/sentry-sdk-') === 0 || source.indexOf(location.origin + '/node_modules/@sentry/') === 0);
         }
         function isAppSource(source) {
-          return typeof source === 'string' && !isSentrySource(source) && (source.indexOf(location.origin + '/app/') === 0 || source.indexOf(location.origin + '/src/') === 0 || source.indexOf(location.origin + '/node_modules/') === 0);
+          if (typeof source !== 'string' || isSentrySource(source)) return false;
+          // This browser cannot parse or run the modern files; the compatibility build replaces them.
+          if (compatibilityBuild && source.indexOf('-legacy-') === -1) return false;
+          return source.indexOf(location.origin + '/app/') === 0 || source.indexOf(location.origin + '/src/') === 0 || source.indexOf(location.origin + '/node_modules/') === 0;
         }
         function stackSource(error) {
           // Fetch errors can start in Sentry's native-call wrapper; use the actual caller.
@@ -76,7 +91,7 @@
         window.addEventListener('umamoe:app-error', function (event) { show(event.detail); });
         window.addEventListener('error', function (event) {
           var script = event.target;
-          if (script && script.tagName === 'SCRIPT' && script.type === 'module' && isAppSource(script.src)) show('An application file could not be downloaded. Check your connection and reload.', { filename: script.src });
+          if (script && script.tagName === 'SCRIPT' && isAppSource(script.src)) show('An application file could not be downloaded. Check your connection and reload.', { filename: script.src });
           else if (isAppSource(stackSource(event.error) || event.filename)) show(event.error || event.message, event);
         }, true);
         window.addEventListener('unhandledrejection', function (event) {

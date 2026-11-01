@@ -475,11 +475,17 @@ test('production Svelte errors report the actual bound property and stack', asyn
     }
   });
 
-  if (Array.isArray(result) || !('output' in result))
-    throw new Error('Expected a single production bundle');
-  const failure = result.output.find(
-    (chunk) => chunk.type === 'chunk' && chunk.isEntry && chunk.facadeModuleId === entry
-  );
+  // The build also emits the compatibility copy; this browser loads the modern one.
+  const bundles = Array.isArray(result) ? result : [result];
+  const failure = bundles
+    .flatMap((bundle) => ('output' in bundle ? bundle.output : []))
+    .find(
+      (chunk) =>
+        chunk.type === 'chunk' &&
+        chunk.isEntry &&
+        chunk.facadeModuleId === entry &&
+        !chunk.fileName.includes('-legacy-')
+    );
 
   if (!failure || failure.type !== 'chunk') throw new Error('Missing compiled Svelte error');
   await page.route(/\/PrivacyPage(?:-[\w-]+\.js|\.svelte)(?:\?.*)?$/, (route) =>

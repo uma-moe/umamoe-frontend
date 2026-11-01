@@ -10,6 +10,14 @@ import { environment as production } from './src/config/environment.prod';
 import { environment as beta } from './src/config/environment.beta';
 
 const rootDirectory = fileURLToPath(new URL('.', import.meta.url));
+// Older phones and browsers run the compatibility build; index.html decides which build starts.
+const compatibilityBrowsers = {
+  chrome: '64',
+  edge: '79',
+  firefox: '68',
+  safari: '12.1',
+  ios: '12.2'
+};
 
 export default defineConfig(async ({ mode, command }) => {
   // Keep the existing CI-injected public provider IDs during the framework migration.
@@ -61,7 +69,14 @@ export default defineConfig(async ({ mode, command }) => {
           'iOS >= 16.4'
         ],
         modernPolyfills: true,
-        renderLegacyChunks: false
+        targets: Object.entries(compatibilityBrowsers).map(
+          ([browser, version]) => `${browser} >= ${version}`
+        ),
+        additionalLegacyPolyfills: [
+          fileURLToPath(
+            new URL('./src/services/browser-support/compatibility-polyfills.js', import.meta.url)
+          )
+        ]
       }),
       svelte({
         // Windows dev requests can lose virtual CSS metadata; keep each component's styles with its JS.
@@ -110,6 +125,10 @@ export default defineConfig(async ({ mode, command }) => {
       // ponytail: skip JS preloading until WebKit's failed-preload cache is fixed:
       // https://bugs.webkit.org/show_bug.cgi?id=270357
       modulePreload: false,
+      // Both builds share the stylesheets.
+      cssTarget: Object.entries(compatibilityBrowsers).map(
+        ([browser, version]) => browser + version
+      ),
       // Compiled code belongs to the shell artifact; /assets is deployed separately.
       assetsDir: 'app',
       manifest: true,

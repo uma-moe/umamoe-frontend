@@ -7,6 +7,16 @@ export interface FindMatch {
 
 const normalize = (text: string) => text.normalize('NFKC').toLocaleLowerCase();
 
+function graphemes(text: string): Iterable<{ segment: string; index: number }> {
+  if (typeof Intl.Segmenter === 'function')
+    return new Intl.Segmenter(undefined, { granularity: 'grapheme' }).segment(text);
+  // Firefox before 125 and Safari before 14.1 lack Intl.Segmenter; keep combining marks with their base.
+  return Array.from(text.matchAll(/\P{M}\p{M}*|\p{M}+/gu), (match) => ({
+    segment: match[0],
+    index: match.index
+  }));
+}
+
 export function findLoaded(sources: FindSource[], query: string): FindMatch[] {
   const needle = normalize(query.trim());
   if (!needle) return [];
@@ -50,7 +60,7 @@ export function findTextRanges(host: HTMLElement, query: string): Range[] {
   if (canonical !== text || folded.length !== text.length) {
     starts = [];
     ends = [];
-    for (const part of new Intl.Segmenter(undefined, { granularity: 'grapheme' }).segment(text)) {
+    for (const part of graphemes(text)) {
       for (let offset = 0; offset < normalize(part.segment).length; offset++) {
         starts.push(part.index);
         ends.push(part.index + part.segment.length);
