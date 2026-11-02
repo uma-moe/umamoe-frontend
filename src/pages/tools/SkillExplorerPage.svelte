@@ -33,6 +33,10 @@
   import { timelineRepository } from '@/pages/timeline/timeline-repository';
   import type { RaceDay } from './skill-explorer/cm/race-day';
   import { meetingOptions, type MeetingOption } from './skill-explorer/cm/meetings';
+  import {
+    restoreCourseSelection,
+    saveCourseSelection
+  } from './skill-explorer/course-selection-storage';
   import TargetStatline from './skill-explorer/statlines/TargetStatline.svelte';
   import {
     loadStatlines,
@@ -104,6 +108,8 @@
   let raceCourses = $state.raw(new Map<number, RaceCourse>());
   let pageError = $state('');
   let timelineMeetings = $state.raw<NumberedMeeting[]>([]);
+  /** The schedule is in, so a kept meeting can be checked against it. */
+  let timelineLoaded = $state(false);
   let statlines = $state.raw<StatlinesData>();
 
   let umaCards = $state.raw<UmaSkills[]>([]);
@@ -400,6 +406,18 @@
     return style !== 'all' && Boolean(scopeData?.builds?.[style]?.includes(skillId));
   }
 
+  /** Last visit's pick, when the model still values that course. */
+  function restorePick(loaded: ExplorerIndex): void {
+    const saved = restoreCourseSelection();
+    if (saved === undefined) return;
+
+    const valued = loaded.courses.some((course) => String(course.courseId) === saved.courseId);
+    if (!valued) return;
+
+    courseId = saved.courseId;
+    meetingNumber = saved.meetingNumber;
+  }
+
   /** A meeting picks its course; the course list opens up so the pick is always among its options. */
   function chooseMeeting(value: string) {
     meetingNumber = value;
@@ -433,6 +451,7 @@
         skillEffects = nextEffects;
         raceCourses = nextCourses;
         statlines = nextStatlines;
+        restorePick(nextIndex);
       })
       .catch((error: unknown) => {
         pageError = error instanceof Error ? error.message : 'Skill values could not be loaded.';
@@ -462,6 +481,7 @@
       .then((data) => {
         timelineMeetings = numberMeetings(data.events);
         banners = firstBanners(data.events);
+        timelineLoaded = true;
       })
       .catch(() => {
         timelineMeetings = [];
@@ -498,6 +518,20 @@
       });
 
     return () => controller.abort();
+  });
+
+  // So a reload, or a trip to another page, returns to the same course.
+  $effect(() => {
+    if (index === undefined) return;
+    saveCourseSelection({ courseId, meetingNumber });
+  });
+
+  // A meeting the timeline no longer lists is dropped; the course it picked stays.
+  $effect(() => {
+    if (index === undefined || !timelineLoaded || meetingNumber === '') return;
+    if (meetings.some((meeting) => String(meeting.number) === meetingNumber)) return;
+
+    meetingNumber = '';
   });
 
   $effect(() => {
