@@ -20,7 +20,7 @@ services:
 
   simulator:
     build:
-      context: ../umamoe-simulators-v2
+      context: ../umamoe-simulator
       dockerfile: deploy/Dockerfile
       target: runtime
     environment:
@@ -36,7 +36,7 @@ services:
       - "127.0.0.1:${LOCAL_SIMULATOR_PORT:-3309}:3009"
     volumes:
       - simulator-cache:/data
-      - ../umamoe-simulators-v2/cm_data:/cm:ro
+      - ../umamoe-simulator/cm_data:/cm:ro
     depends_on:
       resources:
         condition: service_healthy
@@ -154,7 +154,7 @@ services:
   search:
     profiles: [app]
     build:
-      context: ../umamoe_db
+      context: ../umamoe-search
     environment:
       DATABASE_URL: "postgresql://umamoe:${LOCAL_POSTGRES_PASSWORD:-local-stack-only}@postgres:5432/umamoe"
       RESOURCE_BASE_URL: http://resources:3204/resources

@@ -1,5 +1,21 @@
 # Local stack
 
+## Setup
+
+Clone the service repositories beside `umamoe-frontend`, under their GitHub names:
+
+```sh
+git clone https://github.com/uma-moe/umamoe-resources.git
+git clone https://github.com/uma-moe/umamoe-simulator.git   # private
+# Only for the full app (--app):
+git clone https://github.com/uma-moe/umamoe-backend.git
+git clone https://github.com/uma-moe/umamoe-search.git      # private
+git clone https://github.com/uma-moe/umamoe-ingest.git
+```
+
+Building the stack needs read access to the two private repositories. You also need Docker
+Desktop (or Docker Engine with Compose), and on Windows Git Bash, which brings `sh` and OpenSSL.
+
 ## One command (Windows, macOS, Linux)
 
 ```sh
@@ -8,7 +24,9 @@ npm run dev:local
 
 This creates `.env.stack.local` and the local simulator key when they are missing, rebuilds
 whatever changed in the sibling repositories, starts the whole stack (resources, simulator,
-backend, search, ingest, Postgres and Redis) and waits until it is healthy. It then runs Vite on
+backend, search, ingest, Postgres and Redis) and waits until it is healthy. Because it starts the
+full app, it needs all five repositories and the database snapshot described under
+[Full app](#full-app). Without a snapshot, `sh local.sh` below runs resources and the simulator. It then runs Vite on
 this machine at http://127.0.0.1:5173, pointed at that stack, so edits show up instantly.
 `.env.development.local` is left untouched; the stack addresses and key only apply to this run.
 
@@ -28,7 +46,7 @@ and OpenSSL installed. Keep the service repositories beside `umamoe-frontend`.
 sh local.sh
 ```
 
-This builds **umamoe-resources** and **umamoe-simulators-v2**, generates the game
+This builds **umamoe-resources** and **umamoe-simulator**, generates the game
 resources locally, starts the simulator after resources become healthy, and waits
 for readiness. The first start needs internet access to verify/download the game
 master. Resource exports and the simulator cache persist in separate Docker volumes.
@@ -57,9 +75,10 @@ serves the explorer bundle named by `UMAMOE_V3_SKILL_EXPLORER`; see the simulato
 
 ## Full app
 
-Also check out **umamoe-backend**, **umamoe_db**, and **umamoe-ingest** beside this
-repository. The backend's migrations assume its existing base schema, so provide
-a **current local database snapshot** as plain SQL exported with
+Also check out **umamoe-backend**, **umamoe-search**, and **umamoe-ingest** beside this
+repository. There is no seed data yet, and the backend's migrations assume its existing base
+schema, so an empty database doesn't work. Provide a **current local database snapshot** as plain
+SQL exported with
 `pg_dump --no-owner --no-acl`. Set `LOCAL_DATABASE_DUMP` in `.env.stack.local`
 to that file, then run:
 
