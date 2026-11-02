@@ -6,25 +6,23 @@
   import { rushChance, situationSeconds, type PlanCourse } from './hp-plan';
 
   /**
-   * The quick input: how many skills of each kind, and what happens between her and the other runners. Each count
-   * becomes recovery, speed or acceleration at the usual place on the course. Every row sits on the form's five
-   * columns: the kind, then gold, white and unique, then what the unique heals.
+   * The quick input: how many skills of each kind to add beyond her own, and what happens between her and the other
+   * runners. Each count becomes recovery, speed or acceleration at the usual place on the course. Every row sits on
+   * the form's five columns: the kind, then gold, white and unique, then what the unique heals.
    */
   let {
     course,
     guts,
     wit,
-    skillCount = 0,
-    oncount
+    skillCount = 0
   }: {
     course: PlanCourse;
     /** Her guts with green skills, for the usual length of a position fight. */
     guts: number;
     /** Her wit with green skills, for her chance to get rushed. */
     wit: number;
-    /** How many skills her full build has, to count them into the plan. */
+    /** How many skills her build has; the simulator races those itself. */
     skillCount?: number;
-    oncount?: () => void;
   } = $props();
 
   const plan = $derived(hpCalculator.plan);
@@ -50,10 +48,7 @@
 </script>
 
 <div class="pair">
-  <HpSkillCounts
-    {skillCount}
-    {oncount}
-  />
+  <HpSkillCounts {skillCount} />
 
   <SimSection
     number={4}

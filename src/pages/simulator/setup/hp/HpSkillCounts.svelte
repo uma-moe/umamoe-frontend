@@ -20,14 +20,13 @@
     type HpPlan
   } from './hp-plan';
 
-  /** How many skills of each kind and tier she has, with Clear and a way back. */
+  /** How many skills of each kind and tier to add beyond her own, with Clear and a way back. */
   interface Props {
-    /** How many skills her full build has, to count them into the plan. */
+    /** How many skills her build has; the simulator races those itself. */
     skillCount?: number;
-    oncount?: () => void;
   }
 
-  let { skillCount = 0, oncount }: Props = $props();
+  let { skillCount = 0 }: Props = $props();
 
   const plan = $derived(hpCalculator.plan);
   const KINDS = [
@@ -55,9 +54,7 @@
   const uniqueHeal = $derived(Math.round(uniqueRecovery(plan) * 100) / 100);
 
   // Clear takes every count back to none, green skills too, with a way back.
-  type Counts = Pick<HpPlan, 'recovery' | 'speed' | 'accel' | 'debuffs' | 'green'> & {
-    counted: string;
-  };
+  type Counts = Pick<HpPlan, 'recovery' | 'speed' | 'accel' | 'debuffs' | 'green'>;
 
   let cleared = $state<Counts | null>(null);
   const greens = $derived(
@@ -76,16 +73,13 @@
   );
 
   function clear() {
-    cleared = {
-      ...$state.snapshot({
-        recovery: plan.recovery,
-        speed: plan.speed,
-        accel: plan.accel,
-        debuffs: plan.debuffs,
-        green: plan.green
-      }),
-      counted: hpCalculator.counted
-    };
+    cleared = $state.snapshot({
+      recovery: plan.recovery,
+      speed: plan.speed,
+      accel: plan.accel,
+      debuffs: plan.debuffs,
+      green: plan.green
+    });
 
     for (const group of [plan.recovery, plan.speed, plan.accel, plan.debuffs]) {
       group.gold = 0;
@@ -94,8 +88,6 @@
     }
 
     for (const stat of STAT_KEYS) plan.green[stat] = { gold: 0, white: 0 };
-
-    hpCalculator.counted = '';
   }
 
   function undo() {
@@ -106,7 +98,6 @@
     Object.assign(plan.debuffs, cleared.debuffs);
     for (const stat of STAT_KEYS) plan.green[stat] = { ...cleared.green[stat] };
 
-    hpCalculator.counted = cleared.counted;
     cleared = null;
   }
 
@@ -119,17 +110,11 @@
 <SimSection
   number={3}
   title="Skills"
-  note={hpCalculator.counted || undefined}
+  note={skillCount
+    ? 'Her ' + skillCount + ' skills race as she has them; count only others'
+    : undefined}
 >
   {#snippet actions()}
-    {#if skillCount}<Button
-        variant="secondary"
-        size="sm"
-        icon="refresh"
-        onclick={oncount}
-      >
-        Count her {skillCount} skills
-      </Button>{/if}
     {#if cleared && !total}<Button
         variant="ghost"
         size="sm"

@@ -9,7 +9,6 @@ describe('HP calculator setups from a code or this browser', () => {
         positionFight: { on: true, seconds: 8.8 },
         downhill: true
       },
-      counted: 'her build',
       raceType: '14',
       fullSpurt: 'true'
     };
@@ -19,7 +18,7 @@ describe('HP calculator setups from a code or this browser', () => {
     expect([setup.plan.recovery.gold, setup.plan.recovery.white]).toEqual([1, 2]);
     expect(setup.plan.positionFight).toEqual({ on: true, seconds: 8.8 });
     expect(setup.plan.downhill).toBe(true);
-    expect([setup.counted, setup.raceType, setup.fullSpurt]).toEqual(['her build', '14', 'true']);
+    expect([setup.raceType, setup.fullSpurt]).toEqual(['14', 'true']);
   });
 
   it('starts from the defaults for options it can’t read', () => {

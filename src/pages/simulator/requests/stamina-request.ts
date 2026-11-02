@@ -6,6 +6,8 @@
  * normalized here, so the page can hand over raw rows without validating them.
  */
 
+import type { MonteCarloSkill, MonteCarloSkillInput } from './race-sim-request';
+
 export const APTITUDE_GRADES = ['S', 'A', 'B', 'C', 'D', 'E', 'F', 'G'] as const;
 export type AptitudeGrade = (typeof APTITUDE_GRADES)[number];
 
@@ -127,6 +129,8 @@ export interface StaminaForm extends RaceSetupInput {
   /** Turf, Dirt. */
   groundAptitudes: Array<AptitudeGrade>;
   fullSpurt: boolean;
+  /** Her own skills; the simulator races them, passives included, as a race would for her alone. */
+  skills?: Array<MonteCarloSkillInput>;
   /** Races to sample on seeds `seed`, `seed + 1`, …; one when left out. */
   samples?: number;
   /** Optional course length; when set, effect rows at or past the finish are dropped. */
@@ -148,6 +152,7 @@ export function buildRaceSetup(input: RaceSetupInput): RaceSetup {
 }
 
 export function buildStaminaRequest(form: StaminaForm) {
+  const skills = buildSkills(form.skills ?? []);
   return {
     course_id: form.courseId,
     seed: toInt32(form.seed),
@@ -161,7 +166,8 @@ export function buildStaminaRequest(form: StaminaForm) {
         running_style: form.styleAptitudes.map(aptitudeGradeNumber),
         ground: form.groundAptitudes.map(aptitudeGradeNumber)
       },
-      single_mode_team_rank: 0
+      single_mode_team_rank: 0,
+      ...(skills.length ? { skills } : {})
     },
     full_spurt: form.fullSpurt,
     ...(form.samples !== undefined && form.samples !== 1
@@ -277,6 +283,20 @@ function buildStates(
     }
 
     built.push(body);
+  }
+
+  return built;
+}
+
+/** Skill rows as the simulator takes them: positive IDs, levels 1 … 6. */
+export function buildSkills(skills: Array<MonteCarloSkillInput>): Array<MonteCarloSkill> {
+  const built: Array<MonteCarloSkill> = [];
+  for (const skill of skills) {
+    if (!Number.isFinite(skill.skillId) || skill.skillId <= 0) continue;
+    built.push({
+      skill_id: Math.round(skill.skillId),
+      level: clampInt(skill.level ?? 1, 1, 6, 1)
+    });
   }
 
   return built;

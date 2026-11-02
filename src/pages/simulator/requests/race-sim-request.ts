@@ -9,6 +9,7 @@
 
 import {
   buildRaceSetup,
+  buildSkills,
   type RaceSetup,
   type RaceSetupInput,
   type TraineeStats
@@ -183,19 +184,6 @@ function assignFrameOrders(requested: Array<number | undefined>, count: number):
   }
 
   return orders;
-}
-
-function buildSkills(skills: Array<MonteCarloSkillInput>): Array<MonteCarloSkill> {
-  const built: Array<MonteCarloSkill> = [];
-  for (const skill of skills) {
-    if (!Number.isFinite(skill.skillId) || skill.skillId <= 0) continue;
-    built.push({
-      skill_id: Math.round(skill.skillId),
-      level: clampInt(skill.level ?? 1, 1, 6, 1)
-    });
-  }
-
-  return built;
 }
 
 function toInt32(value: number): number {
