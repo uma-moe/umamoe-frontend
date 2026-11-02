@@ -16,12 +16,15 @@
     course,
     showOutline = true,
     showHeader = true,
-    compact = false
+    compact = false,
+    embedded = false
   }: {
     course?: RaceCourse;
     showOutline?: boolean;
     showHeader?: boolean;
     compact?: boolean;
+    /** The host already names the course, so the profile drops its card, header and breakdown heading. */
+    embedded?: boolean;
   } = $props();
 
   let data = $state.raw<CourseData>(),
@@ -62,12 +65,18 @@
               let color = '#737d8a';
               if (slope.slope > 0) color = '#bd7581';
               else if (slope.slope < 0) color = '#719bdd';
+
+              // A narrow segment drops the arrow and the trailing tenth, so "-1%" fits where "↘ -1.0%" is cut.
+              const percent = (Math.abs(slope.slope) / 10000).toFixed(1).replace(/\.0$/, '');
+              const direction = slope.slope > 0 ? '+' : '-';
+
               return {
                 start: slope.start,
                 end: slope.end,
                 label: slope.slope
-                  ? (slope.slope > 0 ? '↗ +' : '↘ ') + (slope.slope / 10000).toFixed(1) + '%'
+                  ? (slope.slope > 0 ? '↗ ' : '↘ ') + direction + percent + '%'
                   : 'Flat',
+                ...(slope.slope ? { short: direction + percent + '%' } : {}),
                 color
               };
             })
@@ -161,10 +170,11 @@
 <section
   class="profile"
   class:compact
+  class:embedded
   class:without-outline={!showOutline}
   aria-label="Course profile"
 >
-  {#if showHeader}
+  {#if showHeader && !embedded}
     <header>
       <div class="course-heading">
         <h2>{course ? trackName(course.race_track_id) : 'Course profile'}</h2>
@@ -177,17 +187,19 @@
   {/if}
   <div class="profile-body">
     <div class="distance-profile">
-      <div class="breakdown-heading">
-        <h3>Course breakdown</h3>
-        {#if profile}
-          <div class="course-distances">
-            <span title={FINAL_SPURT_HELP}>
-              Spurt from {Math.round((profile.distance * 2) / 3).toLocaleString('en-US')} m
-            </span>
-            <span>{profile.distance.toLocaleString('en-US')} m</span>
-          </div>
-        {/if}
-      </div>
+      {#if !embedded}
+        <div class="breakdown-heading">
+          <h3>Course breakdown</h3>
+          {#if profile}
+            <div class="course-distances">
+              <span title={FINAL_SPURT_HELP}>
+                Spurt from {Math.round((profile.distance * 2) / 3).toLocaleString('en-US')} m
+              </span>
+              <span>{profile.distance.toLocaleString('en-US')} m</span>
+            </div>
+          {/if}
+        </div>
+      {/if}
       {#if profile}
         <div
           class="timeline"

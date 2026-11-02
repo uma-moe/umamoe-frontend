@@ -7,6 +7,12 @@
   border-radius: var(--radius-lg);
   container: course-profile / inline-size;
 }
+.embedded {
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  background: none;
+}
 header {
   display: flex;
   align-items: center;
@@ -36,7 +42,7 @@ h2 {
 }
 .profile-body {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) 180px;
+  grid-template-columns: minmax(0, 1fr) 200px;
   gap: 20px;
   align-items: center;
 }
@@ -82,6 +88,8 @@ h2 {
   display: flex;
   align-items: center;
   align-self: stretch;
+  overflow: hidden;
+  white-space: nowrap;
   font-size: 10px;
   color: var(--text-secondary);
 }
@@ -155,7 +163,7 @@ h2 {
 }
 .segment-name {
   overflow: hidden;
-  text-overflow: clip;
+  text-overflow: ellipsis;
 }
 .segment-short {
   display: none;
@@ -391,7 +399,7 @@ h2 {
 }
 @media (max-width: 767px) {
   .profile {
-    --profile-label-width: 48px;
+    --profile-label-width: 56px;
   }
   .profile:not(.compact) {
     padding: 14px;
