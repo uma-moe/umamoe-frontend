@@ -405,7 +405,6 @@
     return style !== 'all' && Boolean(scopeData?.builds?.[style]?.includes(skillId));
   }
 
-  /** Last visit's pick, when the model still values that course. */
   function restorePick(loaded: ExplorerIndex): void {
     const saved = restoreCourseSelection();
     if (saved === undefined) return;
@@ -519,13 +518,11 @@
     return () => controller.abort();
   });
 
-  // So a reload, or a trip to another page, returns to the same course.
   $effect(() => {
     if (index === undefined) return;
     saveCourseSelection({ courseId, meetingNumber });
   });
 
-  // A meeting the timeline no longer lists is dropped; the course it picked stays.
   $effect(() => {
     if (index === undefined || !timelineLoaded || meetingNumber === '') return;
     if (meetings.some((meeting) => String(meeting.number) === meetingNumber)) return;

@@ -1,9 +1,7 @@
-/** The course the explorer last showed and the meeting that picked it, kept in this browser. */
 const STORAGE_KEY = 'uma.skill-explorer.course';
 
 export interface SavedCourseSelection {
   courseId: string;
-  /** Empty when the course was picked on its own. */
   meetingNumber: string;
 }
 
@@ -14,7 +12,6 @@ function isSelection(value: unknown): value is SavedCourseSelection {
   return typeof courseId === 'string' && typeof meetingNumber === 'string';
 }
 
-/** Nothing kept, or nothing we can read, means every course. */
 export function restoreCourseSelection(): SavedCourseSelection | undefined {
   try {
     const saved: unknown = JSON.parse(localStorage.getItem(STORAGE_KEY) ?? 'null');
@@ -24,7 +21,6 @@ export function restoreCourseSelection(): SavedCourseSelection | undefined {
   }
 }
 
-/** Call it from an effect, so every change is kept. */
 export function saveCourseSelection(selection: SavedCourseSelection): void {
   try {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(selection));
