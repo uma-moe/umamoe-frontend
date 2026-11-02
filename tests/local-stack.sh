@@ -3,7 +3,7 @@ set -eu
 
 project_dir=$(CDPATH= cd -- "$(dirname -- "$0")/.." && pwd)
 test_dir=$(mktemp -d)
-trap 'rm -f "$test_dir/bin/docker" "$test_dir/docker.log" "$test_dir/output" "$test_dir/local.sh" "$test_dir/.env.stack.local.example" "$test_dir/.env.stack.local" "$test_dir/.tmp/local-stack/simulator.key"; rmdir "$test_dir/.tmp/local-stack" "$test_dir/.tmp" "$test_dir/bin" "$test_dir" 2>/dev/null || true' EXIT
+trap 'rm -f "$test_dir/bin/docker" "$test_dir/docker.log" "$test_dir/output" "$test_dir/local.sh" "$test_dir/.env.stack.local.example" "$test_dir/.env.stack.local" "$test_dir/.tmp/local-stack/simulator.key"; rmdir "$test_dir/.tmp/local-stack" "$test_dir/.tmp" "$test_dir/node_modules" "$test_dir/bin" "$test_dir" 2>/dev/null || true' EXIT
 mkdir "$test_dir/bin"
 cp "$project_dir/local.sh" "$project_dir/.env.stack.local.example" "$test_dir/"
 export DOCKER_LOG="$test_dir/docker.log"
@@ -30,6 +30,7 @@ sh "$test_dir/local.sh" --app up > "$test_dir/output"
 case "$(cat "$DOCKER_LOG")" in *'--profile app up --build --detach --wait --wait-timeout 900'*) ;; *) fail 'full-app startup did not build and wait' ;; esac
 [ "$key_before" = "$(cat "$test_dir/.tmp/local-stack/simulator.key")" ] || fail 'existing key was replaced'
 case "$(cat "$test_dir/.env.stack.local")" in *'# preserved setting'*) ;; *) fail 'local settings were replaced' ;; esac
+[ -d "$test_dir/node_modules" ] || fail 'full-app startup did not create the node_modules mount point'
 
 # A stopped engine must fail before any startup attempt.
 : > "$DOCKER_LOG"

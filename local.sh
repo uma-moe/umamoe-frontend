@@ -36,6 +36,11 @@ if [ ! -s .tmp/local-stack/simulator.key ]; then
   # Compose bind-mounts file secrets; the non-root backend must read this local-only key.
   chmod 644 .tmp/local-stack/simulator.key
 fi
+if [ "$app" = true ]; then
+  # The frontend mounts its dependency volume at node_modules inside the read-only source mount;
+  # Docker cannot create that mount point itself, so a fresh clone needs the empty folder.
+  mkdir -p node_modules
+fi
 
 compose() {
   if [ "$app" = true ]; then
