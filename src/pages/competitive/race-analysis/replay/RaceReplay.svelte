@@ -9,6 +9,8 @@
   import EmptyState from '@/components/feedback/EmptyState.svelte';
   import Spinner from '@/components/feedback/Spinner.svelte';
   import SegmentedControl from '@/components/controls/SegmentedControl.svelte';
+  import SelectField from '@/components/controls/SelectField.svelte';
+  import { portrait } from '@/pages/competitive/analysis-view';
   import ReplayResults from '../results/ReplayResults.svelte';
   import {
     loadReplayCourses,
@@ -29,7 +31,6 @@
   import ReplayPlayback, { type EnsembleTimeline } from './playback/ReplayPlayback.svelte';
   import ReplayEnsembleViews from './ensemble/ReplayEnsembleViews.svelte';
   import ReplayRunnerAnalysis from './runner/ReplayRunnerAnalysis.svelte';
-  import ReplayRunnerPicker from './runner/ReplayRunnerPicker.svelte';
   import ReplayBuildDialog from './runner/ReplayBuildDialog.svelte';
   import type { RaceTrajectory } from '@/lib/race/replay/race-ensemble';
   import { recordedSimulation, type DetailedSimulation } from '../detailed-simulation';
@@ -70,12 +71,36 @@
 
   let telemetryExpanded = $state(false);
   let windowMeters = $state(80),
-    trackOverride = $state('');
+    trackOverride = $state(''),
+    laneScaleMode = $state('automatic');
 
   let report = $state<HTMLElement>(),
     analysisTarget = $state<HTMLElement>();
 
-  let currentSection = $state('replay');
+  let currentSection = $state('results');
+  let headerHeight = $state(0);
+  let runnerAnalysisOpen = $state(false);
+  let resultsPanel = $state<HTMLElement>(),
+    runnerPanel = $state<HTMLElement>();
+  let resultsScrollY: number | undefined;
+  let resultsFocus: HTMLElement | undefined;
+
+  const finishOrder = $derived(
+    [...capture.runners].sort(
+      (a, b) => (a.result?.finishOrder ?? Infinity) - (b.result?.finishOrder ?? Infinity)
+    )
+  );
+  const runnerPosition = $derived(
+    finishOrder.findIndex((runner) => runner.index === Number(selected))
+  );
+  const runnerChoices = $derived(
+    finishOrder.map((runner, index) => ({
+      value: String(runner.index),
+      label: `${runner.result?.finishOrder ?? index + 1}. ${runner.name}`,
+      image: portrait(runner.cardId),
+      description: `Gate ${runner.index + 1}${runner.trainerName ? ' · ' + runner.trainerName : ''}`
+    }))
+  );
 
   const trackId = $derived(trackOverride || String(capture.courseId ?? ''));
 
@@ -92,8 +117,7 @@
 
   let settingsOpen = $state(false),
     buildOpen = $state(false),
-    runnerPickerOpen = $state(false),
-    focusView = $state('map');
+    focusView = $state('positions');
 
   const mapPrimary = $derived(focusView === 'map');
 
@@ -131,12 +155,14 @@
   // Continuously follow the field spread; restarting a tween each frame stalls its easing.
   const laneScale = new Spring(500, { stiffness: 0.035, damping: 0.4, precision: 0.001 });
 
-  const laneTarget = $derived(viewport.laneMax);
+  const laneTarget = $derived(
+    laneScaleMode === 'fixed' ? Math.max(6000, replay.bounds.laneMax) : viewport.laneMax
+  );
 
   let laneScaleCapture: ParsedRaceCapture | undefined;
 
   $effect(() => {
-    const instant = laneScaleCapture !== capture;
+    const instant = laneScaleMode === 'fixed' || laneScaleCapture !== capture;
     laneScaleCapture = capture;
     void laneScale.set(laneTarget, { instant }).catch(() => {});
   });
@@ -145,7 +171,7 @@
     void laneScale.set(laneScale.current, { instant: true });
   });
 
-  const displayedLaneMax = $derived(laneScale.current);
+  const displayedLaneMax = $derived(laneScaleMode === 'fixed' ? laneTarget : laneScale.current);
   const positionViewport = $derived.by(() => {
     const { bounds, leader } = replay;
     const width = viewport.max - viewport.min,
@@ -156,15 +182,6 @@
     const center = distance - width * 0.3 * edge * edge * (3 - 2 * edge);
     return { min: center - width / 2, max: center + width / 2 };
   });
-
-  function reviewBlocking(event: (typeof replay.blockingSpans)[number]) {
-    selected = String(event.horseIndex);
-    visibility = { ...visibility, [event.horseIndex]: 0, [event.blockerHorseIndex]: 0 };
-
-    toggles = { ...toggles, blocked: true };
-
-    reviewTime(event.startTime);
-  }
 
   async function reviewTime(value: number) {
     replay.seek(value);
@@ -178,11 +195,50 @@
     jump('replay');
   }
 
-  function jump(section: string) {
+  function scrollToSection(section: string) {
     replay.pause();
     report
       ?.querySelector<HTMLElement>('[data-report-section="' + section + '"]')
       ?.scrollIntoView({ block: 'start', behavior: 'instant' });
+  }
+
+  async function inspectRunner(index: number) {
+    replay.pause();
+    if (!runnerAnalysisOpen) {
+      resultsScrollY = currentSection === 'results' ? scrollY : undefined;
+      const active = document.activeElement;
+      resultsFocus =
+        active instanceof HTMLElement && resultsPanel?.contains(active) ? active : undefined;
+    }
+
+    selected = String(index);
+    runnerAnalysisOpen = true;
+    await flush();
+    scrollToSection('results');
+    runnerPanel?.querySelector<HTMLButtonElement>('button')?.focus({ preventScroll: true });
+  }
+
+  async function showResults() {
+    replay.pause();
+    runnerAnalysisOpen = false;
+    await flush();
+    resultsFocus?.focus({ preventScroll: true });
+    if (resultsScrollY !== undefined) window.scrollTo({ top: resultsScrollY, behavior: 'instant' });
+    else scrollToSection('results');
+  }
+
+  function jump(section: string) {
+    if (section === 'results' && runnerAnalysisOpen) {
+      void showResults();
+      return;
+    }
+
+    scrollToSection(section);
+  }
+
+  function stepRunner(direction: number) {
+    const runner = finishOrder[runnerPosition + direction];
+    if (runner) selected = String(runner.index);
   }
 
   /** Follows the reader: the current section is the last one scrolled up to where a jump would land it. */
@@ -213,7 +269,7 @@
   function analyseRunner() {
     replay.pause();
     if (overviewOnly) onanalyse?.({ runner: replay.runner?.index ?? 0, time: replay.time });
-    else jump('runner');
+    else void inspectRunner(replay.runner?.index ?? 0);
   }
 
   function seekDistance(distance: number) {
@@ -231,14 +287,7 @@
   }
 
   function keydown(event: KeyboardEvent) {
-    if (
-      settingsOpen ||
-      buildOpen ||
-      runnerPickerOpen ||
-      event.target !== document.body ||
-      !analysisTarget
-    )
-      return;
+    if (settingsOpen || buildOpen || event.target !== document.body || !analysisTarget) return;
     const box = analysisTarget.getBoundingClientRect();
     if (box.bottom < 120 || box.top > innerHeight) return;
     if (event.code === 'Space') {
@@ -266,7 +315,13 @@
     untrack(() => {
       replay.pause();
       replay.time = capture.frames[0]?.time ?? 0;
-      if (!ensemble) selected = String(capture.runners[0]?.index ?? 0);
+      if (
+        !ensemble &&
+        (!runnerAnalysisOpen || !capture.runners.some((r) => r.index === Number(selected)))
+      )
+        selected = String(capture.runners[0]?.index ?? 0);
+      resultsScrollY = undefined;
+      resultsFocus = undefined;
       trackOverride = '';
       visibility = {};
     });
@@ -336,6 +391,7 @@
   class="replay"
   class:overview={overviewOnly}
   class:ensemble-view={!!ensemble}
+  style:--replay-header-height={headerHeight + 'px'}
   bind:this={report}
 >
   {#if !overviewOnly}
@@ -348,6 +404,7 @@
       {trackOverride}
       {hasSession}
       current={currentSection}
+      bind:height={headerHeight}
       {headerActions}
       onjump={jump}
     />
@@ -361,6 +418,7 @@
     bind:open={settingsOpen}
     bind:trackOverride
     bind:windowMeters
+    bind:laneScaleMode
     bind:toggles
   />
   {#if courseError}
@@ -372,6 +430,83 @@
     </div>
   {/if}
   <div class="race-panels">
+    {#if !overviewOnly}
+      <section
+        class="analysis-section results-panel"
+        data-report-section="results"
+        aria-label="Race results section"
+        bind:this={resultsPanel}
+      >
+        <div hidden={runnerAnalysisOpen}>
+          <ReplayResults
+            capture={{ ...capture, raceDistance: replay.bounds.distanceMax }}
+            selectedIndex={replay.runner?.index}
+            oninspect={inspectRunner}
+          />
+        </div>
+        <div
+          class="runner-panel"
+          hidden={!runnerAnalysisOpen}
+          bind:this={runnerPanel}
+        >
+          {#if replay.runner}
+            <ReplayRunnerAnalysis
+              {replay}
+              runner={replay.runner}
+              {course}
+              {skillNames}
+              simulation={simulation ?? recordedSimulation(capture)}
+              onretry={onretrysimulation}
+              onbuild={() => (buildOpen = true)}
+              onseek={reviewTime}
+              onselect={reviewRunner}
+            >
+              {#snippet navigation()}
+                <div class="runner-navigation">
+                  <Button
+                    variant="secondary"
+                    size="sm"
+                    icon="arrow-left"
+                    onclick={showResults}
+                  >
+                    All results
+                  </Button>
+                  <div class="runner-switcher">
+                    <Button
+                      variant="secondary"
+                      size="sm"
+                      ariaLabel="Previous runner in finish order"
+                      disabled={runnerPosition <= 0}
+                      onclick={() => stepRunner(-1)}
+                    >
+                      ←
+                    </Button>
+                    <div class="runner-select">
+                      <SelectField
+                        id="analysis-runner"
+                        label="Runner"
+                        hideLabel
+                        options={runnerChoices}
+                        bind:value={selected}
+                      />
+                    </div>
+                    <Button
+                      variant="secondary"
+                      size="sm"
+                      ariaLabel="Next runner in finish order"
+                      disabled={runnerPosition >= finishOrder.length - 1}
+                      onclick={() => stepRunner(1)}
+                    >
+                      →
+                    </Button>
+                  </div>
+                </div>
+              {/snippet}
+            </ReplayRunnerAnalysis>
+          {/if}
+        </div>
+      </section>
+    {/if}
     <section
       class="analysis-section replay-panel"
       data-report-section="replay"
@@ -426,7 +561,7 @@
               {callouts}
               shape={shapes?.[trackId]}
               laneMax={displayedLaneMax}
-              laneTarget={viewport.laneMax}
+              {laneTarget}
               {positionViewport}
               {visibility}
               bind:selected
@@ -520,41 +655,6 @@
       </div>
     </section>
     {#if !overviewOnly}
-      <section
-        class="analysis-section results-panel"
-        data-report-section="results"
-        aria-label="Race results section"
-      >
-        <ReplayResults
-          capture={{ ...capture, raceDistance: replay.bounds.distanceMax }}
-          selectedIndex={replay.runner?.index}
-          oninspect={(index) => {
-            selected = String(index);
-            jump('runner');
-          }}
-        />
-      </section>
-      <section
-        class="analysis-section runner-panel"
-        data-report-section="runner"
-        aria-label="Runner analysis section"
-      >
-        {#if replay.runner}
-          <ReplayRunnerAnalysis
-            {replay}
-            runner={replay.runner}
-            {course}
-            {skillNames}
-            simulation={simulation ?? recordedSimulation(capture)}
-            onretry={onretrysimulation}
-            onbuild={() => (buildOpen = true)}
-            onpickrunner={() => (runnerPickerOpen = true)}
-            onreview={reviewBlocking}
-            onseek={reviewTime}
-            onselect={reviewRunner}
-          />
-        {/if}
-      </section>
       {#if hasSession}
         <div
           class="session-report"
@@ -565,13 +665,6 @@
       {/if}
     {/if}
   </div>
-  <ReplayRunnerPicker
-    {replay}
-    {course}
-    {skillNames}
-    bind:open={runnerPickerOpen}
-    bind:selected
-  />
   <ReplayBuildDialog
     {replay}
     {course}

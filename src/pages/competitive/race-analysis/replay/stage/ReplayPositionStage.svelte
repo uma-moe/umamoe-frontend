@@ -263,12 +263,14 @@
               />
               <b>{r.index + 1}</b>
             </span>
-            <span class="hp">
-              <i
-                style:width={(replay.fieldHp(r.index, false) ?? 0) + '%'}
-                style:background={hpColor(replay.fieldHp(r.index, false))}
-              ></i>
-            </span>
+            {#if toggles.hpBars}
+              <span class="hp">
+                <i
+                  style:width={(replay.fieldHp(r.index, false) ?? 0) + '%'}
+                  style:background={hpColor(replay.fieldHp(r.index, false))}
+                ></i>
+              </span>
+            {/if}
             {#if r.index === replay.runner?.index}
               <span class="marker-name">{r.name}</span>
             {/if}

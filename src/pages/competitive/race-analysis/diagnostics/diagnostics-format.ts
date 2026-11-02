@@ -1,6 +1,7 @@
 import type { ParsedRaceCapture } from '@/lib/race/capture/race-capture-parser';
 import {
   diagnosticLabel,
+  frontBlockingSpans,
   skillActiveDuration,
   type DiagnosticRow,
   type HorseDiagnostics
@@ -115,9 +116,8 @@ export function runnerName(capture: ParsedRaceCapture, value: unknown) {
 
 export const skillOutcomes = [
   'Activated',
-  'Passed wit check, failed condition',
   'Wit check failed',
-  'Not triggered',
+  'Condition failed',
   'Not recorded'
 ] as const;
 
@@ -127,12 +127,14 @@ export function isSkillOutcome(value: unknown): value is SkillOutcome {
   return (skillOutcomes as readonly unknown[]).includes(value);
 }
 
-function activationStatus(roll: DiagnosticRow | undefined, observed: boolean): SkillOutcome {
-  if (!roll) return observed ? 'Activated' : 'Not recorded';
-  if (roll.activated) return 'Activated';
-  if (!roll.passed) return 'Wit check failed';
-  if (roll.required) return 'Passed wit check, failed condition';
-  return 'Not triggered';
+export function skillActivationOutcome(
+  roll: DiagnosticRow | undefined,
+  observed: boolean
+): SkillOutcome {
+  if (observed || roll?.activated) return 'Activated';
+  if (!roll) return 'Not recorded';
+  if (roll.required && !roll.passed) return 'Wit check failed';
+  return 'Condition failed';
 }
 
 export function skillRows(
@@ -151,21 +153,23 @@ export function skillRows(
       }),
       ...(horse?.skillActivationDecisions ?? []).map((d) => Number(d.skillId))
     ])
-  ].map((id) => {
-    const events = activations.filter((e) => e.params[1] === id);
-    const roll = horse?.skillActivationDecisions?.find((d) => d.skillId === id);
-    return {
-      id,
-      count: events.length,
-      first: events[0]?.frameTime ?? '—',
-      duration: events.length || roll?.activated ? (skillActiveDuration(horse, id) ?? '—') : '—',
-      status: activationStatus(roll, events.length > 0),
-      witRequired: Number(roll?.required === true),
-      witPassed: Number(roll?.passed === true),
-      roll: typeof roll?.roll === 'number' ? roll.roll : '—',
-      threshold: typeof roll?.threshold === 'number' ? roll.threshold : '—'
-    };
-  });
+  ]
+    .map((id) => {
+      const events = activations.filter((e) => e.params[1] === id);
+      const roll = horse?.skillActivationDecisions?.find((d) => d.skillId === id);
+      return {
+        id,
+        count: events.length,
+        first: events[0]?.frameTime ?? '—',
+        duration: events.length || roll?.activated ? (skillActiveDuration(horse, id) ?? '—') : '—',
+        status: skillActivationOutcome(roll, events.length > 0),
+        witRequired: Number(roll?.required === true),
+        witPassed: Number(roll?.passed === true),
+        roll: typeof roll?.roll === 'number' ? roll.roll : '—',
+        threshold: typeof roll?.threshold === 'number' ? roll.threshold : '—'
+      };
+    })
+    .sort((a, b) => skillOutcomes.indexOf(a.status) - skillOutcomes.indexOf(b.status));
 }
 
 export function sampleRows(
@@ -179,9 +183,31 @@ export function sampleRows(
   }));
 }
 
-export function modeRows(capture: ParsedRaceCapture, horse: HorseDiagnostics | undefined) {
-  return Object.entries(capture.detailed?.annotations.flags ?? {}).flatMap(([key, flag]) => {
-    const spans = horse?.spans.filter((span) => (span.mask & flag) !== 0) ?? [];
+export function modeSpans(
+  capture: ParsedRaceCapture,
+  horse: HorseDiagnostics | undefined,
+  key: string,
+  index = horse?.horseIndex
+) {
+  if (key === 'rushing') return horse?.temptationSpans ?? [];
+  if (key === 'blocked')
+    return (
+      horse?.frontBlockSpans ??
+      frontBlockingSpans(capture).filter((span) => span.horseIndex === index)
+    );
+
+  const flag = capture.detailed?.annotations.flags[key] ?? 0;
+  return horse?.spans.filter((span) => (span.mask & flag) !== 0) ?? [];
+}
+
+export function modeRows(
+  capture: ParsedRaceCapture,
+  horse: HorseDiagnostics | undefined,
+  index = horse?.horseIndex
+) {
+  const keys = [...Object.keys(capture.detailed?.annotations.flags ?? {}), 'rushing', 'blocked'];
+  return keys.flatMap((key) => {
+    const spans = modeSpans(capture, horse, key, index);
     const firstSpan = spans[0];
     if (!firstSpan) return [];
     return [
@@ -227,11 +253,4 @@ export function rngLimit(sections: DiagnosticsSectionRow[]) {
 export function seekRow(row: Record<string, string | number>, onseek: (time: number) => void) {
   const time = row.time ?? row.startTime;
   if (typeof time === 'number') onseek(time);
-}
-
-export function rushingPeriods(horse: HorseDiagnostics | undefined) {
-  return (horse?.temptationSpans ?? []).map((span) => ({
-    ...span,
-    duration: span.endTime - span.startTime
-  }));
 }

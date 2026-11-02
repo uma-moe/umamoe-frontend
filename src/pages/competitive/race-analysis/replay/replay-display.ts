@@ -2,6 +2,7 @@ export type ReplayToggles = ReturnType<typeof defaultReplayToggles>;
 export type ReplayToggle = keyof ReplayToggles;
 
 export const defaultReplayToggles = () => ({
+  hpBars: false,
   skills: true,
   skillTimers: false,
   blocked: true,
@@ -16,6 +17,7 @@ export const defaultReplayToggles = () => ({
 });
 
 export const replayToggleLabels: Record<ReplayToggle, string> = {
+  hpBars: 'HP bars',
   skills: 'Skill labels',
   skillTimers: 'Skill timers',
   blocked: 'Block indicator',
@@ -30,6 +32,7 @@ export const replayToggleLabels: Record<ReplayToggle, string> = {
 };
 
 export const replayToggleHelp: Record<ReplayToggle, string> = {
+  hpBars: 'Shows remaining HP beneath each Uma in Race positions.',
   skills: 'Names skill activations above each Uma. Instant skills stay visible for 2 seconds.',
   skillTimers:
     'Adds the remaining time to skill and race-mode labels. Needs Skill labels or Race modes.',
@@ -49,7 +52,7 @@ export const replayToggleHelp: Record<ReplayToggle, string> = {
 export const replayToggleGroups: { title: string; keys: ReplayToggle[] }[] = [
   {
     title: 'Runner overlays',
-    keys: ['skills', 'skillTimers', 'raceModes', 'blocked', 'speed', 'accel']
+    keys: ['hpBars', 'skills', 'skillTimers', 'raceModes', 'blocked', 'speed', 'accel']
   },
   { title: 'Course overlays', keys: ['course', 'slopes', 'positionKeep', 'cone', 'minimap'] }
 ];

@@ -139,12 +139,6 @@ pre {
   .behaviour-report > :global(.spurt-report) {
     flex: 1 1 340px;
   }
-  .blocking-summary {
-    grid-column: 1/-1;
-  }
-  .blocking-block {
-    flex-basis: 100%;
-  }
 }
 
 /* The runner's build card sits beside how their race went. */
@@ -169,53 +163,15 @@ pre {
   gap: 10px;
   min-width: 0;
 }
-/* The card keeps its height and the blocking list takes the rest, so the column ends with the skills. */
 .runner-column {
   display: flex;
   flex-direction: column;
   gap: 10px;
   min-width: 0;
 }
-.blocking-panel {
-  position: relative;
-  flex: 1 1 auto;
-  min-height: 150px;
-}
-/* Out of flow, so a long list scrolls inside the card instead of making the row taller. */
-.blocking-fill {
-  position: absolute;
-  inset: 10px 12px;
-  display: flex;
-  flex-direction: column;
-}
-.blocking-fill > :global(*) {
-  display: flex;
-  flex: 1 1 auto;
-  flex-direction: column;
-  min-height: 0;
-}
-.blocking-fill :global(.event-list) {
-  flex: 1 1 auto;
-  min-height: 0;
-  max-height: none;
-}
 @media (max-width: 900px) {
   .runner-overview {
     grid-template-columns: minmax(0, 1fr);
     gap: 10px;
-  }
-  /* Stacked, the skills come before the blocking list. */
-  .runner-column {
-    display: contents;
-  }
-  .blocking-panel {
-    order: 1;
-    min-height: 0;
-  }
-  .blocking-fill {
-    position: static;
-  }
-  .blocking-fill :global(.event-list) {
-    max-height: 240px;
   }
 }

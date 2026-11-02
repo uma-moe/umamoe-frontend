@@ -7,18 +7,16 @@
   import DiagnosticsSkills from './report/DiagnosticsSkills.svelte';
   import DiagnosticsModes from './report/DiagnosticsModes.svelte';
   import DiagnosticsSpurt from './report/DiagnosticsSpurt.svelte';
-  import DiagnosticsRushing from './report/DiagnosticsRushing.svelte';
   import DiagnosticsPaceCharts from './measurements/DiagnosticsPaceCharts.svelte';
   import DiagnosticsSamples from './measurements/DiagnosticsSamples.svelte';
   import DiagnosticsTraces from './measurements/DiagnosticsTraces.svelte';
-  import { count, rushingPeriods, sampleRows, sectionRows } from './diagnostics-format';
+  import { count, sampleRows, sectionRows } from './diagnostics-format';
 
   let {
     capture,
     index,
     skillNames,
     distance,
-    blocking,
     overview,
     notice,
     onseek,
@@ -28,7 +26,6 @@
     index: number;
     skillNames: Map<number, string>;
     distance: number;
-    blocking?: Snippet;
     overview?: Snippet;
     /** Replaces the recorded-data note while there is no detailed simulation for this runner. */
     notice?: Snippet;
@@ -46,8 +43,6 @@
   const horse = $derived(diagnosticHorse(capture, index));
   const runner = $derived(capture.runners.find((r) => r.index === index));
   const samples = $derived(sampleRows(capture, horse));
-  const rushing = $derived(rushingPeriods(horse));
-  const hasRushing = $derived(Boolean(horse?.temptationDecision) || rushing.length > 0);
   const spurt = $derived(horse?.lastSpurtDecision ?? horse?.lastSpurtDecisions?.at(-1));
   const hpRows = $derived(hpChangeEvents(capture, horse?.hpSkillApplications ?? []));
   const sections = $derived(
@@ -71,6 +66,7 @@
       {#if horse}
         <div class="behaviour-report">
           <DiagnosticsModes
+            {index}
             {capture}
             {horse}
             {onseek}
@@ -90,33 +86,20 @@
               {onselect}
             />
           {/if}
-          {#if hasRushing}
-            <DiagnosticsRushing
-              {capture}
-              {index}
-              {horse}
-              rushingPeriods={rushing}
-              {skillNames}
-              {onseek}
-              {onselect}
-            />
-          {/if}
-          {#if !hpRows.length || !hasRushing}
+          {#if !hpRows.length}
             <div class="incident-status report-card">
-              {#if !hpRows.length}
-                <span>No recovery or HP debuffs</span>
-              {/if}
-              {#if !hasRushing}
-                <span>No rushing</span>
-              {/if}
+              <span>No recovery or HP debuffs</span>
             </div>
           {/if}
-          {#if blocking}
-            <div class="report-card blocking-block">{@render blocking()}</div>
-          {/if}
         </div>
-      {:else if blocking}
-        <div class="blocking-summary report-card">{@render blocking()}</div>
+      {:else}
+        <DiagnosticsModes
+          {capture}
+          {index}
+          {horse}
+          {onseek}
+          bind:expandedMode
+        />
       {/if}
     </div>
   {/snippet}
@@ -132,14 +115,15 @@
           {notice}
         />
       {:else}
-        <!-- Without detailed simulation the card and its blocking incidents fill the column beside the skills. -->
         <div class="runner-column">
           {@render overview()}
-          {#if blocking}
-            <div class="blocking-panel report-card">
-              <div class="blocking-fill">{@render blocking()}</div>
-            </div>
-          {/if}
+          <DiagnosticsModes
+            {capture}
+            {index}
+            {horse}
+            {onseek}
+            bind:expandedMode
+          />
         </div>
         <div class="recorded-side">
           <DiagnosticsOutcomeSummary

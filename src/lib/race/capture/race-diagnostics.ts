@@ -237,6 +237,14 @@ export function validateDetailedReplay(value: unknown, count: number): DetailedR
 export const diagnosticLabel = (key: string) =>
   (
     ({
+      conservePower: 'Fully charged',
+      rushing: 'Rushed',
+      blocked: 'Blocked',
+      downhill: 'Downhill mode',
+      positionKeepPaceUpEx: 'Pace up ex',
+      positionKeepSpeedUp: 'Speed up',
+      positionKeepOvertake: 'Overtake',
+      positionKeepPaceDown: 'Pace down',
       worldTransformDistanceLoss: 'Course geometry distance loss (m)',
       finishDistanceToPrevious: 'Gap to previous finisher (m)',
       hpDeficit: 'HP shortfall',
@@ -441,7 +449,7 @@ export const raceMetricHelp: Record<string, string> = {
   Build: 'The five build stats, with the total cost of the learned skills in SP below them.',
   Popularity: 'The simulator’s popularity ranking of the runner; 1 is the favourite.',
   Outcome:
-    'Activated means the skill triggered. Wit check failed means its activation check did not pass. Passed wit check, failed condition means the check passed but the skill’s race conditions were not met.',
+    'Activated means the skill triggered. Wit check failed means its required activation check did not pass. Condition failed means the wit check passed or was not required, but the skill did not activate. Not recorded means activation data is unavailable.',
   Triggers: 'Number of recorded activations for this skill during the race.',
   'First (s)':
     'Time of the first activation or active period. Select the time to watch that moment in replay.',

@@ -173,6 +173,38 @@ describe('race capture parser', () => {
     expect(unmatched?.raw.support_card_list).toBeUndefined();
   });
 
+  it('retains HorseACT training data alongside the race stats', () => {
+    const parsed = parseRaceCapture({
+      simDataBase64: scenario(),
+      raceHorse: [
+        {
+          responseHorseData: { chara_name: 'Silence Suzuka', speed: 1600 },
+          trainedCharaData: {
+            speed: 1200,
+            supportCardArray: [{ position: 1, supportCardId: 30066, limitBreakCount: 4 }],
+            factorDataArray: [{ factorId: 102, level: 0 }],
+            successionCharaList: [
+              { positionId: 10, cardId: 102001, factorDataArray: [{ factorId: 303, level: 0 }] },
+              { positionId: 11, cardId: 102601, factorDataArray: [{ factorId: 401, level: 0 }] }
+            ]
+          }
+        },
+        { _responseHorseData: { chara_name: 'Air Groove' } }
+      ]
+    });
+
+    expect(parsed.runners[0]?.raw).toMatchObject({
+      speed: 1600,
+      support_card_list: [{ position: 1, support_card_id: 30066, limit_break_count: 4 }],
+      factor_id_array: [102],
+      succession_chara_array: [
+        { position_id: 10, card_id: 102001, factor_id_array: [303] },
+        { position_id: 11, card_id: 102601, factor_id_array: [401] }
+      ]
+    });
+    expect(parsed.runners[1]?.raw.support_card_list).toBeUndefined();
+  });
+
   it('retains race-instance IDs from room packets, filenames and archived replays', () => {
     const horses = [{ chara_name: 'Special Week' }],
       race_scenario = scenario();

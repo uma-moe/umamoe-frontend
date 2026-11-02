@@ -2,6 +2,7 @@
   import InfoIcon from '@/components/feedback/InfoIcon.svelte';
   import type { ParsedRaceCapture } from '@/lib/race/capture/race-capture-parser';
   import { diagnosticHorse } from '@/lib/race/capture/race-diagnostics';
+  import { skillActivationOutcome } from '../diagnostics/diagnostics-format';
   import { skillActivityRows, skillIconGroups, type SkillPeriod } from './skill-activity';
   import RaceSkill from '@/pages/competitive/runners/RaceSkill.svelte';
   import InspectPopover from '@/components/overlays/InspectPopover.svelte';
@@ -109,13 +110,9 @@
 
   function outcome(id: number) {
     const decision = decisions.find((decision) => Number(decision.skillId) === id);
-    return decision?.activated
-      ? 'Activated, timing not recorded'
-      : decision && !decision.passed
-        ? 'Wit check failed'
-        : decision?.required
-          ? 'Passed wit check, failed condition'
-          : 'No recorded activation';
+    if (decision?.activated) return 'Activated, timing not recorded';
+
+    return skillActivationOutcome(decision, false);
   }
 </script>
 
