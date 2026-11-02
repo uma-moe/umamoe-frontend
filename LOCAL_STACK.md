@@ -25,8 +25,8 @@ npm run dev:local
 This creates `.env.stack.local` and the local simulator key when they are missing, rebuilds
 whatever changed in the sibling repositories, starts the whole stack (resources, simulator,
 backend, search, ingest, Postgres and Redis) and waits until it is healthy. Because it starts the
-full app, it needs all five repositories and the database snapshot described under
-[Full app](#full-app). Without a snapshot, `sh local.sh` below runs resources and the simulator. It then runs Vite on
+full app, it needs all five repositories; the database starts with the backend's demo data (see
+[Full app](#full-app)). It then runs Vite on
 this machine at http://127.0.0.1:5173, pointed at that stack, so edits show up instantly.
 `.env.development.local` is left untouched; the stack addresses and key only apply to this run.
 
@@ -76,18 +76,19 @@ serves the explorer bundle named by `UMAMOE_V3_SKILL_EXPLORER`; see the simulato
 ## Full app
 
 Also check out **umamoe-backend**, **umamoe-search**, and **umamoe-ingest** beside this
-repository. There is no seed data yet, and the backend's migrations assume its existing base
-schema, so an empty database doesn't work. Provide a **current local database snapshot** as plain
-SQL exported with
-`pg_dump --no-owner --no-acl`. Set `LOCAL_DATABASE_DUMP` in `.env.stack.local`
-to that file, then run:
+repository, then run:
 
 ```sh
 sh local.sh --app
 ```
 
-Postgres imports that file on its first startup into this stack's own database
-volume. Backend migrations then run on that copy. The startup service registers
+On its first startup Postgres imports the backend's demo database,
+`../umamoe-backend/dev/demo-database.sql`, into this stack's own database volume: the schema plus
+100 synthetic, linked trainers, circles, users and API keys (demo trainer `900000000001`).
+Backend migrations then run on that copy. To use a real snapshot instead, export plain SQL with
+`pg_dump --no-owner --no-acl` and set `LOCAL_DATABASE_DUMP` in `.env.stack.local` to that file.
+Either file is imported only while the Postgres volume is empty; to switch, stop the stack and
+remove this project's `postgres-data` volume. The startup service registers
 a generated local simulator API key; the Vite proxy reads it from a Docker secret.
 The key stays out of browser assets. The frontend runs Vite with live source
 updates; dependencies stay in a Docker volume. Refresh that volume after changing
