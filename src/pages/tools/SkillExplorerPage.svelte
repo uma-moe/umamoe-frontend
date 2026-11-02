@@ -108,7 +108,6 @@
   let raceCourses = $state.raw(new Map<number, RaceCourse>());
   let pageError = $state('');
   let timelineMeetings = $state.raw<NumberedMeeting[]>([]);
-  /** The schedule is in, so a kept meeting can be checked against it. */
   let timelineLoaded = $state(false);
   let statlines = $state.raw<StatlinesData>();
 

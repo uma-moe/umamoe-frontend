@@ -20,7 +20,6 @@ export function restoreCourseSelection(): SavedCourseSelection | undefined {
     const saved: unknown = JSON.parse(localStorage.getItem(STORAGE_KEY) ?? 'null');
     return isSelection(saved) ? saved : undefined;
   } catch {
-    // Storage can be disabled or hold something else; start on every course then.
     return undefined;
   }
 }
@@ -29,7 +28,5 @@ export function restoreCourseSelection(): SavedCourseSelection | undefined {
 export function saveCourseSelection(selection: SavedCourseSelection): void {
   try {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(selection));
-  } catch {
-    // Storage can be full or disabled; the pick still holds for this visit.
-  }
+  } catch {}
 }
