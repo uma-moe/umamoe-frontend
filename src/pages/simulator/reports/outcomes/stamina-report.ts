@@ -179,6 +179,15 @@ export function neededStamina(
 /** The effective stamina a raw stat runs with: above 1200 counts half. */
 export const effectiveStamina = (raw: number) => compress(raw);
 
+/**
+ * The raw stamina a race ran with, read back from her maximum HP: her green skills and stat bonuses included, as the
+ * simulator applied them. `undefined` for a style or motivation it can't read.
+ */
+export function racedStamina(maxHp: number, distance: number, style: string, motivation: number) {
+  const perPoint = hpPerStamina(style, motivation);
+  return perPoint > 0 && Number.isFinite(maxHp) ? expand((maxHp - distance) / perPoint) : undefined;
+}
+
 export function staminaRaces(
   result: MonteCarloResult,
   source: number,

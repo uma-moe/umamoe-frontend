@@ -89,6 +89,8 @@ export interface StaminaResult {
   debuff_hp_loss: number;
   wasted_recovery_hp: number;
   effects_applied: number;
+  /** Her own skills that fired, passives at the start; missing from simulators older than skill racing. */
+  skill_activations?: Array<{ skill_id: number; time_seconds: number; distance_m: number }>;
   exhausted_at: { time_seconds: number; distance_m: number } | null;
   finish_time_seconds: number;
   last_spurt_start_distance_m: number | null;

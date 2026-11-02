@@ -1,19 +1,13 @@
-import type { RaceCourse } from '@/lib/game-data/racing/courses';
-import type { SkillData } from '@/lib/game-data/skills/skills';
 import { RACE_TYPES } from '../../requests/stamina-request';
-import type { SimulatorUma } from '../../simulator-uma';
-import { countSkills, createHpPlan, STAT_KEYS, type HpPlan } from './hp-plan';
-import { RUNNING_STYLES } from '../trainee';
+import { createHpPlan, STAT_KEYS, type HpPlan } from './hp-plan';
 
 /**
  * The HP calculator's own skill counts and race options, kept apart from the race field so nothing here changes the
- * race simulator's field. The runner is shared with the Build optimizer (simulator-runner). Saved in this browser, so
- * a reload or a discarded tab keeps the setup.
+ * race simulator's field. The runner, whose own skills race as she has them, is shared with the Build optimizer
+ * (simulator-runner). Saved in this browser, so a reload or a discarded tab keeps the setup.
  */
 export interface HpCalculatorState {
   plan: HpPlan;
-  /** Which build the skill counts were last taken from, for the note beside them. */
-  counted: string;
   raceType: string;
   fullSpurt: string;
 }
@@ -23,7 +17,6 @@ const STORAGE_KEY = 'uma.hp-calculator.v1';
 function defaults(): HpCalculatorState {
   return {
     plan: createHpPlan(),
-    counted: '',
     raceType: '0',
     fullSpurt: 'false'
   };
@@ -108,7 +101,6 @@ export function restoreHpCalculator(saved: unknown): HpCalculatorState {
   if (!data) return state;
 
   state.plan = restorePlan(data.plan);
-  if (typeof data.counted === 'string') state.counted = data.counted;
   if (typeof data.raceType === 'string') state.raceType = restoreRaceType(data.raceType);
   if (data.fullSpurt === 'true' || data.fullSpurt === 'false') state.fullSpurt = data.fullSpurt;
 
@@ -134,26 +126,4 @@ export function saveHpCalculator(): void {
   } catch {
     /* Storage can be full or disabled; the setup still works for this visit. */
   }
-}
-
-/** Counts her learned skills into the skill counts, for this course and her running style. */
-export function countHpSkills(
-  uma: SimulatorUma,
-  skills: Map<number, SkillData>,
-  course: RaceCourse | undefined
-): void {
-  if (!uma.skills.length || !skills.size) return;
-  const style = RUNNING_STYLES.indexOf(uma.trainee.runningStyle as (typeof RUNNING_STYLES)[number]);
-  Object.assign(
-    hpCalculator.plan,
-    countSkills(uma.skills, skills, {
-      distance: course?.distance,
-      distanceType: course?.distance_type,
-      surface: course?.surface,
-      turn: course?.turn,
-      style: style === 4 ? 1 : style + 1
-    })
-  );
-
-  hpCalculator.counted = 'Counted from ' + uma.name + '’s ' + uma.skills.length + ' skills';
 }

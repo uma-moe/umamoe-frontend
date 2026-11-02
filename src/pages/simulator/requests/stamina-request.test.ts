@@ -58,6 +58,19 @@ describe('stamina request', () => {
     expect(body.states).toEqual([]);
   });
 
+  it('sends her own skills for the simulator to race, and none when she has none', () => {
+    const body = buildStaminaRequest({
+      ...baseForm(),
+      skills: [{ skillId: 200351 }, { skillId: 100231, level: 9 }, { skillId: 0 }]
+    });
+
+    expect(body.uma.skills).toEqual([
+      { skill_id: 200351, level: 1 },
+      { skill_id: 100231, level: 6 }
+    ]);
+    expect('skills' in buildStaminaRequest(baseForm()).uma).toBe(false);
+  });
+
   it('normalizes the seed to an int32', () => {
     expect(buildStaminaRequest({ ...baseForm(), seed: 1.9 }).seed).toBe(1);
     expect(buildStaminaRequest({ ...baseForm(), seed: 2147483648 }).seed).toBe(-2147483648);

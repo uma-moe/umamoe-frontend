@@ -1,6 +1,5 @@
 <script lang="ts">
   import { onMount } from 'svelte';
-  import { loadSkills, type SkillData } from '@/lib/game-data/skills/skills';
   import type { RaceCourse } from '@/lib/game-data/racing/courses';
   import {
     loadReplayCourses,
@@ -20,7 +19,6 @@
   import { explainStaminaError, traineeGrades } from './setup/hp/hp-run';
   import StaminaResultPanel from './reports/outcomes/hp/StaminaResult.svelte';
   import {
-    countHpSkills,
     hpCalculator,
     restoreHpCalculator,
     saveHpCalculator
@@ -32,6 +30,7 @@
   } from './setup/runner/simulator-runner.svelte';
   import { planEvents, planStats, type PlanMarker } from './setup/hp/hp-plan';
   import { hpSpread, hpVerdict } from './reports/outcomes/hp/hp-needed';
+  import { racedStamina } from './reports/outcomes/stamina-report';
   import { traineeMotivation, traineeRunningStyle, traineeStats } from './setup/trainee';
   import {
     buildStaminaRequest,
@@ -43,7 +42,6 @@
     type SimulatorRun,
     type StaminaResult
   } from './simulator-repository';
-  import type { SimulatorUma } from './simulator-uma';
   import {
     selectedRaceInstanceId,
     selectedCourse,
@@ -64,7 +62,7 @@
     | (SimulatorRun<StaminaResult> & {
         forced: boolean;
         course: RaceCourse;
-        /** Stamina with green skills, and `base` without them. */
+        /** Stamina she raced with, her own and counted green skills included, and `base` without them. */
         runner: { stamina: number; base: number; style: string; motivation: number };
         effects: StaminaEffectInput[];
         markers: PlanMarker[];
@@ -80,7 +78,6 @@
   // Inputs whose calculation failed, so a failure is not retried until something changes.
   let failedKey = $state('');
   let courses = $state.raw<Record<string, Course>>({});
-  let skills = $state.raw(new Map<number, SkillData>());
 
   // Keep the setup and the runner in this browser as they change.
   $effect(saveHpCalculator);
@@ -95,15 +92,6 @@
       .catch((reason: unknown) => {
         if (active)
           error = reason instanceof Error ? reason.message : 'Course details could not be loaded.';
-      });
-
-    void loadSkills()
-      .then((value) => {
-        if (active) skills = value;
-      })
-      .catch((reason: unknown) => {
-        if (active)
-          error = reason instanceof Error ? reason.message : 'Skill data could not be loaded.';
       });
 
     return () => {
@@ -131,6 +119,7 @@
       hpCalculator.fullSpurt,
       simulatorSession.ground,
       trainee,
+      simulatorRunner.uma.skills,
       hpCalculator.plan
     ])
   );
@@ -166,10 +155,6 @@
     return { destroy: () => node.removeEventListener('keydown', listener) };
   }
 
-  function count(uma: SimulatorUma) {
-    countHpSkills(uma, skills, course);
-  }
-
   async function send(): Promise<void> {
     if (busy || !canRun || !course) return;
     live = true;
@@ -196,6 +181,7 @@
         styleAptitudes: traineeGrades(trainee.styleAptitudes),
         groundAptitudes: traineeGrades(trainee.groundAptitudes),
         fullSpurt: hpCalculator.fullSpurt === 'true',
+        skills: $state.snapshot(simulatorRunner.uma.skills),
         courseDistanceM: target.distance,
         effects: plan.effects,
         states: plan.states
@@ -207,7 +193,13 @@
         forced: form.fullSpurt,
         course: target,
         runner: {
-          stamina: stats.stamina,
+          stamina:
+            racedStamina(
+              response.result.max_hp,
+              target.distance,
+              form.runningStyle,
+              form.motivation
+            ) ?? stats.stamina,
           base: traineeStats(trainee).stamina,
           style: form.runningStyle,
           motivation: form.motivation
@@ -262,7 +254,6 @@
         bind:uma={simulatorRunner.uma}
         green={hpCalculator.plan.green}
         {course}
-        onbuild={count}
         oncode={() => (codeOpen = true)}
       />
       <HpRaceSection />
@@ -271,7 +262,6 @@
         guts={stats.guts}
         wit={stats.wisdom}
         skillCount={simulatorRunner.uma.skills.length}
-        oncount={() => count(simulatorRunner.uma)}
       />
     </div>
     <HpCalcBar
@@ -330,7 +320,6 @@
   onrestore={restoreTab}
   onimport={({ umas }) => {
     simulatorRunner.uma = umas[0]!;
-    count(umas[0]!);
   }}
 />
 

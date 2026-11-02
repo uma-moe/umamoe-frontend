@@ -1,5 +1,3 @@
-import { resolveEncodedSkill, type SkillData } from '@/lib/game-data/skills/skills';
-import type { MonteCarloSkillInput } from '../../requests/race-sim-request';
 import type {
   StaminaEffectInput,
   StaminaStateInput,
@@ -7,9 +5,9 @@ import type {
 } from '../../requests/stamina-request';
 
 /**
- * The HP calculator's quick input: how many skills of each kind the runner has and what happens between her and the
- * other runners, instead of each skill one by one. `planEvents` turns it into the recovery, debuffs and state windows
- * the simulator runs, placed where such skills and situations usually happen on the course.
+ * The HP calculator's quick input: how many skills of each kind to add beyond her own, which the simulator races as
+ * she has them, and what happens between her and the other runners. `planEvents` turns it into the recovery, debuffs
+ * and state windows the simulator runs, placed where such skills and situations usually happen on the course.
  */
 
 export type StatKey = keyof TraineeStats;
@@ -362,74 +360,7 @@ export function planEvents(
   return { effects, states, markers };
 }
 
-/** The part of a catalog effect that holds the first trigger's first value, with its kind. */
-function firstEffect(effect: string | undefined) {
-  const match = (effect ?? '').match(
-    /(Stamina Recovery|Increase Target Speed|Increase Current Speed|Increase Acceleration|(Speed|Stamina|Power|Guts|Wisdom|Wit) Stat Up)\s*\(\s*(-?\d*\.?\d+)\s*\)/i
-  );
-
-  if (!match) return undefined;
-  const name = match[1]!.toLowerCase();
-  const statName = match[2]?.toLowerCase();
-  const stat = STAT_KEYS.find((key) => key === (statName === 'wit' ? 'wisdom' : statName));
-  let kind: 'recovery' | 'accel' | 'speed' | 'green' = 'green';
-  if (name.startsWith('stamina recovery')) kind = 'recovery';
-  else if (name.includes('acceleration')) kind = 'accel';
-  else if (name.includes('speed') && !stat) kind = 'speed';
-  return {
-    kind,
-    stat,
-    value: Number(match[3])
-  };
-}
-
-const EARLY = /phase(?:_random)?==0|activate_count_start|is_activate_start/;
-
-/** Whether a green skill's simple conditions hold on this course for this running style; unknown ones count. */
-function greenApplies(conditions: string | undefined, context: CountContext) {
-  const text = (conditions ?? '').split('@')[0]!.replace(/\s+/g, '');
-  const checks: Array<[RegExp, number | undefined]> = [
-    [/rotation==(\d)/, context.turn],
-    [/ground_type==(\d)/, context.surface],
-    [/distance_type==(\d)/, context.distanceType],
-    [/running_style==(\d)/, context.style]
-  ];
-
-  for (const [pattern, actual] of checks) {
-    const match = text.match(pattern);
-    if (match && actual !== undefined && Number(match[1]) !== actual) return false;
-  }
-
-  if (/is_basis_distance==1/.test(text) && context.distance !== undefined)
-    return context.distance % 400 === 0;
-  return true;
-}
-
-export interface CountContext {
-  distance?: number;
-  distanceType?: number;
-  surface?: number;
-  turn?: number;
-  /** 1 front runner … 4 end closer, as skill conditions number them. */
-  style?: number;
-}
-
-/** Which counter one skill adds to, with the value from its catalog effect. */
-export type SkillCount =
-  | {
-      kind: 'recovery' | 'speed' | 'accel';
-      tier: keyof SkillCounts;
-      value: number;
-      /** Fires at the start or in the early race, long before the spurt, so it barely changes HP use. */
-      early: boolean;
-    }
-  | { kind: 'green'; stat: StatKey; tier: 'gold' | 'white'; value: number };
-
-/**
- * Skill icons by what they do. The game draws a skill's icon by its kind (the first four digits) and tier (the last:
- * 1 white, 2 gold, 3 unique, 4 a version that makes things worse), so the icon also tells the kind when the catalog
- * has no effect values.
- */
+/** Skill icons by what they do, as the game draws them: kind in the first four digits, tier in the last. */
 export const SKILL_ICONS = {
   recovery: {
     white: 'utx_ico_skill_20021',
@@ -461,93 +392,6 @@ export const SKILL_ICONS = {
   } satisfies Record<StatKey, string>
 } as const;
 
-const ICON_KINDS: Record<string, 'recovery' | 'speed' | 'accel'> = {
-  '2001': 'speed',
-  '2002': 'recovery',
-  '2004': 'accel'
-};
-
-const ICON_STATS: Record<string, StatKey> = {
-  '1001': 'speed',
-  '1002': 'stamina',
-  '1003': 'power',
-  '1004': 'guts',
-  '1005': 'wisdom'
-};
-
-/** How much a unique heals, from how its description puts it. */
-const HEAL_WORDS: Array<[RegExp, number]> = [
-  [/greatly|tremendously|massively/i, 0.055],
-  [/moderately/i, 0.035],
-  [/slightly/i, 0.015]
-];
-
-/** What a skill does from its icon and description, for catalogs without effect values. */
-function iconEffect(skill: SkillData): ReturnType<typeof firstEffect> {
-  const code = skill.icon?.match(/(\d{5})\.(?:png|webp)$/)?.[1];
-  if (!code || code[4] === '4') return undefined;
-  const family = code.slice(0, 4),
-    description = skill.description ?? '';
-
-  // Inherited uniques can carry a stat icon; their description says what they really do ("surge ahead" is speed).
-  let described: 'recovery' | 'accel' | 'speed' | undefined;
-  if (/recover (?:own )?endurance/i.test(description)) described = 'recovery';
-  else if (/accelerat/i.test(description)) described = 'accel';
-  else if (/velocity|surge ahead|kick forward/i.test(description)) described = 'speed';
-  const stat = ICON_STATS[family];
-  if (stat && !described) {
-    // A green raises a stat: marked ◎ or ○, or said to raise performance, proficiency or a stat by name.
-    const green =
-      /[◎○]\s*$/.test(skill.name) ||
-      (/performance|proficiency|\b(?:speed|stamina|power|guts|wit)\b/i.test(description) &&
-        !/\{\d\}/.test(description));
-
-    if (!green) return undefined;
-    const strong =
-      code[4] === '2' ||
-      /◎\s*$/.test(skill.name) ||
-      (!/○\s*$/.test(skill.name) && !/^\s*moderately/i.test(description));
-
-    return { kind: 'green', stat, value: strong ? GREEN_BONUS.gold : GREEN_BONUS.white };
-  }
-
-  const kind = ICON_KINDS[family] ?? described;
-  if (!kind) return undefined;
-  const heal = HEAL_WORDS.find(([words]) => words.test(description))?.[1];
-  return {
-    kind,
-    stat: undefined,
-    value: kind === 'recovery' ? (heal ?? (code[4] === '2' ? 0.055 : 0.015)) : 1
-  };
-}
-
-/**
- * What one catalog skill counts as: recovery, speed or acceleration of a tier, or a green skill on a stat. Her own
- * unique counts as unique; an inherited unique counts as white. `undefined` when it does not change her HP use.
- */
-export function classifySkill(skill: SkillData, inherited = false): SkillCount | undefined {
-  const effect = firstEffect(skill.effect) ?? iconEffect(skill);
-  if (!effect || effect.value <= 0) return undefined;
-  if (effect.kind === 'green')
-    return effect.stat
-      ? {
-          kind: 'green',
-          stat: effect.stat,
-          tier: effect.value >= 60 ? 'gold' : 'white',
-          value: effect.value
-        }
-      : undefined;
-  let tier: 'unique' | 'gold' | 'white' = 'white';
-  if ((skill.unique || skill.rarity >= 3) && !inherited) tier = 'unique';
-  else if (skill.rarity === 2) tier = 'gold';
-  return {
-    kind: effect.kind,
-    tier,
-    value: effect.value,
-    early: effect.kind !== 'recovery' && EARLY.test(skill.conditions ?? '')
-  };
-}
-
 export const STAT_LABELS: Record<StatKey, string> = {
   speed: 'Speed',
   stamina: 'Stamina',
@@ -555,72 +399,3 @@ export const STAT_LABELS: Record<StatKey, string> = {
   guts: 'Guts',
   wisdom: 'Wit'
 };
-
-const TIER_LABELS = { gold: 'Gold', white: 'White', unique: 'Unique' } as const;
-const KIND_NOUNS = { recovery: 'recovery', speed: 'speed', accel: 'acceleration' } as const;
-
-/** The counter a skill adds to, in words: "Gold recovery", "Stamina ◎". */
-export function skillCountLabel(item: SkillCount): string {
-  return item.kind === 'green'
-    ? STAT_LABELS[item.stat] + (item.tier === 'gold' ? ' ◎' : ' ○')
-    : TIER_LABELS[item.tier] + ' ' + KIND_NOUNS[item.kind];
-}
-
-/**
- * Adds one skill to the counts. A unique recovery also sets the unique's heal to the nearest tier, and its level when
- * given. Returns false when that counter is already full.
- */
-export function addSkillCount(
-  plan: Pick<HpPlan, 'recovery' | 'speed' | 'accel' | 'green'>,
-  item: SkillCount,
-  level?: number
-): boolean {
-  if (item.kind === 'green') {
-    const green = plan.green[item.stat];
-    if (green[item.tier] >= MAX_COUNT) return false;
-    green[item.tier] += 1;
-    return true;
-  }
-
-  const group = plan[item.kind];
-  if (group[item.tier] >= (item.tier === 'unique' ? 2 : MAX_COUNT)) return false;
-  group[item.tier] += 1;
-  if (item.kind === 'recovery' && item.tier === 'unique') {
-    const percent = item.value * 100;
-    plan.recovery.uniquePercent = UNIQUE_RECOVERY_TIERS.reduce((best, tier) =>
-      Math.abs(tier - percent) < Math.abs(best - percent) ? tier : best
-    );
-    if (level !== undefined) plan.recovery.uniqueLevel = Math.min(6, Math.max(1, level));
-  }
-
-  return true;
-}
-
-/**
- * Counts a runner's learned skills into the plan's skill counts, from each skill's catalog effect: what it heals, how
- * much speed or acceleration it adds, and which stat a green skill raises when its course conditions hold. Early-race
- * speed and acceleration skills are left out, as they fire long before the spurt.
- */
-export function countSkills(
-  skills: MonteCarloSkillInput[],
-  skillLookup: Map<number, SkillData>,
-  context: CountContext = {}
-): Pick<HpPlan, 'recovery' | 'speed' | 'accel' | 'green'> {
-  const plan = createHpPlan();
-  const seen = new Set<number>();
-  for (const learned of skills) {
-    const { skill, inherited, level } = resolveEncodedSkill(
-      skillLookup,
-      learned.skillId * 10 + (learned.level ?? 1)
-    );
-
-    if (!skill || seen.has(skill.skill_id)) continue;
-    seen.add(skill.skill_id);
-    const item = classifySkill(skill, inherited);
-    if (!item) continue;
-    if (item.kind === 'green' ? !greenApplies(skill.conditions, context) : item.early) continue;
-    addSkillCount(plan, item, level);
-  }
-
-  return { recovery: plan.recovery, speed: plan.speed, accel: plan.accel, green: plan.green };
-}
