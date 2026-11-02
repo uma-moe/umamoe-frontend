@@ -3,7 +3,7 @@ import {
   isOptimizeModel,
   type OptimizeModel,
   type OptimizeEvaluation,
-  type OptimizeScenarioResult,
+  type OptimizeEstimate,
   type V5PurchaseValue,
   type OptimizeFinalist,
   type OptimizeResult,
@@ -47,6 +47,11 @@ export function winText(win: number): string {
 /** `38.1%`, a win rate (0–1) measured in races. */
 export function winRateText(rate: number): string {
   return (rate * 100).toFixed(1) + '%';
+}
+
+/** `10,818`, Team Trials points rounded to whole points. */
+export function pointsText(points: number): string {
+  return Math.round(points).toLocaleString('en-US');
 }
 
 /** How far a build trails the pick in the races that ranked them: win points (0–1), and that gap's standard error. */
@@ -240,6 +245,8 @@ export interface TheorizedBuild {
   /** Whole-build gain is lengths for theory, measured seconds saved for V5. */
   unit?: 'seconds';
   winRate?: number;
+  /** Team Trials points per race, shown in place of a win rate against the optimizer's pack. */
+  teamTrialsScore?: TeamTrialsScore;
   finalist: OptimizeFinalist;
   /** Lengths it gains her over her build as it is, its skills' synergies included. */
   value: number | undefined;
@@ -563,23 +570,38 @@ export function checkText(finalist: OptimizeFinalist, field: boolean, races: num
 /** Weighted by the actual number of races in each scenario, excluding missing metrics. */
 function measuredMean(
   evaluation: OptimizeEvaluation | null | undefined,
-  key: keyof OptimizeScenarioResult
+  key: 'win_rate' | 'finish_time_seconds' | 'hp_left' | 'full_spurt'
 ): number | undefined {
+  return racedMean((evaluation?.scenarios ?? []).map((scenario) => scenario[key]));
+}
+
+function racedMean(metrics: Array<OptimizeEstimate | undefined>): number | undefined {
   let total = 0,
     races = 0;
-  for (const scenario of evaluation?.scenarios ?? []) {
-    const metric = scenario[key];
-    if (
-      typeof metric !== 'object' ||
-      !metric ||
-      metric.samples <= 0 ||
-      !Number.isFinite(metric.mean)
-    )
-      continue;
+  for (const metric of metrics) {
+    if (!metric || metric.samples <= 0 || !Number.isFinite(metric.mean)) continue;
     total += metric.mean * metric.samples;
     races += metric.samples;
   }
   return races > 0 ? total / races : undefined;
+}
+
+export interface TeamTrialsScore {
+  /** With the other runners: place, margin and leading her style against the optimizer's skill-less pack. */
+  all: number;
+  /** What her own race decides: skill activations, start, time against the course's mark and rushing. */
+  own: number;
+}
+
+function teamTrialsScore(
+  evaluation: OptimizeEvaluation | null | undefined
+): TeamTrialsScore | undefined {
+  const scores = (evaluation?.scenarios ?? []).map((scenario) => scenario.team_trials_score);
+  const all = racedMean(scores.map((score) => score?.all));
+  const own = racedMean(scores.map((score) => score?.own));
+  if (all === undefined || own === undefined) return undefined;
+
+  return { all, own };
 }
 
 /** Read V5's report into the existing comparison cards, matching builds by purchases rather than position. */
@@ -629,6 +651,7 @@ function v5Result(result: OptimizeResult, offers: PricedOffer[]): TheorizedResul
       unit: 'seconds',
       value: baseline !== undefined && seconds !== undefined ? baseline - seconds : undefined,
       winRate: measuredMean(evaluated, 'win_rate'),
+      teamTrialsScore: teamTrialsScore(evaluated),
       count: cells.length,
       cells,
       skipped: [...rows.shared, ...rows.differ].flatMap((row) =>
@@ -713,6 +736,7 @@ function racedResult(result: OptimizeResult, offers: PricedOffer[]): TheorizedRe
       unit: 'seconds',
       value: (finalist.validation_gain ?? finalist.gain)?.mean,
       winRate: measuredMean(finalist.validation ?? finalist.search, 'win_rate'),
+      teamTrialsScore: teamTrialsScore(finalist.validation ?? finalist.search),
       count: cells.length,
       cells,
       skipped: ordered.flatMap((row) =>

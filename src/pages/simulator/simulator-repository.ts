@@ -155,6 +155,15 @@ export interface OptimizeScenarioResult {
   hp_left?: OptimizeEstimate;
   /** How often she had the HP for her fastest last spurt, 0 to 1. Newer services only. */
   full_spurt?: OptimizeEstimate;
+  /** Team Trials only: her raw TT points per race, before the account's bonuses. */
+  team_trials_score?: OptimizeTeamTrialsScore;
+}
+
+export interface OptimizeTeamTrialsScore {
+  /** Every part, place, margin and leading her style against the optimizer's skill-less pack included. */
+  all: OptimizeEstimate;
+  /** Only what her own race decides: skill activations, start, time against the course's mark and rushing. */
+  own: OptimizeEstimate;
 }
 
 /** How a build did over every race: overall fitness and each scenario's metrics. */
