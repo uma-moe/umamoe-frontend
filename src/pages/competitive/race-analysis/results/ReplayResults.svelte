@@ -22,7 +22,6 @@
   import Icon from '@/components/Icon.svelte';
   import LastSpurtResult from './LastSpurtResult.svelte';
   import { n, raceResultRows } from './replay-results';
-  import SkillPoints, { LEARNED_SKILL_POINTS_NOTE } from '@/components/game/SkillPoints.svelte';
 
   let {
     capture,
@@ -331,17 +330,19 @@
       {:else if col.key === 'sp'}
         <div class="result-stats">
           <StatStrip
-            items={stats(r)}
+            items={[
+              ...stats(r),
+              {
+                id: 'sp',
+                label: 'Skill points',
+                value: row.sp ?? '—',
+                icon: '/game-assets/textures/hint.webp'
+              }
+            ]}
             label={r.name + ' build stats'}
             presentation="values"
             compact
           />
-          <span class="result-sp">
-            <SkillPoints
-              value={typeof row.sp === 'number' ? row.sp : null}
-              note={LEARNED_SKILL_POINTS_NOTE}
-            />
-          </span>
         </div>
       {:else}
         {row[col.key]}

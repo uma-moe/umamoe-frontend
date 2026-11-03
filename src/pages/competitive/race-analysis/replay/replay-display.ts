@@ -44,7 +44,8 @@ export const replayToggleHelp: Record<ReplayToggle, string> = {
   raceModes:
     'Labels Pace Up, Pace Down, Speed Up, Overtake, dueling and rushing. Recorded races only show rushing.',
   course: 'Corners, straights and race phase markers.',
-  positionKeep: 'Pace Down and Pace Up zones for each running style while position keeping lasts.',
+  positionKeep:
+    'Pace Down and Pace Up zones while position keeping lasts, plus a flag on the current pacemaker when detailed simulation data is available.',
   cone: 'The base vision cone in front of the followed Uma on the course map.',
   minimap: 'A small full-course map that marks the part of the track currently in view.'
 };

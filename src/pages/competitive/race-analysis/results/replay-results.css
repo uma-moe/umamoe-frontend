@@ -262,11 +262,6 @@ small {
   width: 16px;
   height: 16px;
 }
-.result-sp {
-  display: flex;
-  justify-content: flex-end;
-  font-size: 12px;
-}
 /* Labelled values in two lines, so their columns line up from runner to runner. */
 .mode-values {
   display: inline-grid;

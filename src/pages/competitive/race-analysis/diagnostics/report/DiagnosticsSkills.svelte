@@ -5,7 +5,6 @@
   import Icon from '@/components/Icon.svelte';
   import type { IconName } from '@/components/icon-types';
   import RaceSkill from '@/pages/competitive/runners/RaceSkill.svelte';
-  import DiagnosticsMetricHelp from '../DiagnosticsMetricHelp.svelte';
   import { isSkillOutcome, skillRows, type SkillOutcome } from '../diagnostics-format';
 
   type OutcomeTone = 'activated' | 'caution' | 'failed' | 'idle';
@@ -95,7 +94,6 @@
     <h3>
       Skill procs <small>{activatedSkills}/{rows.length} activated</small>
     </h3>
-    <DiagnosticsMetricHelp label="Wit check threshold" />
   </header>
   <div
     class="skill-columns"

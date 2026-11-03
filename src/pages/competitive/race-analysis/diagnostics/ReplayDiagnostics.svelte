@@ -1,16 +1,19 @@
 <script lang="ts">
   import type { Snippet } from 'svelte';
+  import RunnerSupportDeck from '../../runners/RunnerSupportDeck.svelte';
+  import { veteranSupportCards } from '@/lib/veterans/records/veteran-profile';
   import type { ParsedRaceCapture } from '@/lib/race/capture/race-capture-parser';
-  import { diagnosticHorse, hpChangeEvents } from '@/lib/race/capture/race-diagnostics';
-  import Disclosure from '@/components/overlays/Disclosure.svelte';
+  import { diagnosticHorse } from '@/lib/race/capture/race-diagnostics';
+  import Dialog from '@/components/overlays/Dialog.svelte';
   import DiagnosticsOutcomeSummary from './DiagnosticsOutcomeSummary.svelte';
   import DiagnosticsSkills from './report/DiagnosticsSkills.svelte';
   import DiagnosticsModes from './report/DiagnosticsModes.svelte';
+  import DiagnosticsHp from './report/DiagnosticsHp.svelte';
   import DiagnosticsSpurt from './report/DiagnosticsSpurt.svelte';
-  import DiagnosticsPaceCharts from './measurements/DiagnosticsPaceCharts.svelte';
-  import DiagnosticsSamples from './measurements/DiagnosticsSamples.svelte';
   import DiagnosticsTraces from './measurements/DiagnosticsTraces.svelte';
-  import { count, sampleRows, sectionRows } from './diagnostics-format';
+  import DiagnosticsAcceleration from './measurements/DiagnosticsAcceleration.svelte';
+  import { hpReport } from './report/hp-report';
+  import { number } from './diagnostics-format';
 
   let {
     capture,
@@ -18,6 +21,7 @@
     skillNames,
     distance,
     overview,
+    buildPreview,
     notice,
     onseek,
     onselect
@@ -27,6 +31,7 @@
     skillNames: Map<number, string>;
     distance: number;
     overview?: Snippet;
+    buildPreview?: Snippet;
     /** Replaces the recorded-data note while there is no detailed simulation for this runner. */
     notice?: Snippet;
     onseek: (time: number) => void;
@@ -35,19 +40,32 @@
 
   const instanceId = $props.id();
 
-  let rawOpen = $state(true);
-  let sourceOpen = $state(false);
   let expandedMode = $state<string>();
   let spurtOpen = $state(false);
+  let breakdownOpen = $state(false);
+
+  $effect(() => {
+    capture;
+    index;
+    breakdownOpen = false;
+    spurtOpen = false;
+  });
 
   const horse = $derived(diagnosticHorse(capture, index));
   const runner = $derived(capture.runners.find((r) => r.index === index));
-  const samples = $derived(sampleRows(capture, horse));
   const spurt = $derived(horse?.lastSpurtDecision ?? horse?.lastSpurtDecisions?.at(-1));
-  const hpRows = $derived(hpChangeEvents(capture, horse?.hpSkillApplications ?? []));
-  const sections = $derived(
-    sectionRows(capture, index, horse?.baseTargetSpeedSections ?? [], distance)
+  const hp = $derived(hpReport(capture, index));
+  const deck = $derived(
+    veteranSupportCards(runner?.raw ?? {}).map((card) => ({
+      id: card.support_card_id,
+      lb: card.limit_break_count ?? 0
+    }))
   );
+
+  function openSpurtBreakdown() {
+    spurtOpen = false;
+    breakdownOpen = true;
+  }
 </script>
 
 <section
@@ -65,6 +83,13 @@
       />
       {#if horse}
         <div class="behaviour-report">
+          <DiagnosticsHp
+            {capture}
+            {index}
+            {skillNames}
+            {onseek}
+            onspurt={spurt ? openSpurtBreakdown : undefined}
+          />
           <DiagnosticsModes
             {index}
             {capture}
@@ -72,25 +97,6 @@
             {onseek}
             bind:expandedMode
           />
-          {#if spurt}
-            <DiagnosticsSpurt
-              bind:spurtOpen
-              id={instanceId}
-              {spurt}
-              {capture}
-              {index}
-              {horse}
-              {distance}
-              {skillNames}
-              {onseek}
-              {onselect}
-            />
-          {/if}
-          {#if !hpRows.length}
-            <div class="incident-status report-card">
-              <span>No recovery or HP debuffs</span>
-            </div>
-          {/if}
         </div>
       {:else}
         <DiagnosticsModes
@@ -106,38 +112,30 @@
 
   {#if overview}
     <div class="runner-overview">
-      {#if horse}
-        {@render overview()}
-        <DiagnosticsOutcomeSummary
-          {capture}
-          {index}
-          {horse}
-          {notice}
-        />
+      {@render overview()}
+      {#if buildPreview}
+        {@render buildPreview()}
+        {#if !horse}
+          <div class="runner-notice">
+            <DiagnosticsOutcomeSummary
+              {capture}
+              {index}
+              {horse}
+              {notice}
+            />
+          </div>
+        {/if}
       {:else}
-        <div class="runner-column">
-          {@render overview()}
-          <DiagnosticsModes
-            {capture}
-            {index}
-            {horse}
-            {onseek}
-            bind:expandedMode
+        <div class="runner-setup">
+          <RunnerSupportDeck
+            {deck}
+            compact
           />
-        </div>
-        <div class="recorded-side">
           <DiagnosticsOutcomeSummary
             {capture}
             {index}
             {horse}
             {notice}
-          />
-          <DiagnosticsSkills
-            {capture}
-            {index}
-            {horse}
-            {skillNames}
-            {onseek}
           />
         </div>
       {/if}
@@ -151,77 +149,96 @@
     />
   {/if}
 
-  {#if horse || !overview}
-    {@render report()}
-  {/if}
+  {@render report()}
   {#if horse}
     <div
-      class="measurements"
-      aria-label="Runner pace and speed"
+      class="measurement-data"
+      aria-label="Runner simulation data"
     >
-      <DiagnosticsPaceCharts
-        sampleRows={samples}
-        sectionRows={sections}
-        {onseek}
-      />
-      <Disclosure
-        id={instanceId + '-raw'}
-        title="Detailed measurements & simulation data"
-        description={count(samples.length, 'sample') + ', ' + count(sections.length, 'section')}
-        compact
-        bind:open={rawOpen}
-      >
-        {#if rawOpen}
-          <div class="measurement-data">
-            <DiagnosticsSamples
-              sampleRows={samples}
-              sectionRows={sections}
-              {onseek}
-            />
-            <DiagnosticsTraces
-              id={instanceId}
-              {capture}
-              {index}
-              {horse}
-              {hpRows}
-              {skillNames}
-              {onseek}
-              {onselect}
-            />
-            <div class="simulation-source report-card">
-              <footer class="simulation-meta">
-                <span>
-                  Engine <strong>{capture.detailed?.engineBuild}</strong>
-                </span>
-                <span>
-                  Seed <strong>{capture.detailed?.seed}</strong>
-                </span>
-                <span>
-                  Schema <strong>{capture.detailed?.annotations.schemaVersion}</strong>
-                </span>
-                {#if typeof horse.popularity === 'number'}
-                  <span>
-                    Popularity <strong>{horse.popularity}</strong>
-                  </span>
-                {/if}
-              </footer>
-              <Disclosure
-                id={instanceId + '-source'}
-                title="Raw simulator response"
-                compact
-                bind:open={sourceOpen}
-              >
-                {#if sourceOpen}
-                  <pre>{JSON.stringify(capture.detailed, null, 2)}</pre>
-                {/if}
-              </Disclosure>
-            </div>
-          </div>
-        {/if}
-      </Disclosure>
+      <div class="decision-reports">
+        <DiagnosticsTraces
+          id={instanceId}
+          {capture}
+          {index}
+          {horse}
+          {skillNames}
+          {onseek}
+          {onselect}
+        />
+        <DiagnosticsAcceleration
+          {capture}
+          {index}
+          {distance}
+          {skillNames}
+          {onseek}
+        />
+      </div>
+      <div class="simulation-source report-card">
+        <footer class="simulation-meta">
+          <span>
+            Engine <strong>{capture.detailed?.engineBuild}</strong>
+          </span>
+          <span>
+            Seed <strong>{capture.detailed?.seed}</strong>
+          </span>
+          <span>
+            Schema <strong>{capture.detailed?.annotations.schemaVersion}</strong>
+          </span>
+          {#if typeof horse.popularity === 'number'}
+            <span>
+              Popularity <strong>{horse.popularity}</strong>
+            </span>
+          {/if}
+        </footer>
+      </div>
     </div>
   {/if}
 </section>
+
+<Dialog
+  bind:open={breakdownOpen}
+  title="Last-spurt breakdown"
+  description={runner?.name}
+  maxWidth="760px"
+>
+  {#if breakdownOpen && horse && spurt}
+    <p class="first-check-detail">
+      Starting HP: {number(hp.hp.start)}.
+      {#if hp.checkTime !== undefined}
+        Spurt check:
+        <button
+          type="button"
+          onclick={() => {
+            if (hp.checkTime === undefined) return;
+            breakdownOpen = false;
+            onseek(hp.checkTime);
+          }}
+        >
+          {hp.checkTime.toFixed(3)} s
+        </button>
+        .
+      {/if}
+    </p>
+    <DiagnosticsSpurt
+      bind:spurtOpen
+      id={instanceId}
+      {spurt}
+      {capture}
+      {index}
+      {horse}
+      {distance}
+      {skillNames}
+      onseek={(time) => {
+        breakdownOpen = false;
+        onseek(time);
+      }}
+      onselect={(runnerIndex) => {
+        breakdownOpen = false;
+        onselect(runnerIndex);
+      }}
+    />
+  {/if}
+</Dialog>
 
 <style>
   @import './report-card.css';

@@ -14,6 +14,7 @@
     metrics: contentMetrics,
     inlineMetrics = false,
     training,
+    showOwnSparks = true,
     headerActions
   }: {
     runner: RaceRunner;
@@ -28,6 +29,7 @@
     /** Short metrics share the identity line instead of a row of their own. */
     inlineMetrics?: boolean;
     training?: Snippet;
+    showOwnSparks?: boolean;
     headerActions?: Snippet;
   } = $props();
 </script>
@@ -43,6 +45,7 @@
     {outfit}
     {raceContext}
     {training}
+    {showOwnSparks}
     {headerActions}
     {inlineMetrics}
     expanded={content === 'full'}

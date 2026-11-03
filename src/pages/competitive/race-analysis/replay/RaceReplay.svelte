@@ -573,6 +573,7 @@
               viewDistance={toggles.cone ? courses?.baseViewDistance : undefined}
               blockerIndex={toggles.blocked ? replay.blocker : -1}
               blocking={toggles.blocked ? replay.blockingNow : []}
+              pacemakerIndex={toggles.positionKeep ? replay.pacemaker : undefined}
               skillEvents={toggles.skills ? replay.recentSkills : []}
               runnerLabels={callouts}
               timers={toggles.skillTimers}

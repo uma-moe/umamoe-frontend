@@ -12,7 +12,6 @@ p {
 .report-facts dd.caution {
   color: var(--accent-warning);
 }
-/* The chart takes the height the report column has left beside the skills. */
 .spurt-report {
   display: flex;
   flex-direction: column;

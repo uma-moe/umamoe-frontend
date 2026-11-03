@@ -148,7 +148,7 @@
         </div>
       {/if}
       <div>
-        <dt>Full spurt speed<DiagnosticsMetricHelp label="Full spurt speed" /></dt>
+        <dt>Full spurt speed</dt>
         <dd>
           {fixed(spurt.fullSpurtTargetSpeed, 2)}
           <small>m/s</small>

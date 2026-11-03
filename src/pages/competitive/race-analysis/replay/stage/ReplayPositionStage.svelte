@@ -10,6 +10,7 @@
   import type { CourseShape } from '../replay-course';
   import type { RunnerCallout } from '../replay-callouts';
   import ReplayRunnerCallouts from '../ReplayRunnerCallouts.svelte';
+  import ReplayPacemakerBadge from '../ReplayPacemakerBadge.svelte';
   import ReplayCourseMinimap from '../map/ReplayCourseMinimap.svelte';
   import { finalSpurtSection } from '@/lib/race/final-spurt';
 
@@ -262,6 +263,9 @@
                 shape="circle"
               />
               <b>{r.index + 1}</b>
+              {#if toggles.positionKeep && replay.pacemaker === r.index}
+                <ReplayPacemakerBadge marker />
+              {/if}
             </span>
             {#if toggles.hpBars}
               <span class="hp">

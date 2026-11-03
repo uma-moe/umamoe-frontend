@@ -9,6 +9,9 @@
   import type { Course } from '../replay-course';
   import type { ReplayState } from '../replay-state.svelte';
   import ReplaySimulationNotice from './ReplaySimulationNotice.svelte';
+  import RunnerTrainingPreview from './RunnerTrainingPreview.svelte';
+  import DiagnosticsOutcomeSummary from '../../diagnostics/DiagnosticsOutcomeSummary.svelte';
+  import { diagnosticHorse } from '@/lib/race/capture/race-diagnostics';
 
   let {
     replay,
@@ -35,6 +38,7 @@
   } = $props();
 
   let cardWidth = $state(0);
+  const horse = $derived(diagnosticHorse(replay.capture, runner.index));
 
   const winningTime = $derived(
     Math.min(
@@ -46,6 +50,13 @@
 <header class="report-heading">
   <h2 class="sr-only">Runner analysis</h2>
   {@render navigation()}
+  {#if horse}
+    <DiagnosticsOutcomeSummary
+      capture={replay.capture}
+      index={runner.index}
+      {horse}
+    />
+  {/if}
   <div class="report-actions">
     <Button
       variant="secondary"
@@ -68,7 +79,7 @@
       {skillNames}
       framed
       content="summary"
-      inlineMetrics={cardWidth >= 560}
+      inlineMetrics={cardWidth >= 460}
       color={replay.teamColor(runner)}
       raceContext={{
         surface: course?.surface,
@@ -118,7 +129,14 @@
     notice={simulation.status === 'ready' ? undefined : simulationNotice}
     {onseek}
     {onselect}
-  />
+  >
+    {#snippet buildPreview()}
+      <RunnerTrainingPreview
+        {runner}
+        {onbuild}
+      />
+    {/snippet}
+  </ReplayDiagnostics>
 </div>
 
 <style>

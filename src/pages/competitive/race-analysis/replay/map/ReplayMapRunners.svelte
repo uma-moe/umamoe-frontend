@@ -7,6 +7,7 @@
   import { crowdedCallouts, dotRadius, placeCaptions, type MapCallout } from './course-map-labels';
   import type { RunnerCallout } from '../replay-callouts';
   import ReplayRunnerCallouts from '../ReplayRunnerCallouts.svelte';
+  import ReplayPacemakerBadge from '../ReplayPacemakerBadge.svelte';
 
   let {
     callouts,
@@ -26,6 +27,7 @@
     showSpeed,
     showAcceleration,
     acceleration,
+    pacemakerIndex,
     selected = $bindable('0')
   }: {
     callouts: MapCallout[];
@@ -45,6 +47,7 @@
     showSpeed: boolean;
     showAcceleration: boolean;
     acceleration?: (index: number) => number;
+    pacemakerIndex?: number;
     selected?: string;
   } = $props();
 
@@ -142,6 +145,9 @@
         >
           {places.get(marker.runner.index)}
         </b>
+        {#if pacemakerIndex === marker.runner.index}
+          <ReplayPacemakerBadge marker />
+        {/if}
       </div>
     </foreignObject>
     <text

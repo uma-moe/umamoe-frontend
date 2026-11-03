@@ -7,6 +7,7 @@ import {
 } from '@/lib/race/replay/race-replay';
 import {
   blockerAt,
+  activeSpan,
   frontBlockingSpans,
   diagnosticHorse,
   detailedSample,
@@ -85,6 +86,13 @@ export class ReplayState {
   );
 
   diagnostic = $derived(diagnosticHorse(this.capture, this.runner?.index ?? 0));
+  pacemaker = $derived.by(() => {
+    const index = activeSpan(
+      this.capture.detailed?.annotations.paceMakerSpans,
+      this.time
+    )?.horseIndex;
+    return this.capture.runners.some((runner) => runner.index === index) ? index : undefined;
+  });
   blockingSpans = $derived(frontBlockingSpans(this.capture));
   blockingNow = $derived(
     this.capture.runners.flatMap((r) => {

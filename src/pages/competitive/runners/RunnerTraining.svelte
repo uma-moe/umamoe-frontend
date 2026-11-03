@@ -3,57 +3,56 @@
   import type { Build } from '../hakuraku-types';
   import Artwork from '@/components/game/Artwork.svelte';
   import Disclosure from '@/components/overlays/Disclosure.svelte';
-  import LimitBreak from '@/components/game/LimitBreak.svelte';
   import RadioGroup from '@/components/controls/RadioGroup.svelte';
+  import Button from '@/components/controls/Button.svelte';
   import SparkItem from '@/components/sparks/SparkItem.svelte';
-  import {
-    supportCardImagePath,
-    loadSupportCards,
-    type SupportCardData
-  } from '@/lib/game-data/support-cards/support-cards';
-  import {
-    supportCardDisplay,
-    supportTypeName
-  } from '@/lib/game-data/support-cards/support-card-details';
+  import RunnerSupportDeck from './RunnerSupportDeck.svelte';
   import { loadCharacters, type CharacterData } from '@/lib/game-data/characters';
-  import { watchFactors, decodeFactorEntry } from '@/lib/game-data/factors/factors';
+  import {
+    watchFactors,
+    decodeFactorEntry,
+    factorLoadingState
+  } from '@/lib/game-data/factors/factors';
+  import { parentSparkTotals } from './parent-spark-totals';
   import { portrait } from '../analysis-view';
 
   let {
     deck = [],
     parents = [],
     ownFactors = [],
+    showOwnSparks = true,
     label = 'Runner'
   }: {
     deck?: Pick<NonNullable<Build['deck']>[number], 'id' | 'lb'>[];
     parents?: Pick<NonNullable<Build['parents']>[number], 'positionId' | 'cardId' | 'factors'>[];
     ownFactors?: { id: number; level: number }[];
+    showOwnSparks?: boolean;
     label?: string;
   } = $props();
 
-  type SupportType = ReturnType<typeof supportTypeName> | 'Group';
-
   const instanceId = $props.id();
 
-  let selectedParent = $state(''),
+  let selectedParent = $state('total'),
     mobileTraining = $state(false);
 
-  let supports = $state.raw(new Map<string, SupportCardData>()),
-    characters = $state.raw(new Map<number, CharacterData>());
+  let characters = $state.raw(new Map<number, CharacterData>());
 
-  $effect(() => {
-    selectedParent = String(parents[0]?.positionId ?? '');
+  const activeParent = $derived(
+    parents.find((parent) => String(parent.positionId) === selectedParent)
+  );
+  const selectedSparks = $derived.by(() => {
+    $factorLoadingState;
+    return selectedParent === 'total'
+      ? parentSparkTotals(parents)
+      : (activeParent?.factors ?? []).map((factor) => decodeFactorEntry(factor.id, factor.level));
   });
 
-  function supportType(card: SupportCardData): SupportType {
-    return card.type === 'group' ? 'Group' : supportTypeName(card.type);
-  }
+  $effect(() => {
+    parents;
+    selectedParent = 'total';
+  });
 
   onMount(() => {
-    void loadSupportCards()
-      .then((rows) => (supports = new Map(rows.map((row) => [row.id, row]))))
-      .catch(() => {});
-
     void loadCharacters()
       .then((rows) => (characters = rows))
       .catch(() => {});
@@ -76,64 +75,21 @@
   aria-label={label + ' training setup'}
 >
   {#snippet trainingSections()}
-    <section class="support-section">
-      <h3>Support deck</h3>
-      {#if deck?.length}
-        <ul class="support-deck">
-          {#each deck as card}
-            {@const resource = supports.get(String(card.id))}
-            {@const display = resource ? supportCardDisplay(resource) : undefined}
-            {@const type = resource ? supportType(resource) : undefined}
-            <li
-              title={(display ? display.character + ', ' + display.title : 'Support ' + card.id) +
-                ', limit break ' +
-                card.lb}
-            >
-              <span class="support-art">
-                <Artwork
-                  src={supportCardImagePath(card.id)}
-                  fallbackSrc="/assets/images/placeholder-card.webp"
-                  alt={display?.character ?? 'Support ' + card.id}
-                  kind="card"
-                  size="sm"
-                />
-                {#if type}
-                  <img
-                    class="support-type"
-                    src={'/assets/images/icon/stats/' + type.toLowerCase() + '.webp'}
-                    alt={type + ' support'}
-                    title={type + ' support'}
-                    width="16"
-                    height="16"
-                  />
-                {/if}
-              </span>
-              <div class="support-text">
-                <span class="support-name">{display?.character ?? 'Card ' + card.id}</span>
-                <div class="support-meta">
-                  {#if resource && [1, 2, 3].includes(resource.rarity)}
-                    {@const rarity =
-                      resource.rarity === 3 ? 'SSR' : resource.rarity === 2 ? 'SR' : 'R'}
-                    <img
-                      class="support-rarity"
-                      src={'/game-assets/support-rarity/' + rarity.toLowerCase() + '.png'}
-                      alt={rarity}
-                      width="22"
-                      height="22"
-                    />
-                  {/if}
-                  <span class="support-lb"><LimitBreak value={card.lb} /></span>
-                </div>
-              </div>
-            </li>
-          {/each}
-        </ul>
-      {:else}
-        <p>No support deck was captured.</p>
-      {/if}
-    </section>
+    <RunnerSupportDeck {deck} />
     <section class="inheritance-section">
-      <h3>Parents & grandparents</h3>
+      <header class="inheritance-heading">
+        <h3>Parents & grandparents</h3>
+        {#if parents.length}
+          <Button
+            size="sm"
+            variant={selectedParent === 'total' ? 'primary' : 'secondary'}
+            ariaPressed={selectedParent === 'total'}
+            onclick={() => (selectedParent = 'total')}
+          >
+            Total
+          </Button>
+        {/if}
+      </header>
       {#if parents?.length}
         <div class="parent-builds">
           {#each [1, 2] as branch}
@@ -169,18 +125,22 @@
       {/if}
     </section>
     {#if parents?.length}
-      {@const activeParent =
-        parents.find((parent) => String(parent.positionId) === selectedParent) ?? parents[0]!}
       <section class="parent-factors">
         <header>
           <h3>
-            Sparks <span>{activeParent.factors.length}</span>
+            Sparks <span>{selectedSparks.length}</span>
           </h3>
-          <p>{characters.get(activeParent.cardId)?.name ?? activeParent.cardId}</p>
+          <p>
+            {selectedParent === 'total'
+              ? 'Total'
+              : activeParent
+                ? (characters.get(activeParent.cardId)?.name ?? activeParent.cardId)
+                : ''}
+          </p>
         </header>
         <div class="parent-sparks">
-          {#each activeParent.factors as factor}
-            {@const spark = decodeFactorEntry(factor.id, factor.level)}<SparkItem
+          {#each selectedSparks as spark}
+            <SparkItem
               name={spark.name}
               level={spark.level}
               tone={spark.category === 'stats'
@@ -196,7 +156,7 @@
         </div>
       </section>
     {/if}
-    {#if ownFactors.length}
+    {#if showOwnSparks && ownFactors.length}
       <section class="own-factors">
         <h3>
           Own sparks <span>{ownFactors.length}</span>
