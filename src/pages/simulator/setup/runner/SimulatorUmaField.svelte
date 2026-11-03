@@ -3,6 +3,7 @@
   import Button from '@/components/controls/Button.svelte';
   import Icon from '@/components/Icon.svelte';
   import Menu, { type MenuItem } from '@/components/navigation/Menu.svelte';
+  import Dialog from '@/components/overlays/Dialog.svelte';
   import SimulatorTeamPicker from './SimulatorTeamPicker.svelte';
   import Artwork from '@/components/game/Artwork.svelte';
   import SkillChip from '@/components/game/SkillChip.svelte';
@@ -53,6 +54,7 @@
     adding = $state(false),
     editorOpen = $state(false),
     veteransOpen = $state(false),
+    clearOpen = $state(false),
     error = $state('');
 
   const course = $derived(selectedCourse());
@@ -123,10 +125,9 @@
   }
 
   function clearField() {
-    if (!window.confirm('Remove all ' + simulatorRoster.umas.length + ' runners?')) return;
-
     clearSimulatorField();
     simulatorSession.umaId = '';
+    clearOpen = false;
   }
 
   function duplicate(uma: SimulatorUma) {
@@ -248,12 +249,12 @@
 
     {@render extraActions?.()}
     <Button
-      variant="ghost"
+      variant="secondary"
       size="sm"
       icon="close"
       ariaLabel="Clear field"
       disabled={!simulatorRoster.umas.length}
-      onclick={clearField}
+      onclick={() => (clearOpen = true)}
     >
       Clear field
     </Button>
@@ -377,6 +378,33 @@
     {/if}
   </div>
 </SimSection>
+<!-- In-app, because embedded browsers can answer window.confirm without showing it. -->
+<Dialog
+  bind:open={clearOpen}
+  title="Clear the race field?"
+  icon="trash"
+  maxWidth="420px"
+  compact
+>
+  <p class="clear-note">
+    All {simulatorRoster.umas.length} runners will be removed from the field.
+  </p>
+  {#snippet actions()}
+    <Button
+      variant="secondary"
+      onclick={() => (clearOpen = false)}
+    >
+      Cancel
+    </Button>
+    <Button
+      variant="danger"
+      icon="trash"
+      onclick={clearField}
+    >
+      Clear field
+    </Button>
+  {/snippet}
+</Dialog>
 <SimulatorVeteranPicker
   bind:open={veteransOpen}
   onselectMany={addVeterans}

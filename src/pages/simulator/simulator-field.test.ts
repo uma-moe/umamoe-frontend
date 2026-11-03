@@ -1,7 +1,10 @@
 import { describe, expect, it } from 'vitest';
 import {
+  claimRunner,
+  isDrawnOpponent,
   replaceSimulatorField,
   restoreSimulatorField,
+  seatCmRoom,
   simulatorRoster,
   simulatorTeamColors
 } from './simulator-roster.svelte';
@@ -41,5 +44,48 @@ describe('whole race fields from a code', () => {
     expect(simulatorRoster.configured).toBe(true);
     expect(simulatorTeamColors[7]).toBe('#123456');
     expect(simulatorTeamColors[1]).toBe('#69b7ee');
+  });
+});
+
+describe('a CM room drawn beside the user’s runners', () => {
+  const team = (name: string) => [runner(name + ' 1'), runner(name + ' 2'), runner(name + ' 3')];
+
+  it('keeps the CM Data label on drawn runners', () => {
+    simulatorRoster.umas = [];
+
+    seatCmRoom([team('First').map((uma) => ({ ...uma, source: 'CM Data' }))], 'cm21');
+
+    expect(simulatorRoster.umas.map((uma) => uma.source)).toEqual([
+      'CM Data',
+      'CM Data',
+      'CM Data'
+    ]);
+  });
+
+  it('seats each drawn team on a team number the kept runners leave free', () => {
+    simulatorRoster.umas = [{ ...runner('Seiun Sky'), teamId: 1 }];
+
+    seatCmRoom([team('First'), team('Second')], 'cm21');
+
+    const drawn = simulatorRoster.umas.filter(isDrawnOpponent);
+    expect(simulatorRoster.umas[0]?.name).toBe('Seiun Sky');
+    expect(drawn.map((uma) => uma.teamId)).toEqual([2, 2, 2, 3, 3, 3]);
+  });
+
+  it('replaces the last draw but keeps a drawn runner the user claimed', () => {
+    simulatorRoster.umas = [];
+    seatCmRoom([team('First'), team('Second'), team('Third')], 'cm21');
+    const claimed = simulatorRoster.umas[0]!;
+    claimRunner(claimed);
+
+    seatCmRoom([team('Fourth'), team('Fifth'), team('Sixth')], 'cm21');
+
+    expect(isDrawnOpponent(claimed)).toBe(false);
+    expect(simulatorRoster.umas.map((uma) => uma.name)).toEqual([
+      'First 1',
+      ...team('Fourth').map((uma) => uma.name),
+      ...team('Fifth').map((uma) => uma.name),
+      ...team('Sixth').map((uma) => uma.name)
+    ]);
   });
 });

@@ -25,6 +25,8 @@ export interface SimulatorUma {
   frameOrder?: number;
   fanCount?: number;
   source?: string;
+  /** The CM dataset a room fill drew her from; filling again replaces her. */
+  drawnFrom?: string;
   capturedAptitudes?: Build['aptitudes'];
 }
 
@@ -71,7 +73,7 @@ export function restoreSimulatorUma(value: unknown, fallback: SimulatorUma): Sim
     if (typeof input === 'number' && Number.isFinite(input)) restored[field] = input;
   }
 
-  for (const field of ['teamColor', 'source'] as const) {
+  for (const field of ['teamColor', 'source', 'drawnFrom'] as const) {
     if (!(field in value)) continue;
     const input = value[field];
     if (typeof input === 'string') restored[field] = input;

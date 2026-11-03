@@ -11,6 +11,7 @@
   import TextField from '@/components/controls/TextField.svelte';
   import SimulatorShell from './shell/SimulatorShell.svelte';
   import SimulatorUmaField from './setup/runner/SimulatorUmaField.svelte';
+  import CmRoomFill from './setup/cm-room/CmRoomFill.svelte';
   import BuildCodeDialog from './setup/build/code/BuildCodeDialog.svelte';
   import {
     BUILD_CODE_VERSION,
@@ -73,6 +74,7 @@
   >(null);
 
   let error = $state(''),
+    roomError = $state(''),
     busy = $state(false),
     codeOpen = $state(false);
 
@@ -380,7 +382,22 @@
             }
           ]}
           onimport={importRunners}
-        />
+        >
+          {#snippet actions()}<CmRoomFill bind:error={roomError} />{/snippet}
+        </SimulatorUmaField>
+        {#if roomError}
+          <div class="import-notice">
+            <Banner
+              title="Could not add real CM teams"
+              tone="danger"
+              reportable={false}
+              dismissible
+              ondismiss={() => (roomError = '')}
+            >
+              <p>{roomError}</p>
+            </Banner>
+          </div>
+        {/if}
         {#if simulatorSession.importNotice}
           <div class="import-notice">
             <Banner
