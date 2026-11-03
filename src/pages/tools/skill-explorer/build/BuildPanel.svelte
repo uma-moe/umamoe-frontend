@@ -130,7 +130,7 @@
   {title}
   description={custom
     ? 'The chart shows what each skill adds to your build. These values come from fewer races than the reference build, so small differences can be noise.'
-    : `The chart shows what each skill adds to these skills: the build our optimizer picks for a ${styleName} runner on this course.`}
+    : `The chart shows what each skill adds to these skills: what our optimizer buys a ${styleName} runner on this course with the latest CM's average SP.`}
   maxWidth="640px"
   maxHeight="88dvh"
   mobileMaxHeight="96dvh"
