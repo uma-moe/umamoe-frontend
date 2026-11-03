@@ -1,8 +1,8 @@
 <script lang="ts">
   import Button from '@/components/controls/Button.svelte';
   import Combobox from '@/components/controls/Combobox.svelte';
-  import Banner from '@/components/feedback/Banner.svelte';
   import SkillChip from '@/components/game/SkillChip.svelte';
+  import Icon from '@/components/Icon.svelte';
   import Dialog from '@/components/overlays/Dialog.svelte';
   import { skillImage, skillRarity, type SkillData } from '@/lib/game-data/skills/skills';
   import DialogStatus from '@/pages/simulator/shell/DialogStatus.svelte';
@@ -129,13 +129,24 @@
   bind:open
   {title}
   description={custom
-    ? 'The chart shows what each skill adds to your build. These values come from fewer races than the reference build, so small differences can be noise.'
-    : `The chart shows what each skill adds to these skills: the build our optimizer picks for a ${styleName} runner on this course.`}
+    ? 'The skills you picked. The chart values every skill in this build.'
+    : `The skills our optimizer picks for a ${styleName} runner on this course.`}
   maxWidth="640px"
   maxHeight="88dvh"
   mobileMaxHeight="96dvh"
   mobileActionsStack
 >
+  <p class="disclaimer">
+    <Icon
+      name="info"
+      size={14}
+    />
+    <span>
+      Changed builds race on our simulator: up to {BUILD_RUNS} every {BUILD_WINDOW_MINUTES} minutes, with
+      noisier values.
+    </span>
+  </p>
+
   <section
     class="skills"
     aria-labelledby="{id}-skills"
@@ -187,15 +198,6 @@
       <p class="empty">No skills yet. Search to add some.</p>
     {/if}
   </section>
-
-  {#if !accepted}
-    <Banner title="Changing the build">
-      A changed build is raced on our simulator, which takes 10–30 seconds. You can value {BUILD_RUNS}
-      builds every
-      {BUILD_WINDOW_MINUTES} minutes, and their values come from fewer races than the reference build,
-      so small differences can be noise.
-    </Banner>
-  {/if}
 
   {#snippet actions()}
     {#if !accepted}
@@ -254,6 +256,20 @@
     min-width: 0;
   }
 
+  .disclaimer {
+    display: flex;
+    gap: 6px;
+    align-items: center;
+    margin: 0 0 12px;
+    color: var(--text-secondary);
+    font-size: 12px;
+    line-height: 1.4;
+  }
+
+  .disclaimer :global(svg) {
+    flex: 0 0 auto;
+  }
+
   /* The heading, count, search and chips of the simulator's skill editor (RunnerSkills). */
   .count {
     min-width: 18px;
@@ -305,11 +321,6 @@
   .picked li {
     display: flex;
     min-width: 0;
-  }
-
-  .picked :global(.skill-chip) {
-    min-height: 32px;
-    font-size: 12px;
   }
 
   .empty {

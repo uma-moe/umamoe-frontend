@@ -52,7 +52,7 @@ describe('explorer builds', () => {
     };
 
     expect(buildErrorText(refused('rate_limited', { 'retry-after': '125' }))).toBe(
-      'You can value 3 builds every 10 minutes. Try again in 3 minutes.'
+      'You can value 10 builds every 10 minutes. Try again in 3 minutes.'
     );
     expect(buildErrorText(refused('run_in_progress'))).toMatch(/still running/);
   });

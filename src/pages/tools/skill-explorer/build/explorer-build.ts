@@ -8,7 +8,7 @@ import { skillFamily } from '../skill-explorer-view';
 export const MAX_BUILD_SKILLS = 20;
 
 /** A visitor values this many builds every `BUILD_WINDOW_MINUTES`; the backend refuses more. */
-export const BUILD_RUNS = 3;
+export const BUILD_RUNS = 10;
 export const BUILD_WINDOW_MINUTES = 10;
 
 /** Every skill's values in a build the visitor picked, on one course for one style. */
