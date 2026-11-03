@@ -116,12 +116,24 @@
       { key: 'delay', label: 'Delay', numeric: true },
       { key: 'spurt', label: 'Last spurt', numeric: true },
       { key: 'hp', label: 'HP result', numeric: true },
-      ...(hasDuel ? [{ key: 'duel', label: 'Duel (s)', numeric: true }] : []),
-      ...(hasDownhill ? [{ key: 'downhill', label: 'Downhill (s)', numeric: true }] : []),
-      ...(hasPace ? [{ key: 'paceUp', label: 'Pace (s)', numeric: true }] : []),
-      ...(hasLoss ? [{ key: 'loss', label: 'Course loss (m)', numeric: true }] : []),
+      ...(hasDuel ? [{ key: 'duel', label: 'Duel', helpKey: 'Duel (s)', numeric: true }] : []),
+      ...(hasDownhill
+        ? [{ key: 'downhill', label: 'Downhill', helpKey: 'Downhill (s)', numeric: true }]
+        : []),
+      ...(hasPace ? [{ key: 'paceUp', label: 'Pace', helpKey: 'Pace (s)', numeric: true }] : []),
+      ...(hasLoss
+        ? [{ key: 'loss', label: 'Course loss', helpKey: 'Course loss (m)', numeric: true }]
+        : []),
       ...(hasIncidents
-        ? [{ key: 'blocked', label: 'Incidents (s)', numeric: true, sortable: false }]
+        ? [
+            {
+              key: 'blocked',
+              label: 'Incidents',
+              helpKey: 'Incidents (s)',
+              numeric: true,
+              sortable: false
+            }
+          ]
         : []),
       { key: 'sp', label: 'Stats', numeric: true, sortable: false }
     ]}
@@ -320,11 +332,11 @@
         <dl class="mode-values incidents">
           <div>
             <dt>Blocked</dt>
-            <dd>{n(row.blocked)}</dd>
+            <dd>{typeof row.blocked === 'number' ? n(row.blocked) + ' s' : '—'}</dd>
           </div>
           <div>
             <dt>Rushed</dt>
-            <dd>{n(row.rushed)}</dd>
+            <dd>{typeof row.rushed === 'number' ? n(row.rushed) + ' s' : '—'}</dd>
           </div>
         </dl>
       {:else if col.key === 'sp'}

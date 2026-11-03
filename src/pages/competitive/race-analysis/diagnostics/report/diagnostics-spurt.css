@@ -131,10 +131,6 @@ p {
   color: var(--accent-primary);
   font-weight: 600;
 }
-.spurt-comparison small {
-  font-size: 10px;
-  font-weight: 400;
-}
 .spurt-result {
   display: flex;
   flex-wrap: wrap;

@@ -118,7 +118,7 @@
           Not recorded
         {:else}
           <span>
-            <span class:negative={report.totalLoss > 0}>{number(report.totalLoss, 2)}</span>
+            <span class:negative={report.totalLoss > 0}>{number(report.totalLoss, 2)} HP</span>
             total
           </span>
           {#if report.totalLoss > 0}
@@ -129,7 +129,7 @@
             {:else}
               <span>
                 - <span class:negative={report.lossBeforeCheck > 0}>
-                  {number(report.lossBeforeCheck, 2)}
+                  {number(report.lossBeforeCheck, 2)} HP
                 </span>
                 before spurt check
               </span>
@@ -156,7 +156,7 @@
           bind:sortDirection
           maxHeight={effects.length > 6 ? 210 : undefined}
           columns={[
-            { key: 'time', label: 'Time (s)', numeric: true },
+            { key: 'time', label: 'Time', helpKey: 'Time (s)', numeric: true },
             { key: 'skillId', label: 'Skill' },
             { key: 'change', label: 'HP change', numeric: true }
           ]}
@@ -187,7 +187,7 @@
                   ? 'Requested ' + signed(Number(row.requested)) + ' HP'
                   : undefined}
               >
-                {signed(Number(row.change))}{#if typeof row.percent === 'number'}
+                {signed(Number(row.change))} HP{#if typeof row.percent === 'number'}
                   <span>({signed(row.percent, 1)}%)</span>{/if}
               </span>
             {/if}

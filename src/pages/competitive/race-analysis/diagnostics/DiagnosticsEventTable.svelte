@@ -30,6 +30,15 @@
     onseek: (time: number) => void;
     onselect: (index: number) => void;
   } = $props();
+
+  const units: Record<string, string> = {
+    checkDistance: 'm',
+    selectedStartDistance: 'm',
+    checkHp: 'HP',
+    fullSpurtNeedHp: 'HP',
+    fullSpurtTargetSpeed: 'm/s',
+    selectedTargetSpeed: 'm/s'
+  };
 </script>
 
 {#if Array.isArray(value) && !value.length}
@@ -92,7 +101,7 @@
           Number(row.mode)
         ] ?? row.mode}
       {:else if column.key === 'duration'}
-        {typeof row.duration === 'number' ? row.duration.toFixed(2) : '—'}
+        {typeof row.duration === 'number' ? row.duration.toFixed(2) + ' s' : '—'}
       {:else if column.key === 'roll' && typeof row.roll === 'number' && typeof row.threshold === 'number'}
         <span
           class:activated={Number(row.roll) < Number(row.threshold)}
@@ -109,7 +118,11 @@
           .map(([name]) => diagnosticLabel(name))
           .join(', ') || 'None'}
       {:else}
-        {typeof row[column.key] === 'number' ? number(row[column.key], 2) : row[column.key]}
+        {#if typeof row[column.key] === 'number'}
+          {number(row[column.key], 2)}{units[column.key] ? ' ' + units[column.key] : ''}
+        {:else}
+          {row[column.key]}
+        {/if}
       {/if}
     {/snippet}
   </DataTable>

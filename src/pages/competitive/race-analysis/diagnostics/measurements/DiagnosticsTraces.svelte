@@ -39,8 +39,8 @@
       value={decisions}
       title="Position keep decisions"
       columns={[
-        { key: 'time', label: 'Time (s)', numeric: true },
-        { key: 'duration', label: 'Duration (s)', numeric: true },
+        { key: 'time', label: 'Time', helpKey: 'Time (s)', numeric: true },
+        { key: 'duration', label: 'Duration', helpKey: 'Duration (s)', numeric: true },
         { key: 'attemptedMode', label: 'Mode' },
         { key: 'outcome', label: 'Result' },
         { key: 'pacemakerHorseIndex', label: 'Current pacemaker' }

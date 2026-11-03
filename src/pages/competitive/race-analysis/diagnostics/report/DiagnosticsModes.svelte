@@ -40,9 +40,9 @@
     emptyMessage="No race modes recorded."
     columns={[
       { key: 'mode', label: 'Mode' },
-      { key: 'duration', label: 'Active time (s)', numeric: true },
+      { key: 'duration', label: 'Active time', helpKey: 'Active time (s)', numeric: true },
       { key: 'periods', label: 'Periods', numeric: true },
-      { key: 'time', label: 'First (s)', numeric: true }
+      { key: 'time', label: 'First', helpKey: 'First (s)', numeric: true }
     ]}
     onrowclick={(row) => seekRow(row, onseek)}
     rowKey="id"
@@ -74,7 +74,7 @@
           </span>
         </button>
       {:else if column.key === 'duration'}
-        {Number(row.duration).toFixed(2)}
+        {Number(row.duration).toFixed(2)} s
       {:else}
         {row[column.key]}
       {/if}

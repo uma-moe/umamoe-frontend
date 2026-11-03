@@ -168,17 +168,17 @@
       >
         <span>
           <small>Available HP</small>
-          <strong>{number(spurt.checkHp, 2)}</strong>
+          <strong>{number(spurt.checkHp, 2)} HP</strong>
         </span>
         <b aria-hidden="true">−</b>
         <span>
           <small>Required HP</small>
-          <strong>{number(spurt.fullSpurtNeedHp, 2)}</strong>
+          <strong>{number(spurt.fullSpurtNeedHp, 2)} HP</strong>
         </span>
         <b aria-hidden="true">=</b>
         <span class:shortfall={spurtHpBalance < 0}>
           <small>{spurtHpBalance < 0 ? 'HP shortfall' : 'HP spare'}</small>
-          <strong>{signed(spurtHpBalance)}</strong>
+          <strong>{signed(spurtHpBalance)} HP</strong>
         </span>
       </div>
     {/if}
@@ -193,18 +193,28 @@
       </thead>
       <tbody>
         <tr>
-          <th scope="row">
-            Start <small>m</small>
-          </th>
-          <td>{number(spurt.checkDistance, 2)}</td>
-          <td>{spurtSelected ? number(spurt.selectedStartDistance, 2) : '—'}</td>
+          <th scope="row">Start</th>
+          <td>
+            {typeof spurt.checkDistance === 'number' ? number(spurt.checkDistance, 2) + ' m' : '—'}
+          </td>
+          <td>
+            {spurtSelected && typeof spurt.selectedStartDistance === 'number'
+              ? number(spurt.selectedStartDistance, 2) + ' m'
+              : '—'}
+          </td>
         </tr>
         <tr>
-          <th scope="row">
-            Speed <small>m/s</small>
-          </th>
-          <td>{number(spurt.fullSpurtTargetSpeed, 2)}</td>
-          <td>{spurtSelected ? number(spurt.selectedTargetSpeed, 2) : '—'}</td>
+          <th scope="row">Speed</th>
+          <td>
+            {typeof spurt.fullSpurtTargetSpeed === 'number'
+              ? number(spurt.fullSpurtTargetSpeed, 2) + ' m/s'
+              : '—'}
+          </td>
+          <td>
+            {spurtSelected && typeof spurt.selectedTargetSpeed === 'number'
+              ? number(spurt.selectedTargetSpeed, 2) + ' m/s'
+              : '—'}
+          </td>
         </tr>
       </tbody>
     </table>
@@ -242,13 +252,18 @@
         value={horse.lastSpurtDecisions}
         title="Last-spurt decisions"
         columns={[
-          { key: 'time', label: 'Time (s)', numeric: true },
-          { key: 'checkDistance', label: 'Distance (m)', numeric: true },
+          { key: 'time', label: 'Time', helpKey: 'Time (s)', numeric: true },
+          { key: 'checkDistance', label: 'Distance', helpKey: 'Distance (m)', numeric: true },
           { key: 'checkHp', label: 'HP available', numeric: true },
           { key: 'fullSpurtNeedHp', label: 'HP required', numeric: true },
-          { key: 'fullSpurtTargetSpeed', label: 'Full speed (m/s)', numeric: true },
-          { key: 'selectedStartDistance', label: 'Start (m)', numeric: true },
-          { key: 'selectedTargetSpeed', label: 'Speed (m/s)', numeric: true },
+          {
+            key: 'fullSpurtTargetSpeed',
+            label: 'Full speed',
+            helpKey: 'Full speed (m/s)',
+            numeric: true
+          },
+          { key: 'selectedStartDistance', label: 'Start', helpKey: 'Start (m)', numeric: true },
+          { key: 'selectedTargetSpeed', label: 'Speed', helpKey: 'Speed (m/s)', numeric: true },
           { key: 'result', label: 'Result' },
           { key: 'delayPenalty', label: 'Delayed' },
           { key: 'speedPenalty', label: 'Slower' },
