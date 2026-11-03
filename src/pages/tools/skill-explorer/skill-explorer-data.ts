@@ -170,7 +170,7 @@ export function parseIndex(value: unknown): ExplorerIndex {
  * A row is [id, win points in build, win points alone, rate, mean, courses, sections in permille of races, win points
  * over all races, courses forced on]; a bundle from before the last two reads them from the rest.
  */
-function parseRow(value: unknown): SkillPoint {
+export function parseRow(value: unknown): SkillPoint {
   if (!Array.isArray(value) || ![7, 9].includes(value.length) || !Array.isArray(value[6]))
     throw new Error('Skill Explorer data has an invalid skill row.');
   const sections = value[6].map((share) => finiteNumber(share, 'section share') / 1000);
