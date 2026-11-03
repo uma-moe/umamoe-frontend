@@ -2,6 +2,8 @@ import type { ParsedRaceCapture } from '@/lib/race/capture/race-capture-parser';
 import {
   diagnosticLabel,
   skillActiveDuration,
+  skillMiss,
+  skillMissLabels,
   type DiagnosticRow,
   type HorseDiagnostics
 } from '@/lib/race/capture/race-diagnostics';
@@ -115,6 +117,9 @@ export function runnerName(capture: ParsedRaceCapture, value: unknown) {
 
 export const skillOutcomes = [
   'Activated',
+  skillMissLabels.impossible,
+  skillMissLabels.preconditionNeverMet,
+  skillMissLabels.conditionNeverMet,
   'Passed wit check, failed condition',
   'Wit check failed',
   'Not triggered',
@@ -127,10 +132,14 @@ export function isSkillOutcome(value: unknown): value is SkillOutcome {
   return (skillOutcomes as readonly unknown[]).includes(value);
 }
 
+// An impossible skill is reported even after a failed wit check: it could never have fired.
 function activationStatus(roll: DiagnosticRow | undefined, observed: boolean): SkillOutcome {
   if (!roll) return observed ? 'Activated' : 'Not recorded';
   if (roll.activated) return 'Activated';
+  const miss = skillMiss(roll);
+  if (miss?.kind === 'impossible') return skillMissLabels.impossible;
   if (!roll.passed) return 'Wit check failed';
+  if (miss) return skillMissLabels[miss.kind];
   if (roll.required) return 'Passed wit check, failed condition';
   return 'Not triggered';
 }
@@ -154,12 +163,15 @@ export function skillRows(
   ].map((id) => {
     const events = activations.filter((e) => e.params[1] === id);
     const roll = horse?.skillActivationDecisions?.find((d) => d.skillId === id);
+    const status = activationStatus(roll, events.length > 0);
     return {
       id,
       count: events.length,
       first: events[0]?.frameTime ?? '—',
       duration: events.length || roll?.activated ? (skillActiveDuration(horse, id) ?? '—') : '—',
-      status: activationStatus(roll, events.length > 0),
+      status,
+      reason:
+        status === skillMissLabels.impossible ? (skillMiss(roll)?.reasons.join('; ') ?? '') : '',
       witRequired: Number(roll?.required === true),
       witPassed: Number(roll?.passed === true),
       roll: typeof roll?.roll === 'number' ? roll.roll : '—',

@@ -39,6 +39,9 @@
 
   const outcomeTones: Record<SkillOutcome, OutcomeTone> = {
     Activated: 'activated',
+    'Impossible in this race': 'failed',
+    'Precondition never met': 'caution',
+    'Condition never met': 'caution',
     'Passed wit check, failed condition': 'caution',
     'Wit check failed': 'failed',
     'Not triggered': 'idle',
@@ -102,17 +105,22 @@
         </span>
       {:else if column.key === 'status'}
         {@const tone = outcomeTone(row.status)}
-        <span class="skill-status {tone}">
-          <span
-            class="status-icon"
-            aria-hidden="true"
-          >
-            <Icon
-              name={toneIcons[tone]}
-              size={12}
-            />
+        <span class="skill-outcome">
+          <span class="skill-status {tone}">
+            <span
+              class="status-icon"
+              aria-hidden="true"
+            >
+              <Icon
+                name={toneIcons[tone]}
+                size={12}
+              />
+            </span>
+            {row.status}
           </span>
-          {row.status}
+          {#if row.reason}
+            <small class="miss-reason">{row.reason}</small>
+          {/if}
         </span>
       {:else if column.key === 'roll'}
         <span
@@ -219,6 +227,18 @@
   }
   .skill-status.failed {
     --status-color: var(--accent-error);
+  }
+  .skill-outcome {
+    display: inline-grid;
+    gap: 2px;
+  }
+  /* Aligned under the label text, past the 16px badge and its gap; wraps rather than widening the table. */
+  .miss-reason {
+    padding-left: 23px;
+    max-width: 32ch;
+    color: var(--text-secondary);
+    font-size: 10px;
+    white-space: normal;
   }
   .skill-status.idle .status-icon {
     background: var(--surface-2);

@@ -38,6 +38,18 @@ export interface HorseDiagnostics extends DiagnosticRow {
   temptationDecision?: DiagnosticRow | null;
 }
 
+/** The simulator's reason a skill did not activate; `reasons` explains `impossible` only. */
+export interface SkillMiss {
+  kind: 'impossible' | 'preconditionNeverMet' | 'conditionNeverMet';
+  reasons: string[];
+}
+
+export const skillMissLabels = {
+  impossible: 'Impossible in this race',
+  preconditionNeverMet: 'Precondition never met',
+  conditionNeverMet: 'Condition never met'
+} as const satisfies Record<SkillMiss['kind'], string>;
+
 export interface DetailedReplay {
   engineBuild: string;
   seed: number;
@@ -58,6 +70,12 @@ const object = (v: unknown): v is DiagnosticRow =>
   Boolean(v) && typeof v === 'object' && !Array.isArray(v);
 
 const finite = (v: unknown): v is number => typeof v === 'number' && Number.isFinite(v);
+
+const isSkillMiss = (v: unknown): v is SkillMiss =>
+  object(v) &&
+  Object.keys(skillMissLabels).includes(String(v.kind)) &&
+  Array.isArray(v.reasons) &&
+  v.reasons.every((reason) => typeof reason === 'string');
 export function validateDetailedReplay(value: unknown, count: number): DetailedReplay {
   if (
     !object(value) ||
@@ -185,7 +203,8 @@ export function validateDetailedReplay(value: unknown, count: number): DetailedR
         ['required', 'passed', 'activated'].some((k) => typeof row[k] !== 'boolean') ||
         ['roll', 'threshold'].some(
           (k) => row[k] !== null && row[k] !== undefined && !finite(row[k])
-        )
+        ) ||
+        (row.miss !== null && row.miss !== undefined && !isSkillMiss(row.miss))
       )
         throw Error('Invalid skill activation decision.');
     }
@@ -441,7 +460,7 @@ export const raceMetricHelp: Record<string, string> = {
   Build: 'The five build stats, with the total cost of the learned skills in SP below them.',
   Popularity: 'The simulator’s popularity ranking of the runner; 1 is the favourite.',
   Outcome:
-    'Activated means the skill triggered. Wit check failed means its activation check did not pass. Passed wit check, failed condition means the check passed but the skill’s race conditions were not met.',
+    'Activated means the skill triggered. Impossible in this race means the race itself rules the skill out, for example a place condition no runner can meet in a small field; the reason is shown below it. Wit check failed means its activation check did not pass. Precondition never met and Condition never met mean the skill could activate, but that part of its conditions never happened this race. Passed wit check, failed condition is the same, from a simulator that does not say which part.',
   Triggers: 'Number of recorded activations for this skill during the race.',
   'First (s)':
     'Time of the first activation or active period. Select the time to watch that moment in replay.',
@@ -619,6 +638,12 @@ export function blockerAt(
     capture.runners.some((r) => r.index === blocker)
     ? blocker
     : -1;
+}
+
+/** Why a skill activation decision did not activate, when the simulator says. */
+export function skillMiss(decision: DiagnosticRow | undefined): SkillMiss | undefined {
+  const miss = decision?.miss;
+  return isSkillMiss(miss) ? miss : undefined;
 }
 
 /** Multiple effects of one skill can overlap; count elapsed active time once. */
