@@ -6,6 +6,8 @@ export interface SkillData {
   rarity: number;
   icon: string;
   baseCost?: number;
+  /** `disp_order` in the game's skill list: 10 for a character unique, 30 for an inherited one, 990 and up for the rest. */
+  order?: number;
   effect?: string;
   description?: string;
   conditions?: string;
@@ -62,6 +64,10 @@ export function normalizeSkill(entry: Record<string, unknown>): SkillData {
       Number.isFinite(Number(entry.base_cost)) &&
       Number(entry.base_cost) >= 0
         ? Number(entry.base_cost)
+        : undefined,
+    order:
+      entry.disp_order != null && Number(entry.disp_order) > 0
+        ? Number(entry.disp_order)
         : undefined,
     unique:
       entry.unique === true ||

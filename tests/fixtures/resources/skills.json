@@ -1,6 +1,7 @@
 [
   {
     "skill_id": 200011,
+    "disp_order": 1005,
     "name": "Right-Handed ◎",
     "rarity": 1,
     "icon": "utx_ico_skill_10011.png",
@@ -14,6 +15,7 @@
   },
   {
     "skill_id": 200012,
+    "disp_order": 1010,
     "name": "Right-Handed ○",
     "rarity": 1,
     "icon": "utx_ico_skill_10011.png",
@@ -27,6 +29,7 @@
   },
   {
     "skill_id": 200022,
+    "disp_order": 1040,
     "name": "Left-Handed ○",
     "rarity": 1,
     "icon": "utx_ico_skill_10011.png",
@@ -52,6 +55,7 @@
   },
   {
     "skill_id": 200023,
+    "disp_order": 1050,
     "name": "Left-Handed ×",
     "rarity": 1,
     "icon": "utx_ico_skill_10014.png",
@@ -65,6 +69,7 @@
   },
   {
     "skill_id": 200132,
+    "disp_order": 1400,
     "name": "Standard Distance ○",
     "rarity": 1,
     "icon": "utx_ico_skill_10021.png",
@@ -78,6 +83,7 @@
   },
   {
     "skill_id": 202161,
+    "disp_order": 21730,
     "name": "Self-Control",
     "rarity": 1,
     "icon": "utx_ico_skill_10051.png",
@@ -87,6 +93,7 @@
   },
   {
     "skill_id": 200352,
+    "disp_order": 1960,
     "name": "Corner Recovery ○",
     "rarity": 1,
     "icon": "utx_ico_skill_20021.png",
@@ -100,6 +107,7 @@
   },
   {
     "skill_id": 201202,
+    "disp_order": 20510,
     "name": "Passing Pro",
     "rarity": 1,
     "icon": "utx_ico_skill_20021.png",
@@ -125,6 +133,7 @@
   },
   {
     "skill_id": 200351,
+    "disp_order": 1950,
     "name": "Swinging Maestro",
     "rarity": 2,
     "icon": "utx_ico_skill_20022.png",
@@ -138,6 +147,7 @@
   },
   {
     "skill_id": 201201,
+    "disp_order": 20500,
     "name": "VIP Pass",
     "rarity": 2,
     "icon": "utx_ico_skill_20022.png",
@@ -151,6 +161,7 @@
   },
   {
     "skill_id": 200362,
+    "disp_order": 1990,
     "name": "Straightaway Adept",
     "rarity": 1,
     "icon": "utx_ico_skill_20011.png",
@@ -174,6 +185,7 @@
   },
   {
     "skill_id": 110031,
+    "disp_order": 10,
     "name": "Certain Victory",
     "rarity": 3,
     "icon": "utx_ico_skill_20013.png",
@@ -187,6 +199,7 @@
   },
   {
     "skill_id": 100011,
+    "disp_order": 10,
     "name": "Shooting Star",
     "rarity": 3,
     "icon": "utx_ico_skill_20013.png",
@@ -200,6 +213,7 @@
   },
   {
     "skill_id": 100021,
+    "disp_order": 10,
     "name": "The View from the Lead Is Mine!",
     "rarity": 3,
     "icon": "utx_ico_skill_20013.png",
@@ -213,6 +227,7 @@
   },
   {
     "skill_id": 100301,
+    "disp_order": 10,
     "name": "Blue Rose Closer",
     "rarity": 3,
     "icon": "utx_ico_skill_20013.png",
@@ -226,6 +241,7 @@
   },
   {
     "skill_id": 100601,
+    "disp_order": 10,
     "name": "Just a Little Farther!",
     "rarity": 1,
     "icon": "utx_ico_skill_20013.png",
@@ -238,6 +254,7 @@
   },
   {
     "skill_id": 100501,
+    "disp_order": 10,
     "name": "Nemesis",
     "rarity": 3,
     "icon": "utx_ico_skill_20013.png",
@@ -251,6 +268,7 @@
   },
   {
     "skill_id": 100401,
+    "disp_order": 10,
     "name": "KEEP IT REAL.",
     "rarity": 3,
     "icon": "utx_ico_skill_20013.png",
@@ -264,6 +282,7 @@
   },
   {
     "skill_id": 101001,
+    "disp_order": 10,
     "name": "Never Say Never",
     "rarity": 3,
     "icon": "utx_ico_skill_20013.png",
@@ -337,6 +356,7 @@
   },
   {
     "skill_id": 201601,
+    "disp_order": 21280,
     "name": "Groundwork",
     "rarity": 1,
     "icon": "utx_ico_skill_20041.png",
@@ -363,6 +383,7 @@
   },
   {
     "skill_id": 100101,
+    "disp_order": 10,
     "name": "Shooting for Victory!",
     "rarity": 3,
     "icon": "utx_ico_skill_20043.png",
@@ -376,6 +397,7 @@
   },
   {
     "skill_id": 100201,
+    "disp_order": 10,
     "name": "Angling and Scheming",
     "rarity": 3,
     "icon": "utx_ico_skill_20043.png",
@@ -402,6 +424,7 @@
   },
   {
     "skill_id": 200432,
+    "disp_order": 2090,
     "name": "Focus",
     "rarity": 1,
     "icon": "utx_ico_skill_20061.png",
@@ -415,6 +438,7 @@
   },
   {
     "skill_id": 210052,
+    "disp_order": 31009,
     "name": "Ignited Spirit WIT",
     "rarity": 1,
     "icon": "utx_ico_skill_20131.png",
@@ -427,6 +451,7 @@
   },
   {
     "skill_id": 1000012,
+    "disp_order": 100011,
     "name": "Carnival Bonus (obsolete)",
     "rarity": 1,
     "icon": "utx_ico_skill_1010011.png",

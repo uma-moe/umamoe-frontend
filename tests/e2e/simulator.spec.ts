@@ -2065,7 +2065,10 @@ test('Build search prices the skills on offer by hint and answers with the skill
   }
 
   await expect(page.getByRole('group', { name: 'Hint for Corner Recovery ○' })).toContainText('5');
-  await expect(offers.getByRole('listitem').first()).toContainText('102 SP');
+  // The game's shop order: the gold she buys sits above the ○ it upgrades, so the list can be bought in one pass.
+  const offerRows = offers.getByRole('listitem');
+  await expect(offerRows.first()).toContainText('Swinging Maestro');
+  await expect(offerRows.nth(1)).toContainText('102 SP');
   await find.click();
   const result = page.getByRole('region', { name: 'Result', exact: true });
   // The answer: how many skills to buy, their SP and what they gain her. An upgrade and the skill it builds on are one
@@ -2320,7 +2323,10 @@ test('Build codes load the runner, the course, the goal and what she can buy on 
   const offers = page.getByRole('list', { name: 'Skills on offer' });
   await expect(offers.getByRole('listitem')).toHaveCount(3);
   // Fast Learner takes another 10% off: 170 at hint 5 is 50% off.
-  await expect(offers.getByRole('listitem').first()).toContainText(/Corner Recovery.*85 SP/);
+  const cornerRecovery = offers
+    .getByRole('listitem')
+    .filter({ has: page.getByRole('group', { name: 'Hint for Corner Recovery ○' }) });
+  await expect(cornerRecovery).toContainText(/Corner Recovery.*85 SP/);
   // Team Trials draws its course per race, so she races the distance's pool of tracks, one per race.
   const tracks = page.getByRole('group', { name: 'Tracks', exact: true });
   await expect(tracks).toContainText('1 of 1 courses');

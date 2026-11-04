@@ -61,6 +61,14 @@ it('sorts by rarity, effect type and descending SP cost with stable ties and inh
   });
 });
 
+it("reads a skill's display order, and leaves it unset without one", async () => {
+  expect(normalizeSkill({ disp_order: '1960' }).order).toBe(1960);
+  expect(normalizeSkill({ disp_order: 0 }).order).toBeUndefined();
+  expect(normalizeSkill({}).order).toBeUndefined();
+  const skillLookup = await loadSkills();
+  expect(skillLookup.get(200352)?.order).toBe(1960);
+});
+
 it('normalizes legacy boolean flags and metadata-derived unique skills like Angular', async () => {
   expect(
     normalizeSkill({ skill_id: '1', rarity: '3', unique: 'false', inherited: 'false' })

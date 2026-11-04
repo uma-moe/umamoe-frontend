@@ -4,6 +4,7 @@
   import IconButton from '@/components/controls/IconButton.svelte';
   import Combobox, { type ComboboxOption } from '@/components/controls/Combobox.svelte';
   import { skillImage, type SkillData } from '@/lib/game-data/skills/skills';
+  import { sortByGameOrder } from '@/lib/game-data/skills/skill-order';
   import SimSection from '../../shell/SimSection.svelte';
   import BuildBudget from './BuildBudget.svelte';
   import { buildSearch } from './build-search.svelte';
@@ -46,6 +47,8 @@
 
   const total = $derived(offers.priced.reduce((sum, offer) => sum + offer.cost, 0));
   const budget = $derived(Number(buildSearch.budget) || 0);
+  /** The shop's order, so the list can be bought in one pass; `offers.priced` keeps the optimizer's order. */
+  const inShopOrder = $derived(sortByGameOrder(offers.priced, (offer) => offer.skill));
 
   // Everything out on Global she could buy and does not have or have on offer yet: inherited uniques but not her own
   // unique, priced in the catalog.
@@ -182,7 +185,7 @@
       class="offers"
       aria-label="Skills on offer"
     >
-      {#each offers.priced as offer (offer.skillId)}
+      {#each inShopOrder as offer (offer.skillId)}
         <!-- A bundled upgrade's cost includes the ranks below it, so its own base is not the price before the hint. -->
         {@const showsBasePrice = offer.cost !== offer.base && offer.needs !== 'bundled'}
         <li
