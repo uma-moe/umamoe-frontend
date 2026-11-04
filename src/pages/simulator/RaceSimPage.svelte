@@ -306,19 +306,6 @@
     </Banner>
   {/key}
 {/if}
-{#if populateError}
-  {#key populateError}
-    <Banner
-      title="Could not populate the field"
-      tone="danger"
-      reportable={false}
-      dismissible
-      ondismiss={() => (populateError = '')}
-    >
-      {populateError}
-    </Banner>
-  {/key}
-{/if}
 <SimulatorShell
   mode="race"
   showUma={false}
@@ -467,6 +454,19 @@
               ondismiss={() => (roomError = '')}
             >
               <p>{roomError}</p>
+            </Banner>
+          </div>
+        {/if}
+        {#if populateError}
+          <div class="import-notice">
+            <Banner
+              title="Could not populate the field"
+              tone="danger"
+              reportable={false}
+              dismissible
+              ondismiss={() => (populateError = '')}
+            >
+              <p>{populateError}</p>
             </Banner>
           </div>
         {/if}
