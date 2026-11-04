@@ -44,10 +44,7 @@ function generatedField() {
 }
 
 async function populateField(page: Page) {
-  await page
-    .getByRole('button', { name: 'Populate for race settings', exact: true })
-    .first()
-    .click();
+  await page.getByRole('button', { name: 'Populate', exact: true }).first().click();
   await expect(page.locator('.field .runner')).toHaveCount(9);
 }
 
@@ -122,7 +119,7 @@ test.beforeEach(async ({ page }) => {
 test('Race field opens empty and populates for its race settings', async ({ page }) => {
   await page.goto('/simulator/race');
   await expect(page.locator('.field .runner')).toHaveCount(0);
-  const populate = page.getByRole('button', { name: 'Populate for race settings', exact: true });
+  const populate = page.getByRole('button', { name: 'Populate', exact: true });
   await expect(populate.first()).toBeEnabled();
   await populate.first().click();
   await expect(page.locator('.field .runner')).toHaveCount(9);
