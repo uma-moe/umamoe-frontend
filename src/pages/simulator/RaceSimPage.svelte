@@ -127,7 +127,17 @@
     error = '';
   }
 
-  /** Fill the field with the simulator's model-built runners for the settings on screen. */
+  function courseLabel(courseId: number): string {
+    const raceCourse = simulatorCourseData.courses.get(courseId);
+    return raceCourse
+      ? trackName(raceCourse.race_track_id) +
+          ' ' +
+          raceCourse.distance.toLocaleString('en-US') +
+          ' m'
+      : 'course ' + courseId;
+  }
+
+  /** Fill the field with real CM runners for the settings on screen. */
   async function populate() {
     if (!course || busy || populating || seedInvalid) return;
 
@@ -152,11 +162,20 @@
       const umas = simulatorUmasFromField(response.result, characters);
       replaceSimulatorField(umas, {});
       simulatorSession.umaId = umas[0]?.id ?? '';
+      const source = response.result.source;
+      const target = courseLabel(source.course_id);
+      const origin =
+        source.from_course_id === undefined
+          ? ' from ' + target
+          : ' from ' + courseLabel(source.from_course_id) + ', adapted to ' + target;
       simulatorSession.importNotice =
-        'Populated ' + umas.length + ' runners for these race settings.';
+        'Populated ' + umas.length + ' real CM runners' + origin + ' for these race settings.';
       error = '';
     } catch (reason) {
-      populateError = reason instanceof Error ? reason.message : 'Could not populate the field.';
+      const message = reason instanceof Error ? reason.message : 'Could not populate the field.';
+      populateError = /no published CM snapshot|no CM model or published room/i.test(message)
+        ? 'This course has no CM data. Population works for CM presets and CM tracks; choose one, or add runners yourself.'
+        : message;
     } finally {
       populating = false;
     }
@@ -457,7 +476,7 @@
         {#if simulatorSession.importNotice}
           <div class="import-notice">
             <Banner
-              title="Runners imported"
+              title="Race field updated"
               dismissible
               ondismiss={() => (simulatorSession.importNotice = '')}
             >

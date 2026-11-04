@@ -122,7 +122,7 @@ test('Race field opens empty and populates for its race settings', async ({ page
   await expect(populate.first()).toBeEnabled();
   await populate.first().click();
   await expect(page.locator('.field .runner')).toHaveCount(9);
-  await expect(page.getByText('Populated 9 runners for these race settings.')).toBeVisible();
+  await expect(page.getByText(/Populated 9 real CM runners/)).toBeVisible();
 });
 
 test('Course setup preserves every searchable resource option and its breakdown', async ({

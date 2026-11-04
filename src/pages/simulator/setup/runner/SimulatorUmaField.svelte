@@ -265,7 +265,10 @@
   <div class="field">
     {#if !simulatorRoster.umas.length}
       <div class="empty-field">
-        <p>The field is empty. Populate it for these race settings, or add Uma yourself.</p>
+        <p>
+          The field is empty. Populate it with real CM runners for these race settings (CM presets
+          only), or add Uma yourself.
+        </p>
         {@render emptyAction?.()}
       </div>
     {/if}
