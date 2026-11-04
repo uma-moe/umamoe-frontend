@@ -24,7 +24,7 @@
     open = $bindable(false),
     trackOverride = $bindable(''),
     windowMeters = $bindable(80),
-    laneScaleMode = $bindable('automatic'),
+    laneScaleMode = $bindable('fixed'),
     toggles = $bindable(defaultReplayToggles())
   }: {
     capture: ParsedRaceCapture;
@@ -182,7 +182,7 @@
       onclick={() => {
         toggles = defaultReplayToggles();
         windowMeters = 80;
-        laneScaleMode = 'automatic';
+        laneScaleMode = 'fixed';
       }}
     >
       Reset display

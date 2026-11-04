@@ -18,7 +18,7 @@
     type CourseData,
     type CourseShape
   } from './replay-course';
-  import { defaultReplayToggles } from './replay-display';
+  import { loadReplaySettings, saveReplaySettings } from './replay-settings';
   import { runnerCallouts, skillWindows } from './replay-callouts';
   import { ReplayState } from './replay-state.svelte';
   import ReplayReportHeader from './ReplayReportHeader.svelte';
@@ -69,10 +69,12 @@
     onretrysimulation?: () => void;
   } = $props();
 
+  const savedSettings = loadReplaySettings();
+
   let telemetryExpanded = $state(false);
-  let windowMeters = $state(80),
+  let windowMeters = $state(savedSettings.windowMeters),
     trackOverride = $state(''),
-    laneScaleMode = $state('automatic');
+    laneScaleMode = $state<string>(savedSettings.laneScaleMode);
 
   let report = $state<HTMLElement>(),
     analysisTarget = $state<HTMLElement>();
@@ -113,11 +115,11 @@
     fullscreenTarget = $state<HTMLDivElement>(),
     fullscreen = $state(false);
 
-  let toggles = $state(defaultReplayToggles());
+  let toggles = $state(savedSettings.toggles);
 
   let settingsOpen = $state(false),
     buildOpen = $state(false),
-    focusView = $state('positions');
+    focusView = $state<string>(savedSettings.layout);
 
   const mapPrimary = $derived(focusView === 'map');
 
@@ -128,6 +130,17 @@
     selected: () => selected,
     course: () => course,
     distance: () => course?.distance ?? shapes?.[trackId]?.distance
+  });
+  replay.speed = savedSettings.playbackSpeed;
+
+  $effect(() => {
+    saveReplaySettings({
+      layout: focusView,
+      laneScaleMode,
+      windowMeters,
+      playbackSpeed: replay.speed,
+      toggles
+    });
   });
 
   const windows = $derived(skillWindows(capture));

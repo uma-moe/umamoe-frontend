@@ -4,7 +4,7 @@ export type ReplayToggle = keyof ReplayToggles;
 export const defaultReplayToggles = () => ({
   hpBars: false,
   skills: true,
-  skillTimers: false,
+  skillTimers: true,
   blocked: true,
   slopes: true,
   speed: false,
@@ -12,7 +12,7 @@ export const defaultReplayToggles = () => ({
   raceModes: false,
   course: true,
   positionKeep: false,
-  cone: true,
+  cone: false,
   minimap: false
 });
 
