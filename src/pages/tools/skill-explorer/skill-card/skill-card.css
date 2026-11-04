@@ -342,6 +342,10 @@ figcaption {
   content: '–';
 }
 
+.build-toggle {
+  display: flex;
+}
+
 .notes {
   display: grid;
   gap: 2px;

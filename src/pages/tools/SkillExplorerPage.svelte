@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { onMount } from 'svelte';
+  import { onMount, untrack } from 'svelte';
   import AppPage from '@/layouts/AppPage.svelte';
   import Disclosure from '@/components/overlays/Disclosure.svelte';
   import Banner from '@/components/feedback/Banner.svelte';
@@ -33,6 +33,10 @@
   import { timelineRepository } from '@/pages/timeline/timeline-repository';
   import type { RaceDay } from './skill-explorer/cm/race-day';
   import { meetingOptions, type MeetingOption } from './skill-explorer/cm/meetings';
+  import {
+    restoreCourseSelection,
+    saveCourseSelection
+  } from './skill-explorer/course-selection-storage';
   import TargetStatline from './skill-explorer/statlines/TargetStatline.svelte';
   import {
     loadStatlines,
@@ -50,6 +54,18 @@
     type UmaSkills,
     type UnvaluedSkills
   } from './skill-explorer/umas/uma-skills';
+  import BuildPanel from './skill-explorer/build/BuildPanel.svelte';
+  import {
+    BUILD_RUNS,
+    BUILD_WINDOW_MINUTES,
+    MAX_BUILD_SKILLS,
+    addToBuild,
+    buildErrorText,
+    removeFromBuild,
+    sameBuild,
+    valueBuild,
+    type BuildValues
+  } from './skill-explorer/build/explorer-build';
   import SkillExplorerFilters from './skill-explorer/SkillExplorerFilters.svelte';
   import SkillScatter from './skill-explorer/scatter/SkillScatter.svelte';
   import SkillCard, {
@@ -100,10 +116,13 @@
   let index = $state.raw<ExplorerIndex>();
   // Both a named skill and its Global mechanic entry are required; names include future translations.
   let skills = $state.raw(new Map<number, SkillData>());
+  /** Every Global skill, with those the explorer has no mechanics for: names for the build panel. */
+  let allSkills = $state.raw(new Map<number, SkillData>());
   let skillEffects = $state.raw(new Map<number, SkillEffectAlternative[]>());
   let raceCourses = $state.raw(new Map<number, RaceCourse>());
   let pageError = $state('');
   let timelineMeetings = $state.raw<NumberedMeeting[]>([]);
+  let timelineLoaded = $state(false);
   let statlines = $state.raw<StatlinesData>();
 
   let umaCards = $state.raw<UmaSkills[]>([]);
@@ -135,6 +154,15 @@
   let showDayBound = $state(true);
   let procScaled = $state(true);
   let comparedSkillIds = $state.raw<ReadonlySet<number>>(new Set());
+
+  // The build being edited (none: the one the values are for), and values for a build the visitor picked.
+  let draftBuild = $state.raw<number[]>();
+  let valuedBuild = $state.raw<BuildValues & { key: string }>();
+  let buildLoading = $state(false);
+  let buildError = $state('');
+  let buildRequest: AbortController | undefined;
+  // Builds race on the simulator, so they change only once the visitor accepts that, for the rest of the visit.
+  let buildAccepted = $state(false);
 
   const explorerCourses = $derived(index?.courses ?? []);
 
@@ -240,10 +268,22 @@
       .sort((left, right) => left.label.localeCompare(right.label))
   ]);
 
+  /** A build is shown and can be edited on a single course for a single style. */
+  const buildStyle = $derived(selectedCourse && style !== 'all' ? style : undefined);
+  const buildKey = $derived(
+    selectedCourse && buildStyle ? `${selectedCourse.courseId}:${buildStyle}` : undefined
+  );
+  const referenceBuild = $derived(buildStyle ? scopeData?.builds?.[buildStyle] : undefined);
+  const customValues = $derived(valuedBuild?.key === buildKey ? valuedBuild : undefined);
+  /** The build the values shown are measured in. */
+  const measuredBuild = $derived(customValues?.build ?? referenceBuild);
+  const editedBuild = $derived(draftBuild ?? measuredBuild);
+  const points = $derived(customValues?.points ?? scopeData?.styles[style] ?? []);
+
   const view = $derived(
     scopeData
       ? plotView({
-          points: scopeData.styles[style],
+          points,
           skills,
           facts: index?.skills ?? new Map(),
           xMode,
@@ -265,16 +305,14 @@
 
   const yTitle = $derived(
     (yMode === 'value'
-      ? 'Est. win rate added to the reference build'
+      ? `Est. win rate added to ${customValues ? 'your' : 'the reference'} build`
       : 'Est. win rate gained on its own') + (procScaled ? ', over all races' : ', when it procs')
   );
   /** What the plot's axes mean: when it changes, the zoom starts again from the whole plot. */
   const viewKey = $derived(
     [JSON.stringify(scope), style, xMode, yMode, procScaled, selectedCourse?.distance].join('|')
   );
-  const pointsById = $derived(
-    new Map((scopeData?.styles[style] ?? []).map((point) => [point.skillId, point]))
-  );
+  const pointsById = $derived(new Map(points.map((point) => [point.skillId, point])));
   const margin = $derived(scopeData?.margins[style]);
 
   function courseLabel(id: number): string {
@@ -337,8 +375,7 @@
     const unvalued = unvaluedSkills(uma, (skillId) => index?.skills.has(skillId) === true);
     const valuedUnique = uma.unique !== undefined && !unvalued.unique;
     const uniqueFiresHere =
-      scopeData === undefined ||
-      scopeData.styles[style].some((point) => point.skillId === uma.unique);
+      scopeData === undefined || points.some((point) => point.skillId === uma.unique);
     const silentUnique = valuedUnique && !uniqueFiresHere;
     const where = style === 'all' ? 'here' : `for ${STYLE_NAMES[style]} here`;
 
@@ -362,8 +399,9 @@
     };
   }
 
+  /** Partners are found for the reference build only. */
   function partnersOf(skillId: number): RelatedSkill[] {
-    if (style === 'all') return [];
+    if (style === 'all' || customValues) return [];
 
     const partners = scopeData?.partners?.[style]?.get(skillId) ?? [];
     return partners
@@ -377,7 +415,7 @@
     if (gate === undefined) return undefined;
 
     const [from, to] = gate.sections;
-    const feeders = (scopeData?.styles[style] ?? [])
+    const feeders = points
       .filter((point) => {
         const skill = skills.get(point.skillId);
         if (point.skillId === skillId || skill === undefined || isNegativeSkill(skill))
@@ -396,8 +434,66 @@
     return { gate, feeders };
   }
 
-  function inReferenceBuild(skillId: number): boolean {
-    return style !== 'all' && Boolean(scopeData?.builds?.[style]?.includes(skillId));
+  function inMeasuredBuild(skillId: number): boolean {
+    return style !== 'all' && Boolean(measuredBuild?.includes(skillId));
+  }
+
+  /** Adding a skill or taking it out of the edited build; the values change once the build is valued. */
+  function editBuild(skillId: number) {
+    if (editedBuild === undefined) return;
+
+    draftBuild = editedBuild.includes(skillId)
+      ? removeFromBuild(editedBuild, skillId)
+      : addToBuild(editedBuild, skillId);
+    buildError = '';
+  }
+
+  /** Values `build`, the edited one from the row or the dialog's; the reference build needs no request. */
+  function valueEditedBuild(build: number[]) {
+    if (!selectedCourse || !buildStyle || !buildKey) return;
+    if (referenceBuild && sameBuild(build, referenceBuild)) return resetBuild();
+
+    draftBuild = build;
+    buildRequest?.abort();
+    const controller = new AbortController();
+    const key = buildKey;
+    buildRequest = controller;
+    buildLoading = true;
+    buildError = '';
+    valueBuild(selectedCourse.courseId, buildStyle, build, controller.signal)
+      .then((values) => {
+        valuedBuild = { ...values, key };
+        draftBuild = undefined;
+      })
+      .catch((error: unknown) => {
+        if (controller.signal.aborted) return;
+        buildError = buildErrorText(error);
+      })
+      .finally(() => {
+        if (buildRequest !== controller) return;
+        buildRequest = undefined;
+        buildLoading = false;
+      });
+  }
+
+  function resetBuild() {
+    buildRequest?.abort();
+    buildRequest = undefined;
+    buildLoading = false;
+    buildError = '';
+    draftBuild = undefined;
+    valuedBuild = undefined;
+  }
+
+  function restorePick(loaded: ExplorerIndex): void {
+    const saved = restoreCourseSelection();
+    if (saved === undefined) return;
+
+    const valued = loaded.courses.some((course) => String(course.courseId) === saved.courseId);
+    if (!valued) return;
+
+    courseId = saved.courseId;
+    meetingNumber = saved.meetingNumber;
   }
 
   /** A meeting picks its course; the course list opens up so the pick is always among its options. */
@@ -429,10 +525,12 @@
     ])
       .then(([nextIndex, nextSkills, nextCourses, nextStatlines, nextEffects]) => {
         index = nextIndex;
+        allSkills = nextSkills;
         skills = releasedSkills(nextSkills, nextEffects);
         skillEffects = nextEffects;
         raceCourses = nextCourses;
         statlines = nextStatlines;
+        restorePick(nextIndex);
       })
       .catch((error: unknown) => {
         pageError = error instanceof Error ? error.message : 'Skill values could not be loaded.';
@@ -462,6 +560,7 @@
       .then((data) => {
         timelineMeetings = numberMeetings(data.events);
         banners = firstBanners(data.events);
+        timelineLoaded = true;
       })
       .catch(() => {
         timelineMeetings = [];
@@ -498,6 +597,24 @@
       });
 
     return () => controller.abort();
+  });
+
+  // Another course or style starts again from its reference build.
+  $effect(() => {
+    void buildKey;
+    untrack(resetBuild);
+  });
+
+  $effect(() => {
+    if (index === undefined) return;
+    saveCourseSelection({ courseId, meetingNumber });
+  });
+
+  $effect(() => {
+    if (index === undefined || !timelineLoaded || meetingNumber === '') return;
+    if (meetings.some((meeting) => String(meeting.number) === meetingNumber)) return;
+
+    meetingNumber = '';
   });
 
   $effect(() => {
@@ -590,13 +707,43 @@
         {#if scopeLoading}
           <Spinner size={18} />
         {/if}
-        {#if target}
-          <TargetStatline
-            {target}
-            selectedStyle={style}
-          />
+        {#if (buildStyle && editedBuild && measuredBuild) || target}
+          <!-- The values' build and target stats: they share the title row, and wrap to the next one together. -->
+          <div class="scope-tools">
+            {#if buildStyle && editedBuild && measuredBuild}
+              <BuildPanel
+                build={editedBuild}
+                measured={measuredBuild}
+                reference={referenceBuild}
+                addable={points.map((point) => point.skillId)}
+                skillLookup={allSkills}
+                styleName={STYLE_NAMES[buildStyle]}
+                custom={customValues !== undefined}
+                edited={!sameBuild(editedBuild, measuredBuild) &&
+                  !(referenceBuild && sameBuild(editedBuild, referenceBuild))}
+                loading={buildLoading}
+                bind:accepted={buildAccepted}
+                onvalue={valueEditedBuild}
+              />
+            {/if}
+            {#if target}
+              <TargetStatline
+                {target}
+                selectedStyle={style}
+              />
+            {/if}
+          </div>
         {/if}
       </div>
+
+      {#if buildError}
+        <Banner
+          title="The values for your build could not be updated"
+          tone="warning"
+        >
+          {buildError}
+        </Banner>
+      {/if}
 
       {#if scopeError}
         <Banner
@@ -637,40 +784,75 @@
       >
         <div class="method">
           <p>
-            Every value comes from racing. For each running style, a typical runner (no particular
-            uma, with the stats you would expect for that course) races a hundred real Champions
-            Meeting fields on the course: the CM's own recorded rooms, or runners from the nearest
-            CM when the course has none. Those races show where and how often each skill activates.
-            The model the optimizer builds with ({modelName(index.model.variant)}, checkpoint
-            {index.model.checkpoint}) then works out how much time the skill saves at that spot and
-            what that does to the win rate.
+            <strong>What the numbers mean.</strong>
+            Each skill's value is how much it raises the win rate in a Champions Meeting room: +2% means
+            the runner wins about 2 more races in 100 with it.
+          </p>
+          <p>
+            <strong>Why not just sim each skill on its own?</strong>
+            A solo sim gives one skill to a bare runner racing alone and counts the lengths she gains.
+            Real races differ in three ways, and the explorer covers each:
+          </p>
+          <ol>
+            <li>
+              <strong>Who is around her decides when skills fire.</strong>
+              Position, overtake and blocked skills fire differently in a full room. So for each running
+              style, a typical runner (no particular uma, with the stats you would expect for that course)
+              races thousands of times in real Champions Meeting rooms on the course: the CM's own recorded
+              rooms, or rooms from the nearest CM when the course has none. Those races show where and
+              how often each skill fires.
+            </li>
+            <li>
+              <strong>Lengths are not wins.</strong>
+              Time saved in the final spurt wins far more races than the same time at the start. The model
+              our optimizer builds with ({modelName(index.model.variant)}, checkpoint
+              {index.model.checkpoint}) turns the time a skill saves at that spot into win rate.
+            </li>
+            <li>
+              <strong>Skills overlap.</strong>
+              A second acceleration skill in the same spot, or a speed skill that runs her out of HP,
+              is worth less in a build than on its own. So skills are valued inside a build.
+            </li>
+          </ol>
+          <p>
+            <strong>The build.</strong>
+            Pick a course and a running style, and the Reference build button beside the course name shows
+            it: the {index.buildSize} skills our optimizer picks for that runner there. It changes with
+            the course and the style. Long courses need more recoveries, sprints more acceleration, so
+            the same skill can rank high in one CM and low in the next. Open it and accept to swap in
+            your own skills, or add one from a skill's card, then update the values to see what each skill
+            adds to your build. That takes the simulator 10–30 seconds and fewer races than the reference
+            build, so small differences there can be noise. You can value {BUILD_RUNS} builds every {BUILD_WINDOW_MINUTES}
+            minutes.
           </p>
           <ul>
             <li>
-              <strong>Win rate</strong>
-              is how much the skill adds to the win rate when it activates.
-            </li>
-            <li>
-              <strong>Scale by proc rate</strong>
-              multiplies that by how often it activates: a skill worth +10% that procs in half the races
-              shows +5%.
-            </li>
-            <li>
               <strong>In build</strong>
-              adds the skill to a typical {index.buildSize}-skill build the model picks, replacing
-              its gold or ◎ version if the build has one. For a skill already in that build, it is
-              what removing it costs.
+              is what the skill adds to that build. A gold or ◎ takes the place of its weaker version
+              in it. For a skill already in the build, it is what removing it costs.
             </li>
             <li>
               <strong>Alone</strong>
-              adds the skill to a runner with no other skills.
+              is what it adds to a runner with no other skills, the closest to a solo sim.
+            </li>
+            <li>
+              <strong>Scale by proc rate</strong>
+              multiplies the value by how often the skill fires: a skill worth +10% that procs in half
+              the races shows +5%.
             </li>
             <li>
               <strong>Works best with</strong>
-              lists the skills that raise its value most when owned together. Win rate gains shrink as
-              a build gets stronger anyway, so that alone does not count as a combo.
+              lists the skills that raise its value most when owned together, for the reference build.
+              Win rate gains shrink as a build gets stronger anyway, so that alone does not count as a
+              combo.
             </li>
           </ul>
+          <p>
+            <strong>Strong and weaker are relative.</strong>
+            The plot splits at the middle skill shown. If you show the top 25 and a skill lands under
+            weaker, it is not a bad skill: it is worth less than the other skills on screen, which are
+            the best on this course anyway.
+          </p>
           <p>
             <strong>How accurate is it?</strong>
             The values are best for comparing skills with each other. The exact numbers are estimates.
@@ -685,9 +867,9 @@
           <p>
             <strong>Courses.</strong>
             A CM shows its own course. A wider view such as Turf shows the middle (median) course of the
-            group, so it is what a skill is worth on a typical turf course. Activation spots average the
-            races where it fired. Strong and weaker split at the middle skill shown. All styles averages
-            only the styles that can activate the skill.
+            group, so it is what a skill is worth on a typical turf course; each course keeps its own
+            build. Activation spots average the races where it fired. All styles averages only the styles
+            that can activate the skill.
           </p>
           <p>
             <strong>Special cases.</strong>
@@ -733,7 +915,14 @@
       course={selectedCourse && terrain
         ? { distance: selectedCourse.distance, terrain }
         : undefined}
-      inBuild={inReferenceBuild(skillId)}
+      inBuild={inMeasuredBuild(skillId)}
+      build={buildAccepted && editedBuild && buildStyle && !buildLoading
+        ? {
+            has: editedBuild.includes(skillId),
+            full: editedBuild.length >= MAX_BUILD_SKILLS,
+            toggle: () => editBuild(skillId)
+          }
+        : undefined}
     />
   {/if}
 {/snippet}

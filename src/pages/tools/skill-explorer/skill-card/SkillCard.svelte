@@ -5,6 +5,7 @@
   import type { SkillEffectDetails } from './skill-effects';
   import type { SkillProvider, SkillProviders } from './skill-providers';
   import { finalSpurtSection, FINAL_SPURT_HELP } from '@/lib/race/final-spurt';
+  import Button from '@/components/controls/Button.svelte';
   import Disclosure from '@/components/overlays/Disclosure.svelte';
   import PickupImages from '@/components/cards/PickupImages.svelte';
   import SkillPoints from '@/components/game/SkillPoints.svelte';
@@ -47,7 +48,10 @@
     scopeCourses: number;
     /** A single course: its distance in metres and terrain, for a metre axis. */
     course?: { distance: number; terrain: TerrainSegment[] };
+    /** In the build the values are measured in. */
     inBuild: boolean;
+    /** On a single course and style: whether the edited build holds it, and adding or removing it there. */
+    build?: { has: boolean; full: boolean; toggle: () => void };
   }
 
   let {
@@ -65,7 +69,8 @@
     gate,
     scopeCourses,
     course,
-    inBuild
+    inBuild,
+    build
   }: Props = $props();
   const sourcesId = $props.id();
 
@@ -270,10 +275,24 @@
     {/if}
   </section>
 
+  {#if build}
+    <div class="build-toggle">
+      <Button
+        size="sm"
+        variant="secondary"
+        icon={build.has ? 'close' : 'add'}
+        disabled={!build.has && build.full}
+        onclick={build.toggle}
+      >
+        {build.has ? 'Remove from build' : 'Add to build'}
+      </Button>
+    </div>
+  {/if}
+
   {#if inBuild || scopeCourses > 1}
     <ul class="notes">
       {#if inBuild}
-        <li>In the reference build</li>
+        <li>In the build these values are measured in</li>
       {/if}
       {#if scopeCourses > 1}
         <li>Fires on {point.courses - point.forced} of {scopeCourses} courses</li>

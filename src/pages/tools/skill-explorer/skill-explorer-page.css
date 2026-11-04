@@ -20,6 +20,23 @@
   font-size: 0.85rem;
 }
 
+.scope-tools {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.25rem 1rem;
+  align-items: center;
+  justify-content: flex-end;
+  margin-left: auto;
+  min-width: 0;
+}
+
+/* On a phone the build joins the count's line, and the target stats take the next. */
+@media (max-width: 520px) {
+  .scope-tools {
+    display: contents;
+  }
+}
+
 .method {
   display: grid;
   gap: 0.5rem;
@@ -29,10 +46,12 @@
 }
 
 .method p,
+.method ol,
 .method ul {
   margin: 0;
 }
 
+.method ol,
 .method ul {
   display: grid;
   gap: 0.25rem;

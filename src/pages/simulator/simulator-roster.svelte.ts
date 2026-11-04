@@ -5,7 +5,7 @@ import { createExampleRace, EXAMPLE_SOURCE } from './simulator-example';
 let characters: CharacterData[] = [];
 
 /** The most runners a race takes. */
-const MAX_FIELD = 18;
+export const MAX_FIELD = 18;
 
 const FIELD_STORAGE_KEY = 'uma.simulator.field';
 
@@ -45,9 +45,14 @@ export function isExampleRunner(uma: SimulatorUma): boolean {
   return uma.source === EXAMPLE_SOURCE;
 }
 
-/** An example runner the user edits or copies is theirs from then on, so imports keep it. */
+export function isDrawnOpponent(uma: SimulatorUma): boolean {
+  return uma.drawnFrom !== undefined;
+}
+
+/** A runner the user edits or copies is theirs from then on, so imports and room draws keep her. */
 export function claimRunner(uma: SimulatorUma): void {
   if (isExampleRunner(uma)) delete uma.source;
+  delete uma.drawnFrom;
 }
 
 /** Saves a runner from the editor: in her place when she is already in the field, otherwise added. */
@@ -76,6 +81,30 @@ export function importSimulatorUmas(umas: SimulatorUma[], replace = false): void
     throw new Error('A race can contain at most 18 Uma. Remove a runner first.');
   simulatorRoster.umas = [...existing, ...umas];
   if (simulatorRoster.umas.length === 1) simulatorRoster.umas.push(createRosterUma('Opponent'));
+  simulatorRoster.configured = true;
+}
+
+/** The runners a room draw keeps: the user's own, without the example field or the last draw. */
+export function roomRunners(): SimulatorUma[] {
+  return ownRunners().filter((uma) => !isDrawnOpponent(uma));
+}
+
+/** Seats drawn teams beside the kept runners, each team on the lowest team number the kept runners leave free. */
+export function seatCmRoom(teams: SimulatorUma[][], snapshotId: string): void {
+  const kept = roomRunners();
+  const usedTeams = new Set(kept.map((uma) => uma.teamId ?? 0));
+  const seated = teams.flatMap((team) => {
+    let teamId = 1;
+    while (usedTeams.has(teamId)) teamId++;
+    usedTeams.add(teamId);
+
+    return team.map((uma) => ({ ...uma, teamId, drawnFrom: snapshotId }));
+  });
+
+  if (kept.length + seated.length > MAX_FIELD)
+    throw new Error('A race can contain at most 18 Uma. Remove a runner first.');
+
+  simulatorRoster.umas = [...kept, ...seated];
   simulatorRoster.configured = true;
 }
 

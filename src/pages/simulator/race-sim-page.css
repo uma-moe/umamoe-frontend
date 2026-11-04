@@ -155,9 +155,8 @@
   font-size: 12px;
   border-radius: var(--radius-sm);
 }
-.import-notice {
-  max-width: 100ch;
-  margin-top: 12px;
+.import-notice + .import-notice {
+  margin-top: 8px;
 }
 .race-main[hidden] {
   display: none;

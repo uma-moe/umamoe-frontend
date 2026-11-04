@@ -99,6 +99,31 @@ describe('a race search in the optimizer', () => {
     ]);
   });
 
+  it('scores both builds in Team Trials points when the service sends them', () => {
+    const response = result();
+    const [pick, runnerUp] = response.report.finalists;
+    pick!.validation!.scenarios[0]!.team_trials_score = {
+      all: estimate(22865),
+      own: estimate(10818)
+    };
+    runnerUp!.validation!.scenarios[0]!.team_trials_score = {
+      all: estimate(22940),
+      own: estimate(10734)
+    };
+
+    const view = theorizedResult({ result: response, offers })!;
+
+    expect(view.builds.map((b) => b.teamTrialsScore)).toEqual([
+      { all: 22865, own: 10818 },
+      { all: 22940, own: 10734 }
+    ]);
+  });
+
+  it('leaves the score out for a service that does not send it', () => {
+    const view = theorizedResult({ result: result(), offers })!;
+    expect(view.builds.every((b) => b.teamTrialsScore === undefined)).toBe(true);
+  });
+
   it('reads no other objective, whose gains are not seconds', () => {
     const response = result();
     response.objective = 'field_place';

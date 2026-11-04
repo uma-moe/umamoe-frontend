@@ -9,6 +9,8 @@ describe('saved simulator runner', () => {
       teamId: 0,
       fanCount: 0,
       skills: [{ skillId: 100101, level: 6 }, { skillId: 200101 }],
+      source: 'CM Data',
+      drawnFrom: 'cm21-2026-11-02',
       capturedAptitudes: ['S', 'A', 'A']
     };
 

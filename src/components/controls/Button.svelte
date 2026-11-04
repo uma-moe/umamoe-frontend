@@ -172,9 +172,11 @@
     padding-inline: var(--space-3);
     font-size: var(--font-sm);
   }
+  /* The loading mark takes the icon's place without resizing the button or moving its neighbours. */
   .button-spinner {
     display: flex;
     flex: none;
+    margin: -2px;
   }
   @media (max-width: 767px) {
     .ui-button {
@@ -192,6 +194,9 @@
     .ui-button > :global(svg) {
       width: 14px;
       height: 14px;
+    }
+    .button-spinner {
+      margin: -4px;
     }
   }
 </style>
