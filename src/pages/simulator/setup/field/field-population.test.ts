@@ -18,7 +18,6 @@ const runner = (overrides: Partial<FieldResult['teams'][number]['runners'][numbe
 const field = (): FieldResult => ({
   schema_version: 1,
   source: { kind: 'rooms', course_id: 10506 },
-  model: { name: 'v5b-wide.v5', sha256: 'abc', course_prior: true },
   layout: { teams: 2, team_size: 1, mobs: 1, mob_team_size: 1 },
   teams: [
     { team_id: 1, kind: 'player', runners: [runner({ card_id: 100201 })] },

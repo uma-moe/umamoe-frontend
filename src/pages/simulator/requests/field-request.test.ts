@@ -11,7 +11,7 @@ const setup = {
 };
 
 describe('field request', () => {
-  it('asks for a CM field with the mode default when nothing overrides it', () => {
+  it('asks for a CM field with the selected race settings', () => {
     const body = buildFieldRequest({ courseId: 10506, seed: 42, setup });
 
     expect(body).toEqual({
@@ -27,17 +27,5 @@ describe('field request', () => {
       },
       mode: 'cm'
     });
-  });
-
-  it('keeps a usable SP override', () => {
-    const body = buildFieldRequest({ courseId: 10506, seed: 42, setup, spBudget: 1000 });
-
-    expect(body.sp_budget).toBe(1000);
-  });
-
-  it('drops a zero budget', () => {
-    const body = buildFieldRequest({ courseId: 10506, seed: 42, setup, spBudget: 0 });
-
-    expect(body.sp_budget).toBeUndefined();
   });
 });

@@ -572,11 +572,10 @@ export interface FieldTeamResult {
   runners: FieldRunnerResult[];
 }
 
-/** `/api/sim/field` result: the mode's layout, the runners, and where the player builds came from. */
+/** `/api/sim/field` result: the mode's layout, the runners, and where the room came from. */
 export interface FieldResult {
   schema_version: number;
   source: { kind: 'rooms' | 'pack'; course_id: number; from_course_id?: number };
-  model: { name: string; sha256: string; course_prior: boolean };
   layout: { teams: number; team_size: number; mobs: number; mob_team_size: number };
   teams: FieldTeamResult[];
 }

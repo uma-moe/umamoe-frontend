@@ -160,7 +160,6 @@ describe('simulator lab repository', () => {
     const result = {
       schema_version: 1,
       source: { kind: 'rooms', course_id: 10506 },
-      model: { name: 'v5b-wide.v5', sha256: 'fixture', course_prior: true },
       layout: { teams: 1, team_size: 2, mobs: 0, mob_team_size: 3 },
       teams: [{ team_id: 1, kind: 'player', runners: [runner, { ...runner, frame_order: 2 }] }]
     };

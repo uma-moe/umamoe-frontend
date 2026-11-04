@@ -235,12 +235,9 @@ function stamina(value: Record<string, unknown>): boolean {
 function field(value: Record<string, unknown>): boolean {
   if (value.schema_version !== 1) return false;
   const source = value.source;
-  const model = value.model;
   const layout = value.layout;
   if (!isRecord(source) || (source.kind !== 'rooms' && source.kind !== 'pack')) return false;
-  if (!isRecord(model) || typeof model.name !== 'string' || typeof model.sha256 !== 'string')
-    return false;
-  if (typeof model.course_prior !== 'boolean' || !isRecord(layout)) return false;
+  if (!isRecord(layout)) return false;
   if (
     !Number.isInteger(layout.teams) ||
     !Number.isInteger(layout.team_size) ||

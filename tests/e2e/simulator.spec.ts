@@ -18,7 +18,6 @@ function generatedField() {
   return {
     schema_version: 1,
     source: { kind: 'rooms', course_id: 10506 },
-    model: { name: 'v5b-wide.v5', sha256: 'fixture', course_prior: true },
     layout: { teams: 3, team_size: 3, mobs: 0, mob_team_size: 3 },
     teams: [1, 2, 3].map((teamId) => ({
       team_id: teamId,
