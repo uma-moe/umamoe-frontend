@@ -40,7 +40,8 @@
     number = 3,
     imports = [],
     onimport,
-    actions: extraActions
+    actions: extraActions,
+    emptyAction
   }: {
     /** Its place among the form's numbered sections. */
     number?: number;
@@ -48,6 +49,8 @@
     imports?: MenuItem[];
     onimport?: (id: string) => void;
     actions?: Snippet;
+    /** The page's fill action, shown in the empty field itself. */
+    emptyAction?: Snippet;
   } = $props();
 
   let editing = $state<SimulatorUma>(),
@@ -261,7 +264,10 @@
   {/snippet}
   <div class="field">
     {#if !simulatorRoster.umas.length}
-      <p class="empty-field">The field is empty. Add Uma, or import a field to race.</p>
+      <div class="empty-field">
+        <p>The field is empty. Populate it for these race settings, or add Uma yourself.</p>
+        {@render emptyAction?.()}
+      </div>
     {/if}
     <div class="runners">
       {#each simulatorRoster.umas as uma, index (uma.id)}

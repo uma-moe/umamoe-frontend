@@ -1,7 +1,11 @@
 <script lang="ts">
   import { describeCourse, trackName, type RaceCourse } from '@/lib/game-data/racing/courses';
   import type { SkillData } from '@/lib/game-data/skills/skills';
-  import { isExampleRunner, simulatorRoster } from '../../../simulator-roster.svelte';
+  import {
+    isExampleRunner,
+    isPlaceholderRunner,
+    simulatorRoster
+  } from '../../../simulator-roster.svelte';
   import {
     GROUND_OPTIONS,
     SEASON_OPTIONS,
@@ -79,11 +83,15 @@
 
     if (target === 'race') {
       const replacesExample = simulatorRoster.umas.some(isExampleRunner);
+      const replacesField = !replacesExample && simulatorRoster.umas.some(isPlaceholderRunner);
+      let replacement = '';
+      if (replacesExample) replacement = ' in place of the example runners';
+      else if (replacesField) replacement = ' in place of the generated field';
       return (
         'Adds ' +
         (runners.length === 1 ? 'her' : 'both runners') +
         ' to the race field' +
-        (replacesExample ? ' in place of the example runners' : '') +
+        replacement +
         ' and sets the course.'
       );
     }

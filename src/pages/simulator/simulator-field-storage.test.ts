@@ -1,5 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { createSimulatorUma, type SimulatorUma } from './simulator-uma';
+import { createExampleRace } from './simulator-example';
 
 const KEY = 'uma.simulator.field';
 
@@ -69,47 +70,50 @@ describe('the field this browser last raced', () => {
     expect(simulatorRoster.configured).toBe(true);
   });
 
-  it('opens on the example field when what was kept is unreadable', async () => {
+  it('opens empty when what was kept is unreadable', async () => {
     storage.setItem(KEY, JSON.stringify({ field: [{ name: 3 }] }));
 
     const { simulatorRoster } = await rosterModule();
 
-    expect(simulatorRoster.umas.length).toBeGreaterThan(1);
-    expect(simulatorRoster.configured).toBe(false);
+    expect(simulatorRoster.umas).toEqual([]);
+    expect(simulatorRoster.configured).toBe(true);
   });
 
-  it('keeps the example field replaceable after a reload', async () => {
+  it('keeps the empty field replaceable after a reload', async () => {
     const first = await rosterModule();
     first.saveSimulatorField();
 
     const { importSimulatorUmas, simulatorRoster } = await rosterModule();
-    expect(simulatorRoster.configured).toBe(false);
+    expect(simulatorRoster.umas).toEqual([]);
 
     importSimulatorUmas([runner('Pick', 'a'), runner('Runner-up', 'b')]);
 
     expect(simulatorRoster.umas.map((uma) => uma.name)).toEqual(['Pick', 'Runner-up']);
   });
 
-  it('drops only the example runners when a build joins the field', async () => {
+  it('drops a generated field when a build joins it', async () => {
     const { importSimulatorUmas, simulatorRoster } = await rosterModule();
-    const exampleCount = simulatorRoster.umas.length;
+    simulatorRoster.umas.push({
+      ...runner('Generated', 'generated'),
+      source: 'Simulator field'
+    });
     simulatorRoster.umas.push(runner('Seiun Sky', 'own'));
     simulatorRoster.configured = true;
 
     importSimulatorUmas([runner('Pick', 'a')]);
 
-    expect(exampleCount).toBeGreaterThan(1);
     expect(simulatorRoster.umas.map((uma) => uma.name)).toEqual(['Seiun Sky', 'Pick']);
   });
 
-  it('keeps an edited example runner when a build joins the field', async () => {
+  it('keeps a generated runner once it is edited', async () => {
     const { importSimulatorUmas, saveFieldRunner, simulatorRoster } = await rosterModule();
-    const edited = { ...simulatorRoster.umas[0]!, name: 'Tuned example' };
-    saveFieldRunner(edited);
+    const generated = { ...runner('Generated', 'generated'), source: 'Simulator field' };
+    simulatorRoster.umas.push(generated);
+    saveFieldRunner({ ...generated, name: 'Tuned generated' });
 
     importSimulatorUmas([runner('Pick', 'a')]);
 
-    expect(simulatorRoster.umas.map((uma) => uma.name)).toEqual(['Tuned example', 'Pick']);
+    expect(simulatorRoster.umas.map((uma) => uma.name)).toEqual(['Tuned generated', 'Pick']);
   });
 
   it('adds a build beside the runners already placed', async () => {
@@ -125,28 +129,31 @@ describe('the field this browser last raced', () => {
     ]);
   });
 
-  it('reads an example field saved without the flag as the example', async () => {
-    const example = (await rosterModule()).simulatorRoster.umas;
+  it('treats an untouched saved example field as empty', async () => {
+    const example = createExampleRace().umas;
     storage.setItem(KEY, JSON.stringify({ field: example, teamColors: {} }));
 
     const { simulatorRoster } = await rosterModule();
 
-    expect(simulatorRoster.configured).toBe(false);
+    expect(simulatorRoster.umas).toEqual([]);
+    expect(simulatorRoster.configured).toBe(true);
   });
 
-  it('keeps an edited example field once it is configured', async () => {
+  it('keeps an empty configured field once it is configured', async () => {
     const first = await rosterModule();
     first.simulatorRoster.configured = true;
     first.saveSimulatorField();
 
     const { simulatorRoster } = await rosterModule();
 
+    expect(simulatorRoster.umas).toEqual([]);
     expect(simulatorRoster.configured).toBe(true);
   });
 
   it('empties the field and keeps it empty', async () => {
-    const { clearSimulatorField, saveSimulatorField, simulatorRoster } = await rosterModule();
-    expect(simulatorRoster.umas.length).toBeGreaterThan(1);
+    const { clearSimulatorField, importSimulatorUmas, saveSimulatorField, simulatorRoster } =
+      await rosterModule();
+    importSimulatorUmas([runner('Seiun Sky', 'a'), runner('Silence Suzuka', 'b')]);
 
     clearSimulatorField();
     saveSimulatorField();

@@ -3,10 +3,16 @@
   container: setup-field / inline-size;
 }
 .empty-field {
-  margin: 0;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 12px;
   padding: 12px 2px;
   font-size: 12px;
   color: var(--text-secondary);
+}
+.empty-field p {
+  margin: 0;
 }
 .clear-note {
   margin: 0;

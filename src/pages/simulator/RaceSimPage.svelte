@@ -52,6 +52,9 @@
   import type { SimulatorUma } from './simulator-uma';
   import type { ParsedRaceCapture } from '@/lib/race/capture/race-capture-parser';
   import { trackName, type RaceCourse } from '@/lib/game-data/racing/courses';
+  import { loadCharacters } from '@/lib/game-data/characters';
+  import { buildFieldRequest } from './requests/field-request';
+  import { simulatorUmasFromField } from './setup/field/field-population';
 
   const GATE_OPTIONS: Array<{ value: MonteCarloGateOrder; label: string; title: string }> = [
     { value: 'sent', label: 'As set', title: 'Every race starts each runner from her own gate' },
@@ -75,7 +78,9 @@
 
   let error = $state(''),
     roomError = $state(''),
+    populateError = $state(''),
     busy = $state(false),
+    populating = $state(false),
     codeOpen = $state(false);
 
   async function showStep(value: 'setup' | 'report') {
@@ -124,6 +129,41 @@
     error = '';
   }
 
+  /** Fill the field with the simulator's model-built runners for the settings on screen. */
+  async function populate() {
+    if (!course || busy || populating || seedInvalid) return;
+
+    populating = true;
+    populateError = '';
+    try {
+      const body = buildFieldRequest({
+        courseId: course.course_id,
+        seed: Number(simulatorSession.seed),
+        setup: {
+          raceInstanceId: selectedRaceInstanceId(),
+          raceType: 0,
+          season: Number(simulatorSession.season),
+          weather: Number(simulatorSession.weather),
+          ground: Number(simulatorSession.ground),
+          startTimeType: Number(simulatorSession.startTime)
+        },
+        mode: 'cm'
+      });
+      const response = await simulatorRepository.field({ body: { ...body } });
+      const characters = await loadCharacters().catch(() => new Map());
+      const umas = simulatorUmasFromField(response.result, characters);
+      replaceSimulatorField(umas, {});
+      simulatorSession.umaId = umas[0]?.id ?? '';
+      simulatorSession.importNotice =
+        'Populated ' + umas.length + ' runners for these race settings.';
+      error = '';
+    } catch (reason) {
+      populateError = reason instanceof Error ? reason.message : 'Could not populate the field.';
+    } finally {
+      populating = false;
+    }
+  }
+
   /** The page's entries in the race field's Import menu. */
   function importRunners(id: string) {
     switch (id) {
@@ -137,7 +177,7 @@
   }
 
   async function send(single: boolean): Promise<void> {
-    if (busy || !canRun || (!single && runsInvalid) || !course) return;
+    if (busy || populating || !canRun || (!single && runsInvalid) || !course) return;
     const target = structuredClone($state.snapshot(course));
     const umas = structuredClone($state.snapshot(simulatorRoster.umas)).map((uma) => ({
       ...uma,
@@ -241,6 +281,19 @@
   }
 </script>
 
+{#snippet populateButton()}
+  <Button
+    variant="secondary"
+    size="sm"
+    icon="users-add"
+    loading={populating}
+    disabled={!course || seedInvalid || busy || populating}
+    onclick={populate}
+  >
+    Populate for race settings
+  </Button>
+{/snippet}
+
 {#if error}
   {#key error}
     <Banner
@@ -250,6 +303,19 @@
       dismissible
     >
       {error}
+    </Banner>
+  {/key}
+{/if}
+{#if populateError}
+  {#key populateError}
+    <Banner
+      title="Could not populate the field"
+      tone="danger"
+      reportable={false}
+      dismissible
+      ondismiss={() => (populateError = '')}
+    >
+      {populateError}
     </Banner>
   {/key}
 {/if}
@@ -382,8 +448,12 @@
             }
           ]}
           onimport={importRunners}
+          emptyAction={populateButton}
         >
-          {#snippet actions()}<CmRoomFill bind:error={roomError} />{/snippet}
+          {#snippet actions()}
+            {@render populateButton()}
+            <CmRoomFill bind:error={roomError} />
+          {/snippet}
         </SimulatorUmaField>
         {#if roomError}
           <div class="import-notice">
@@ -413,10 +483,12 @@
       <!-- Running stays in reach while the form scrolls. -->
       <RunBar
         label="Run simulation"
-        {busy}
+        busy={busy || populating}
       >
         {#snippet summary()}
-          {#if busy}
+          {#if populating}
+            <strong>Populating the field…</strong>
+          {:else if busy}
             <strong>Simulating the field…</strong>
           {:else}
             <strong>
@@ -439,7 +511,7 @@
             variant="ghost"
             size="sm"
             icon="chart"
-            disabled={busy}
+            disabled={busy || populating}
             onclick={() => showStep('report')}
           >
             See result
@@ -448,7 +520,7 @@
           variant="secondary"
           size="sm"
           icon="play"
-          disabled={busy || !canRun}
+          disabled={busy || populating || !canRun}
           onclick={() => send(true)}
         >
           Run one race
@@ -456,7 +528,7 @@
           size="sm"
           icon="chart"
           ariaLabel={'Run ' + (runsInvalid ? 'samples' : runs + ' races')}
-          disabled={busy || !canRun || runsInvalid}
+          disabled={busy || populating || !canRun || runsInvalid}
           onclick={() => send(false)}
         >
           Run simulation

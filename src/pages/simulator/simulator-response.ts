@@ -232,6 +232,71 @@ function stamina(value: Record<string, unknown>): boolean {
   );
 }
 
+function field(value: Record<string, unknown>): boolean {
+  if (value.schema_version !== 1) return false;
+  const source = value.source;
+  const model = value.model;
+  const layout = value.layout;
+  if (!isRecord(source) || (source.kind !== 'rooms' && source.kind !== 'pack')) return false;
+  if (!isRecord(model) || typeof model.name !== 'string' || typeof model.sha256 !== 'string')
+    return false;
+  if (typeof model.course_prior !== 'boolean' || !isRecord(layout)) return false;
+  if (
+    !Number.isInteger(layout.teams) ||
+    !Number.isInteger(layout.team_size) ||
+    !Number.isInteger(layout.mobs) ||
+    !Number.isInteger(layout.mob_team_size)
+  )
+    return false;
+
+  const teams = value.teams;
+  if (!Array.isArray(teams) || !teams.length) return false;
+  const teamIds = new Set<number>();
+  let runners = 0;
+  for (const team of teams) {
+    if (!isRecord(team) || !Number.isInteger(team.team_id) || !Array.isArray(team.runners))
+      return false;
+    if (team.kind !== 'player' && team.kind !== 'mob') return false;
+    if (teamIds.has(Number(team.team_id))) return false;
+    teamIds.add(Number(team.team_id));
+    for (const runner of team.runners) {
+      if (!isRecord(runner) || !isRecord(runner.stats) || !isRecord(runner.aptitudes)) return false;
+      if (runner.team_id !== team.team_id || typeof runner.is_mob !== 'boolean') return false;
+      if (!Number.isInteger(runner.frame_order) || !Array.isArray(runner.skills)) return false;
+      if (
+        !numbers([
+          runner.stats.speed,
+          runner.stats.stamina,
+          runner.stats.power,
+          runner.stats.guts,
+          runner.stats.wisdom
+        ])
+      )
+        return false;
+      const aptitude = (value: unknown, length: number) =>
+        numbers(value) &&
+        value.length === length &&
+        value.every((grade) => grade >= 1 && grade <= 8);
+      if (
+        !aptitude(runner.aptitudes.distance, 4) ||
+        !aptitude(runner.aptitudes.running_style, 4) ||
+        !aptitude(runner.aptitudes.ground, 2)
+      )
+        return false;
+      if (
+        !runner.skills.every(
+          (skill) =>
+            isRecord(skill) && Number.isInteger(skill.skill_id) && Number.isInteger(skill.level)
+        )
+      )
+        return false;
+      runners += 1;
+    }
+  }
+
+  return runners >= 2 && runners <= 18;
+}
+
 export function validateSimulatorResponse(
   path: string,
   body: Record<string, unknown>,
@@ -247,6 +312,7 @@ export function validateSimulatorResponse(
     if (!isRecord(input) || !Array.isArray(input.runners)) throw new Error(incompatible);
     validateDetailedReplay(result, input.runners.length);
   } else if (path.endsWith('/stamina')) valid = stamina(result);
+  else if (path.endsWith('/field')) valid = field(result);
   else if (path.endsWith('/optimize'))
     valid =
       typeof result.mode === 'string' &&

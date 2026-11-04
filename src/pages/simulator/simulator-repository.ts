@@ -550,6 +550,37 @@ export interface SimulatorBatchResult {
   results: { seed: number; finish_order?: number[]; error?: string }[];
 }
 
+/** One runner of a generated field, as `/api/sim/field` returns her. */
+export interface FieldRunnerResult {
+  card_id?: number;
+  chara_id?: number;
+  stats: { speed: number; stamina: number; power: number; guts: number; wisdom: number };
+  running_style: string;
+  motivation: number;
+  aptitudes: { distance: number[]; running_style: number[]; ground: number[] };
+  skills: Array<{ skill_id: number; level: number }>;
+  frame_order: number;
+  team_member_id?: number;
+  team_id: number;
+  fan_count?: number | null;
+  is_mob: boolean;
+}
+
+export interface FieldTeamResult {
+  team_id: number;
+  kind: 'player' | 'mob';
+  runners: FieldRunnerResult[];
+}
+
+/** `/api/sim/field` result: the mode's layout, the runners, and where the player builds came from. */
+export interface FieldResult {
+  schema_version: number;
+  source: { kind: 'rooms' | 'pack'; course_id: number; from_course_id?: number };
+  model: { name: string; sha256: string; course_prior: boolean };
+  layout: { teams: number; team_size: number; mobs: number; mob_team_size: number };
+  teams: FieldTeamResult[];
+}
+
 export type SimulatorHttpRequest = (
   path: string,
   options?: HttpRequestOptions
@@ -676,7 +707,8 @@ export function createSimulatorRepository(request: SimulatorHttpRequest) {
     detailedReplay: (run: SimulatorRunRequest) =>
       post<DetailedReplay>('/api/sim/race', { ...run, body: { input: run.body } }),
     stamina: (run: SimulatorRunRequest) => post<StaminaResult>('/api/sim/stamina', run),
-    optimize: (run: SimulatorRunRequest) => post<OptimizeResult>('/api/sim/optimize', run)
+    optimize: (run: SimulatorRunRequest) => post<OptimizeResult>('/api/sim/optimize', run),
+    field: (run: SimulatorRunRequest) => post<FieldResult>('/api/sim/field', run)
   };
 }
 

@@ -1,6 +1,10 @@
 import { createSimulatorUma, restoreSimulatorUma, type SimulatorUma } from './simulator-uma';
 import { loadReleasedCharacters, type CharacterData } from '@/lib/game-data/characters';
-import { createExampleRace, EXAMPLE_SOURCE } from './simulator-example';
+import { EXAMPLE_SOURCE } from './simulator-example';
+
+/** The generated field's player runners and its mobs; both yield to the user's own builds. */
+export const GENERATED_FIELD_SOURCE = 'Simulator field';
+export const MOB_SOURCE = 'Mob';
 
 let characters: CharacterData[] = [];
 
@@ -12,9 +16,7 @@ const FIELD_STORAGE_KEY = 'uma.simulator.field';
 const kept = restoreField();
 
 export const simulatorRoster = $state<{ umas: SimulatorUma[]; configured: boolean }>(
-  kept
-    ? { umas: kept.umas, configured: kept.configured }
-    : { umas: createExampleRace().umas, configured: false }
+  kept ? { umas: kept.umas, configured: kept.configured } : { umas: [], configured: true }
 );
 
 /** Manual runners start with distinct characters from the released resource catalog. */
@@ -45,13 +47,26 @@ export function isExampleRunner(uma: SimulatorUma): boolean {
   return uma.source === EXAMPLE_SOURCE;
 }
 
+/** A runner an auto-populated field supplied, rather than one the user made. */
+export function isGeneratedRunner(uma: SimulatorUma): boolean {
+  return uma.source === GENERATED_FIELD_SOURCE || uma.source === MOB_SOURCE;
+}
+
+export function isPlaceholderRunner(uma: SimulatorUma): boolean {
+  return isExampleRunner(uma) || isGeneratedRunner(uma);
+}
+
+export function isMobRunner(uma: SimulatorUma): boolean {
+  return uma.source === MOB_SOURCE;
+}
+
 export function isDrawnOpponent(uma: SimulatorUma): boolean {
   return uma.drawnFrom !== undefined;
 }
 
 /** A runner the user edits or copies is theirs from then on, so imports and room draws keep her. */
 export function claimRunner(uma: SimulatorUma): void {
-  if (isExampleRunner(uma)) delete uma.source;
+  if (isPlaceholderRunner(uma)) delete uma.source;
   delete uma.drawnFrom;
 }
 
@@ -69,9 +84,9 @@ export function saveFieldRunner(uma: SimulatorUma): void {
   simulatorRoster.configured = true;
 }
 
-/** The runners the user placed, without the example ones an import makes room for. */
+/** The runners the user placed, without the placeholder field an import makes room for. */
 export function ownRunners(): SimulatorUma[] {
-  return simulatorRoster.umas.filter((uma) => !isExampleRunner(uma));
+  return simulatorRoster.umas.filter((uma) => !isPlaceholderRunner(uma));
 }
 
 /** A whole team/lobby explicitly replaces the current field. Individual builds take the example runners' place. */
@@ -170,9 +185,12 @@ function restoreField():
       return { umas: [], teamColors: readTeamColors(teamColors), configured: true };
 
     const restored = restoreSimulatorField({ field, teamColors });
-    // Fields saved before the flag existed still read as the example while every runner comes from it.
+    // Fields saved before the flag existed still read as the example while every runner comes from it. An untouched
+    // example field is now empty: the race page asks for a field instead of opening on one.
     const userField =
       typeof configured === 'boolean' ? configured : !restored.umas.every(isExampleRunner);
+    if (!userField && restored.umas.every(isExampleRunner))
+      return { ...restored, umas: [], configured: true };
     return { ...restored, configured: userField };
   } catch {
     return undefined;
