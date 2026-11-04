@@ -451,7 +451,9 @@
           emptyAction={populateButton}
         >
           {#snippet actions()}
-            {@render populateButton()}
+            {#if simulatorRoster.umas.length}
+              {@render populateButton()}
+            {/if}
             <CmRoomFill bind:error={roomError} />
           {/snippet}
         </SimulatorUmaField>
