@@ -41,7 +41,8 @@
     imports = [],
     onimport,
     actions: extraActions,
-    emptyAction
+    emptyAction,
+    notice
   }: {
     /** Its place among the form's numbered sections. */
     number?: number;
@@ -51,6 +52,8 @@
     actions?: Snippet;
     /** The page's fill action, shown in the empty field itself. */
     emptyAction?: Snippet;
+    /** Messages about the field, shown under its header so they stay in view above the runners. */
+    notice?: Snippet;
   } = $props();
 
   let editing = $state<SimulatorUma>(),
@@ -262,11 +265,14 @@
       Clear field
     </Button>
   {/snippet}
+  {#if notice}
+    <div class="field-notice">{@render notice()}</div>
+  {/if}
   <div class="field">
     {#if !simulatorRoster.umas.length}
       <div class="empty-field">
         <p>
-          The field is empty. Populate it with real CM runners for these race settings (CM presets
+          The field is empty. Populate it with real CM runners for these race settings (CM races
           only), or add Uma yourself.
         </p>
         {@render emptyAction?.()}

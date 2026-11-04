@@ -9,6 +9,8 @@
   import Banner from '@/components/feedback/Banner.svelte';
   import Button from '@/components/controls/Button.svelte';
   import TextField from '@/components/controls/TextField.svelte';
+  import Dialog from '@/components/overlays/Dialog.svelte';
+  import { HttpError } from '@/services/http/http-client';
   import SimulatorShell from './shell/SimulatorShell.svelte';
   import SimulatorUmaField from './setup/runner/SimulatorUmaField.svelte';
   import BuildCodeDialog from './setup/build/code/BuildCodeDialog.svelte';
@@ -42,6 +44,7 @@
   import {
     simulatorRoster,
     importSimulatorUmas,
+    isPlaceholderRunner,
     replaceSimulatorField,
     restoreSimulatorField,
     simulatorTeamColor,
@@ -79,6 +82,7 @@
     populateError = $state(''),
     busy = $state(false),
     populating = $state(false),
+    replaceOpen = $state(false),
     codeOpen = $state(false);
 
   async function showStep(value: 'setup' | 'report') {
@@ -101,6 +105,9 @@
 
   const canRun = $derived(Boolean(course) && simulatorRoster.umas.length >= 2 && !seedInvalid);
 
+  /** Populating silently replaces only a field the simulator itself filled. */
+  const hasOwnRunners = $derived(simulatorRoster.umas.some((uma) => !isPlaceholderRunner(uma)));
+
   function loadExample() {
     const example = createExampleRace();
     if (!simulatorCourseData.courses.has(example.courseId)) {
@@ -109,6 +116,7 @@
     }
 
     importSimulatorUmas(example.umas, true);
+    populateError = '';
     Object.assign(simulatorSession, {
       courseId: String(example.courseId),
       sourceCourseId: String(example.courseId),
@@ -127,6 +135,12 @@
     error = '';
   }
 
+  const isRecord = (value: unknown): value is Record<string, unknown> =>
+    typeof value === 'object' && value !== null;
+
+  /** A non-negative seed the simulator's signed 32-bit field accepts. */
+  const randomSeed = (): number => Math.floor(Math.random() * 2 ** 31);
+
   function courseLabel(courseId: number): string {
     const raceCourse = simulatorCourseData.courses.get(courseId);
     return raceCourse
@@ -137,16 +151,46 @@
       : 'course ' + courseId;
   }
 
+  function beginPopulate() {
+    if (hasOwnRunners) {
+      replaceOpen = true;
+      return;
+    }
+
+    void populate();
+  }
+
+  /** Why populate failed, in words: a CM-less course and the backend's limits need explaining. */
+  function populateErrorText(reason: unknown): string {
+    if (reason instanceof HttpError && reason.status === 429) {
+      const code = isRecord(reason.body) ? reason.body.error : undefined;
+      if (code === 'run_in_progress')
+        return 'The field is still being populated. Wait for it to finish, then try again.';
+
+      const seconds = Number.parseInt(reason.response.headers.get('retry-after') ?? '', 10);
+      return Number.isFinite(seconds)
+        ? 'You can populate once a minute. Try again in ' + seconds + ' seconds.'
+        : 'You can populate once a minute. Try again in a moment.';
+    }
+
+    const message = reason instanceof Error ? reason.message : 'Could not populate the field.';
+    return /no published CM snapshot|no CM model or published room/i.test(message)
+      ? 'This course has no CM data. Population works for CM presets and CM tracks; choose one, or add runners yourself.'
+      : message;
+  }
+
   /** Fill the field with real CM runners for the settings on screen. */
   async function populate() {
     if (!course || busy || populating || seedInvalid) return;
 
     populating = true;
     populateError = '';
+    simulatorSession.importNotice = '';
     try {
       const body = buildFieldRequest({
         courseId: course.course_id,
-        seed: Number(simulatorSession.seed),
+        // The field seed is not the race seed: a new draw should give a new room for the same unedited settings.
+        seed: randomSeed(),
         setup: {
           raceInstanceId: selectedRaceInstanceId(),
           raceType: 0,
@@ -172,10 +216,7 @@
         'Populated ' + umas.length + ' real CM runners' + origin + ' for these race settings.';
       error = '';
     } catch (reason) {
-      const message = reason instanceof Error ? reason.message : 'Could not populate the field.';
-      populateError = /no published CM snapshot|no CM model or published room/i.test(message)
-        ? 'This course has no CM data. Population works for CM presets and CM tracks; choose one, or add runners yourself.'
-        : message;
+      populateError = populateErrorText(reason);
     } finally {
       populating = false;
     }
@@ -293,6 +334,7 @@
     if (page.gateOrder === 'sent' || page.gateOrder === 'randomized') gateOrder = page.gateOrder;
     const races = wholeNumber(page.runs);
     if (races !== undefined) runs = races;
+    populateError = '';
     simulatorSession.importNotice =
       'Loaded the whole race field of ' + restored.umas.length + ' runners from a build code.';
   }
@@ -305,9 +347,12 @@
     icon="users-add"
     loading={populating}
     disabled={!course || seedInvalid || busy || populating}
-    onclick={populate}
+    title={simulatorRoster.umas.length
+      ? 'Replace the field with a new CM field'
+      : 'Fill the field with real CM runners'}
+    onclick={beginPopulate}
   >
-    Populate
+    {simulatorRoster.umas.length ? 'Repopulate' : 'Populate'}
   </Button>
 {/snippet}
 
@@ -414,8 +459,7 @@
                     size="sm"
                     icon="dice"
                     ariaLabel="Random seed"
-                    onclick={() =>
-                      (simulatorSession.seed = String(Math.floor(Math.random() * 2 ** 31)))}
+                    onclick={() => (simulatorSession.seed = String(randomSeed()))}
                   />
                 </div>
                 <div class="run-field gates">
@@ -459,31 +503,29 @@
               {@render populateButton()}
             {/if}
           {/snippet}
+          {#snippet notice()}
+            {#if populateError}
+              <Banner
+                title="Could not populate the field"
+                tone="danger"
+                reportable={false}
+                dismissible
+                ondismiss={() => (populateError = '')}
+              >
+                <p>{populateError}</p>
+              </Banner>
+            {/if}
+            {#if simulatorSession.importNotice}
+              <Banner
+                title="Race field updated"
+                dismissible
+                ondismiss={() => (simulatorSession.importNotice = '')}
+              >
+                <p>{simulatorSession.importNotice}</p>
+              </Banner>
+            {/if}
+          {/snippet}
         </SimulatorUmaField>
-        {#if populateError}
-          <div class="import-notice">
-            <Banner
-              title="Could not populate the field"
-              tone="danger"
-              reportable={false}
-              dismissible
-              ondismiss={() => (populateError = '')}
-            >
-              <p>{populateError}</p>
-            </Banner>
-          </div>
-        {/if}
-        {#if simulatorSession.importNotice}
-          <div class="import-notice">
-            <Banner
-              title="Race field updated"
-              dismissible
-              ondismiss={() => (simulatorSession.importNotice = '')}
-            >
-              <p>{simulatorSession.importNotice}</p>
-            </Banner>
-          </div>
-        {/if}
       </div>
       <!-- Running stays in reach while the form scrolls. -->
       <RunBar
@@ -598,11 +640,41 @@
     } catch (reason) {
       return reason instanceof Error ? reason.message : 'Could not import this build.';
     }
+    populateError = '';
     simulatorSession.importNotice =
       'Added ' + umas.map((uma) => uma.name).join(' and ') + ' from a build code.';
     return undefined;
   }}
 />
+
+<Dialog
+  bind:open={replaceOpen}
+  title="Replace the field?"
+  compact
+  maxWidth="420px"
+>
+  <p class="replace-note">
+    Populating replaces the {simulatorRoster.umas.length} runners on the field with real CM runners for
+    these race settings.
+  </p>
+  {#snippet actions()}
+    <Button
+      variant="secondary"
+      onclick={() => (replaceOpen = false)}
+    >
+      Cancel
+    </Button>
+    <Button
+      icon="users-add"
+      onclick={() => {
+        replaceOpen = false;
+        void populate();
+      }}
+    >
+      Populate
+    </Button>
+  {/snippet}
+</Dialog>
 
 <style>
   @import './race-sim-page.css';

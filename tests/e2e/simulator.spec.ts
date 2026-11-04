@@ -32,7 +32,10 @@ function generatedField() {
           running_style: [7, 7, 7, 7],
           ground: [7, 7]
         },
-        skills: [{ skill_id: 200001, level: 1 }],
+        skills: [
+          { skill_id: 200001, level: 1 },
+          { skill_id: 200012, level: 1 }
+        ],
         frame_order: (teamId - 1) * 3 + member + 1,
         team_member_id: member + 1,
         team_id: teamId,
@@ -43,7 +46,10 @@ function generatedField() {
 }
 
 async function populateField(page: Page) {
-  await page.getByRole('button', { name: 'Populate', exact: true }).first().click();
+  await page
+    .getByRole('button', { name: /^(Populate|Repopulate)$/ })
+    .first()
+    .click();
   await expect(page.locator('.field .runner')).toHaveCount(9);
 }
 
@@ -118,11 +124,47 @@ test.beforeEach(async ({ page }) => {
 test('Race field opens empty and populates for its race settings', async ({ page }) => {
   await page.goto('/simulator/race');
   await expect(page.locator('.field .runner')).toHaveCount(0);
+  await expect(page.getByText('CM races only')).toBeVisible();
   const populate = page.getByRole('button', { name: 'Populate', exact: true });
   await expect(populate.first()).toBeEnabled();
   await populate.first().click();
   await expect(page.locator('.field .runner')).toHaveCount(9);
   await expect(page.getByText(/Populated 9 real CM runners/)).toBeVisible();
+});
+
+test('Populating explains a course without CM data and the minute limit', async ({ page }) => {
+  let reply = { status: 503, json: { error: 'no published CM snapshot for course 10601' } };
+  await page.route('**/api/sim/field', (route) => route.fulfill(reply));
+
+  await page.goto('/simulator/race');
+  const populate = page.getByRole('button', { name: 'Populate', exact: true }).first();
+  await populate.click();
+  await expect(page.getByText(/This course has no CM data/)).toBeVisible();
+
+  reply = { status: 429, headers: { 'retry-after': '42' }, json: { error: 'rate_limited' } };
+  await populate.click();
+  await expect(page.getByText(/once a minute. Try again in 42 seconds/)).toBeVisible();
+});
+
+test('Repopulating asks before replacing the user’s runners', async ({ page }) => {
+  await gotoRaceField(page);
+  const field = page.getByRole('region', { name: 'Race field', exact: true });
+  await field
+    .getByRole('button', { name: /^Edit / })
+    .first()
+    .click();
+  await page.getByRole('button', { name: 'Save Uma', exact: true }).click();
+
+  await field.getByRole('button', { name: 'Repopulate', exact: true }).click();
+  const dialog = page.getByRole('dialog', { name: 'Replace the field?' });
+  await expect(dialog).toBeVisible();
+  await dialog.getByRole('button', { name: 'Cancel', exact: true }).click();
+  await expect(field.locator('.runner')).toHaveCount(9);
+
+  await field.getByRole('button', { name: 'Repopulate', exact: true }).click();
+  await dialog.getByRole('button', { name: 'Populate', exact: true }).click();
+  await expect(dialog).toBeHidden();
+  await expect(field.locator('.runner')).toHaveCount(9);
 });
 
 test('Course setup preserves every searchable resource option and its breakdown', async ({
@@ -137,6 +179,7 @@ test('Course setup preserves every searchable resource option and its breakdown'
   );
 
   await page.goto('/simulator/race');
+  await populateField(page);
   // The setup reads top to bottom: the race with its course and sampling, then the field; running stays in the bar
   // under them.
   const race = page.getByRole('region', { name: 'Race', exact: true }),
