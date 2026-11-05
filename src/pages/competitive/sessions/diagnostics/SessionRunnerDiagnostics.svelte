@@ -1,11 +1,9 @@
 <script lang="ts">
   import type { RaceRunner } from '@/lib/race/capture/race-capture-parser';
-  import { frontBlockingSpans } from '@/lib/race/capture/race-diagnostics';
   import Disclosure from '@/components/overlays/Disclosure.svelte';
   import Button from '@/components/controls/Button.svelte';
   import RunnerBuildDetails from '../../runners/RunnerBuildDetails.svelte';
   import ReplayDiagnostics from '@/pages/competitive/race-analysis/diagnostics/ReplayDiagnostics.svelte';
-  import RunnerReference from '../../runners/RunnerReference.svelte';
   import { styleColors } from '../../analysis-view';
   import type { DiagnosticEntry } from './session-diagnostics';
 
@@ -82,65 +80,15 @@
         raceContext={{ distance: selected.capture.raceDistance }}
       />
     {/snippet}
-    {#snippet blocking()}
-      <section class="session-blocking">
-        <h4>Front blocking</h4>
-        {#each frontBlockingSpans(selected.capture).filter((s) => s.horseIndex === selected.runner.index) as span}
-          {@const blocker = selected.capture.runners.find(
-            (r) => r.index === span.blockerHorseIndex
-          )}
-          <div>
-            <Button
-              variant="secondary"
-              size="sm"
-              disabled={!onreplay}
-              onclick={() => onreplay?.(selected.race, selected.runner.index, span.startTime)}
-            >
-              {span.startTime.toFixed(3)} s
-            </Button>
-            <span>Blocked by</span>
-            {#if blocker}
-              <RunnerReference
-                name={blocker.name}
-                cardId={blocker.cardId}
-                compact
-              />
-            {/if}
-            <strong>{(span.endTime - span.startTime).toFixed(2)} s</strong>
-          </div>
-        {:else}
-          <p>No front blocking recorded.</p>
-        {/each}
-      </section>
-    {/snippet}
   </ReplayDiagnostics>
 </Disclosure>
 
 <style>
-  h4,
-  p {
-    margin: 0;
-  }
-  h4 {
-    font-size: 13px;
-  }
-  p {
-    font-size: 11px;
-    line-height: 1.5;
-    color: var(--text-secondary);
-  }
-  p {
-    margin-top: 3px;
-  }
-  .selected-runner,
-  .session-blocking > div {
+  .selected-runner {
     display: flex;
     align-items: center;
     gap: 8px;
     font-size: 12px;
-  }
-  .session-blocking strong {
-    margin-left: auto;
   }
   .selected-runner {
     justify-content: space-between;
@@ -152,12 +100,6 @@
     display: flex;
     flex-wrap: wrap;
     gap: 6px;
-  }
-  .session-blocking h4 {
-    margin-bottom: 4px;
-  }
-  .session-blocking strong {
-    font-weight: 500;
   }
   @media (max-width: 760px) {
     .selected-runner > div {

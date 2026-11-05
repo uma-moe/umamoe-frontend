@@ -131,9 +131,9 @@
         { key: 'time', label: 'Finish time', numeric: true },
         { key: 'hp', label: 'HP at finish', numeric: true },
         { key: 'spurt', label: 'Spurt delay', numeric: true },
-        { key: 'loss', label: 'Course loss (m)', numeric: true },
-        { key: 'start', label: 'Start delay (ms)', numeric: true },
-        { key: 'blocked', label: 'Blocked (s)', numeric: true },
+        { key: 'loss', label: 'Course loss', helpKey: 'Course loss (m)', numeric: true },
+        { key: 'start', label: 'Start delay', helpKey: 'Start delay (ms)', numeric: true },
+        { key: 'blocked', label: 'Blocked', helpKey: 'Blocked (s)', numeric: true },
         ...(filtered.some((e) => !e.horse) ? [{ key: 'source', label: 'Simulation' }] : [])
       ]}
     >
@@ -173,7 +173,7 @@
             )}
           >
             {typeof row.hp === 'number'
-              ? Math.round(row.hp).toLocaleString()
+              ? Math.round(row.hp).toLocaleString() + ' HP'
               : '—'}{#if typeof row.percent === 'number'}
               <small>
                 ({row.percent.toFixed(1)}%)
@@ -184,10 +184,13 @@
           <LastSpurtResult result={lastSpurtResult(entry.capture, entry.runner.index)} />
         {:else if column.key === 'start'}
           <span class:warning={row.delayed}>
-            {typeof row.start === 'number' ? row.start.toFixed(1) : '—'}
+            {typeof row.start === 'number' ? row.start.toFixed(1) + ' ms' : '—'}
           </span>
         {:else if typeof row[column.key] === 'number'}
           {Number(row[column.key]).toFixed(['loss', 'blocked'].includes(column.key) ? 2 : 0)}
+          {#if column.key === 'loss'}
+            m{:else if column.key === 'blocked'}
+            s{/if}
         {:else}
           {row[column.key]}
         {/if}
@@ -225,8 +228,8 @@
         expandedRow={mode}
         columns={[
           { key: 'name', label: 'Mode' },
-          { key: 'mean', label: 'Avg. active (s)', numeric: true },
-          { key: 'duration', label: 'Total active (s)', numeric: true },
+          { key: 'mean', label: 'Avg. active', helpKey: 'Avg. active (s)', numeric: true },
+          { key: 'duration', label: 'Total active', helpKey: 'Total active (s)', numeric: true },
           { key: 'entries', label: 'Runners', numeric: true },
           { key: 'periods', label: 'Periods', numeric: true, sortable: false }
         ]}
@@ -253,6 +256,8 @@
                 </span>
               </span>
             </Button>
+          {:else if column.key === 'mean' || column.key === 'duration'}
+            {row[column.key]} s
           {:else}
             {row[column.key]}
           {/if}

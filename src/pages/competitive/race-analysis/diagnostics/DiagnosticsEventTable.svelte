@@ -6,6 +6,7 @@
   import RaceSkill from '@/pages/competitive/runners/RaceSkill.svelte';
   import DiagnosticsRunnerReference from './DiagnosticsRunnerReference.svelte';
   import { number, rows, seekRow } from './diagnostics-format';
+  import { positionKeepModeLabel } from './measurements/position-keep-decisions';
 
   let {
     value,
@@ -29,6 +30,15 @@
     onseek: (time: number) => void;
     onselect: (index: number) => void;
   } = $props();
+
+  const units: Record<string, string> = {
+    checkDistance: 'm',
+    selectedStartDistance: 'm',
+    checkHp: 'HP',
+    fullSpurtNeedHp: 'HP',
+    fullSpurtTargetSpeed: 'm/s',
+    selectedTargetSpeed: 'm/s'
+  };
 </script>
 
 {#if Array.isArray(value) && !value.length}
@@ -59,9 +69,10 @@
           {capture}
           {index}
           value={Number(row[column.key])}
+          showTrainer={column.key === 'pacemakerHorseIndex'}
           {onselect}
         />
-      {:else if column.key === 'referenceHorseIndex'}
+      {:else if column.key === 'referenceHorseIndex' || column.key === 'pacemakerHorseIndex'}
         <span class="muted">None</span>
       {:else if column.key === 'skillId'}
         <span class="skill-chip-cell">
@@ -77,9 +88,7 @@
           </small>
         {/if}
       {:else if column.key === 'attemptedMode'}
-        {['None', 'Speed up', 'Overtake', 'Pace up', 'Pace down', 'Pace up (extended)'][
-          Number(row.attemptedMode)
-        ] ?? row.attemptedMode}
+        {positionKeepModeLabel(Number(row.attemptedMode))}
       {:else if column.key === 'outcome'}
         <span
           class:activated={row.outcome === 'Started'}
@@ -92,7 +101,7 @@
           Number(row.mode)
         ] ?? row.mode}
       {:else if column.key === 'duration'}
-        {Number(row.duration).toFixed(2)}
+        {typeof row.duration === 'number' ? row.duration.toFixed(2) + ' s' : '—'}
       {:else if column.key === 'roll' && typeof row.roll === 'number' && typeof row.threshold === 'number'}
         <span
           class:activated={Number(row.roll) < Number(row.threshold)}
@@ -109,7 +118,11 @@
           .map(([name]) => diagnosticLabel(name))
           .join(', ') || 'None'}
       {:else}
-        {typeof row[column.key] === 'number' ? number(row[column.key], 2) : row[column.key]}
+        {#if typeof row[column.key] === 'number'}
+          {number(row[column.key], 2)}{units[column.key] ? ' ' + units[column.key] : ''}
+        {:else}
+          {row[column.key]}
+        {/if}
       {/if}
     {/snippet}
   </DataTable>

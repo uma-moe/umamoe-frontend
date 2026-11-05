@@ -8,6 +8,8 @@
   export interface TableColumn {
     key: string;
     label: string;
+    /** Keeps shared help text when the displayed heading is shortened. */
+    helpKey?: string;
     /** A shorter heading a phone shows, so a narrow table keeps its columns; `label` stays the accessible name. */
     short?: string;
     numeric?: boolean;
@@ -234,6 +236,7 @@
     <thead>
       <tr>
         {#each columns as column, columnIndex}
+          {@const help = columnHelp?.[column.helpKey ?? column.label]}
           <th
             class:secondary={column.priority === 'secondary'}
             class:numeric={column.numeric}
@@ -263,7 +266,7 @@
                 </span>
               </button>
             {/if}
-            {#if columnHelp?.[column.label]}
+            {#if help}
               <span class="column-help">
                 <InspectPopover
                   label={'About ' + column.label}
@@ -273,7 +276,7 @@
                   {#snippet trigger()}
                     <InfoIcon />
                   {/snippet}
-                  <p>{columnHelp[column.label]}</p>
+                  <p>{help}</p>
                 </InspectPopover>
               </span>
             {/if}

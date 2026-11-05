@@ -38,17 +38,13 @@ export interface HorseDiagnostics extends DiagnosticRow {
   temptationDecision?: DiagnosticRow | null;
 }
 
+const skillMissKinds = ['impossible', 'preconditionNeverMet', 'conditionNeverMet'] as const;
+
 /** The simulator's reason a skill did not activate; `reasons` explains `impossible` only. */
 export interface SkillMiss {
-  kind: 'impossible' | 'preconditionNeverMet' | 'conditionNeverMet';
+  kind: (typeof skillMissKinds)[number];
   reasons: string[];
 }
-
-export const skillMissLabels = {
-  impossible: 'Impossible in this race',
-  preconditionNeverMet: 'Precondition never met',
-  conditionNeverMet: 'Condition never met'
-} as const satisfies Record<SkillMiss['kind'], string>;
 
 export interface DetailedReplay {
   engineBuild: string;
@@ -73,9 +69,10 @@ const finite = (v: unknown): v is number => typeof v === 'number' && Number.isFi
 
 const isSkillMiss = (v: unknown): v is SkillMiss =>
   object(v) &&
-  Object.keys(skillMissLabels).includes(String(v.kind)) &&
+  (skillMissKinds as readonly unknown[]).includes(v.kind) &&
   Array.isArray(v.reasons) &&
   v.reasons.every((reason) => typeof reason === 'string');
+
 export function validateDetailedReplay(value: unknown, count: number): DetailedReplay {
   if (
     !object(value) ||
@@ -256,6 +253,15 @@ export function validateDetailedReplay(value: unknown, count: number): DetailedR
 export const diagnosticLabel = (key: string) =>
   (
     ({
+      conservePower: 'Fully charged',
+      rushing: 'Rushed',
+      blocked: 'Blocked',
+      downhill: 'Downhill mode',
+      positionKeepPaceUpEx: 'Pace up ex',
+      positionKeepSpeedUp: 'Speed up',
+      positionKeepPaceUp: 'Pace up',
+      positionKeepOvertake: 'Overtake',
+      positionKeepPaceDown: 'Pace down',
       worldTransformDistanceLoss: 'Course geometry distance loss (m)',
       finishDistanceToPrevious: 'Gap to previous finisher (m)',
       hpDeficit: 'HP shortfall',
@@ -422,18 +428,16 @@ export const raceMetricHelp: Record<string, string> = {
   Runner:
     'The runner’s name, starting gate and running style. Select a runner to inspect their race.',
   'No.': 'Starting gate number.',
-  Uma: 'Rank, character and trainer. Select a runner to inspect their race.',
-  Time: 'Race completion time. The distance below it is the gap to the previous finisher when that runner crossed the line.',
-  'Style / mood': 'Running style used in this race and the mood on race day.',
+  Uma: 'Rank, uma and trainer. Click umas for details.',
+  Time: 'The first value is finish time, second value is the distance to the previous finisher at the moment they finish. Note that the finish time uses the real race simulation time, the ingame time is highly inaccurate.',
   Delay:
-    'Start delay in milliseconds. Delays of 80 ms or more are late starts. A delay above one simulation frame (66.6 ms) also loses the first acceleration frame.',
-  'Last spurt':
-    'Distance between the first last-spurt check and the selected spurt start. Zero means no delay. Speed is the selected spurt target, with the reduction from the full-spurt target in parentheses.',
-  'Duel (s)': 'Seconds spent dueling with another runner on the final straight.',
-  'Downhill (s)':
-    'Seconds in downhill accel mode. The line below splits it into time before the late race and time in it.',
-  'Pace (s)': 'Seconds in position-keeping modes: ↑ Pace Up, Speed Up and Overtake; ↓ Pace Down.',
-  Stats: 'The five build stats, with the total cost of the learned skills in SP.',
+    'Ingame, a start delay of 80ms or worse is marked as a late start. However, the most devastating effect of high start delay is the loss of 1 frame of acceleration which already occurs at 66ms, so any start that loses that frame of acceleration is marked as a late start here.',
+  'Last spurt': 'Spurt delay and last spurt speed of this uma.',
+  'Duel (s)': 'Time spent dueling with another uma on the final straight.',
+  'Downhill (s)': 'Time spent in downhill mode, split into late race and pre-late race time.',
+  'Pace (s)':
+    'Time this uma spent in position keep modes, categorized by positive (pace up, pace up ex, overtake) and negative (pace down) modes.',
+  Stats: "The uma's stats as well as the total SP cost of her learned skills without hints.",
   'Time / gap':
     'Race completion time. The gap below it is the distance to the previous finisher when that runner crossed the finish line.',
   'Start delay':
@@ -441,51 +445,38 @@ export const raceMetricHelp: Record<string, string> = {
   'Start delay (ms)':
     'Time spent waiting after the start. Delays of 80 ms or more are marked as late starts. A delay above one simulation frame (66.6 ms) also loses the first acceleration frame.',
   Start:
-    'The start is marked delayed if it was at least 80 ms late or lost the first acceleration frame. Losing that frame starts above 66.6 ms.',
+    'Ingame, a start delay of 80ms or worse is marked as a late start. However, the most devastating effect of high start delay is the loss of 1 frame of acceleration which already occurs at 66ms, so any start that loses that frame of acceleration is marked as a late start here.',
   'Spurt delay':
     'Distance between the first last-spurt check and the selected spurt start. Zero means no delay. For recorded-only captures, delay is estimated from the late-race boundary. Speed is the selected spurt target. A negative value in parentheses shows the reduction from the full-spurt target, in m/s.',
   'HP result':
-    'Survived shows HP left at the finish as a share of maximum HP. Died shows how far before the finish HP ran out and, when resimulated, the HP shortfall as a share of maximum HP.',
+    'HP result at the end of the race. If the uma ran out of HP, displays how far before the finish HP hit 0.',
   'HP at finish':
     'HP remaining when the runner finishes. Zero means HP was exhausted, and the exhaustion distance shows where it happened.',
   'Race modes (s)':
     'Seconds spent dueling, running downhill, or in position-keeping pace modes. Hover the downhill time for the part in the late race.',
   'Course loss (m)':
-    'Additional distance travelled because of track geometry, including the runner’s path through corners.',
+    'Distance lost while moving lanes, or being on outside lanes while running through corners.',
   'Course loss':
-    'Additional distance travelled because of track geometry, including the runner’s path through corners.',
-  'Incidents (s)':
-    'Total seconds spent front-blocked or rushing. Rushing periods and front-blocking periods can overlap.',
+    'Distance lost while moving lanes, or being on outside lanes while running through corners.',
+  'Incidents (s)': 'Total seconds spent blocked or rushed.',
   'Blocked (s)': 'Total time with another runner blocking the path directly ahead.',
   Build: 'The five build stats, with the total cost of the learned skills in SP below them.',
   Popularity: 'The simulator’s popularity ranking of the runner; 1 is the favourite.',
   Outcome:
-    'Activated means the skill triggered. Impossible in this race means the race itself rules the skill out, for example a place condition no runner can meet in a small field; the reason is shown below it. Wit check failed means its activation check did not pass. Precondition never met and Condition never met mean the skill could activate, but that part of its conditions never happened this race. Passed wit check, failed condition is the same, from a simulator that does not say which part.',
+    "Displays whether the skill activated, failed its wit check or passed the wit check but didn't meet its preconditions or conditions. Impossible means its conditions can't be met in this race at all, for example a position condition in a small field.",
   Triggers: 'Number of recorded activations for this skill during the race.',
-  'First (s)':
-    'Time of the first activation or active period. Select the time to watch that moment in replay.',
+  'First (s)': 'Time of first occurrence.',
   'Active (s)':
     'Total elapsed time the skill was active. Overlapping effects from the same skill are counted once. Instant effects can last only one simulation tick.',
   'Wit check':
     'The random percentage drawn for the skill’s wit check. A value below the activation chance passes, and an equal or higher value fails. For example, 22% passes an 80% chance and 91% fails. A dash means no wit check is required. The race conditions still need to be met.',
   'Wit threshold (%)':
     'Chance of passing the skill’s activation check, determined by wit and any relevant modifiers. Passing the check does not guarantee the skill’s conditions are met.',
-  'Wit check threshold':
-    'Chance of passing the skill’s activation check, determined by wit and any relevant modifiers. Passing the check does not guarantee the skill’s conditions are met.',
-  Mode: 'A race behaviour active during the recorded periods, such as downhill running, dueling or position keeping.',
-  'Active time (s)':
-    'Total time this race behaviour was active. Expand the period count to inspect its start and end times.',
-  Periods:
-    'Number of separate active periods. Expand the count to see each period and jump to it in replay.',
-  'HP at decision': 'HP available when the simulator calculated the last-spurt plan.',
+  'HP at decision': 'Current HP at the time of last spurt check.',
   'Rushing check':
     'The random percentage drawn for rushing, beside the runner’s rushing chance. A check below the chance makes the runner rush from the scheduled section. Higher wit lowers the chance.',
-  'HP for full spurt':
-    'HP needed to start the full-speed spurt at this decision point and sustain it to the finish.',
-  'Full spurt speed':
-    'Target speed for a full last spurt before an HP shortage lowers the selected speed.',
-  'HP balance':
-    'HP at the decision minus the HP a full spurt needs. A shortfall delays the spurt or lowers its speed.',
+  'HP for full spurt': 'HP required for full spurt.',
+  'HP balance': 'Difference between current and required HP at last spurt check.',
   'Time (s)':
     'Seconds since the start of the race. Select a time to jump to that moment in replay.',
   'Target (m/s)':
@@ -494,8 +485,6 @@ export const raceMetricHelp: Record<string, string> = {
     'The acceleration rate at this sample. Positive values speed the runner up and negative values slow them down.',
   Section:
     'One of 24 equal distance sections used for the race’s base target-speed calculation. Select a section to replay its beginning.',
-  'Distance (m)':
-    'Distance along the course, measured from the start. A range shows the section’s start and end.',
   Phase: 'The race phase used for this course section: early, mid, late or last spurt.',
   'RNG (%)':
     'Random adjustment to base target speed for this section. Positive values raise speed and negative values lower it. It is included in the displayed base target speed.',

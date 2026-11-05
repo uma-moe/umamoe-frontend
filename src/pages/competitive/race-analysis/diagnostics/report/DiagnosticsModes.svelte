@@ -4,21 +4,23 @@
   import DataTable from '@/components/data/DataTable.svelte';
   import Button from '@/components/controls/Button.svelte';
   import Icon from '@/components/Icon.svelte';
-  import { display, modeRows, seekRow } from '../diagnostics-format';
+  import { display, modeRows, modeSpans, seekRow } from '../diagnostics-format';
 
   let {
     capture,
+    index,
     horse,
     onseek,
     expandedMode = $bindable()
   }: {
     capture: ParsedRaceCapture;
-    horse: HorseDiagnostics;
+    index: number;
+    horse: HorseDiagnostics | undefined;
     onseek: (time: number) => void;
     expandedMode?: string;
   } = $props();
 
-  const rows = $derived(modeRows(capture, horse));
+  const rows = $derived(modeRows(capture, horse, index));
 </script>
 
 <section
@@ -26,9 +28,7 @@
   aria-label="Runner race modes"
 >
   <header class="section-heading">
-    <h3>
-      Race behaviour <small>{rows.length} active</small>
-    </h3>
+    <h3>Race behaviour</h3>
   </header>
   <DataTable
     columnHelp={raceMetricHelp}
@@ -40,9 +40,9 @@
     emptyMessage="No race modes recorded."
     columns={[
       { key: 'mode', label: 'Mode' },
-      { key: 'duration', label: 'Active time (s)', numeric: true },
+      { key: 'duration', label: 'Active time', helpKey: 'Active time (s)', numeric: true },
       { key: 'periods', label: 'Periods', numeric: true },
-      { key: 'time', label: 'First (s)', numeric: true }
+      { key: 'time', label: 'First', helpKey: 'First (s)', numeric: true }
     ]}
     onrowclick={(row) => seekRow(row, onseek)}
     rowKey="id"
@@ -74,7 +74,7 @@
           </span>
         </button>
       {:else if column.key === 'duration'}
-        {Number(row.duration).toFixed(2)}
+        {Number(row.duration).toFixed(2)} s
       {:else}
         {row[column.key]}
       {/if}
@@ -84,7 +84,7 @@
         class="mode-periods"
         aria-label={row.mode + ' periods'}
       >
-        {#each horse.spans.filter((span) => (span.mask & (capture.detailed?.annotations.flags[String(row.id)] ?? 0)) !== 0) as span}
+        {#each modeSpans(capture, horse, String(row.id), index) as span}
           <li>
             <span>
               <Button
@@ -103,7 +103,16 @@
                 {span.endTime.toFixed(3)} s
               </Button>
             </span>
-            <span>{display(span.phase, 'phase')}</span>
+            {#if 'phase' in span && span.phase !== undefined}
+              <span>{display(span.phase, 'phase')}</span>
+            {/if}
+            {#if typeof span.blockerHorseIndex === 'number'}
+              <span>
+                Blocked by {capture.runners.find(
+                  (runner) => runner.index === span.blockerHorseIndex
+                )?.name ?? 'Runner ' + (span.blockerHorseIndex + 1)}
+              </span>
+            {/if}
             <small>{(span.endTime - span.startTime).toFixed(2)} s</small>
           </li>
         {/each}

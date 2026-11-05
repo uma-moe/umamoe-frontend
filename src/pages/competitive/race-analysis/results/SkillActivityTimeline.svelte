@@ -1,7 +1,8 @@
 <script lang="ts">
   import InfoIcon from '@/components/feedback/InfoIcon.svelte';
   import type { ParsedRaceCapture } from '@/lib/race/capture/race-capture-parser';
-  import { diagnosticHorse, skillMiss, skillMissLabels } from '@/lib/race/capture/race-diagnostics';
+  import { diagnosticHorse } from '@/lib/race/capture/race-diagnostics';
+  import { impossibleSkillReason, skillActivationOutcome } from '../diagnostics/diagnostics-format';
   import { skillActivityRows, skillIconGroups, type SkillPeriod } from './skill-activity';
   import RaceSkill from '@/pages/competitive/runners/RaceSkill.svelte';
   import InspectPopover from '@/components/overlays/InspectPopover.svelte';
@@ -109,18 +110,11 @@
 
   function outcome(id: number) {
     const decision = decisions.find((decision) => Number(decision.skillId) === id);
-    const miss = skillMiss(decision);
-    return decision?.activated
-      ? 'Activated, timing not recorded'
-      : miss?.kind === 'impossible'
-        ? skillMissLabels.impossible + ': ' + miss.reasons.join('; ')
-        : decision && !decision.passed
-          ? 'Wit check failed'
-          : miss
-            ? skillMissLabels[miss.kind]
-            : decision?.required
-              ? 'Passed wit check, failed condition'
-              : 'No recorded activation';
+    if (decision?.activated) return 'Activated, timing not recorded';
+
+    const status = skillActivationOutcome(decision, false);
+    const reason = impossibleSkillReason(decision);
+    return reason ? status + ': ' + reason : status;
   }
 </script>
 

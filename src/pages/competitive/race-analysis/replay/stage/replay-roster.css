@@ -74,6 +74,14 @@ p {
   font-size: 12px;
   font-weight: 600;
 }
+.field-identity {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+.field-identity strong {
+  min-width: 0;
+}
 .field-name small,
 .field-gap small {
   display: block;

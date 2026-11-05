@@ -36,6 +36,7 @@
         {skillNames}
         framed
         inlineMetrics
+        showOwnSparks={false}
         color={replay.teamColor(runner)}
         raceContext={{
           surface: course?.surface,

@@ -12,7 +12,6 @@ p {
 .report-facts dd.caution {
   color: var(--accent-warning);
 }
-/* The chart takes the height the report column has left beside the skills. */
 .spurt-report {
   display: flex;
   flex-direction: column;
@@ -131,10 +130,6 @@ p {
 .spurt-comparison td:last-child {
   color: var(--accent-primary);
   font-weight: 600;
-}
-.spurt-comparison small {
-  font-size: 10px;
-  font-weight: 400;
 }
 .spurt-result {
   display: flex;
