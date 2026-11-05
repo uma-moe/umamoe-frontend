@@ -59,6 +59,20 @@ describe('monte carlo request', () => {
     expect(randomGates.gateOrder).toBe('randomized');
   });
 
+  it('asks for full-room order rates only for a field under 9 runners', () => {
+    const form = { courseId: 1, seed: 1, setup: SETUP, fullRoomOrderRate: true };
+
+    expect(buildMonteCarloRequest({ ...form, runners: runners(5) }).input.fullRoomOrderRate).toBe(
+      true
+    );
+    expect(buildMonteCarloRequest({ ...form, runners: runners(9) }).input).not.toHaveProperty(
+      'fullRoomOrderRate'
+    );
+    expect(
+      buildMonteCarloRequest({ ...form, runners: runners(5), fullRoomOrderRate: false }).input
+    ).not.toHaveProperty('fullRoomOrderRate');
+  });
+
   it('derives source_input_index from the array and keeps frame_order unique', () => {
     const body = buildMonteCarloRequest({
       courseId: 1,

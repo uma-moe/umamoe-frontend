@@ -8,6 +8,7 @@
   import SimulatorCourseProfile from './courses/SimulatorCourseProfile.svelte';
   import Banner from '@/components/feedback/Banner.svelte';
   import Button from '@/components/controls/Button.svelte';
+  import Checkbox from '@/components/controls/Checkbox.svelte';
   import TextField from '@/components/controls/TextField.svelte';
   import SimulatorShell from './shell/SimulatorShell.svelte';
   import SimulatorUmaField from './setup/runner/SimulatorUmaField.svelte';
@@ -20,6 +21,7 @@
   } from './setup/build/code/build-code';
   import RaceSimResult from './reports/RaceSimResult.svelte';
   import {
+    FULL_ROOM_RUNNERS,
     MAX_MONTE_CARLO_RUNS,
     buildMonteCarloRequest,
     type MonteCarloGateOrder,
@@ -59,6 +61,8 @@
   ];
 
   let gateOrder = $state<MonteCarloGateOrder>('sent'),
+    // Judge top-% skill places of a field under 9 as a 9-runner room; offered only for such a field.
+    fullRoom = $state(false),
     runs = $state('100'),
     step = $state<'setup' | 'report'>('setup');
 
@@ -97,6 +101,9 @@
   );
 
   const canRun = $derived(Boolean(course) && simulatorRoster.umas.length >= 2 && !seedInvalid);
+  const smallField = $derived(
+    simulatorRoster.umas.length >= 2 && simulatorRoster.umas.length < FULL_ROOM_RUNNERS
+  );
 
   function loadExample() {
     const example = createExampleRace();
@@ -119,6 +126,7 @@
     });
 
     gateOrder = 'sent';
+    fullRoom = false;
     run = null;
     step = 'setup';
     error = '';
@@ -175,7 +183,8 @@
           frameOrder: uma.frameOrder
         })),
         outputMode: 'report',
-        gateOrder
+        gateOrder,
+        fullRoomOrderRate: fullRoom
       });
 
       let response;
@@ -234,6 +243,7 @@
     if (typeof page.raceInstanceId === 'number' && page.raceInstanceId >= 0)
       simulatorSession.raceInstanceId = page.raceInstanceId;
     if (page.gateOrder === 'sent' || page.gateOrder === 'randomized') gateOrder = page.gateOrder;
+    if (typeof page.fullRoomOrderRate === 'boolean') fullRoom = page.fullRoomOrderRate;
     const races = wholeNumber(page.runs);
     if (races !== undefined) runs = races;
     simulatorSession.importNotice =
@@ -385,6 +395,16 @@
         >
           {#snippet actions()}<CmRoomFill bind:error={roomError} />{/snippet}
         </SimulatorUmaField>
+        {#if smallField}
+          <div class="full-room">
+            <Checkbox
+              id="race-full-room"
+              label="Judge top-% skills as a 9-runner room"
+              description="A small field rules out skills like Budding Blossom, which need 3rd or lower within the top 40%. The game uses the real field."
+              bind:checked={fullRoom}
+            />
+          </div>
+        {/if}
         {#if roomError}
           <div class="import-notice">
             <Banner
@@ -509,7 +529,8 @@
             seed: String(simulatorSession.seed),
             raceInstanceId: simulatorSession.raceInstanceId,
             gateOrder,
-            runs: String(runs)
+            runs: String(runs),
+            fullRoomOrderRate: fullRoom
           }
         }
       : undefined;

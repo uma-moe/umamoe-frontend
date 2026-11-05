@@ -25,6 +25,8 @@ export type MonteCarloGateOrder = 'sent' | 'randomized';
 export const MIN_FIELD_RUNNERS = 2;
 export const MAX_FIELD_RUNNERS = 18;
 export const MAX_MONTE_CARLO_RUNS = 1000;
+/** A Champions Meeting room, which `fullRoomOrderRate` judges smaller fields' top-% skill places by. */
+export const FULL_ROOM_RUNNERS = 9;
 
 /**
  * Fans that reach the simulator's top fan-count tier (×1.2 from 160,000 up). Imports such as CM builds don't
@@ -84,6 +86,8 @@ export interface MonteCarloInput {
   seed: number;
   setup: RaceSetup;
   runners: Array<FieldRunner>;
+  /** A what-if the game never does: skill `order_rate` terms count a field under 9 as 9 runners. */
+  fullRoomOrderRate?: boolean;
 }
 
 export interface MonteCarloBody {
@@ -106,6 +110,8 @@ export interface MonteCarloForm {
   seeds?: Array<number>;
   outputMode?: MonteCarloOutputMode;
   gateOrder?: MonteCarloGateOrder;
+  /** Sent only for a field under 9 runners, the only one it changes. */
+  fullRoomOrderRate?: boolean;
 }
 
 /** Writes the runner array, deriving `source_input_index` and a unique `frame_order`. */
@@ -158,6 +164,8 @@ export function buildMonteCarloRequest(form: MonteCarloForm): MonteCarloBody {
   else body.runs = clampInt(form.runs ?? 1, 1, MAX_MONTE_CARLO_RUNS, 1);
 
   if (form.gateOrder === 'randomized') body.gateOrder = 'randomized';
+  if (form.fullRoomOrderRate && body.input.runners.length < FULL_ROOM_RUNNERS)
+    body.input.fullRoomOrderRate = true;
 
   return body;
 }
