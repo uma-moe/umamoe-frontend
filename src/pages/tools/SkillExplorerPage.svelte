@@ -817,19 +817,23 @@
           <p>
             <strong>The build.</strong>
             Pick a course and a running style, and the Reference build button beside the course name shows
-            it: the {index.buildSize} skills our optimizer picks for that runner there. It changes with
-            the course and the style. Long courses need more recoveries, sprints more acceleration, so
-            the same skill can rank high in one CM and low in the next. Open it and accept to swap in
-            your own skills, or add one from a skill's card, then update the values to see what each skill
-            adds to your build. That takes the simulator 10–30 seconds and fewer races than the reference
-            build, so small differences there can be noise. You can value {BUILD_RUNS} builds every {BUILD_WINDOW_MINUTES}
+            it: what our optimizer buys that runner there with as much SP as the latest CM's runners'
+            skills cost on average, before hints. Skills that need a certain season, weather or ground
+            are left out of it. It changes with the course and the style. Long courses need more recoveries,
+            sprints more acceleration, so the same skill can rank high in one CM and low in the next.
+            Open it and accept to swap in your own skills, or add one from a skill's card, then update
+            the values to see what each skill adds to your build. That takes the simulator 10–30 seconds
+            and fewer races than the reference build, so small differences there can be noise. You can
+            value {BUILD_RUNS} builds every {BUILD_WINDOW_MINUTES}
             minutes.
           </p>
           <ul>
             <li>
               <strong>In build</strong>
               is what the skill adds to that build. A gold or ◎ takes the place of its weaker version
-              in it. For a skill already in the build, it is what removing it costs.
+              in it. For a skill already in the build, it is what removing it costs. Both are scaled alike,
+              so a build that already wins often does not make removing a skill look bigger than adding
+              one.
             </li>
             <li>
               <strong>Alone</strong>

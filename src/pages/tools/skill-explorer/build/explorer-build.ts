@@ -4,8 +4,8 @@ import { finiteNumber, isRecord } from '../json-guards';
 import { parseRow, type SkillPoint, type StyleKey } from '../skill-explorer-data';
 import { skillFamily } from '../skill-explorer-view';
 
-/** The simulator values builds of 1 to 20 skills. */
-export const MAX_BUILD_SKILLS = 20;
+/** The simulator values builds of 1 to 30 skills. */
+export const MAX_BUILD_SKILLS = 30;
 
 /** A visitor values this many builds every `BUILD_WINDOW_MINUTES`; the backend refuses more. */
 export const BUILD_RUNS = 3;
