@@ -12,6 +12,7 @@
   import { portrait, styleColors } from '@/pages/competitive/analysis-view';
   import { theme } from '@/stores/theme';
   import type { ReplayState } from '../replay-state.svelte';
+  import ReplayPacemakerBadge from '../ReplayPacemakerBadge.svelte';
 
   let {
     replay,
@@ -121,7 +122,12 @@
             size="xs"
           />
           <span class="field-name">
-            <strong>{r.name}</strong>
+            <span class="field-identity">
+              <strong>{r.name}</strong>
+              {#if replay.pacemaker === r.index}
+                <ReplayPacemakerBadge />
+              {/if}
+            </span>
             <small class="field-meta">
               <span>Gate {r.index + 1}</span>
               <span style:color={styleColors[runningStyle(r)]}>

@@ -2,11 +2,9 @@
   import type { ParsedRaceCapture } from '@/lib/race/capture/race-capture-parser';
   import { raceMetricHelp, type HorseDiagnostics } from '@/lib/race/capture/race-diagnostics';
   import DataTable from '@/components/data/DataTable.svelte';
-  import Button from '@/components/controls/Button.svelte';
   import Icon from '@/components/Icon.svelte';
   import type { IconName } from '@/components/icon-types';
   import RaceSkill from '@/pages/competitive/runners/RaceSkill.svelte';
-  import DiagnosticsMetricHelp from '../DiagnosticsMetricHelp.svelte';
   import { isSkillOutcome, skillRows, type SkillOutcome } from '../diagnostics-format';
 
   type OutcomeTone = 'activated' | 'caution' | 'failed' | 'idle';
@@ -25,23 +23,45 @@
     onseek: (time: number) => void;
   } = $props();
 
+  let skillsWidth = $state(0);
+  let sortKey = $state('');
+  let sortDirection = $state<'ascending' | 'descending'>('ascending');
+
   const runner = $derived(capture.runners.find((r) => r.index === index));
   const rows = $derived(skillRows(capture, index, horse, runner));
-  const activationThresholds = $derived([
-    ...new Set(rows.flatMap((row) => (typeof row.threshold === 'number' ? [row.threshold] : [])))
-  ]);
+  const skillColumns = $derived.by(() => {
+    const ordered = sortKey
+      ? [...rows].sort((a, b) => {
+          const comparison =
+            sortKey === 'id'
+              ? Number(a.id) - Number(b.id)
+              : String(a.status).localeCompare(String(b.status));
+          return sortDirection === 'ascending' ? comparison : -comparison;
+        })
+      : rows;
 
-  const sharedThreshold = $derived(
-    activationThresholds.length === 1 ? activationThresholds[0] : undefined
-  );
+    if (skillsWidth < 680 || ordered.length < 2) return [ordered];
 
+    const midpoint = Math.ceil(ordered.length / 2);
+    return [ordered.slice(0, midpoint), ordered.slice(midpoint)];
+  });
+  const activationTimes = $derived.by(() => {
+    const timesBySkill = new Map<number, number[]>();
+    for (const event of capture.events) {
+      if (event.type !== 3 || event.params[0] !== index || event.params[1] === undefined) continue;
+      const times = timesBySkill.get(event.params[1]);
+      if (times) times.push(event.frameTime);
+      else timesBySkill.set(event.params[1], [event.frameTime]);
+    }
+
+    return timesBySkill;
+  });
   const activatedSkills = $derived(rows.filter((row) => row.status === 'Activated').length);
 
   const outcomeTones: Record<SkillOutcome, OutcomeTone> = {
     Activated: 'activated',
-    'Passed wit check, failed condition': 'caution',
+    'Condition failed': 'caution',
     'Wit check failed': 'failed',
-    'Not triggered': 'idle',
     'Not recorded': 'idle'
   };
 
@@ -55,6 +75,15 @@
   function outcomeTone(status: unknown): OutcomeTone {
     return isSkillOutcome(status) ? outcomeTones[status] : 'idle';
   }
+
+  function witDescription(row: Record<string, string | number>) {
+    if (row.status === 'Not recorded') return 'Activation data not recorded.';
+    if (row.witRequired !== 1) return 'No wit check required.';
+    if (typeof row.roll !== 'number' || typeof row.threshold !== 'number')
+      return 'Wit check not recorded.';
+
+    return `Wit check: ${row.roll.toFixed(2)}%. Pass below ${row.threshold.toFixed(2)}%.`;
+  }
 </script>
 
 <section
@@ -65,92 +94,95 @@
     <h3>
       Skill procs <small>{activatedSkills}/{rows.length} activated</small>
     </h3>
-    {#if sharedThreshold !== undefined}
-      <span class="activation-threshold">
-        Wit checks pass below <strong>{sharedThreshold.toFixed(2)}%</strong>
-        <DiagnosticsMetricHelp label="Wit check threshold" />
-      </span>
-    {/if}
   </header>
-  <DataTable
-    columnHelp={raceMetricHelp}
-    plain
-    compact
-    caption="Runner skill analysis"
-    {rows}
-    columns={[
-      { key: 'id', label: 'Skill' },
-      { key: 'status', label: 'Outcome' },
-      { key: 'count', label: 'Triggers', numeric: true },
-      { key: 'first', label: 'First (s)', numeric: true },
-      ...(horse
-        ? [
-            { key: 'duration', label: 'Active (s)', numeric: true },
-            { key: 'roll', label: 'Wit check', numeric: true }
-          ]
-        : [])
-    ]}
+  <div
+    class="skill-columns"
+    bind:clientWidth={skillsWidth}
   >
-    {#snippet cell(row, column)}
-      {#if column.key === 'id'}
-        <span class="skill-chip-cell">
-          <RaceSkill
-            id={Number(row.id)}
-            name={skillNames.get(Number(row.id))}
-            fill
-          />
-        </span>
-      {:else if column.key === 'status'}
-        {@const tone = outcomeTone(row.status)}
-        <span class="skill-status {tone}">
-          <span
-            class="status-icon"
-            aria-hidden="true"
-          >
-            <Icon
-              name={toneIcons[tone]}
-              size={12}
-            />
-          </span>
-          {row.status}
-        </span>
-      {:else if column.key === 'roll'}
-        <span
-          class="wit-check"
-          class:failed={row.witRequired === 1 && row.witPassed === 0}
-        >
-          {#if row.witRequired !== 1}
-            <span
-              class="muted"
-              title="No wit check required"
-            >
-              —
+    {#each skillColumns as columnRows, columnIndex}
+      <DataTable
+        columnHelp={raceMetricHelp}
+        plain
+        compact
+        caption={skillColumns.length === 1
+          ? 'Runner skill analysis'
+          : `Runner skill analysis, column ${columnIndex + 1}`}
+        rows={columnRows}
+        bind:sortKey
+        bind:sortDirection
+        emptyMessage="No skill data recorded for this runner."
+        columns={[
+          { key: 'id', label: 'Skill' },
+          { key: 'status', label: 'Outcome' }
+        ]}
+      >
+        {#snippet cell(row, column)}
+          {#if column.key === 'id'}
+            <span class="skill-chip-cell">
+              <RaceSkill
+                id={Number(row.id)}
+                name={skillNames.get(Number(row.id))}
+                fill
+              />
             </span>
-          {:else if typeof row.roll === 'number' && typeof row.threshold === 'number'}
-            {Number(row.roll).toFixed(2)}%{#if sharedThreshold === undefined}
-              <small>
-                Pass below {Number(row.threshold).toFixed(2)}%
-              </small>
-            {/if}
-          {:else}
-            <span class="muted">Not recorded</span>
+          {:else if column.key === 'status'}
+            {@const tone = outcomeTone(row.status)}
+            <span
+              class="skill-status {tone}"
+              title={witDescription(row)}
+            >
+              {#if row.status === 'Activated'}
+                <span class="activation-checks">
+                  {#each activationTimes.get(Number(row.id)) ?? [] as time, activationIndex}
+                    <button
+                      type="button"
+                      class="status-icon activation-trigger"
+                      title={'Review activation at ' + time.toFixed(3) + ' s'}
+                      aria-label={'Review ' +
+                        (skillNames.get(Number(row.id)) ?? 'skill ' + row.id) +
+                        ' activation ' +
+                        (activationIndex + 1) +
+                        ' at ' +
+                        time.toFixed(3) +
+                        ' seconds'}
+                      onclick={() => onseek(time)}
+                    >
+                      <Icon
+                        name="check"
+                        size={12}
+                      />
+                    </button>
+                  {:else}
+                    <span
+                      class="status-icon"
+                      aria-hidden="true"
+                    >
+                      <Icon
+                        name="check"
+                        size={12}
+                      />
+                    </span>
+                  {/each}
+                </span>
+                {Number(row.count) > 1 ? row.count + '× activated' : 'Activated'}
+              {:else}
+                <span
+                  class="status-icon"
+                  aria-hidden="true"
+                >
+                  <Icon
+                    name={toneIcons[tone]}
+                    size={12}
+                  />
+                </span>
+                {row.status}
+              {/if}
+            </span>
           {/if}
-        </span>
-      {:else if column.key === 'first' && typeof row.first === 'number'}
-        <Button
-          variant="secondary"
-          size="sm"
-          onclick={() => onseek(Number(row.first))}
-        >
-          {Number(row.first).toFixed(3)} s
-        </Button>
-      {:else}
-        {typeof row[column.key] === 'number'
-          ? Number(row[column.key]).toFixed(column.key === 'count' ? 0 : 2)
-          : row[column.key]}
-      {/if}
-    {/snippet}
-  </DataTable>
+        {/snippet}
+      </DataTable>
+    {/each}
+  </div>
 </section>
 
 <style>
@@ -158,24 +190,13 @@
   @import '../report-card.css';
   @import './report-section.css';
   @import '../../../runners/skill-chip-cell.css';
-  .activation-threshold {
-    font-size: 10px;
-    color: var(--text-secondary);
-    white-space: nowrap;
+  .skill-columns {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(min(100%, 330px), 1fr));
+    gap: 0 20px;
   }
-  .activation-threshold strong {
-    font-weight: 500;
-    color: var(--text-primary);
-    font-variant-numeric: tabular-nums;
-  }
-  .muted {
-    color: var(--text-secondary);
-  }
-  .skills-report :global(th:nth-child(2)) {
-    width: 28%;
-  }
-  .skills-report :global(th:last-child) {
-    width: 112px;
+  .skills-report :global(th:first-child) {
+    width: 50%;
   }
   .skill-chip-cell {
     display: inline-flex;
@@ -185,9 +206,6 @@
   @media (max-width: 767px) {
     .skills-report :global(.skill-chip-cell) {
       --skill-chip-width: 8rem;
-    }
-    .skills-report :global(th:nth-child(2)) {
-      width: auto;
     }
   }
   /* The icon carries the outcome at a glance; its colour repeats it for readers who scan by tone. */
@@ -209,6 +227,24 @@
     background: var(--status-color);
     color: var(--surface-1);
   }
+  .activation-checks {
+    display: inline-flex;
+    flex-wrap: wrap;
+    gap: 3px;
+    max-width: 96px;
+  }
+  .activation-trigger {
+    border: 0;
+    padding: 0;
+    cursor: pointer;
+  }
+  .activation-trigger:hover {
+    filter: brightness(1.15);
+  }
+  .activation-trigger:focus-visible {
+    outline: 2px solid var(--accent-primary);
+    outline-offset: 2px;
+  }
   .skill-status.activated,
   .skill-status.failed,
   .skill-status.caution {
@@ -223,18 +259,6 @@
   .skill-status.idle .status-icon {
     background: var(--surface-2);
     color: var(--text-secondary);
-  }
-  .wit-check {
-    display: inline-grid;
-    justify-items: end;
-    font-variant-numeric: tabular-nums;
-  }
-  .wit-check small {
-    color: var(--text-secondary);
-    font-size: 10px;
-  }
-  .wit-check.failed {
-    color: var(--accent-error);
   }
   .skill-status.caution {
     --status-color: var(--accent-warning);

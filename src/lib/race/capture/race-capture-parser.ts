@@ -210,6 +210,50 @@ function withTrainedChara(rawRunner: unknown, trainedCharas: unknown[]): unknown
   return trained ? { ...trained, ...horse } : rawRunner;
 }
 
+function horseActRunner(member: unknown): unknown {
+  const wrapper = record(member);
+  const horse = first(wrapper, '_responseHorseData', 'responseHorseData');
+  if (!horse) return undefined;
+
+  const training = record(first(wrapper, 'trainedCharaData', '<TrainedCharaData>k__BackingField'));
+  const factors = (value: unknown) =>
+    array(value).flatMap((entry) => {
+      const id = numeric(record(entry), 'factorId');
+      return id === undefined ? [] : [id];
+    });
+
+  return {
+    ...(Array.isArray(training.supportCardArray)
+      ? {
+          support_card_list: training.supportCardArray.map((value) => {
+            const card = record(value);
+            return {
+              position: numeric(card, 'position'),
+              support_card_id: numeric(card, 'supportCardId'),
+              limit_break_count: numeric(card, 'limitBreakCount')
+            };
+          })
+        }
+      : {}),
+    ...(Array.isArray(training.successionCharaList)
+      ? {
+          succession_chara_array: training.successionCharaList.map((value) => {
+            const parent = record(value);
+            return {
+              position_id: numeric(parent, 'positionId'),
+              card_id: numeric(parent, 'cardId'),
+              factor_id_array: factors(parent.factorDataArray)
+            };
+          })
+        }
+      : {}),
+    ...(Array.isArray(training.factorDataArray)
+      ? { factor_id_array: factors(training.factorDataArray) }
+      : {}),
+    ...record(horse)
+  };
+}
+
 function normalizeRunner(
   rawValue: unknown,
   index: number,
@@ -644,9 +688,7 @@ export function parseRaceCapture(value: unknown, fileName = 'capture.json'): Par
   const rawRunners =
     source === 'api'
       ? [...array(apiHorses)]
-      : array(actMembers)
-          .map((member) => first(record(member), '_responseHorseData', 'responseHorseData'))
-          .filter(Boolean);
+      : array(actMembers).map(horseActRunner).filter(Boolean);
 
   const gates = rawRunners.map((r) => numeric(record(r), 'frame_order', 'frameOrder'));
   if (

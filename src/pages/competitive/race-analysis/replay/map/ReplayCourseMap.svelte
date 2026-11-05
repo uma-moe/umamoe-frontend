@@ -53,6 +53,7 @@
     showSpeed = false,
     showAcceleration = false,
     acceleration,
+    pacemakerIndex,
     onselectcourse,
     toolbarStart,
     toolbarEnd
@@ -81,6 +82,7 @@
     showSpeed?: boolean;
     showAcceleration?: boolean;
     acceleration?: (index: number) => number;
+    pacemakerIndex?: number;
     onselectcourse: () => void;
     toolbarStart?: Snippet;
     toolbarEnd?: Snippet;
@@ -529,6 +531,7 @@
           {showSpeed}
           {showAcceleration}
           {acceleration}
+          {pacemakerIndex}
           bind:selected
         />
       </svg>

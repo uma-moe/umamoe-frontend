@@ -1,18 +1,17 @@
 <script lang="ts">
+  import type { Snippet } from 'svelte';
   import type { RaceRunner } from '@/lib/race/capture/race-capture-parser';
   import { formatRaceTime, ordinalPlace } from '@/lib/race/replay/race-display';
   import Button from '@/components/controls/Button.svelte';
-  import Checkbox from '@/components/controls/Checkbox.svelte';
-  import Artwork from '@/components/game/Artwork.svelte';
   import RunnerBuildDetails from '@/pages/competitive/runners/RunnerBuildDetails.svelte';
-  import { portrait } from '@/pages/competitive/analysis-view';
   import ReplayDiagnostics from '../../diagnostics/ReplayDiagnostics.svelte';
   import type { DetailedSimulation } from '../../detailed-simulation';
   import type { Course } from '../replay-course';
   import type { ReplayState } from '../replay-state.svelte';
   import ReplaySimulationNotice from './ReplaySimulationNotice.svelte';
-
-  type BlockingSpan = ReplayState['blockingSpans'][number];
+  import RunnerTrainingPreview from './RunnerTrainingPreview.svelte';
+  import DiagnosticsOutcomeSummary from '../../diagnostics/DiagnosticsOutcomeSummary.svelte';
+  import { diagnosticHorse } from '@/lib/race/capture/race-diagnostics';
 
   let {
     replay,
@@ -21,8 +20,7 @@
     skillNames,
     simulation,
     onbuild,
-    onpickrunner,
-    onreview,
+    navigation,
     onretry,
     onseek,
     onselect
@@ -33,22 +31,14 @@
     skillNames: Map<number, string>;
     simulation: DetailedSimulation;
     onbuild: () => void;
-    onpickrunner: () => void;
-    onreview: (event: BlockingSpan) => void;
+    navigation: Snippet;
     onretry?: () => void;
     onseek: (time: number) => void;
     onselect: (index: number) => void;
   } = $props();
 
-  let allBlocking = $state(false);
-
   let cardWidth = $state(0);
-
-  const visibleBlocking = $derived(
-    allBlocking
-      ? replay.blockingSpans
-      : replay.blockingSpans.filter((event) => event.horseIndex === runner?.index)
-  );
+  const horse = $derived(diagnosticHorse(replay.capture, runner.index));
 
   const winningTime = $derived(
     Math.min(
@@ -58,16 +48,16 @@
 </script>
 
 <header class="report-heading">
-  <h2>Runner analysis</h2>
+  <h2 class="sr-only">Runner analysis</h2>
+  {@render navigation()}
+  {#if horse}
+    <DiagnosticsOutcomeSummary
+      capture={replay.capture}
+      index={runner.index}
+      {horse}
+    />
+  {/if}
   <div class="report-actions">
-    <Button
-      variant="ghost"
-      size="sm"
-      icon="users"
-      onclick={onpickrunner}
-    >
-      Change Uma
-    </Button>
     <Button
       variant="secondary"
       size="sm"
@@ -89,7 +79,7 @@
       {skillNames}
       framed
       content="summary"
-      inlineMetrics={cardWidth >= 560}
+      inlineMetrics={cardWidth >= 460}
       color={replay.teamColor(runner)}
       raceContext={{
         surface: course?.surface,
@@ -129,73 +119,24 @@
     />
   {/if}
 {/snippet}
-{#snippet blockingPanel()}
-  <section
-    class="events blocking-analysis"
-    aria-label="Blocking incidents"
-  >
-    <header>
-      <h3>
-        Front blocking <small>
-          {visibleBlocking.length}
-          {visibleBlocking.length === 1 ? 'incident' : 'incidents'}
-        </small>
-      </h3>
-      <Checkbox
-        id="blocking-scope"
-        label="All runners"
-        bind:checked={allBlocking}
-      />
-    </header>
-    <div class="event-list">
-      {#each visibleBlocking as event}
-        {@const blocked = replay.capture.runners.find((r) => r.index === event.horseIndex)}
-        {@const blocker = replay.capture.runners.find((r) => r.index === event.blockerHorseIndex)}
-        <button
-          class:active={replay.time >= event.startTime &&
-            replay.time < event.endTime &&
-            runner.index === event.horseIndex}
-          aria-label={'Review ' +
-            blocked?.name +
-            ' blocked by ' +
-            blocker?.name +
-            ' at ' +
-            event.startTime.toFixed(2) +
-            ' seconds'}
-          onclick={() => onreview(event)}
-        >
-          <time>{event.startTime.toFixed(3)} s</time>
-          <Artwork
-            src={portrait(blocked?.cardId)}
-            alt=""
-            size="xs"
-          />
-          <span class="blocking-pair">
-            <strong>{blocked?.name}</strong>
-            <small>Blocked by {blocker?.name}</small>
-          </span>
-          <span>{(event.endTime - event.startTime).toFixed(2)} s</span>
-        </button>
-      {:else}
-        <p>
-          No front blocking recorded {allBlocking ? 'in this race' : 'for ' + runner.name}.
-        </p>
-      {/each}
-    </div>
-  </section>
-{/snippet}
 <div class="runner-outcomes">
   <ReplayDiagnostics
     capture={replay.capture}
     index={runner.index}
     {skillNames}
     distance={replay.bounds.distanceMax}
-    blocking={blockingPanel}
     overview={runnerOverview}
     notice={simulation.status === 'ready' ? undefined : simulationNotice}
     {onseek}
     {onselect}
-  />
+  >
+    {#snippet buildPreview()}
+      <RunnerTrainingPreview
+        {runner}
+        {onbuild}
+      />
+    {/snippet}
+  </ReplayDiagnostics>
 </div>
 
 <style>

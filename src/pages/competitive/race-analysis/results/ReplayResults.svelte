@@ -22,7 +22,6 @@
   import Icon from '@/components/Icon.svelte';
   import LastSpurtResult from './LastSpurtResult.svelte';
   import { n, raceResultRows } from './replay-results';
-  import SkillPoints, { LEARNED_SKILL_POINTS_NOTE } from '@/components/game/SkillPoints.svelte';
 
   let {
     capture,
@@ -117,12 +116,24 @@
       { key: 'delay', label: 'Delay', numeric: true },
       { key: 'spurt', label: 'Last spurt', numeric: true },
       { key: 'hp', label: 'HP result', numeric: true },
-      ...(hasDuel ? [{ key: 'duel', label: 'Duel (s)', numeric: true }] : []),
-      ...(hasDownhill ? [{ key: 'downhill', label: 'Downhill (s)', numeric: true }] : []),
-      ...(hasPace ? [{ key: 'paceUp', label: 'Pace (s)', numeric: true }] : []),
-      ...(hasLoss ? [{ key: 'loss', label: 'Course loss (m)', numeric: true }] : []),
+      ...(hasDuel ? [{ key: 'duel', label: 'Duel', helpKey: 'Duel (s)', numeric: true }] : []),
+      ...(hasDownhill
+        ? [{ key: 'downhill', label: 'Downhill', helpKey: 'Downhill (s)', numeric: true }]
+        : []),
+      ...(hasPace ? [{ key: 'paceUp', label: 'Pace', helpKey: 'Pace (s)', numeric: true }] : []),
+      ...(hasLoss
+        ? [{ key: 'loss', label: 'Course loss', helpKey: 'Course loss (m)', numeric: true }]
+        : []),
       ...(hasIncidents
-        ? [{ key: 'blocked', label: 'Incidents (s)', numeric: true, sortable: false }]
+        ? [
+            {
+              key: 'blocked',
+              label: 'Incidents',
+              helpKey: 'Incidents (s)',
+              numeric: true,
+              sortable: false
+            }
+          ]
         : []),
       { key: 'sp', label: 'Stats', numeric: true, sortable: false }
     ]}
@@ -321,27 +332,29 @@
         <dl class="mode-values incidents">
           <div>
             <dt>Blocked</dt>
-            <dd>{n(row.blocked)}</dd>
+            <dd>{typeof row.blocked === 'number' ? n(row.blocked) + ' s' : '—'}</dd>
           </div>
           <div>
             <dt>Rushed</dt>
-            <dd>{n(row.rushed)}</dd>
+            <dd>{typeof row.rushed === 'number' ? n(row.rushed) + ' s' : '—'}</dd>
           </div>
         </dl>
       {:else if col.key === 'sp'}
         <div class="result-stats">
           <StatStrip
-            items={stats(r)}
+            items={[
+              ...stats(r),
+              {
+                id: 'sp',
+                label: 'Skill points',
+                value: row.sp ?? '—',
+                icon: '/game-assets/textures/hint.webp'
+              }
+            ]}
             label={r.name + ' build stats'}
             presentation="values"
             compact
           />
-          <span class="result-sp">
-            <SkillPoints
-              value={typeof row.sp === 'number' ? row.sp : null}
-              note={LEARNED_SKILL_POINTS_NOTE}
-            />
-          </span>
         </div>
       {:else}
         {row[col.key]}

@@ -60,9 +60,7 @@
     activeSpan(replay.diagnostic?.positionKeepReferenceSpans, replay.time)?.referenceHorseIndex
   );
 
-  const pacemaker = $derived(
-    activeSpan(replay.capture.detailed?.annotations.paceMakerSpans, replay.time)?.horseIndex
-  );
+  const pacemaker = $derived(replay.pacemaker);
 
   const modes = $derived(
     Object.entries(replay.capture.detailed?.annotations.flags ?? {})

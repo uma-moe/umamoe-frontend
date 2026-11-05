@@ -13,7 +13,6 @@
   import AptitudeTile from '@/components/game/AptitudeTile.svelte';
   import { runningStyleName } from '@/lib/race/replay/race-display';
   import { identity, score, stats } from '../analysis-view';
-  import SkillPoints, { LEARNED_SKILL_POINTS_NOTE } from '@/components/game/SkillPoints.svelte';
 
   let {
     runner,
@@ -24,6 +23,7 @@
     metrics,
     inlineMetrics = false,
     training,
+    showOwnSparks = true,
     headerActions,
     raceContext
   }: {
@@ -36,6 +36,7 @@
     /** Short compact metrics share the identity line instead of a row of their own. */
     inlineMetrics?: boolean;
     training?: Snippet;
+    showOwnSparks?: boolean;
     headerActions?: Snippet;
     raceContext?: { surface?: number; distance?: number };
   } = $props();
@@ -91,16 +92,25 @@
   );
 
   const statPresentation = $derived.by(() => {
-    if (compact) return 'tiles';
+    if (compact) return 'values';
     return expanded ? 'icons' : 'inline';
   });
 
-  const totalStats = $derived(
-    Object.values(runner.stats).reduce((total, value) => total + (value ?? 0), 0)
-  );
-
   /** Null until the catalog prices every learned skill. */
   const skillPoints = $derived(skillPointTotal(skillCatalog, runner.skillIds));
+  const statItems = $derived(
+    compact
+      ? [
+          ...stats(runner),
+          {
+            id: 'sp',
+            label: 'Skill points',
+            value: skillPoints ?? '—',
+            icon: '/game-assets/textures/hint.webp'
+          }
+        ]
+      : stats(runner)
+  );
 
   const raceAptitudes = $derived.by(() => {
     if (!raceContext) return [];
@@ -169,7 +179,7 @@
   });
 
   onMount(() => {
-    // Only compact cards head their stats with the SP total; until the catalog loads it reads as a dash.
+    // Compact cards include the SP total; until the catalog loads it reads as a dash.
     if (!compact) return;
 
     void loadSkills()
@@ -181,6 +191,7 @@
 <div
   class="build"
   class:compact
+  class:race-context={compact && Boolean(raceContext)}
 >
   <header class="build-identity">
     <div class="identity-line">
@@ -204,35 +215,19 @@
     {/if}
   </header>
   <div class="build-content">
-    <section class="stat-overview">
-      {#if compact}
-        <header class="section-heading">
-          <h3>
-            Stats
-            <span class="stat-totals">
-              <span class="stat-total">
-                <strong>{totalStats.toLocaleString('en-US')}</strong>
-                <span>total</span>
-              </span>
-              <SkillPoints
-                value={skillPoints}
-                note={LEARNED_SKILL_POINTS_NOTE}
-              />
-            </span>
-          </h3>
-        </header>
-      {/if}
+    <section
+      class="stat-overview"
+      class:stat-grid={compact}
+    >
       <StatStrip
-        items={stats(runner)}
+        items={statItems}
+        label={runner.name + ' build stats'}
         presentation={statPresentation}
         compact
       />
     </section>
-    {#if raceContext && !expanded}
+    {#if raceContext && (compact || !expanded)}
       <section class="aptitude-overview">
-        {#if compact}
-          <h3>Race aptitudes</h3>
-        {/if}
         <div
           class="compact-aptitudes race-aptitudes"
           aria-label="Aptitudes for this race"
@@ -240,28 +235,20 @@
           {#each raceAptitudes as item}
             <AptitudeTile
               label={item.label ?? item.group}
-              caption={item.label ? item.group : undefined}
               grade={item.grade}
               title={item.group + ': ' + (item.label ?? 'not detected')}
-              prominent
             />
           {/each}
         </div>
       </section>
     {/if}
     {#if expanded}
-      {#if aptitudeItems.length}
+      {#if aptitudeItems.length && !(compact && raceContext)}
         <section class="aptitude-overview">
           {#if compact}
             <h3>Aptitudes</h3>
           {/if}
-          {#if compact && raceContext && aptitudes.length}
-            <AptitudeGrid
-              items={aptitudeItems}
-              label="All aptitudes"
-              layout="tiles"
-            />
-          {:else if compact}
+          {#if compact}
             <div
               class="compact-aptitudes"
               aria-label="Race aptitudes"
@@ -312,6 +299,7 @@
           }))}
           parents={veteran?.parents}
           ownFactors={veteran?.factors}
+          {showOwnSparks}
           label={runner.name}
         />
       {/if}

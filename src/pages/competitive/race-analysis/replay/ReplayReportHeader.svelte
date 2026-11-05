@@ -15,6 +15,7 @@
     trackOverride,
     hasSession,
     current,
+    height = $bindable(0),
     headerActions,
     onjump
   }: {
@@ -27,6 +28,7 @@
     hasSession: boolean;
     /** The section in view, which its tab marks. */
     current: string;
+    height?: number;
     headerActions?: Snippet;
     onjump: (section: string) => void;
   } = $props();
@@ -54,9 +56,8 @@
   type ReportSection = { id: string; icon: IconName; label: string; short: string };
 
   const raceSections: ReportSection[] = [
-    { id: 'replay', icon: 'race', label: 'Race replay', short: 'Replay' },
     { id: 'results', icon: 'rankings', label: 'Race results', short: 'Results' },
-    { id: 'runner', icon: 'chart', label: 'Runner analysis', short: 'Runner' }
+    { id: 'replay', icon: 'race', label: 'Race replay', short: 'Replay' }
   ];
 
   const sessionSection: ReportSection = {
@@ -69,7 +70,10 @@
   const sections = $derived(hasSession ? [...raceSections, sessionSection] : raceSections);
 </script>
 
-<header class="replay-header">
+<header
+  class="replay-header"
+  bind:clientHeight={height}
+>
   <div class="replay-title">
     <span class="replay-icon">
       <Icon
@@ -106,30 +110,30 @@
   {#if headerActions}
     <div class="header-actions">{@render headerActions()}</div>
   {/if}
+  <nav
+    class="report-navigation"
+    aria-label="Jump to analysis section"
+  >
+    <div class="report-links">
+      {#each sections as section}
+        <button
+          type="button"
+          class="section-tab"
+          aria-label={section.label}
+          aria-current={current === section.id ? 'location' : undefined}
+          onclick={() => onjump(section.id)}
+        >
+          <Icon
+            name={section.icon}
+            size={15}
+          />
+          <span class="tab-long">{section.label}</span>
+          <span class="tab-short">{section.short}</span>
+        </button>
+      {/each}
+    </div>
+  </nav>
 </header>
-<nav
-  class="report-navigation"
-  aria-label="Jump to analysis section"
->
-  <div class="report-links">
-    {#each sections as section}
-      <button
-        type="button"
-        class="section-tab"
-        aria-label={section.label}
-        aria-current={current === section.id ? 'location' : undefined}
-        onclick={() => onjump(section.id)}
-      >
-        <Icon
-          name={section.icon}
-          size={15}
-        />
-        <span class="tab-long">{section.label}</span>
-        <span class="tab-short">{section.short}</span>
-      </button>
-    {/each}
-  </div>
-</nav>
 
 <style>
   @import './replay-report-header.css';

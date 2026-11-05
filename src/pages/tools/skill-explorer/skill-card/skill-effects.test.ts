@@ -1,6 +1,7 @@
 import { expect, it } from 'vitest';
 import { normalizeSkill } from '@/lib/game-data/skills/skills';
-import { parseSkillEffects, releasedSkills, skillEffectDetails } from './skill-effects';
+import { parseSkillEffects, releasedSkills } from '@/lib/game-data/skills/skill-effects';
+import { skillEffectDetails } from './skill-effects';
 
 it('requires both a translated name and a Global mechanic entry to display a skill', () => {
   const names = new Map([

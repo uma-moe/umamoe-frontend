@@ -24,6 +24,7 @@
     open = $bindable(false),
     trackOverride = $bindable(''),
     windowMeters = $bindable(80),
+    laneScaleMode = $bindable('fixed'),
     toggles = $bindable(defaultReplayToggles())
   }: {
     capture: ParsedRaceCapture;
@@ -34,6 +35,7 @@
     open?: boolean;
     trackOverride?: string;
     windowMeters?: number;
+    laneScaleMode?: string;
     toggles?: ReplayToggles;
   } = $props();
 
@@ -129,6 +131,22 @@
         oninput={seekFrame}
       />
     </section>
+    <section>
+      <h3>Race positions</h3>
+      <SelectField
+        id="replay-lane-scale"
+        label="Lane scale"
+        bind:value={laneScaleMode}
+        options={[
+          { value: 'automatic', label: 'Automatic', description: 'Fits the current field spread.' },
+          {
+            value: 'fixed',
+            label: 'Fixed for race',
+            description: 'Keeps the lane axis steady throughout the race.'
+          }
+        ]}
+      />
+    </section>
     {#each replayToggleGroups as group}
       <section>
         <h3>{group.title}</h3>
@@ -164,6 +182,7 @@
       onclick={() => {
         toggles = defaultReplayToggles();
         windowMeters = 80;
+        laneScaleMode = 'fixed';
       }}
     >
       Reset display

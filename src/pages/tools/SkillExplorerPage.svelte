@@ -76,9 +76,9 @@
   import {
     loadSkillEffects,
     releasedSkills,
-    skillEffectDetails,
     type SkillEffectAlternative
-  } from './skill-explorer/skill-card/skill-effects';
+  } from '@/lib/game-data/skills/skill-effects';
+  import { skillEffectDetails } from './skill-explorer/skill-card/skill-effects';
   import {
     loadProviderCatalog,
     skillProviders,

@@ -8,13 +8,16 @@
     capture,
     index,
     value,
+    showTrainer = false,
     onselect
   }: {
     capture: ParsedRaceCapture;
     index: number;
     value: number;
+    showTrainer?: boolean;
     onselect: (index: number) => void;
   } = $props();
+  const runner = $derived(capture.runners.find((runner) => runner.index === value));
 </script>
 
 {#if value >= 0}
@@ -27,7 +30,8 @@
       src={portrait(capture.runners.find((r) => r.index === value)?.cardId)}
       alt=""
       size="xs"
-    />{value === index ? 'Self' : runnerName(capture, value)}
+    />{!showTrainer && value === index ? 'Self' : runnerName(capture, value)}
+    {#if showTrainer}<span>[{runner?.trainerName?.trim() || 'Gate ' + (value + 1)}]</span>{/if}
   </button>
 {:else}
   <span class="muted">None</span>

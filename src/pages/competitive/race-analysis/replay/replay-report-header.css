@@ -1,8 +1,9 @@
 .replay-header {
-  display: flex;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 45%);
   align-items: center;
   justify-content: space-between;
-  gap: 16px;
+  gap: 10px 16px;
   padding: 16px;
   border-bottom: 1px solid var(--border-subtle);
   margin-bottom: 12px;
@@ -52,8 +53,8 @@ p {
 }
 .header-actions {
   min-width: 0;
-  max-width: 45%;
-  flex: none;
+  max-width: 100%;
+  justify-self: end;
 }
 .capture-summary strong {
   padding: 4px 7px;
@@ -66,7 +67,7 @@ p {
 @media (max-width: 700px) {
   .replay-header {
     align-items: start;
-    flex-wrap: wrap;
+    grid-template-columns: minmax(0, 1fr);
   }
   .header-actions {
     width: 100%;
@@ -104,6 +105,9 @@ p {
   }
 }
 .replay-header {
+  position: sticky;
+  top: var(--utility-height);
+  z-index: calc(var(--z-header) - 2);
   background: var(--surface-1);
   border: 0;
   border-radius: var(--radius-lg);
@@ -111,14 +115,9 @@ p {
   padding: 12px 16px;
 }
 .report-navigation {
-  position: sticky;
-  top: var(--utility-height);
-  z-index: calc(var(--z-header) - 2);
+  grid-column: 1/-1;
   display: flex;
   align-items: center;
-  padding: 4px 0;
-  background: var(--bg-primary);
-  border-bottom: 1px solid var(--border-subtle);
 }
 /* One tab group: the section in view reads as the selected tab. */
 .report-links {

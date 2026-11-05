@@ -12,7 +12,6 @@ h2 {
 }
 .analysis-section {
   min-width: 0;
-  scroll-margin-top: 80px;
   padding: 0 16px 16px;
 }
 .replay-layout {
@@ -103,15 +102,32 @@ h2 {
 .results-panel {
   padding: 0;
 }
-/* The runner analysis is a row of cards of its own, so its section draws no panel behind them. */
 .runner-panel {
-  padding: 0;
-  background: none;
-  border-radius: 0;
+  padding: 12px;
+}
+.runner-navigation {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+  flex: 1;
+  min-width: 0;
+}
+.runner-switcher {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  flex: 1;
+  min-width: min(100%, 260px);
+  max-width: 440px;
+}
+.runner-select {
+  flex: 1;
+  min-width: 0;
 }
 .session-report,
 [data-report-section] {
-  scroll-margin-top: 50px;
+  scroll-margin-top: calc(var(--replay-header-height, 64px) + 16px);
 }
 .session-report {
   min-width: 0;
@@ -126,18 +142,12 @@ h2 {
   .analysis-section {
     padding: 8px;
   }
-  .results-panel,
-  .runner-panel {
+  .results-panel {
     padding: 0;
   }
-  .session-report,
-  [data-report-section] {
-    scroll-margin-top: 78px;
+  .runner-panel {
+    padding: 8px;
   }
-}
-/* Keep live readings with the replay; the analysis below shares one runner context. */
-.runner-panel {
-  padding-block: 12px;
 }
 .fullscreen-target {
   grid-column: 1;
