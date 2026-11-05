@@ -146,6 +146,44 @@ describe('simulator lab repository', () => {
     expect(run.result.mode).toBe('cm');
   });
 
+  it('posts generated fields to the backend route and validates their teams', async () => {
+    const runner = {
+      stats: { speed: 1200, stamina: 900, power: 1000, guts: 600, wisdom: 800 },
+      running_style: 'Nige',
+      motivation: 4,
+      aptitudes: { distance: [7, 7, 7, 7], running_style: [7, 7, 7, 7], ground: [7, 7] },
+      skills: [{ skill_id: 200001, level: 1 }],
+      frame_order: 1,
+      team_id: 1,
+      is_mob: false
+    };
+    const result = {
+      schema_version: 1,
+      source: { kind: 'rooms', course_id: 10506 },
+      layout: { teams: 1, team_size: 2, mobs: 0, mob_team_size: 3 },
+      teams: [{ team_id: 1, kind: 'player', runners: [runner, { ...runner, frame_order: 2 }] }]
+    };
+    const request = vi.fn(async () => JSON.stringify(result));
+    const repository = createSimulatorRepository(request);
+
+    const run = await repository.field({ body: { course_id: 10506 } });
+
+    expect(request).toHaveBeenCalledWith('/api/sim/field', {
+      method: 'POST',
+      headers: { accept: 'application/json' },
+      browserProof: false,
+      body: { course_id: 10506 },
+      responseType: 'text'
+    });
+    expect(run.result.teams[0]!.runners).toHaveLength(2);
+
+    await expect(
+      createSimulatorRepository(async () => JSON.stringify({ ...result, teams: [] })).field({
+        body: {}
+      })
+    ).rejects.toThrow(/incompatible results/);
+  });
+
   it('rejects malformed rankings and explains an unavailable service', async () => {
     const repository = createSimulatorRepository(async () =>
       JSON.stringify({

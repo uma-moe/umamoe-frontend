@@ -63,6 +63,8 @@ for (const runners of [9, 18])
       });
 
       await page.goto('/simulator/race');
+      await page.getByRole('button', { name: 'Import', exact: true }).click();
+      await page.getByRole('menuitem', { name: 'Load example', exact: true }).click();
       await expect(page.locator('.field .runner')).toHaveCount(9);
       if (runners === 18)
         for (let i = 0; i < 9; i++)
