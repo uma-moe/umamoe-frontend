@@ -3,6 +3,7 @@ import {
   diagnosticLabel,
   frontBlockingSpans,
   skillActiveDuration,
+  skillMiss,
   type DiagnosticRow,
   type HorseDiagnostics
 } from '@/lib/race/capture/race-diagnostics';
@@ -117,7 +118,9 @@ export function runnerName(capture: ParsedRaceCapture, value: unknown) {
 export const skillOutcomes = [
   'Activated',
   'Wit check failed',
+  'Precondition failed',
   'Condition failed',
+  'Impossible',
   'Not recorded'
 ] as const;
 
@@ -133,8 +136,19 @@ export function skillActivationOutcome(
 ): SkillOutcome {
   if (observed || roll?.activated) return 'Activated';
   if (!roll) return 'Not recorded';
+
+  const miss = skillMiss(roll);
+  // An impossible skill could never have fired, whatever its wit check rolled.
+  if (miss?.kind === 'impossible') return 'Impossible';
   if (roll.required && !roll.passed) return 'Wit check failed';
+  if (miss?.kind === 'preconditionNeverMet') return 'Precondition failed';
   return 'Condition failed';
+}
+
+/** The simulator's explanation for an impossible skill, empty for any other decision. */
+export function impossibleSkillReason(roll: DiagnosticRow | undefined) {
+  const miss = skillMiss(roll);
+  return miss?.kind === 'impossible' ? miss.reasons.join('; ') : '';
 }
 
 export function skillRows(
@@ -157,12 +171,14 @@ export function skillRows(
     .map((id) => {
       const events = activations.filter((e) => e.params[1] === id);
       const roll = horse?.skillActivationDecisions?.find((d) => d.skillId === id);
+      const status = skillActivationOutcome(roll, events.length > 0);
       return {
         id,
         count: events.length,
         first: events[0]?.frameTime ?? '—',
         duration: events.length || roll?.activated ? (skillActiveDuration(horse, id) ?? '—') : '—',
-        status: skillActivationOutcome(roll, events.length > 0),
+        status,
+        reason: status === 'Impossible' ? impossibleSkillReason(roll) : '',
         witRequired: Number(roll?.required === true),
         witPassed: Number(roll?.passed === true),
         roll: typeof roll?.roll === 'number' ? roll.roll : '—',

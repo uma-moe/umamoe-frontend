@@ -100,9 +100,86 @@ describe('skill activation outcomes', () => {
       decision: { activated: false, required: true, passed: false },
       observed: true,
       expected: 'Activated'
+    },
+    {
+      label: 'precondition never met',
+      decision: {
+        activated: false,
+        required: true,
+        passed: true,
+        miss: { kind: 'preconditionNeverMet', reasons: [] }
+      },
+      observed: false,
+      expected: 'Precondition failed'
+    },
+    {
+      label: 'condition never met',
+      decision: {
+        activated: false,
+        required: true,
+        passed: true,
+        miss: { kind: 'conditionNeverMet', reasons: [] }
+      },
+      observed: false,
+      expected: 'Condition failed'
+    },
+    {
+      label: 'impossible skill after a failed wit check',
+      decision: {
+        activated: false,
+        required: true,
+        passed: false,
+        miss: { kind: 'impossible', reasons: ['no place fits among 5 runners'] }
+      },
+      observed: false,
+      expected: 'Impossible'
     }
   ])('$label', ({ decision, observed, expected }) => {
     expect(skillActivationOutcome(decision, observed)).toBe(expected);
+  });
+
+  it('gives the simulator reason for an impossible skill only', () => {
+    const impossibleReason =
+      'order>=3 (place 3-5), order_rate<=40 (place 1-2): no place fits among 5 runners';
+    const capture: ParsedRaceCapture = {
+      source: 'api',
+      fileName: 'race.json',
+      track: {},
+      runners: [],
+      frames: [],
+      events: []
+    };
+    const horse: HorseDiagnostics = {
+      horseIndex: 0,
+      spans: [],
+      skillActivationDecisions: [
+        {
+          skillId: 1,
+          activated: false,
+          required: true,
+          passed: false,
+          miss: { kind: 'impossible', reasons: [impossibleReason] }
+        },
+        {
+          skillId: 2,
+          activated: false,
+          required: true,
+          passed: true,
+          miss: { kind: 'conditionNeverMet', reasons: [] }
+        }
+      ]
+    };
+
+    const outcomes = skillRows(capture, 0, horse, undefined).map(({ id, status, reason }) => ({
+      id,
+      status,
+      reason
+    }));
+
+    expect(outcomes).toEqual([
+      { id: 2, status: 'Condition failed', reason: '' },
+      { id: 1, status: 'Impossible', reason: impossibleReason }
+    ]);
   });
 
   it('keeps wit and condition failures contiguous while preserving their original order', () => {

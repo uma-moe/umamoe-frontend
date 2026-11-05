@@ -60,8 +60,10 @@
 
   const outcomeTones: Record<SkillOutcome, OutcomeTone> = {
     Activated: 'activated',
+    'Precondition failed': 'caution',
     'Condition failed': 'caution',
     'Wit check failed': 'failed',
+    Impossible: 'failed',
     'Not recorded': 'idle'
   };
 
@@ -178,6 +180,9 @@
                 {row.status}
               {/if}
             </span>
+            {#if row.reason}
+              <small class="impossible-reason">{row.reason}</small>
+            {/if}
           {/if}
         {/snippet}
       </DataTable>
@@ -262,5 +267,13 @@
   }
   .skill-status.caution {
     --status-color: var(--accent-warning);
+  }
+  /* Indented past the 16px badge and its gap; wraps rather than widening the column. */
+  .impossible-reason {
+    display: block;
+    padding-left: 23px;
+    color: var(--text-secondary);
+    font-size: 10px;
+    white-space: normal;
   }
 </style>

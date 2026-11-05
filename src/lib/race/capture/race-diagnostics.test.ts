@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { ParsedRaceCapture } from './race-capture-parser';
-import { hpChangeEvents, lastSpurtResult } from './race-diagnostics';
+import { hpChangeEvents, lastSpurtResult, validateDetailedReplay } from './race-diagnostics';
 
 const capture = {
   frames: [{ time: 1, horses: [{ hp: 500 }, { hp: 850 }] }],
@@ -158,5 +158,45 @@ describe('HP change display', () => {
 
     expect(events[0]).toMatchObject({ before: 890, after: 860, estimated: true });
     expect(events[2]).toMatchObject({ before: 860, after: 960, estimated: true });
+  });
+});
+
+describe('skill activation misses', () => {
+  const replayWithDecision = (miss: unknown) => ({
+    engineBuild: 'test',
+    seed: 1,
+    replay: { data: '', encoding: 'base64', compression: 'gzip', format: 'uma-race-binary' },
+    annotations: {
+      schemaVersion: 7,
+      flags: {},
+      horses: [
+        {
+          horseIndex: 0,
+          spans: [],
+          skillActivationDecisions: [
+            { skillId: 1, required: true, passed: true, activated: false, miss }
+          ]
+        }
+      ]
+    }
+  });
+
+  it('accepts a decision with the simulator reason, or without one', () => {
+    const impossible = { kind: 'impossible', reasons: ['no place fits among 5 runners'] };
+
+    expect(() => validateDetailedReplay(replayWithDecision(impossible), 1)).not.toThrow();
+    expect(() => validateDetailedReplay(replayWithDecision(undefined), 1)).not.toThrow();
+  });
+
+  it('rejects a miss of an unknown kind or without reasons', () => {
+    const unknownKind = { kind: 'unlucky', reasons: [] };
+    const missingReasons = { kind: 'impossible' };
+
+    expect(() => validateDetailedReplay(replayWithDecision(unknownKind), 1)).toThrow(
+      'Invalid skill activation decision.'
+    );
+    expect(() => validateDetailedReplay(replayWithDecision(missingReasons), 1)).toThrow(
+      'Invalid skill activation decision.'
+    );
   });
 });

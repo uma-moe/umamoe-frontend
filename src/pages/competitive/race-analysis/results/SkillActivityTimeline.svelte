@@ -2,7 +2,7 @@
   import InfoIcon from '@/components/feedback/InfoIcon.svelte';
   import type { ParsedRaceCapture } from '@/lib/race/capture/race-capture-parser';
   import { diagnosticHorse } from '@/lib/race/capture/race-diagnostics';
-  import { skillActivationOutcome } from '../diagnostics/diagnostics-format';
+  import { impossibleSkillReason, skillActivationOutcome } from '../diagnostics/diagnostics-format';
   import { skillActivityRows, skillIconGroups, type SkillPeriod } from './skill-activity';
   import RaceSkill from '@/pages/competitive/runners/RaceSkill.svelte';
   import InspectPopover from '@/components/overlays/InspectPopover.svelte';
@@ -112,7 +112,9 @@
     const decision = decisions.find((decision) => Number(decision.skillId) === id);
     if (decision?.activated) return 'Activated, timing not recorded';
 
-    return skillActivationOutcome(decision, false);
+    const status = skillActivationOutcome(decision, false);
+    const reason = impossibleSkillReason(decision);
+    return reason ? status + ': ' + reason : status;
   }
 </script>
 

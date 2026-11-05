@@ -38,6 +38,14 @@ export interface HorseDiagnostics extends DiagnosticRow {
   temptationDecision?: DiagnosticRow | null;
 }
 
+const skillMissKinds = ['impossible', 'preconditionNeverMet', 'conditionNeverMet'] as const;
+
+/** The simulator's reason a skill did not activate; `reasons` explains `impossible` only. */
+export interface SkillMiss {
+  kind: (typeof skillMissKinds)[number];
+  reasons: string[];
+}
+
 export interface DetailedReplay {
   engineBuild: string;
   seed: number;
@@ -58,6 +66,13 @@ const object = (v: unknown): v is DiagnosticRow =>
   Boolean(v) && typeof v === 'object' && !Array.isArray(v);
 
 const finite = (v: unknown): v is number => typeof v === 'number' && Number.isFinite(v);
+
+const isSkillMiss = (v: unknown): v is SkillMiss =>
+  object(v) &&
+  (skillMissKinds as readonly unknown[]).includes(v.kind) &&
+  Array.isArray(v.reasons) &&
+  v.reasons.every((reason) => typeof reason === 'string');
+
 export function validateDetailedReplay(value: unknown, count: number): DetailedReplay {
   if (
     !object(value) ||
@@ -185,7 +200,8 @@ export function validateDetailedReplay(value: unknown, count: number): DetailedR
         ['required', 'passed', 'activated'].some((k) => typeof row[k] !== 'boolean') ||
         ['roll', 'threshold'].some(
           (k) => row[k] !== null && row[k] !== undefined && !finite(row[k])
-        )
+        ) ||
+        (row.miss !== null && row.miss !== undefined && !isSkillMiss(row.miss))
       )
         throw Error('Invalid skill activation decision.');
     }
@@ -447,7 +463,7 @@ export const raceMetricHelp: Record<string, string> = {
   Build: 'The five build stats, with the total cost of the learned skills in SP below them.',
   Popularity: 'The simulator’s popularity ranking of the runner; 1 is the favourite.',
   Outcome:
-    "Displays whether the skill activated, failed its wit check or passed the wit check but didn't meet its conditions.",
+    "Displays whether the skill activated, failed its wit check or passed the wit check but didn't meet its preconditions or conditions. Impossible means its conditions can't be met in this race at all, for example a position condition in a small field.",
   Triggers: 'Number of recorded activations for this skill during the race.',
   'First (s)': 'Time of first occurrence.',
   'Active (s)':
@@ -611,6 +627,12 @@ export function blockerAt(
     capture.runners.some((r) => r.index === blocker)
     ? blocker
     : -1;
+}
+
+/** Why a skill activation decision did not activate, when the simulator says. */
+export function skillMiss(decision: DiagnosticRow | undefined): SkillMiss | undefined {
+  const miss = decision?.miss;
+  return isSkillMiss(miss) ? miss : undefined;
 }
 
 /** Multiple effects of one skill can overlap; count elapsed active time once. */
