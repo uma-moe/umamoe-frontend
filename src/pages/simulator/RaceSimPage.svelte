@@ -8,6 +8,7 @@
   import SimulatorCourseProfile from './courses/SimulatorCourseProfile.svelte';
   import Banner from '@/components/feedback/Banner.svelte';
   import Button from '@/components/controls/Button.svelte';
+  import Checkbox from '@/components/controls/Checkbox.svelte';
   import TextField from '@/components/controls/TextField.svelte';
   import Dialog from '@/components/overlays/Dialog.svelte';
   import { HttpError } from '@/services/http/http-client';
@@ -64,6 +65,8 @@
   ];
 
   let gateOrder = $state<MonteCarloGateOrder>('sent'),
+    // Skill conditions on the runner's place always hold, so even a small field can trigger them.
+    positionChecksPass = $state(false),
     runs = $state('100'),
     step = $state<'setup' | 'report'>('setup');
 
@@ -130,6 +133,7 @@
     });
 
     gateOrder = 'sent';
+    positionChecksPass = false;
     run = null;
     step = 'setup';
     error = '';
@@ -273,7 +277,8 @@
           frameOrder: uma.frameOrder
         })),
         outputMode: 'report',
-        gateOrder
+        gateOrder,
+        positionChecksPass
       });
 
       let response;
@@ -332,6 +337,7 @@
     if (typeof page.raceInstanceId === 'number' && page.raceInstanceId >= 0)
       simulatorSession.raceInstanceId = page.raceInstanceId;
     if (page.gateOrder === 'sent' || page.gateOrder === 'randomized') gateOrder = page.gateOrder;
+    if (typeof page.positionChecksPass === 'boolean') positionChecksPass = page.positionChecksPass;
     const races = wholeNumber(page.runs);
     if (races !== undefined) runs = races;
     populateError = '';
@@ -526,6 +532,14 @@
             {/if}
           {/snippet}
         </SimulatorUmaField>
+        <div class="position-checks">
+          <Checkbox
+            id="race-position-checks"
+            label="Position skills ignore place and field size"
+            description="Skills that need a place in the field, like Budding Blossom, can trigger in any place and any field size. Their other conditions still apply. The game checks the place."
+            bind:checked={positionChecksPass}
+          />
+        </div>
       </div>
       <!-- Running stays in reach while the form scrolls. -->
       <RunBar
@@ -628,7 +642,8 @@
             seed: String(simulatorSession.seed),
             raceInstanceId: simulatorSession.raceInstanceId,
             gateOrder,
-            runs: String(runs)
+            runs: String(runs),
+            positionChecksPass
           }
         }
       : undefined;
