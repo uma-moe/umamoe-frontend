@@ -251,16 +251,51 @@ h3 {
       'build deck deck';
   }
 }
-/* The desktop row without the deck, which runs below it as one row of six. */
+/*
+ * The desktop row on a laptop: the deck shows each card as its art over the limit break, as the compact deck does, so
+ * the row fits without truncating names.
+ */
 @container runner-profile (min-width: 1100px) and (max-width: 1479px) {
   .profile-zones {
-    grid-template-columns: minmax(260px, 1fr) minmax(280px, 1fr) max-content max-content;
-    grid-template-areas:
-      'identity build result parents'
-      'deck deck deck deck';
+    grid-template-columns:
+      minmax(270px, 1fr) minmax(285px, 1fr) max-content minmax(170px, 210px)
+      max-content;
+    grid-template-areas: 'identity build result deck parents';
+  }
+  /* Each result over its label keeps the column narrow; the gap to the winner stays beside the finish time. */
+  .result-metrics {
+    grid-template-columns: max-content;
+    gap: 5px;
+  }
+  .metric {
+    grid-template-columns: minmax(0, 1fr);
+    grid-column: auto;
+  }
+  .metric .time-behind {
+    flex-basis: auto;
+  }
+  .race-entry {
+    grid-template-columns: repeat(3, max-content);
+    justify-content: space-between;
+  }
+  .profile-deck :global(.support-deck li) {
+    --support-art-size: 40px;
+    grid-template-columns: minmax(0, 1fr);
+    justify-items: center;
+    gap: 2px;
+    padding: 0;
+    border: 0;
+    background: none;
   }
   .profile-deck :global(.support-deck) {
-    grid-template-columns: repeat(6, minmax(0, 1fr));
+    row-gap: 6px;
+  }
+  .profile-deck :global(.support-name),
+  .profile-deck :global(.support-rarity) {
+    display: none;
+  }
+  .profile-deck :global(.support-meta) {
+    height: 10px;
   }
 }
 /* One row once the deck's names fit; who the runner is takes only the width it needs. */
