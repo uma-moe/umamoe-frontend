@@ -28,72 +28,42 @@
   padding: 10px 14px 12px;
   background: var(--card-surface-bg);
 }
-/* The finishing position leads, as the results table's first column does. */
+/* Who the runner is reads like the zones beside it: a heading, then each figure beside its label. */
 .profile-identity {
   grid-area: identity;
-  display: flex;
-  align-items: center;
-  gap: 14px;
   background: color-mix(in srgb, var(--runner-color) 8%, var(--card-surface-bg));
 }
-/* A taller portrait than the shared identity's carries the zone, so it never reads as a lone line of text. */
-.profile-identity > :global(.veteran-identity.rank-in-details) {
-  grid-template-columns: 64px minmax(0, 1fr);
-  min-width: 0;
-}
-.profile-identity :global(.portrait) {
-  height: 92px;
-}
-.race-entry {
+.profile-identity h3 {
   display: flex;
   flex-wrap: wrap;
-  align-items: center;
-  gap: 2px 10px;
-  margin: 0;
+  align-items: baseline;
+  column-gap: 6px;
+}
+.trainer {
   color: var(--text-secondary);
   font-size: 11px;
-  font-variant-numeric: tabular-nums;
+  font-weight: 400;
 }
-.race-entry strong {
-  color: var(--text-primary);
-  font-weight: 600;
-}
-.mood {
-  display: inline-flex;
-  align-items: center;
-  gap: 4px;
-}
-.mood img {
-  flex: none;
-  width: 16px;
-  height: 16px;
-}
-.finish-place {
+.identity-body {
   display: grid;
-  justify-items: center;
-  flex: none;
-  min-width: 42px;
-  margin: 0;
-  font-variant-numeric: tabular-nums;
+  grid-template-columns: 64px max-content;
+  gap: 12px;
 }
-.finish-place strong {
-  color: var(--text-primary);
-  font-size: 22px;
-  font-weight: 700;
-  line-height: 1.1;
-}
-.finish-place small {
+/* The portrait takes the height of the figures beside it rather than setting it. */
+.portrait {
+  position: relative;
+  display: grid;
+  place-items: center;
+  overflow: hidden;
   color: var(--text-secondary);
-  font-size: 11px;
 }
-.finish-place.winner strong {
-  color: var(--accent-warning);
-}
-.finish-place.podium strong {
-  color: var(--accent-primary);
-}
-.profile-identity :global(.race-style) {
-  color: var(--runner-color);
+.portrait img {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  object-position: center bottom;
 }
 .profile-build {
   grid-area: build;
@@ -128,8 +98,8 @@ h3 {
 .profile-build :global(.tile-stats) {
   grid-template-columns: repeat(3, minmax(0, 1fr));
 }
-/* Each result beside its label; the time behind the winner sits under the finish time. */
-.result-metrics {
+/* Each figure beside its label; the time behind the winner sits under the finish time. */
+.zone-metrics {
   display: grid;
   grid-template-columns: max-content minmax(0, max-content);
   gap: 7px 16px;
@@ -172,6 +142,21 @@ h3 {
 .metric .time-behind {
   flex-basis: 100%;
 }
+.metric dd > :global(.rank),
+.metric-icon {
+  flex: none;
+  align-self: center;
+}
+.metric-icon {
+  width: 16px;
+  height: 16px;
+}
+.metric.winner strong {
+  color: var(--accent-warning);
+}
+.metric.podium strong {
+  color: var(--accent-primary);
+}
 .good strong {
   color: var(--accent-success);
 }
@@ -199,24 +184,17 @@ h3 {
 .profile-deck :global(.support-lb) {
   font-size: 11px;
 }
-/* Who the runner is runs as a band; the result and the parents share the next row above the full-width build. */
+/* Who the runner is beside the result, the build beside the parents, then the deck across the card. */
 @container runner-profile (min-width: 520px) and (max-width: 699px) {
   .profile-zones {
-    grid-template-columns: minmax(0, 1fr) max-content;
+    grid-template-columns: minmax(290px, max-content) minmax(0, 1fr);
     grid-template-areas:
-      'identity identity'
-      'result parents'
-      'build build'
+      'identity result'
+      'build parents'
       'deck deck';
   }
-  /* A full-width build puts the stats beside the race aptitudes, as the build details do. */
-  .profile-build {
-    grid-template-columns: 240px minmax(0, 1fr);
-    align-items: center;
-    column-gap: 24px;
-  }
-  .profile-build > h3 {
-    grid-column: 1 / -1;
+  .profile-parents :global(.lineage) {
+    justify-content: center;
   }
 }
 /*
@@ -245,24 +223,12 @@ h3 {
 @container runner-profile (min-width: 1100px) and (max-width: 1479px) {
   .profile-zones {
     grid-template-columns:
-      minmax(270px, 1fr) minmax(285px, 1fr) max-content minmax(170px, 210px)
+      fit-content(320px) minmax(280px, 1fr) max-content minmax(160px, 210px)
       max-content;
     grid-template-areas: 'identity build result deck parents';
   }
-  /* Each result over its label keeps the column narrow; the gap to the winner stays beside the finish time. */
-  .result-metrics {
-    grid-template-columns: max-content;
-    gap: 5px;
-  }
-  .metric {
-    grid-template-columns: minmax(0, 1fr);
-    grid-column: auto;
-  }
-  .metric .time-behind {
-    flex-basis: auto;
-  }
   .profile-deck :global(.support-deck li) {
-    --support-art-size: 40px;
+    --support-art-size: 36px;
     grid-template-columns: minmax(0, 1fr);
     justify-items: center;
     gap: 2px;

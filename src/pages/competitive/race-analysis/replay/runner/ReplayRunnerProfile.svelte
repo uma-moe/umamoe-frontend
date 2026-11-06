@@ -13,8 +13,9 @@
   import { normalizeVeteranRecord } from '@/lib/veterans/records/veteran-normalizer';
   import { veteranSupportCards } from '@/lib/veterans/records/veteran-profile';
   import AptitudeTile from '@/components/game/AptitudeTile.svelte';
+  import RankBadge from '@/components/game/RankBadge.svelte';
   import StatStrip from '@/components/game/StatStrip.svelte';
-  import ProfileVeteranIdentity from '@/pages/profile/veterans/ProfileVeteranIdentity.svelte';
+  import Icon from '@/components/Icon.svelte';
   import { identity, score, stats } from '../../../analysis-view';
   import { raceAptitudes, type RaceContext } from '../../../runners/race-aptitudes';
   import RunnerLineage from '../../../runners/RunnerLineage.svelte';
@@ -65,10 +66,8 @@
   const start = $derived(horse ? startOutcome(horse, runner.result) : undefined);
   const result = $derived(runner.result);
   const timeBehind = $derived(result ? result.finishTime - winningTime : 0);
-  const popularity = $derived.by(() => {
-    const rank = horse?.popularity ?? Number(runner.raw.popularity);
-    return Number.isInteger(rank) && rank > 0 ? rank : undefined;
-  });
+  const summary = $derived(identity(runner));
+  const rankScore = $derived(score(runner));
   const mood = $derived(moodName(runner.raw.motivation));
   const deck = $derived(
     veteranSupportCards(runner.raw).map((card) => ({
@@ -97,50 +96,80 @@
   style:--runner-color={color}
 >
   <div class="profile-zones">
-    <div class="profile-zone profile-identity">
-      {#if result}
-        <p
-          class="finish-place"
-          class:winner={result.finishOrder === 1}
-          class:podium={result.finishOrder === 2 || result.finishOrder === 3}
-        >
-          <span class="sr-only">Finished</span>
-          <strong>{ordinalPlace(result.finishOrder)}</strong>
-          <small>of {fieldSize}</small>
-        </p>
-      {/if}
-      <ProfileVeteranIdentity
-        summary={identity(runner)}
-        score={score(runner) || undefined}
-        rankPlacement="details"
-      >
-        {#if mood || popularity !== undefined}
-          <p class="race-entry">
-            {#if mood}
-              <span
-                class="mood"
-                class:good={moodTones[mood] === 'good'}
-                class:bad={moodTones[mood] === 'bad'}
-              >
+    <section
+      class="profile-zone profile-identity"
+      aria-label="Runner"
+    >
+      <h3>
+        {summary.name}
+        <span class="trainer">{summary.scenario}</span>
+      </h3>
+      <div class="identity-body">
+        <span class="portrait">
+          {#if summary.image}
+            <img
+              src={summary.image}
+              alt=""
+            />
+          {:else}
+            <Icon
+              name="user"
+              size={28}
+            />
+          {/if}
+        </span>
+        <dl class="zone-metrics">
+          {#if result}
+            <div
+              class="metric"
+              class:winner={result.finishOrder === 1}
+              class:podium={result.finishOrder === 2 || result.finishOrder === 3}
+            >
+              <dt>Place</dt>
+              <dd>
+                <strong>{ordinalPlace(result.finishOrder)}</strong>
+                <small>of {fieldSize}</small>
+              </dd>
+            </div>
+          {/if}
+          <div class="metric">
+            <dt>Style</dt>
+            <dd><strong>{summary.detail}</strong></dd>
+          </div>
+          {#if mood}
+            <div
+              class="metric"
+              class:good={moodTones[mood] === 'good'}
+              class:bad={moodTones[mood] === 'bad'}
+            >
+              <dt>Mood</dt>
+              <dd>
                 <img
+                  class="metric-icon"
                   src={moodIcon(mood)}
                   alt=""
                   width="16"
                   height="16"
                 />
                 <strong>{mood}</strong>
-                <span class="sr-only">mood</span>
-              </span>
-            {/if}
-            {#if popularity !== undefined}
-              <span>
-                Popularity <strong>{ordinalPlace(popularity)}</strong>
-              </span>
-            {/if}
-          </p>
-        {/if}
-      </ProfileVeteranIdentity>
-    </div>
+              </dd>
+            </div>
+          {/if}
+          {#if rankScore > 0}
+            <div class="metric">
+              <dt>Rank</dt>
+              <dd>
+                <RankBadge
+                  score={rankScore}
+                  size="xs"
+                />
+                <strong>{rankScore.toLocaleString()}</strong>
+              </dd>
+            </div>
+          {/if}
+        </dl>
+      </div>
+    </section>
     <section
       class="profile-zone profile-build"
       aria-label="Build"
@@ -171,7 +200,7 @@
     >
       <h3>Result</h3>
       {#if result || horse}
-        <dl class="result-metrics">
+        <dl class="zone-metrics">
           {#if result}
             <div class="metric">
               <dt>Finish time</dt>
