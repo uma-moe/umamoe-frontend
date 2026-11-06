@@ -1,14 +1,16 @@
+/* One line from tablet up: the switcher shrinks before Build details would wrap under it. */
 .report-heading {
   display: flex;
-  flex-wrap: wrap;
   align-items: center;
   gap: 8px 12px;
   margin-bottom: 8px;
 }
 .report-heading > :global(.ui-button) {
+  flex: none;
   margin-left: auto;
 }
 h2 {
+  flex: none;
   margin: 0;
   font-size: 17px;
   font-weight: 650;
@@ -19,6 +21,9 @@ h2 {
   gap: 10px;
 }
 @media (max-width: 767px) {
+  .report-heading {
+    flex-wrap: wrap;
+  }
   /* The switcher takes its own line under the title and Build details. */
   .report-heading :global(.runner-switcher) {
     order: 1;
