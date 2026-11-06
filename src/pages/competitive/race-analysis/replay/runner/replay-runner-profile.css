@@ -221,9 +221,7 @@ h3 {
   .profile-build > h3 {
     grid-column: 1 / -1;
   }
-}
-/* A band-wide identity zone puts the race entry beside who the runner is; the name gives way first. */
-@container runner-profile (min-width: 520px) and (max-width: 699px) {
+  /* The band puts the race entry beside who the runner is; the name gives way first. */
   .profile-identity {
     grid-template-columns: minmax(0, max-content) minmax(max-content, 1fr);
     align-content: center;
@@ -253,28 +251,16 @@ h3 {
       'build deck deck';
   }
 }
-/*
- * The build, the deck and the parents keep their desktop row. Who the runner is runs as a band above the build and the
- * deck, with the race entry beside the name, and the result sits above the parents.
- */
+/* The desktop row without the deck, which runs below it as one row of six. */
 @container runner-profile (min-width: 1100px) and (max-width: 1479px) {
   .profile-zones {
-    grid-template-columns: minmax(280px, 320px) minmax(400px, 1fr) max-content;
+    grid-template-columns: minmax(260px, 1fr) minmax(280px, 1fr) max-content max-content;
     grid-template-areas:
-      'identity identity result'
-      'build deck parents';
+      'identity build result parents'
+      'deck deck deck deck';
   }
-  .profile-identity {
-    grid-template-columns: minmax(0, max-content) minmax(max-content, 1fr);
-    align-content: center;
-    align-items: center;
-    column-gap: 40px;
-  }
-  .race-entry {
-    grid-template-columns: repeat(3, minmax(max-content, 1fr));
-  }
-  .metric .time-behind {
-    flex-basis: auto;
+  .profile-deck :global(.support-deck) {
+    grid-template-columns: repeat(6, minmax(0, 1fr));
   }
 }
 /* One row once the deck's names fit; who the runner is takes only the width it needs. */
