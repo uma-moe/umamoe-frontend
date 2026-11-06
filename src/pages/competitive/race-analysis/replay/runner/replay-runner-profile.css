@@ -16,28 +16,33 @@
 }
 .profile-head {
   grid-column: 1 / -1;
-  display: flex;
-  flex-wrap: wrap;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  grid-template-areas:
+    'identity action'
+    'metrics metrics';
   align-items: center;
-  justify-content: space-between;
   gap: 10px 32px;
   min-width: 0;
   padding: 10px 14px;
   background: color-mix(in srgb, var(--runner-color) 8%, var(--card-surface-bg));
 }
 .profile-head > :global(.veteran-identity) {
-  flex: 1 1 240px;
+  grid-area: identity;
   min-width: 0;
 }
 .profile-head :global(.race-style) {
   color: var(--runner-color);
+}
+.profile-head > :global(.ui-button) {
+  grid-area: action;
 }
 .profile-zone {
   display: grid;
   align-content: start;
   gap: 8px;
   min-width: 0;
-  padding: 8px 14px 12px;
+  padding: 10px 14px 12px;
   background: var(--card-surface-bg);
 }
 h3 {
@@ -45,19 +50,8 @@ h3 {
   font-size: 12px;
   font-weight: 600;
 }
-/* Every zone heading takes the height of the Build details button, so the headings line up across the card. */
-.zone-heading,
-.profile-zone :global(.support-section > h3),
-.profile-zone :global(.lineage-section > h3) {
-  display: flex;
-  align-items: center;
-  min-height: 32px;
-}
-.zone-heading {
-  justify-content: space-between;
-  gap: 8px;
-}
 .result-metrics {
+  grid-area: metrics;
   display: grid;
   grid-template-columns: repeat(4, max-content);
   gap: 8px 28px;
@@ -98,21 +92,16 @@ h3 {
   color: var(--accent-warning);
 }
 .empty {
+  grid-area: metrics;
   margin: 0;
   color: var(--text-secondary);
   font-size: 12px;
 }
-.profile-build :global(.values) {
-  grid-template-columns: repeat(3, max-content);
-  gap: 6px 16px;
+.profile-build :global(.tile-stats) {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
 }
-.profile-build :global(.values dd) {
-  min-width: 4ch;
-  font-size: 13px;
-}
-.profile-build :global(.values img) {
-  width: 18px;
-  height: 18px;
+.profile-build :global(.tile-stats > div) {
+  min-height: 40px;
 }
 .race-aptitudes {
   display: grid;
@@ -124,37 +113,42 @@ h3 {
 }
 @container (max-width: 559px) {
   .result-metrics {
-    flex: 1 1 100%;
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
+  .build-details-label {
+    display: none;
+  }
 }
-/* A full-width build puts the stats beside the race aptitudes, as the build details do. The stats measure their own
-   width, so their column has a fixed one that fits four-digit stats. */
-@container (min-width: 520px) and (max-width: 899px) {
+/* A full-width build puts the stats beside the race aptitudes, as the build details do. */
+@container (min-width: 520px) and (max-width: 699px) {
   .profile-build {
-    grid-template-columns: 200px minmax(0, 1fr);
+    grid-template-columns: 240px minmax(0, 1fr);
     align-items: center;
     column-gap: 24px;
   }
-  .profile-build > .zone-heading {
+  .profile-build > h3 {
     grid-column: 1 / -1;
   }
 }
-/* The build sits beside the deck once the deck keeps its two rows there; the parents take a row of their own. */
-@container (min-width: 900px) {
+/* The build and the parents share a row, and the deck keeps its two rows beneath them. */
+@container (min-width: 700px) and (max-width: 1049px) {
   .profile-zones {
-    grid-template-columns: minmax(300px, 0.7fr) minmax(0, 1.3fr);
+    grid-template-columns: minmax(0, 1fr) max-content;
   }
-  .profile-lineage {
+  .profile-deck {
+    grid-row: 3;
     grid-column: 1 / -1;
   }
 }
-@container (min-width: 1300px) {
-  .profile-zones {
-    grid-template-columns: minmax(300px, 0.65fr) minmax(0, 1fr) minmax(0, 1fr);
+@container (min-width: 1000px) {
+  .profile-head {
+    grid-template-columns: minmax(0, 1fr) auto auto;
+    grid-template-areas: 'identity metrics action';
   }
-  .profile-lineage {
-    grid-column: auto;
+}
+@container (min-width: 1050px) {
+  .profile-zones {
+    grid-template-columns: minmax(300px, 1fr) minmax(0, 1.5fr) max-content;
   }
 }
 @media (max-width: 600px) {
@@ -162,6 +156,6 @@ h3 {
     padding: 8px 10px;
   }
   .profile-zone {
-    padding: 6px 10px 10px;
+    padding: 8px 10px 10px;
   }
 }

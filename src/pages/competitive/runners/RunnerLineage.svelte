@@ -11,23 +11,26 @@
     parents?: Pick<NonNullable<Build['parents']>[number], 'positionId' | 'cardId'>[];
   } = $props();
 
-  /** Each parent at 10 and 20, followed by their own two parents. */
-  const lineagePositions = [10, 11, 12, 20, 21, 22];
-
   let characters = $state.raw(new Map<number, CharacterData>());
 
-  const lineage = $derived(
-    lineagePositions.map((positionId) => {
-      const parent = parents.find((entry) => entry.positionId === positionId);
-      const name = parent
-        ? (characters.get(parent.cardId)?.name ?? 'Uma ' + parent.cardId)
-        : 'Not recorded';
-      const branch = Math.floor(positionId / 10);
-      const role = positionId % 10 === 0 ? 'Parent ' + branch : 'Grandparent';
+  function characterName(cardId: number) {
+    return characters.get(cardId)?.name ?? 'Uma ' + cardId;
+  }
 
-      return { positionId, parent, name, role };
-    })
-  );
+  /** Parents sit at 10 and 20; each one's own parents follow at 11, 12 and 21, 22. */
+  function lineageEntry(positionId: number) {
+    const parent = parents.find((entry) => entry.positionId === positionId);
+    const branch = Math.floor(positionId / 10);
+    const role =
+      positionId % 10 === 0
+        ? 'Parent ' + branch
+        : 'Grandparent ' + (positionId % 10) + ' of parent ' + branch;
+
+    return {
+      portrait: parent ? portrait(parent.cardId) : undefined,
+      label: role + ' - ' + (parent ? characterName(parent.cardId) : 'Not recorded')
+    };
+  }
 
   onMount(() => {
     void loadCharacters()
@@ -40,28 +43,43 @@
   class="lineage-section"
   aria-label="Parents and grandparents"
 >
-  <h3>Parents & grandparents</h3>
+  <h3>Parents</h3>
   {#if parents.length}
-    <ul class="lineage">
-      {#each lineage as { positionId, parent, name, role } (positionId)}
-        <li
-          class="tile"
-          title={role + ': ' + name}
+    <div class="lineage">
+      {#each [1, 2] as branch}
+        {@const directParent = lineageEntry(branch * 10)}
+        <div
+          class="branch"
+          aria-label={'Parent ' + branch + ' lineage'}
         >
-          <span class="tile-art">
+          <div class="grandparents">
+            {#each [branch * 10 + 1, branch * 10 + 2] as position}
+              {@const grandparent = lineageEntry(position)}
+              <span
+                class="grandparent"
+                title={grandparent.label}
+              >
+                <Artwork
+                  src={grandparent.portrait}
+                  alt={grandparent.label}
+                  size="xs"
+                />
+              </span>
+            {/each}
+          </div>
+          <span
+            class="parent"
+            title={directParent.label}
+          >
             <Artwork
-              src={parent ? portrait(parent.cardId) : undefined}
-              alt=""
+              src={directParent.portrait}
+              alt={directParent.label}
               size="sm"
             />
           </span>
-          <div class="tile-text">
-            <span class="tile-name">{name}</span>
-            <span class="tile-meta">{role}</span>
-          </div>
-        </li>
+        </div>
       {/each}
-    </ul>
+    </div>
   {:else}
     <p>No inheritance setup was captured.</p>
   {/if}

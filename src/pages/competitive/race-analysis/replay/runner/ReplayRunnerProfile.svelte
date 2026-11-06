@@ -138,27 +138,26 @@
       {:else}
         <p class="empty">No result was recorded.</p>
       {/if}
+      <Button
+        variant="secondary"
+        size="sm"
+        icon="clipboard"
+        ariaLabel="Build details"
+        title="Build details"
+        onclick={onbuild}
+      >
+        <span class="build-details-label">Build details</span>
+      </Button>
     </header>
     <section
       class="profile-zone profile-build"
       aria-label="Build"
     >
-      <header class="zone-heading">
-        <h3>Build</h3>
-        <Button
-          variant="secondary"
-          size="sm"
-          icon="clipboard"
-          onclick={onbuild}
-        >
-          Build details
-        </Button>
-      </header>
+      <h3>Build</h3>
       <StatStrip
         items={statItems}
         label={runner.name + ' build stats'}
-        presentation="values"
-        compact
+        presentation="tiles"
       />
       <div
         class="race-aptitudes"
@@ -173,10 +172,10 @@
         {/each}
       </div>
     </section>
-    <div class="profile-zone">
+    <div class="profile-zone profile-deck">
       <RunnerSupportDeck {deck} />
     </div>
-    <div class="profile-zone profile-lineage">
+    <div class="profile-zone">
       <RunnerLineage {parents} />
     </div>
   </div>
