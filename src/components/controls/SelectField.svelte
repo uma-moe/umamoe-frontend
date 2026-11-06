@@ -327,7 +327,7 @@
   }
   .selected-copy span {
     min-width: 0;
-    overflow: hidden;
+    overflow-x: clip;
     text-overflow: ellipsis;
     white-space: nowrap;
   }
@@ -387,7 +387,7 @@
     border-bottom: 0;
   }
   .select-panel button:has(.rich-copy) {
-    min-height: 34px;
+    min-height: 33px;
     gap: 8px;
     padding-block: 3px;
   }
@@ -409,11 +409,27 @@
   }
   .rich-copy small {
     min-width: 0;
-    overflow: hidden;
+    overflow-x: clip;
     text-overflow: ellipsis;
     font-size: var(--select-description-size, 10px);
     line-height: 1.15;
     color: var(--select-description-color, var(--accent-secondary));
+  }
+  /*
+   * Each line is trimmed to its caps and baseline, so the pair centres on the letters. Whole-pixel line heights keep
+   * the baselines snapping with the border when the control sits at a fractional offset; the 0.1px absorbs metric
+   * noise on caps that are already whole. Labels clip only sideways, since the letters overflow the trimmed boxes.
+   */
+  @supports (text-box: trim-both cap alphabetic) {
+    .rich-copy {
+      gap: 4px;
+    }
+    .rich-copy > span,
+    .rich-copy small {
+      height: round(up, 1cap - 0.1px, 1px);
+      align-content: end;
+      text-box: trim-both cap alphabetic;
+    }
   }
   .select-panel button img {
     width: 38px;
@@ -432,7 +448,7 @@
   }
   .select-panel button span {
     min-width: 0;
-    overflow: hidden;
+    overflow-x: clip;
     text-overflow: ellipsis;
     white-space: nowrap;
   }
