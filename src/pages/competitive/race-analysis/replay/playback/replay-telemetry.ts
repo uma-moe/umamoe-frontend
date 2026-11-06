@@ -9,6 +9,7 @@ import { raceTimeAtDistance } from '@/lib/race/replay/race-replay';
 import { hpRemainingColor } from '@/lib/race/replay/race-display';
 import { diagnosticHorse } from '@/lib/race/capture/race-diagnostics';
 import { finalSpurtSection } from '@/lib/race/final-spurt';
+import { phaseBandArea, racePhaseBands, type PhaseMarkArea } from '../../race-phase-bands';
 import {
   trajectorySeries,
   type RaceSignalMeans,
@@ -22,7 +23,7 @@ export interface TelemetrySignal {
   color: string;
 }
 
-type MarkArea = [Record<string, unknown>, { xAxis: number }];
+type MarkArea = PhaseMarkArea;
 
 /** A mean race: every sampled race behind it, and each runner's mean signals at the mean capture's frames. */
 export interface TelemetryEnsemble {
@@ -91,37 +92,14 @@ export function telemetryPhases(
   telemetryEnd: number,
   dark: boolean
 ): MarkArea[] {
-  return [
-    { name: 'Early race', start: 0, end: 1 / 6, color: '#b5b9c2' },
-    { name: 'Mid race', start: 1 / 6, end: 2 / 3, color: '#6ab7ee' },
-    { name: 'Late race', start: 2 / 3, end: 5 / 6, color: '#dfba72' },
-    { name: 'Final leg', start: 5 / 6, end: 1, color: '#bd91d1' }
-  ].flatMap((phase) => {
+  return racePhaseBands.flatMap((phase) => {
     const start = raceTimeAtDistance(capture.frames, distanceMax * phase.start),
       end =
         phase.end === 1
           ? telemetryEnd
           : (raceTimeAtDistance(capture.frames, distanceMax * phase.end) ?? telemetryEnd);
 
-    return start === undefined
-      ? []
-      : [
-          [
-            {
-              name: phase.name,
-              xAxis: start,
-              itemStyle: { color: phase.color, opacity: 0.07 },
-              label: {
-                show: true,
-                position: 'insideTop',
-                fontSize: 9,
-                color: dark ? '#abb4c3' : '#566071',
-                formatter: phase.name.replace(' race', '')
-              }
-            },
-            { xAxis: end }
-          ] satisfies MarkArea
-        ];
+    return start === undefined ? [] : [phaseBandArea({ phase, start, end, dark })];
   });
 }
 

@@ -1,14 +1,25 @@
+/*
+ * Wide screens keep the whole header on one row: course, section tabs, race file. Narrower ones put the tabs and
+ * the race file under the course; a phone gives the tabs the full width.
+ */
 .replay-header {
+  position: sticky;
+  top: var(--utility-height);
+  z-index: calc(var(--z-header) - 2);
   display: grid;
-  grid-template-columns: minmax(0, 1fr) minmax(0, 45%);
+  grid-template-columns: minmax(0, 1fr) auto;
+  grid-template-areas:
+    'title title'
+    'tabs actions';
   align-items: center;
-  justify-content: space-between;
   gap: 10px 16px;
-  padding: 16px;
-  border-bottom: 1px solid var(--border-subtle);
-  margin-bottom: 12px;
+  margin: 0 0 8px;
+  padding: 10px 14px;
+  border-radius: var(--radius-lg);
+  background: var(--surface-1);
 }
 .replay-title {
+  grid-area: title;
   display: flex;
   align-items: center;
   gap: 10px;
@@ -17,107 +28,69 @@
 .replay-icon {
   display: grid;
   place-items: center;
-  color: var(--accent-primary);
   flex: none;
+  width: 34px;
+  height: 34px;
+  border-radius: 8px;
+  background: rgb(var(--accent-primary-rgb) / 0.12);
+  color: var(--accent-primary);
+}
+.title-text {
+  min-width: 0;
+}
+.title-line {
+  display: flex;
+  align-items: center;
+  gap: 4px 10px;
+  min-width: 0;
 }
 h2 {
-  font-size: 17px;
+  min-width: 0;
+  margin: 0;
+  overflow: hidden;
+  font-size: 16px;
   font-weight: 650;
-  margin: 0;
+  line-height: 22px;
+  white-space: nowrap;
+  text-overflow: ellipsis;
 }
-p {
+.course-length {
+  margin-left: 4px;
+  color: var(--text-secondary);
+  font-weight: 500;
+}
+.title-line :global(.badge) {
+  flex: none;
+  min-height: 20px;
+  padding-inline: 8px;
+  white-space: nowrap;
+}
+.race-facts {
+  margin: 2px 0 0;
+  overflow: hidden;
+  color: var(--text-secondary);
   font-size: 12px;
-  color: var(--text-secondary);
-  line-height: 1.6;
-  margin: 0;
+  line-height: 16px;
+  white-space: nowrap;
+  text-overflow: ellipsis;
 }
-.course-source {
-  display: inline-block;
-  font-size: 10px;
-  margin-left: 10px;
-  color: var(--text-secondary);
+.race-facts span {
+  white-space: nowrap;
 }
-.course-heading {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  flex-wrap: wrap;
-  margin-bottom: 5px;
-}
-.capture-summary {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  font-size: 10px;
-  color: var(--text-secondary);
+.race-facts span + span::before {
+  content: '·';
+  margin: 0 6px;
+  opacity: 0.7;
 }
 .header-actions {
-  min-width: 0;
-  max-width: 100%;
+  grid-area: actions;
   justify-self: end;
-}
-.capture-summary strong {
-  padding: 4px 7px;
-  background: var(--surface-2);
-  border-radius: 4px;
-  font-size: 10px;
-  font-weight: 500;
-  color: var(--text-secondary);
-}
-@media (max-width: 700px) {
-  .replay-header {
-    align-items: start;
-    grid-template-columns: minmax(0, 1fr);
-  }
-  .header-actions {
-    width: 100%;
-    max-width: 100%;
-  }
-  .course-heading {
-    gap: 4px 8px;
-  }
-  .replay-title {
-    gap: 8px;
-  }
-  .replay-icon {
-    display: none;
-  }
-  h2 {
-    font-size: 14px;
-  }
-  .replay-header p {
-    font-size: 11px;
-  }
-  .course-source {
-    display: block;
-    margin-left: 0;
-  }
-  .replay-header > :global(button) {
-    flex: none;
-  }
-  .replay-header {
-    padding: 12px;
-  }
-  .capture-summary {
-    display: flex;
-    gap: 6px;
-    font-size: 9px;
-  }
-}
-.replay-header {
-  position: sticky;
-  top: var(--utility-height);
-  z-index: calc(var(--z-header) - 2);
-  background: var(--surface-1);
-  border: 0;
-  border-radius: var(--radius-lg);
-  margin: 0 0 8px;
-  padding: 12px 16px;
+  min-width: 0;
 }
 .report-navigation {
-  grid-column: 1/-1;
+  grid-area: tabs;
   display: flex;
-  align-items: center;
+  min-width: 0;
 }
 /* One tab group: the section in view reads as the selected tab. */
 .report-links {
@@ -159,11 +132,54 @@ p {
   background: rgb(var(--accent-primary-rgb) / 0.12);
   color: var(--color-accent);
 }
-.tab-short {
+.tab-long {
   display: none;
 }
-/* A phone spreads the tabs across the width with short names and no icons, keeping the bar one row. */
+@media (min-width: 1280px) {
+  .replay-header {
+    grid-template-columns: minmax(0, 1fr) auto auto;
+    grid-template-areas: 'title tabs actions';
+  }
+}
+@media (min-width: 1500px) {
+  .tab-long {
+    display: inline;
+  }
+  .tab-short {
+    display: none;
+  }
+}
 @media (max-width: 767px) {
+  .replay-header {
+    grid-template-areas:
+      'title actions'
+      'tabs tabs';
+    gap: 8px 10px;
+    padding: 10px 12px;
+  }
+  /* A race picker needs the width, so it takes its own row. */
+  .replay-header:has(.header-actions :global(.field)) {
+    grid-template-areas:
+      'title title'
+      'actions actions'
+      'tabs tabs';
+  }
+  .replay-header:has(.header-actions :global(.field)) .header-actions {
+    justify-self: stretch;
+  }
+  .replay-icon {
+    display: none;
+  }
+  .title-line {
+    flex-wrap: wrap;
+  }
+  h2 {
+    font-size: 15px;
+  }
+  .race-facts {
+    font-size: 11px;
+    white-space: normal;
+  }
   .report-links {
     flex: 1;
   }
@@ -171,27 +187,7 @@ p {
     flex: 1 1 0;
     padding-inline: 4px;
   }
-  .section-tab :global(svg),
-  .tab-long {
+  .section-tab :global(svg) {
     display: none;
-  }
-  .tab-short {
-    display: inline;
-  }
-}
-@media (min-width: 951px) {
-  .replay-header {
-    padding: 12px 16px;
-  }
-  .course-heading {
-    margin-bottom: 4px;
-  }
-  .course-heading h2 {
-    font-size: 17px;
-    line-height: 22px;
-  }
-  .replay-header p {
-    font-size: 11px;
-    line-height: 16px;
   }
 }

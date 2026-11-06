@@ -1,13 +1,11 @@
 <script lang="ts">
   import type { ParsedRaceCapture } from '@/lib/race/capture/race-capture-parser';
   import type { HorseDiagnostics } from '@/lib/race/capture/race-diagnostics';
-  import Disclosure from '@/components/overlays/Disclosure.svelte';
   import DiagnosticsEventTable from '../DiagnosticsEventTable.svelte';
   import { count } from '../diagnostics-format';
   import { positionKeepDecisionRows } from './position-keep-decisions';
 
   let {
-    id,
     capture,
     index,
     horse,
@@ -15,7 +13,6 @@
     onseek,
     onselect
   }: {
-    id: string;
     capture: ParsedRaceCapture;
     index: number;
     horse: HorseDiagnostics;
@@ -27,36 +24,44 @@
   const decisions = $derived(positionKeepDecisionRows(capture, horse));
 </script>
 
-<section class="detail-panel report-card detail-table position-decisions">
-  <Disclosure
-    id={id + '-position-decisions'}
+<section
+  class="report-block report-card detail-panel detail-table position-decisions"
+  aria-label="Position keep decisions"
+>
+  <header class="section-heading">
+    <h3>
+      Position keep decisions <small>
+        {count(horse.positionKeepDecisions?.length ?? 0, 'decision')}
+      </small>
+    </h3>
+  </header>
+  <DiagnosticsEventTable
+    value={decisions}
     title="Position keep decisions"
-    description={count(horse.positionKeepDecisions?.length ?? 0, 'decision')}
-    compact
-    open
-  >
-    <DiagnosticsEventTable
-      value={decisions}
-      title="Position keep decisions"
-      columns={[
-        { key: 'time', label: 'Time', helpKey: 'Time (s)', numeric: true },
-        { key: 'duration', label: 'Duration', helpKey: 'Duration (s)', numeric: true },
-        { key: 'attemptedMode', label: 'Mode' },
-        { key: 'outcome', label: 'Result' },
-        { key: 'pacemakerHorseIndex', label: 'Current pacemaker' }
-      ]}
-      {capture}
-      {index}
-      {skillNames}
-      maxHeight={300}
-      {onseek}
-      {onselect}
-    />
-  </Disclosure>
+    columns={[
+      { key: 'time', label: 'Time', helpKey: 'Time (s)', numeric: true },
+      { key: 'duration', label: 'Duration', helpKey: 'Duration (s)', numeric: true },
+      { key: 'attemptedMode', label: 'Mode' },
+      { key: 'outcome', label: 'Result' },
+      { key: 'pacemakerHorseIndex', label: 'Current pacemaker' }
+    ]}
+    {capture}
+    {index}
+    {skillNames}
+    fill
+    {onseek}
+    {onselect}
+  />
 </section>
 
 <style>
   @import '../report-card.css';
+  @import '../report/report-section.css';
   @import './detail-panel.css';
-  @import './diagnostics-traces.css';
+  /* The table scrolls inside whatever height the analysis gives this card. */
+  .position-decisions {
+    display: flex;
+    flex-direction: column;
+    min-height: 0;
+  }
 </style>

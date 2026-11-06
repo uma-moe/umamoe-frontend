@@ -48,7 +48,7 @@
 </script>
 
 <header class="report-heading">
-  <h2 class="sr-only">Runner analysis</h2>
+  <h2>Runner analysis</h2>
   {@render navigation()}
   {#if horse}
     <DiagnosticsOutcomeSummary

@@ -105,21 +105,12 @@ h2 {
 .runner-panel {
   padding: 12px;
 }
-.runner-navigation {
-  display: flex;
-  align-items: center;
-  flex-wrap: wrap;
-  gap: 8px;
-  flex: 1;
-  min-width: 0;
-}
 .runner-switcher {
   display: flex;
   align-items: center;
   gap: 4px;
-  flex: 1;
+  flex: 0 1 440px;
   min-width: min(100%, 260px);
-  max-width: 440px;
 }
 .runner-select {
   flex: 1;

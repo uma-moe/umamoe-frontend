@@ -1,0 +1,68 @@
+.section-heading {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 4px 12px;
+  margin-bottom: 4px;
+}
+.chart-title {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-right: auto;
+}
+.chart-title h3 {
+  margin: 0;
+  font-size: 13px;
+  font-weight: 600;
+}
+/*
+ * The legend is the library's checkbox in each line's colour, as the timeline filters are; its description reads
+ * out the line's value under the pointer, so the legend is also the readout.
+ */
+.legend {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 104px));
+  gap: 2px 8px;
+}
+.legend-item :global(.checkbox) {
+  min-height: 30px;
+  grid-template-columns: 16px minmax(0, 1fr);
+  gap: 6px;
+}
+.legend-item :global(.box) {
+  width: 16px;
+  height: 16px;
+}
+.legend-item :global(strong) {
+  overflow: hidden;
+  color: var(--text-secondary);
+  font-size: 10px;
+  font-weight: 500;
+  line-height: 1.2;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+.legend-item :global(small) {
+  color: var(--text-primary);
+  font-size: 12px;
+  font-weight: 600;
+  line-height: 1.2;
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+}
+.status {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 4px 0 0;
+  font-size: 11px;
+  color: var(--text-secondary);
+  line-height: 1.5;
+}
+@media (max-width: 600px) {
+  .legend {
+    width: 100%;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}

@@ -1,7 +1,13 @@
 import { describe, expect, it } from 'vitest';
 import type { ParsedRaceCapture, RaceRunner } from '@/lib/race/capture/race-capture-parser';
 import type { DiagnosticRow, HorseDiagnostics } from '@/lib/race/capture/race-diagnostics';
-import { modeRows, modeSpans, skillActivationOutcome, skillRows } from './diagnostics-format';
+import {
+  modeRows,
+  modeSpans,
+  seekTimeLabel,
+  skillActivationOutcome,
+  skillRows
+} from './diagnostics-format';
 
 describe('rushing as a race behaviour', () => {
   const capture: ParsedRaceCapture = {
@@ -222,5 +228,17 @@ describe('skill activation outcomes', () => {
       { id: 5, status: 'Condition failed' },
       { id: 6, status: 'Not recorded' }
     ]);
+  });
+});
+
+describe('seek time labels', () => {
+  it('writes every race time as minutes, seconds and milliseconds', () => {
+    const labels = [0, 0.0667, 18.248, 75.3254, 132.0005].map(seekTimeLabel);
+
+    expect(labels).toEqual(['0:00.000', '0:00.067', '0:18.248', '1:15.325', '2:12.001']);
+  });
+
+  it('carries a millisecond that rounds up to a full minute', () => {
+    expect(seekTimeLabel(59.9996)).toBe('1:00.000');
   });
 });

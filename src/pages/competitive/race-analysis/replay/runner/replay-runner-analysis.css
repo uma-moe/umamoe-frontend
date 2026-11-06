@@ -21,12 +21,7 @@ h2 {
   border: 0;
   gap: 8px 16px;
 }
-.report-heading > :global(.runner-navigation) {
-  flex: 0 0 auto;
-  flex-wrap: nowrap;
-  width: 550px;
-  max-width: 100%;
-}
+
 .report-actions > :global(.ui-button) {
   min-height: 28px;
   padding-inline: 12px;
@@ -37,12 +32,6 @@ h2 {
     display: grid;
     grid-template-columns: minmax(0, 1fr) auto;
     gap: 8px;
-  }
-  .report-heading :global(.runner-navigation) {
-    display: contents;
-  }
-  .report-heading :global(.runner-navigation > .ui-button) {
-    justify-self: start;
   }
   .report-heading :global(.runner-switcher) {
     grid-column: 1/-1;

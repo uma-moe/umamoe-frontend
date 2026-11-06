@@ -195,10 +195,20 @@
   @import '../report-card.css';
   @import './report-section.css';
   @import '../../../runners/skill-chip-cell.css';
+  /* The skills scroll inside whatever height the analysis gives this card. */
+  .skills-report {
+    display: flex;
+    flex-direction: column;
+    min-height: 0;
+  }
   .skill-columns {
     display: grid;
     grid-template-columns: repeat(auto-fit, minmax(min(100%, 330px), 1fr));
     gap: 0 20px;
+    min-height: 0;
+    overflow-y: auto;
+    scrollbar-width: thin;
+    scrollbar-color: var(--border-secondary) transparent;
   }
   .skills-report :global(th:first-child) {
     width: 50%;
