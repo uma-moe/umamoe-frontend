@@ -14,9 +14,9 @@
   import { normalizeVeteranRecord } from '@/lib/veterans/records/veteran-normalizer';
   import { veteranSupportCards } from '@/lib/veterans/records/veteran-profile';
   import AptitudeTile from '@/components/game/AptitudeTile.svelte';
+  import Artwork from '@/components/game/Artwork.svelte';
   import RankBadge from '@/components/game/RankBadge.svelte';
   import StatStrip from '@/components/game/StatStrip.svelte';
-  import Icon from '@/components/Icon.svelte';
   import { identity, score, stats, styleColors } from '../../../analysis-view';
   import { raceAptitudes, type RaceContext } from '../../../runners/race-aptitudes';
   import RunnerLineage from '../../../runners/RunnerLineage.svelte';
@@ -106,90 +106,80 @@
       class="profile-zone profile-identity"
       aria-label="Runner"
     >
-      <span class="portrait">
-        {#if summary.image}
+      <div class="identity-title">
+        <Artwork
+          src={summary.image}
+          alt=""
+          size="sm"
+        />
+        <div>
+          <h3>{summary.name}</h3>
+          <p class="trainer">{summary.scenario}</p>
+        </div>
+        {#if styleBadge}
           <img
-            src={summary.image}
-            alt=""
+            class="style-badge"
+            src={styleBadge}
+            alt={summary.detail}
+            title={summary.detail}
+            width="32"
+            height="32"
           />
         {:else}
-          <Icon
-            name="user"
-            size={28}
-          />
+          <span
+            class="style-pill"
+            style:--style-color={styleColors[runningStyle] ?? styleColors[0]}
+          >
+            {summary.detail}
+          </span>
         {/if}
-      </span>
-      <div class="identity-main">
-        <div class="identity-title">
-          <div>
-            <h3>{summary.name}</h3>
-            <p class="trainer">{summary.scenario}</p>
-          </div>
-          {#if styleBadge}
-            <img
-              class="style-badge"
-              src={styleBadge}
-              alt={summary.detail}
-              title={summary.detail}
-              width="32"
-              height="32"
-            />
-          {:else}
-            <span
-              class="style-pill"
-              style:--style-color={styleColors[runningStyle] ?? styleColors[0]}
-            >
-              {summary.detail}
-            </span>
-          {/if}
-        </div>
-        <dl class="zone-metrics">
-          {#if result}
-            <div
-              class="metric"
-              class:winner={result.finishOrder === 1}
-              class:podium={result.finishOrder === 2 || result.finishOrder === 3}
-            >
-              <dt>Place</dt>
-              <dd>
-                <strong>{ordinalPlace(result.finishOrder)}</strong>
-                <small>of {fieldSize}</small>
-              </dd>
-            </div>
-          {/if}
-          {#if mood}
-            <div
-              class="metric"
-              class:good={moodTones[mood] === 'good'}
-              class:bad={moodTones[mood] === 'bad'}
-            >
-              <dt>Mood</dt>
-              <dd>
-                <img
-                  class="metric-icon"
-                  src={moodIcon(mood)}
-                  alt=""
-                  width="16"
-                  height="16"
-                />
-                <strong>{mood}</strong>
-              </dd>
-            </div>
-          {/if}
-          {#if rankScore > 0}
-            <div class="metric">
-              <dt>Rank</dt>
-              <dd>
-                <RankBadge
-                  score={rankScore}
-                  size="xs"
-                />
-                <strong>{rankScore.toLocaleString()}</strong>
-              </dd>
-            </div>
-          {/if}
-        </dl>
       </div>
+      <dl class="zone-metrics">
+        {#if result}
+          <div
+            class="metric"
+            class:winner={result.finishOrder === 1}
+            class:podium={result.finishOrder === 2 || result.finishOrder === 3}
+          >
+            <dt>Place</dt>
+            <dd>
+              <strong>{ordinalPlace(result.finishOrder)}</strong>
+              <small>of {fieldSize}</small>
+            </dd>
+          </div>
+        {/if}
+        {#if mood}
+          <div
+            class="metric"
+            class:good={moodTones[mood] === 'good'}
+            class:bad={moodTones[mood] === 'bad'}
+          >
+            <dt>Mood</dt>
+            <dd>
+              <img
+                class="metric-icon"
+                src={moodIcon(mood)}
+                alt=""
+                width="16"
+                height="16"
+              />
+              <strong>{mood}</strong>
+            </dd>
+          </div>
+        {/if}
+        {#if rankScore > 0}
+          <div class="metric">
+            <dt>Rank</dt>
+            <dd>
+              <RankBadge
+                score={rankScore}
+                size="xs"
+              />
+              <strong>{rankScore.toLocaleString()}</strong>
+            </dd>
+          </div>
+        {/if}
+      </dl>
     </section>
     <section
       class="profile-zone profile-build"

@@ -28,19 +28,12 @@
   padding: 10px 14px 12px;
   background: var(--card-surface-bg);
 }
-/* Who the runner is: the portrait beside their name over the trainer, as the results table shows them, then the
-   place, mood and rank as figures beside their labels, as the result zone lists its own. */
+/* Who the runner is: portrait, name and trainer as the results table shows a runner, with the style badge beside
+   them, then the place, mood and rank as figures beside their labels, as the result zone lists its own. */
 .profile-identity {
   grid-area: identity;
-  grid-template-columns: 64px max-content;
-  column-gap: 12px;
-  background: color-mix(in srgb, var(--runner-color) 8%, var(--card-surface-bg));
-}
-.identity-main {
-  display: grid;
-  align-content: start;
   gap: 10px;
-  min-width: 0;
+  background: color-mix(in srgb, var(--runner-color) 8%, var(--card-surface-bg));
 }
 .identity-title {
   display: flex;
@@ -75,22 +68,6 @@
   font-size: 10px;
   font-weight: 800;
   text-transform: uppercase;
-}
-/* The portrait takes the height of the figures beside it rather than setting it. */
-.portrait {
-  position: relative;
-  display: grid;
-  place-items: center;
-  overflow: hidden;
-  color: var(--text-secondary);
-}
-.portrait img {
-  position: absolute;
-  inset: 0;
-  width: 100%;
-  height: 100%;
-  object-fit: contain;
-  object-position: center bottom;
 }
 .profile-build {
   grid-area: build;
