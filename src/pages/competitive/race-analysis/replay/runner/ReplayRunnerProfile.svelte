@@ -7,6 +7,7 @@
     moodIcon,
     moodName,
     ordinalPlace,
+    runningStyleIcon,
     type MoodName
   } from '@/lib/race/replay/race-display';
   import { loadSkills, skillPointTotal, type SkillData } from '@/lib/game-data/skills/skills';
@@ -16,7 +17,7 @@
   import RankBadge from '@/components/game/RankBadge.svelte';
   import StatStrip from '@/components/game/StatStrip.svelte';
   import Icon from '@/components/Icon.svelte';
-  import { identity, score, stats } from '../../../analysis-view';
+  import { identity, score, stats, styleColors } from '../../../analysis-view';
   import { raceAptitudes, type RaceContext } from '../../../runners/race-aptitudes';
   import RunnerLineage from '../../../runners/RunnerLineage.svelte';
   import RunnerSupportDeck from '../../../runners/RunnerSupportDeck.svelte';
@@ -67,6 +68,11 @@
   const result = $derived(runner.result);
   const timeBehind = $derived(result ? result.finishTime - winningTime : 0);
   const summary = $derived(identity(runner));
+  const runningStyle = $derived(runner.result?.runningStyle ?? Number(runner.raw.runningStyle));
+  /** Debuffers are named as such rather than by the style badge they ran with. */
+  const styleBadge = $derived(
+    Number(runner.raw.analysisStyle) === 6 ? undefined : runningStyleIcon(runningStyle)
+  );
   const rankScore = $derived(score(runner));
   const mood = $derived(moodName(runner.raw.motivation));
   const deck = $derived(
@@ -100,24 +106,43 @@
       class="profile-zone profile-identity"
       aria-label="Runner"
     >
-      <h3>
-        {summary.name}
-        <span class="trainer">{summary.scenario}</span>
-      </h3>
-      <div class="identity-body">
-        <span class="portrait">
-          {#if summary.image}
+      <span class="portrait">
+        {#if summary.image}
+          <img
+            src={summary.image}
+            alt=""
+          />
+        {:else}
+          <Icon
+            name="user"
+            size={28}
+          />
+        {/if}
+      </span>
+      <div class="identity-main">
+        <div class="identity-title">
+          <div>
+            <h3>{summary.name}</h3>
+            <p class="trainer">{summary.scenario}</p>
+          </div>
+          {#if styleBadge}
             <img
-              src={summary.image}
-              alt=""
+              class="style-badge"
+              src={styleBadge}
+              alt={summary.detail}
+              title={summary.detail}
+              width="32"
+              height="32"
             />
           {:else}
-            <Icon
-              name="user"
-              size={28}
-            />
+            <span
+              class="style-pill"
+              style:--style-color={styleColors[runningStyle] ?? styleColors[0]}
+            >
+              {summary.detail}
+            </span>
           {/if}
-        </span>
+        </div>
         <dl class="zone-metrics">
           {#if result}
             <div
@@ -132,10 +157,6 @@
               </dd>
             </div>
           {/if}
-          <div class="metric">
-            <dt>Style</dt>
-            <dd><strong>{summary.detail}</strong></dd>
-          </div>
           {#if mood}
             <div
               class="metric"
