@@ -28,17 +28,28 @@
   padding: 10px 14px 12px;
   background: var(--card-surface-bg);
 }
-/* Who the runner is: portrait, name and trainer as the results table shows a runner, with the style badge beside
-   them, then the place, mood and rank as figures beside their labels, as the result zone lists its own. */
+/*
+ * Who the runner is, on one grid: the portrait heads a column the labels share, and the name heads the column the
+ * figures share, so every value starts where the name does. The style badge closes the title row.
+ */
 .profile-identity {
   grid-area: identity;
-  gap: 10px;
+  grid-template-columns: 40px minmax(0, max-content) auto;
+  gap: 10px 12px;
   background: color-mix(in srgb, var(--runner-color) 8%, var(--card-surface-bg));
 }
+.identity-title,
+.profile-identity .zone-metrics {
+  display: grid;
+  grid-template-columns: subgrid;
+  grid-column: 1 / -1;
+  column-gap: 12px;
+}
 .identity-title {
-  display: flex;
   align-items: center;
-  gap: 10px;
+}
+.profile-identity .metric dd {
+  grid-column: 2 / -1;
 }
 .identity-title h3 {
   font-size: 15px;
@@ -51,13 +62,11 @@
   font-size: 11px;
 }
 .style-badge {
-  flex: none;
-  width: 32px;
-  height: 32px;
+  width: 40px;
+  height: 40px;
 }
 /* Runaway has no game badge, so it keeps the results table's ring in the style colour around the name. */
 .style-pill {
-  flex: none;
   display: inline-grid;
   place-items: center;
   height: 24px;
