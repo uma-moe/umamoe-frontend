@@ -1,4 +1,5 @@
 <script lang="ts">
+  import type { Snippet } from 'svelte';
   import RankBadge from '@/components/game/RankBadge.svelte';
   import Icon from '@/components/Icon.svelte';
   import type { VeteranUiRecord } from '@/components/game/veteran-ui-types';
@@ -10,7 +11,8 @@
     rankPlacement = 'column',
     heading = 'h3',
     titleId,
-    descriptionId
+    descriptionId,
+    children
   }: {
     summary: VeteranUiRecord;
     rarity?: number | null;
@@ -20,6 +22,8 @@
     heading?: 'h2' | 'h3';
     titleId?: string;
     descriptionId?: string;
+    /** Further details under the scenario line, such as how the veteran entered a race. */
+    children?: Snippet;
   } = $props();
 </script>
 
@@ -76,6 +80,7 @@
         </span>
       {/if}
     </div>
+    {@render children?.()}
   </div>
   {#if score != null && rankPlacement === 'column'}
     <div class="rank">

@@ -98,56 +98,48 @@
 >
   <div class="profile-zones">
     <div class="profile-zone profile-identity">
-      <div class="identity-head">
-        {#if result}
-          <p
-            class="finish-place"
-            class:winner={result.finishOrder === 1}
-            class:podium={result.finishOrder === 2 || result.finishOrder === 3}
-          >
-            <span class="sr-only">Finished</span>
-            <strong>{ordinalPlace(result.finishOrder)}</strong>
-            <small>of {fieldSize}</small>
+      {#if result}
+        <p
+          class="finish-place"
+          class:winner={result.finishOrder === 1}
+          class:podium={result.finishOrder === 2 || result.finishOrder === 3}
+        >
+          <span class="sr-only">Finished</span>
+          <strong>{ordinalPlace(result.finishOrder)}</strong>
+          <small>of {fieldSize}</small>
+        </p>
+      {/if}
+      <ProfileVeteranIdentity
+        summary={identity(runner)}
+        score={score(runner) || undefined}
+        rankPlacement="details"
+      >
+        {#if mood || popularity !== undefined}
+          <p class="race-entry">
+            {#if mood}
+              <span
+                class="mood"
+                class:good={moodTones[mood] === 'good'}
+                class:bad={moodTones[mood] === 'bad'}
+              >
+                <img
+                  src={moodIcon(mood)}
+                  alt=""
+                  width="16"
+                  height="16"
+                />
+                <strong>{mood}</strong>
+                <span class="sr-only">mood</span>
+              </span>
+            {/if}
+            {#if popularity !== undefined}
+              <span>
+                Popularity <strong>{ordinalPlace(popularity)}</strong>
+              </span>
+            {/if}
           </p>
         {/if}
-        <ProfileVeteranIdentity
-          summary={identity(runner)}
-          score={score(runner) || undefined}
-          rankPlacement="details"
-        />
-      </div>
-      <dl
-        class="race-entry"
-        aria-label="Race entry"
-      >
-        <div>
-          <dt>Gate</dt>
-          <dd><strong>{runner.index + 1}</strong></dd>
-        </div>
-        {#if popularity !== undefined}
-          <div>
-            <dt>Popularity</dt>
-            <dd><strong>{ordinalPlace(popularity)}</strong></dd>
-          </div>
-        {/if}
-        {#if mood}
-          <div
-            class:good={moodTones[mood] === 'good'}
-            class:bad={moodTones[mood] === 'bad'}
-          >
-            <dt>Mood</dt>
-            <dd>
-              <img
-                src={moodIcon(mood)}
-                alt=""
-                width="20"
-                height="20"
-              />
-              <strong>{mood}</strong>
-            </dd>
-          </div>
-        {/if}
-      </dl>
+      </ProfileVeteranIdentity>
     </div>
     <section
       class="profile-zone profile-build"
