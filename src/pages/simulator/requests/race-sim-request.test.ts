@@ -59,6 +59,15 @@ describe('monte carlo request', () => {
     expect(randomGates.gateOrder).toBe('randomized');
   });
 
+  it('sends positionChecksPass only when it is on', () => {
+    const form = { courseId: 1, seed: 1, setup: SETUP, runners: runners(2) };
+
+    expect(
+      buildMonteCarloRequest({ ...form, positionChecksPass: true }).input.positionChecksPass
+    ).toBe(true);
+    expect(buildMonteCarloRequest(form).input).not.toHaveProperty('positionChecksPass');
+  });
+
   it('derives source_input_index from the array and keeps frame_order unique', () => {
     const body = buildMonteCarloRequest({
       courseId: 1,

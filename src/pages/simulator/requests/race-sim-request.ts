@@ -84,6 +84,8 @@ export interface MonteCarloInput {
   seed: number;
   setup: RaceSetup;
   runners: Array<FieldRunner>;
+  /** A what-if the game never does: skill conditions on the runner's place always hold. */
+  positionChecksPass?: boolean;
 }
 
 export interface MonteCarloBody {
@@ -106,6 +108,8 @@ export interface MonteCarloForm {
   seeds?: Array<number>;
   outputMode?: MonteCarloOutputMode;
   gateOrder?: MonteCarloGateOrder;
+  /** Sent only when true. */
+  positionChecksPass?: boolean;
 }
 
 /** Writes the runner array, deriving `source_input_index` and a unique `frame_order`. */
@@ -158,6 +162,7 @@ export function buildMonteCarloRequest(form: MonteCarloForm): MonteCarloBody {
   else body.runs = clampInt(form.runs ?? 1, 1, MAX_MONTE_CARLO_RUNS, 1);
 
   if (form.gateOrder === 'randomized') body.gateOrder = 'randomized';
+  if (form.positionChecksPass) body.input.positionChecksPass = true;
 
   return body;
 }
