@@ -14,7 +14,7 @@
     label?: string;
     compact?: boolean;
     framed?: boolean;
-    /** `tiles` gives each stat its own tile tinted by the stat's colour. */
+    /** `tiles` gives each stat its own tile tinted by the stat's colour; compact tiles show only the icon and value. */
     presentation?: 'labels' | 'icons' | 'inline' | 'values' | 'tiles';
   }
 
@@ -58,7 +58,9 @@
           {/if}
         </dd>
         <dt
-          class:sr-only={(presentation === 'icons' || presentation === 'values') &&
+          class:sr-only={(presentation === 'icons' ||
+            presentation === 'values' ||
+            (presentation === 'tiles' && compact)) &&
             Boolean(item.icon)}
         >
           {item.label}

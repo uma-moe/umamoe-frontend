@@ -1,41 +1,24 @@
 /*
- * One card, read like the build details: a band with who the runner is and how the race went, then the build, the
- * support deck and the parents. The parts sit on the card's border colour with a 1px gap, so every layout draws its
- * own dividers.
+ * One card in five zones, read left to right: who the runner is, the build, how the race went, the support deck and
+ * the parents. The zones sit on the card's border colour with a 1px gap, so every layout draws its own dividers.
  */
+/* Named, because the stat strip and the deck are containers of their own and would otherwise answer the queries. */
 .runner-profile {
-  container-type: inline-size;
+  container: runner-profile / inline-size;
   padding: 0;
   overflow: hidden;
 }
 .profile-zones {
   display: grid;
   grid-template-columns: minmax(0, 1fr);
+  grid-template-areas:
+    'identity'
+    'result'
+    'build'
+    'deck'
+    'parents';
   gap: 1px;
   background: var(--card-surface-border);
-}
-.profile-head {
-  grid-column: 1 / -1;
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) auto;
-  grid-template-areas:
-    'identity action'
-    'metrics metrics';
-  align-items: center;
-  gap: 10px 32px;
-  min-width: 0;
-  padding: 10px 14px;
-  background: color-mix(in srgb, var(--runner-color) 8%, var(--card-surface-bg));
-}
-.profile-head > :global(.veteran-identity) {
-  grid-area: identity;
-  min-width: 0;
-}
-.profile-head :global(.race-style) {
-  color: var(--runner-color);
-}
-.profile-head > :global(.ui-button) {
-  grid-area: action;
 }
 .profile-zone {
   display: grid;
@@ -45,20 +28,59 @@
   padding: 10px 14px 12px;
   background: var(--card-surface-bg);
 }
+.profile-identity {
+  grid-area: identity;
+  align-content: center;
+  background: color-mix(in srgb, var(--runner-color) 8%, var(--card-surface-bg));
+}
+.profile-identity :global(.race-style) {
+  color: var(--runner-color);
+}
+.profile-build {
+  grid-area: build;
+}
+.profile-result {
+  grid-area: result;
+}
+.profile-deck {
+  grid-area: deck;
+}
+.profile-parents {
+  grid-area: parents;
+}
 h3 {
   margin: 0;
   font-size: 12px;
   font-weight: 600;
 }
-.result-metrics {
-  grid-area: metrics;
+.race-aptitudes {
   display: grid;
-  grid-template-columns: repeat(4, max-content);
-  gap: 8px 28px;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 4px;
+}
+.race-aptitudes > :global(.aptitude-tile) {
+  padding-inline: 6px;
+  white-space: nowrap;
+}
+.race-aptitudes :global(.label) {
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.profile-build :global(.tile-stats) {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+/* Each result on one line: what it is, then its value. */
+.result-metrics {
+  display: grid;
+  grid-template-columns: max-content minmax(0, max-content);
+  gap: 7px 16px;
   margin: 0;
 }
 .metric {
-  min-width: 0;
+  display: grid;
+  grid-template-columns: subgrid;
+  grid-column: 1 / -1;
+  align-items: baseline;
 }
 .metric dt {
   display: flex;
@@ -76,11 +98,11 @@ h3 {
   flex-wrap: wrap;
   align-items: baseline;
   gap: 2px 5px;
-  margin: 2px 0 0;
+  margin: 0;
   font-variant-numeric: tabular-nums;
 }
 .metric strong {
-  font-size: 15px;
+  font-size: 14px;
   font-weight: 650;
   line-height: 1.2;
 }
@@ -92,35 +114,28 @@ h3 {
   color: var(--accent-warning);
 }
 .empty {
-  grid-area: metrics;
   margin: 0;
   color: var(--text-secondary);
   font-size: 12px;
 }
-.profile-build :global(.tile-stats) {
-  grid-template-columns: repeat(3, minmax(0, 1fr));
+/* Smaller support cards than the build details, so the deck's two rows match the build beside it. */
+.profile-deck :global(.support-deck li) {
+  --support-art-size: 36px;
+  --support-rarity-size: 16px;
+  gap: 6px;
+  padding: 4px;
 }
-.profile-build :global(.tile-stats > div) {
-  min-height: 40px;
+.profile-deck :global(.support-text) {
+  gap: 3px;
 }
-.race-aptitudes {
-  display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 4px;
+.profile-deck :global(.support-name) {
+  font-size: 11px;
 }
-.race-aptitudes > :global(.aptitude-tile) {
-  white-space: nowrap;
-}
-@container (max-width: 559px) {
-  .result-metrics {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-  }
-  .build-details-label {
-    display: none;
-  }
+.profile-deck :global(.support-lb) {
+  font-size: 11px;
 }
 /* A full-width build puts the stats beside the race aptitudes, as the build details do. */
-@container (min-width: 520px) and (max-width: 699px) {
+@container runner-profile (min-width: 520px) and (max-width: 699px) {
   .profile-build {
     grid-template-columns: 240px minmax(0, 1fr);
     align-items: center;
@@ -130,31 +145,38 @@ h3 {
     grid-column: 1 / -1;
   }
 }
-/* The build and the parents share a row, and the deck keeps its two rows beneath them. */
-@container (min-width: 700px) and (max-width: 1049px) {
-  .profile-zones {
-    grid-template-columns: minmax(0, 1fr) max-content;
+@container runner-profile (min-width: 700px) {
+  /* The deck keeps its two rows; a long name gives way to an ellipsis first. */
+  .profile-deck :global(.support-deck) {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
   }
-  .profile-deck {
-    grid-row: 3;
-    grid-column: 1 / -1;
+  .profile-zones {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    grid-template-areas:
+      'identity result'
+      'build parents'
+      'deck deck';
   }
 }
-@container (min-width: 1000px) {
-  .profile-head {
-    grid-template-columns: minmax(0, 1fr) auto auto;
-    grid-template-areas: 'identity metrics action';
+/* The result tucks under who the runner is, so the build, the deck and the parents still share one row. */
+@container runner-profile (min-width: 1100px) {
+  .profile-zones {
+    grid-template-columns: minmax(190px, 1fr) minmax(280px, 320px) minmax(400px, 2fr) max-content;
+    grid-template-areas:
+      'identity build deck parents'
+      'result build deck parents';
   }
 }
-@container (min-width: 1050px) {
+/* One row; who the runner is takes only the width it needs. */
+@container runner-profile (min-width: 1300px) {
   .profile-zones {
-    grid-template-columns: minmax(300px, 1fr) minmax(0, 1.5fr) max-content;
+    grid-template-columns:
+      fit-content(260px) minmax(280px, 320px) max-content minmax(400px, 1fr)
+      max-content;
+    grid-template-areas: 'identity build result deck parents';
   }
 }
 @media (max-width: 600px) {
-  .profile-head {
-    padding: 8px 10px;
-  }
   .profile-zone {
     padding: 8px 10px 10px;
   }

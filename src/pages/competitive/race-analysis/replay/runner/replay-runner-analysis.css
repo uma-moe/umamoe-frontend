@@ -5,6 +5,9 @@
   gap: 8px 12px;
   margin-bottom: 8px;
 }
+.report-heading > :global(.ui-button) {
+  margin-left: auto;
+}
 h2 {
   margin: 0;
   font-size: 17px;
@@ -16,7 +19,9 @@ h2 {
   gap: 10px;
 }
 @media (max-width: 767px) {
+  /* The switcher takes its own line under the title and Build details. */
   .report-heading :global(.runner-switcher) {
+    order: 1;
     flex: 1 1 100%;
     max-width: none;
   }

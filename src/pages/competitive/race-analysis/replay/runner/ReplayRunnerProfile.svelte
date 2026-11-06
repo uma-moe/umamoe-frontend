@@ -6,7 +6,6 @@
   import { loadSkills, skillPointTotal, type SkillData } from '@/lib/game-data/skills/skills';
   import { normalizeVeteranRecord } from '@/lib/veterans/records/veteran-normalizer';
   import { veteranSupportCards } from '@/lib/veterans/records/veteran-profile';
-  import Button from '@/components/controls/Button.svelte';
   import AptitudeTile from '@/components/game/AptitudeTile.svelte';
   import StatStrip from '@/components/game/StatStrip.svelte';
   import ProfileVeteranIdentity from '@/pages/profile/veterans/ProfileVeteranIdentity.svelte';
@@ -24,8 +23,7 @@
     fieldSize,
     winningTime,
     raceContext,
-    color,
-    onbuild
+    color
   }: {
     runner: RaceRunner;
     horse: HorseDiagnostics | undefined;
@@ -34,7 +32,6 @@
     raceContext: RaceContext;
     /** The runner's colour in the replay, which tints who they are. */
     color: string;
-    onbuild: () => void;
   } = $props();
 
   let skillCatalog = $state.raw(new Map<number, SkillData>());
@@ -81,17 +78,44 @@
   style:--runner-color={color}
 >
   <div class="profile-zones">
-    <header class="profile-head">
+    <div class="profile-zone profile-identity">
       <ProfileVeteranIdentity
         summary={identity(runner)}
         score={score(runner) || undefined}
         rankPlacement="details"
       />
+    </div>
+    <section
+      class="profile-zone profile-build"
+      aria-label="Build"
+    >
+      <h3>Build</h3>
+      <StatStrip
+        items={statItems}
+        label={runner.name + ' build stats'}
+        presentation="tiles"
+        compact
+      />
+      <div
+        class="race-aptitudes"
+        aria-label="Aptitudes for this race"
+      >
+        {#each aptitudes as item}
+          <AptitudeTile
+            label={item.label ?? item.group}
+            grade={item.grade}
+            title={item.group + ': ' + (item.label ?? 'not detected')}
+          />
+        {/each}
+      </div>
+    </section>
+    <section
+      class="profile-zone profile-result"
+      aria-label="Race result"
+    >
+      <h3>Result</h3>
       {#if result || horse}
-        <dl
-          class="result-metrics"
-          aria-label="Race result"
-        >
+        <dl class="result-metrics">
           {#if result}
             <div class="metric">
               <dt>Finish</dt>
@@ -138,44 +162,11 @@
       {:else}
         <p class="empty">No result was recorded.</p>
       {/if}
-      <Button
-        variant="secondary"
-        size="sm"
-        icon="clipboard"
-        ariaLabel="Build details"
-        title="Build details"
-        onclick={onbuild}
-      >
-        <span class="build-details-label">Build details</span>
-      </Button>
-    </header>
-    <section
-      class="profile-zone profile-build"
-      aria-label="Build"
-    >
-      <h3>Build</h3>
-      <StatStrip
-        items={statItems}
-        label={runner.name + ' build stats'}
-        presentation="tiles"
-      />
-      <div
-        class="race-aptitudes"
-        aria-label="Aptitudes for this race"
-      >
-        {#each aptitudes as item}
-          <AptitudeTile
-            label={item.label ?? item.group}
-            grade={item.grade}
-            title={item.group + ': ' + (item.label ?? 'not detected')}
-          />
-        {/each}
-      </div>
     </section>
     <div class="profile-zone profile-deck">
       <RunnerSupportDeck {deck} />
     </div>
-    <div class="profile-zone">
+    <div class="profile-zone profile-parents">
       <RunnerLineage {parents} />
     </div>
   </div>

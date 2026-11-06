@@ -1,6 +1,6 @@
 .lineage-section {
-  --grandparent-size: 40px;
-  --parent-size: 58px;
+  --grandparent-size: 34px;
+  --parent-size: 48px;
   display: grid;
   align-content: start;
   gap: 8px;

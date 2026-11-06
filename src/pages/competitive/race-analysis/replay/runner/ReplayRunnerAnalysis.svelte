@@ -2,6 +2,7 @@
   import type { Snippet } from 'svelte';
   import type { RaceRunner } from '@/lib/race/capture/race-capture-parser';
   import { diagnosticHorse } from '@/lib/race/capture/race-diagnostics';
+  import Button from '@/components/controls/Button.svelte';
   import ReplayDiagnostics from '../../diagnostics/ReplayDiagnostics.svelte';
   import type { DetailedSimulation } from '../../detailed-simulation';
   import type { Course } from '../replay-course';
@@ -44,6 +45,14 @@
 <header class="report-heading">
   <h2>Runner analysis</h2>
   {@render navigation()}
+  <Button
+    variant="secondary"
+    size="sm"
+    icon="clipboard"
+    onclick={onbuild}
+  >
+    Build details
+  </Button>
 </header>
 <div class="runner-report">
   <ReplayRunnerProfile
@@ -56,7 +65,6 @@
       distance: course?.distance ?? replay.capture.raceDistance
     }}
     color={replay.teamColor(runner)}
-    {onbuild}
   />
   {#if simulation.status !== 'ready'}
     <ReplaySimulationNotice
