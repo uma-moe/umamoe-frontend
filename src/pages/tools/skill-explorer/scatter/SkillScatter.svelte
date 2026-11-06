@@ -34,7 +34,7 @@
     skillId: number;
     name: string;
     image?: string;
-    tier: 'white' | 'gold' | 'inherited';
+    tier: 'white' | 'gold' | 'inherited' | 'personal';
     x: number;
     /** Lengths or win points, as `format` shows them. */
     y: number;
@@ -42,8 +42,12 @@
     /** Dimmed when a search leaves it out. */
     matches: boolean;
     searchMatch: boolean;
-    /** Never fires for her somewhere, so it is valued forced to fire there. */
+    /** Needs a ground, weather or season the day lacks somewhere, so it is valued as if the day held there. */
     forced: boolean;
+    /** Waits on other skills and is valued at its best timing: in the Optimal view, or where no setup reaches. */
+    optimal: boolean;
+    /** Waits on other skills, and its value comes with the cheap skills bought to trigger it. */
+    setUp: boolean;
   }
 
   export interface QuadrantLabels {
@@ -59,6 +63,22 @@
     suffix: string;
   }
 
+  /** A stretch of the horizontal axis tinted behind the skills, such as a phase of the race. */
+  export interface PlotBand {
+    from: number;
+    to: number;
+    label: string;
+    /** Any CSS colour; the band takes a faint tint of it. */
+    color: string;
+  }
+
+  /** A labelled line across the plot at `at` on the horizontal axis, such as where the final spurt can begin. */
+  export interface PlotMark {
+    at: number;
+    label: string;
+    color: string;
+  }
+
   interface Props {
     /** Most valuable first: those keep their exact point and their name when space runs short. */
     points: PlottedSkill[];
@@ -71,6 +91,8 @@
     yTitle: string;
     format: (value: number) => string;
     quadrants: QuadrantLabels;
+    bands?: readonly PlotBand[];
+    marks?: readonly PlotMark[];
     /** Changes when the axes come to mean something else; the zoom then returns to the whole plot. */
     viewKey: string;
     /** A skill's details, opened beside the selected icon. */
@@ -90,6 +112,8 @@
     yTitle,
     format,
     quadrants,
+    bands = [],
+    marks = [],
     viewKey,
     details,
     comparedSkillIds,
@@ -100,12 +124,20 @@
   const detailsId = $props.id();
   const LABEL_HEIGHT = 18;
   /** A quadrant's name shows only while this much of it is in view. */
-  const QUADRANT_LABEL_ROOM = { width: 170, height: 40 };
+  const QUADRANT_LABEL_ROOM = { width: 110, height: 32 };
   /** Pointer travel, in pixels, past which a press is a drag rather than a click. */
   const DRAG_THRESHOLD = 4;
   const ZOOM_STEP = 1.6;
   /** Pixels a tick label keeps from the median's label on the value axis. */
   const MEDIAN_CLEARANCE = 22;
+  /** Value labels sit above their line at the right edge, clear of the top corner's quadrant name... */
+  const TOP_NAME_ROOM = 32;
+  /** ...and of the bottom corner's, above the distance labels: the pixels from the bottom it spans. */
+  const BOTTOM_NAME_ROOM = { from: 10, to: 38 };
+  /** Distance labels run right of their line and stop this far from the right edge, where the lowest value is. */
+  const X_LABEL_ROOM = 64;
+  /** A band names itself only while this many pixels of it are in view: its name runs along its left line. */
+  const BAND_LABEL_ROOM = 18;
 
   let viewportWidth = $state(0);
   let viewportHeight = $state(0);
@@ -185,18 +217,47 @@
     }));
   });
 
+  /** Bands in view, clipped to the plot. */
+  const shownBands = $derived(
+    bands.flatMap((band) => {
+      const left = clamp(screenX(linearPercent(band.from, xAxis) / 100), 0, viewportWidth);
+      const right = clamp(screenX(linearPercent(band.to, xAxis) / 100), 0, viewportWidth);
+      return right > left ? [{ ...band, left, width: right - left }] : [];
+    })
+  );
+  const shownMarks = $derived(
+    marks.flatMap((mark) => {
+      const x = screenX(linearPercent(mark.at, xAxis) / 100);
+      return x >= 0 && x <= viewportWidth ? [{ ...mark, x }] : [];
+    })
+  );
+
+  /** Where the horizontal axis's values begin and end on screen: the quadrant names stay between them. */
+  const domainLeft = $derived(
+    clamp(screenX(linearPercent(xAxis.min, xAxis) / 100), 0, viewportWidth)
+  );
+  const domainRight = $derived(
+    clamp(screenX(linearPercent(xAxis.max, xAxis) / 100), 0, viewportWidth)
+  );
   const splitX = $derived(clamp(screenX(linearPercent(xSplit, xAxis) / 100), 0, viewportWidth));
   const splitY = $derived(clamp(screenY(valuePercent(ySplit, yAxis) / 100), 0, viewportHeight));
   const medianVisible = $derived(splitY > 0 && splitY < viewportHeight);
-  /** Tick values give way to the median's where they would touch it. */
+  /** Tick values give way to the median's where they would touch it, and to the quadrant names in the corners. */
   const yTickLabels = $derived(
-    yTicks.filter((tick) => !medianVisible || Math.abs(tick.y - splitY) > MEDIAN_CLEARANCE)
+    yTicks.filter((tick) => {
+      if (medianVisible && Math.abs(tick.y - splitY) <= MEDIAN_CLEARANCE) return false;
+      if (tick.y < TOP_NAME_ROOM) return false;
+
+      const fromBottom = viewportHeight - tick.y;
+      return fromBottom < BOTTOM_NAME_ROOM.from || fromBottom > BOTTOM_NAME_ROOM.to;
+    })
   );
+  const xTickLabels = $derived(xTicks.filter((tick) => tick.x <= viewportWidth - X_LABEL_ROOM));
   const quadrantShown = $derived({
-    topLeft: roomFor(splitX, splitY),
-    topRight: roomFor(viewportWidth - splitX, splitY),
-    bottomLeft: roomFor(splitX, viewportHeight - splitY),
-    bottomRight: roomFor(viewportWidth - splitX, viewportHeight - splitY)
+    topLeft: roomFor(splitX - domainLeft, splitY),
+    topRight: roomFor(domainRight - splitX, splitY),
+    bottomLeft: roomFor(splitX - domainLeft, viewportHeight - splitY),
+    bottomRight: roomFor(domainRight - splitX, viewportHeight - splitY)
   });
 
   const activeId = $derived(pinnedId ?? previewId);
@@ -228,6 +289,7 @@
     if (!point) return '';
     const flags = [
       point.forced ? 'forced' : '',
+      point.optimal ? 'optimal' : '',
       point.searchMatch ? 'search match' : '',
       comparedSkillIds.has(point.skillId) ? 'compared' : ''
     ].filter(Boolean);
@@ -358,19 +420,24 @@
     };
   };
 
-  /** One pointer drags the zoomed plot; two pinch it. */
+  /** One pointer drags the zoomed plot; two pinch it, the plot under them staying under them. */
   function movePress(event: PointerEvent) {
     const previous = pointers.get(event.pointerId);
     if (previous === undefined) return;
 
     const current = viewPointOf(event);
     if (pointers.size === 2) {
-      const [other] = [...pointers].filter(([id]) => id !== event.pointerId);
-      const otherPoint = other![1];
-      const before = Math.hypot(previous.x - otherPoint.x, previous.y - otherPoint.y);
-      const after = Math.hypot(current.x - otherPoint.x, current.y - otherPoint.y);
-      const midpoint = { x: (current.x + otherPoint.x) / 2, y: (current.y + otherPoint.y) / 2 };
-      if (before > 0) zoomBy(after / before, midpoint);
+      const [, other] = [...pointers].find(([id]) => id !== event.pointerId)!;
+      // Finger spread in pixels: shares of a wide plot's width and height are not the same length.
+      const spread = (point: ViewPoint) =>
+        Math.hypot((point.x - other.x) * viewportWidth, (point.y - other.y) * viewportHeight);
+      const before = spread(previous);
+      const from = { x: (previous.x + other.x) / 2, y: (previous.y + other.y) / 2 };
+      const to = { x: (current.x + other.x) / 2, y: (current.y + other.y) / 2 };
+      if (before > 0) {
+        const zoomedIn = zoomAt(plotWindow, from, spread(current) / before);
+        plotWindow = panBy(zoomedIn, { x: to.x - from.x, y: to.y - from.y });
+      }
     } else if (zoomed) {
       plotWindow = panBy(plotWindow, { x: current.x - previous.x, y: current.y - previous.y });
     }
@@ -396,6 +463,12 @@
     if (pointers.size === 0) dragging = false;
   }
 
+  /** The browser took the press over to scroll the page: it was no tap, so the open skill stays open. */
+  function cancelPress(event: PointerEvent) {
+    pointers.delete(event.pointerId);
+    if (pointers.size === 0) dragging = false;
+  }
+
   function zoomIntoPoint(event: MouseEvent) {
     if (event.target instanceof Element && event.target.closest('.skill-dot')) return;
 
@@ -412,6 +485,28 @@
 
     event.preventDefault();
   }
+
+  /**
+   * Two fingers, or one moving on the zoomed plot, move the plot and never the page: a page scroll would cancel the
+   * gesture halfway. `touch-action` alone cannot, as the page decides at the first finger, before the second lands.
+   * A single finger's touchstart passes, so a tap on an icon still clicks it.
+   */
+  const holdTouches: Attachment<HTMLDivElement> = (element) => {
+    function onStart(event: TouchEvent) {
+      if (event.touches.length > 1) event.preventDefault();
+    }
+
+    function onMove(event: TouchEvent) {
+      if (event.touches.length > 1 || zoomed) event.preventDefault();
+    }
+
+    element.addEventListener('touchstart', onStart, { passive: false });
+    element.addEventListener('touchmove', onMove, { passive: false });
+    return () => {
+      element.removeEventListener('touchstart', onStart);
+      element.removeEventListener('touchmove', onMove);
+    };
+  };
 
   /** The wheel and trackpad pinch zoom around the pointer while it is over the plot. */
   const wheelZoom: Attachment<HTMLDivElement> = (element) => {
@@ -448,13 +543,27 @@
   <div class="toolbar">
     <p class="hint">
       <span class="with-hover">
-        Hover a skill to preview it and click to keep it open. Scroll or pinch to zoom.
+        Hover a skill for details, click to pin it. Scroll or pinch to zoom.
       </span>
-      <span class="with-touch">Tap a skill for its details. Pinch to zoom.</span>
+      <span class="with-touch">Tap a skill for details. Pinch to zoom.</span>
       {#if zoomed}
         Drag to pan.
       {/if}
     </p>
+    {#if comparedSkillIds.size > 0}
+      <div class="comparison-controls">
+        <span>{comparedSkillIds.size} compared</span>
+        <Button
+          variant="secondary"
+          size="sm"
+          icon="close"
+          ariaLabel="Clear comparison"
+          onclick={onclearcomparison}
+        >
+          Clear
+        </Button>
+      </div>
+    {/if}
     <div
       class="zoom"
       role="group"
@@ -487,9 +596,10 @@
 
   <div
     class="plot-area"
-    class:comparing={comparedSkillIds.size > 0}
-    style:--split-left={`calc(${splitX}px + var(--plot-left))`}
-    style:--split-top={`calc(${splitY}px + var(--plot-top))`}
+    style:--domain-left={`${domainLeft}px`}
+    style:--domain-right={`${viewportWidth - domainRight}px`}
+    style:--split-left={`${splitX}px`}
+    style:--split-top={`${splitY}px`}
     {@attach fitAvailableHeight}
   >
     <div
@@ -510,44 +620,6 @@
       {/if}
     </div>
 
-    {#if comparedSkillIds.size > 0}
-      <div class="comparison-controls">
-        <span>{comparedSkillIds.size} compared</span>
-        <Button
-          variant="secondary"
-          size="sm"
-          icon="close"
-          ariaLabel="Clear comparison"
-          onclick={onclearcomparison}
-        >
-          Clear
-        </Button>
-      </div>
-    {/if}
-    <div
-      class="y-title"
-      title={yTitle}
-    >
-      {yTitle}
-    </div>
-    <div
-      class="y-axis"
-      aria-hidden="true"
-    >
-      {#each yTickLabels as tick (tick.value)}
-        <span style:top={`${tick.y}px`}>{format(tick.value)}</span>
-      {/each}
-      {#if medianVisible}
-        <span
-          class="median"
-          style:top={`${splitY}px`}
-        >
-          {format(ySplit)}
-          <small>median</small>
-        </span>
-      {/if}
-    </div>
-
     <div
       class="viewport"
       class:zoomed
@@ -560,10 +632,36 @@
       onpointerdown={startPress}
       onpointermove={movePress}
       onpointerup={endPress}
-      onpointercancel={endPress}
+      onpointercancel={cancelPress}
       ondblclick={zoomIntoPoint}
       {@attach wheelZoom}
+      {@attach holdTouches}
     >
+      {#each shownBands as band (band.label)}
+        <div
+          class="band"
+          style:left={`${band.left}px`}
+          style:width={`${band.width}px`}
+          style:--band-color={band.color}
+          aria-hidden="true"
+        >
+          {#if band.width >= BAND_LABEL_ROOM}
+            <span class="band-label">{band.label}</span>
+          {/if}
+        </div>
+      {/each}
+
+      {#each shownMarks as mark (mark.label)}
+        <div
+          class="mark"
+          style:left={`${mark.x}px`}
+          style:--mark-color={mark.color}
+          aria-hidden="true"
+        >
+          <span class="mark-label">{mark.label}</span>
+        </div>
+      {/each}
+
       {#each yTicks as tick (tick.value)}
         <div
           class="grid-row"
@@ -589,6 +687,35 @@
         ></div>
       {/if}
 
+      {#each yTickLabels as tick (tick.value)}
+        <span
+          class="y-tick"
+          style:top={`${tick.y}px`}
+          aria-hidden="true"
+        >
+          {format(tick.value)}
+        </span>
+      {/each}
+      {#if medianVisible}
+        <span
+          class="y-tick median"
+          style:top={`${splitY}px`}
+          aria-hidden="true"
+        >
+          {format(ySplit)}
+          <small>median</small>
+        </span>
+      {/if}
+      {#each xTickLabels as tick (tick.label)}
+        <span
+          class="x-tick"
+          style:left={`${tick.x}px`}
+          aria-hidden="true"
+        >
+          {tick.label}
+        </span>
+      {/each}
+
       {#each [true, false] as dimmed (dimmed)}
         <div
           class="skill-layer"
@@ -610,6 +737,10 @@
                 <span class="label-name">{point.name}</span>
                 {#if point.forced}
                   <small class="forced-tag">Forced</small>
+                {:else if point.optimal}
+                  <small class="optimal-tag">Optimal</small>
+                {:else if point.setUp}
+                  <small class="setup-tag">Set up</small>
                 {/if}
                 {#if point.searchMatch}
                   <small class="search-tag">Search match</small>
@@ -631,11 +762,12 @@
                 class:search-match={point.searchMatch}
                 class:compared={comparedSkillIds.has(point.skillId)}
                 class:forced={point.forced}
+                class:optimal={point.optimal}
                 class:active={icon.id === activeId}
                 class:pinned={icon.id === pinnedId}
                 style:left={`${icon.x}px`}
                 style:top={`${icon.y}px`}
-                aria-label={`${point.name}: ${format(point.y)}, ${point.xLabel}${point.forced ? ', forced to proc' : ''}${point.searchMatch ? ', search match' : ''}${comparedSkillIds.has(point.skillId) ? ', compared' : ''}`}
+                aria-label={`${point.name}: ${format(point.y)}, ${point.xLabel}${point.forced ? ', forced to proc' : point.optimal ? ', at its optimal timing' : point.setUp ? ', set up with skills that trigger it' : ''}${point.searchMatch ? ', search match' : ''}${comparedSkillIds.has(point.skillId) ? ', compared' : ''}`}
                 aria-haspopup="dialog"
                 aria-expanded={icon.id === activeId}
                 aria-controls={icon.id === activeId ? detailsId : undefined}
@@ -712,15 +844,6 @@
         </SkillDialog>
       {/key}
     {/if}
-    <div
-      class="x-axis"
-      aria-hidden="true"
-    >
-      {#each xTicks as tick (tick.label)}
-        <span style:left={`${tick.x}px`}>{tick.label}</span>
-      {/each}
-    </div>
-    <div class="x-title">{xTitle}</div>
   </div>
 </figure>
 

@@ -1,19 +1,57 @@
 import { characterImagePath } from '@/lib/game-data/characters';
 import { skillImage, type SkillData } from '@/lib/game-data/skills/skills';
+import { finalSpurtSection } from '@/lib/race/final-spurt';
 import type { LinearAxis } from './scatter/scatter-scale';
 import { dayAllows, type RaceDay } from './cm/race-day';
-import type { SkillFacts, SkillKind, SkillPoint } from './skill-explorer-data';
-import type { AxisUnit, PlottedSkill, QuadrantLabels } from './scatter/SkillScatter.svelte';
+import {
+  type SkillFacts,
+  type SkillKind,
+  type SkillPoint,
+  type TimedValue
+} from './skill-explorer-data';
+import type {
+  AxisUnit,
+  PlotBand,
+  PlotMark,
+  PlottedSkill,
+  QuadrantLabels
+} from './scatter/SkillScatter.svelte';
 
 /** Left to right by where a skill first procs, or by its base SP cost. */
 export type XMode = 'position' | 'cost';
-/** What it adds to the reference build, or on its own. */
-export type YMode = 'value' | 'alone';
+/**
+ * What it adds to the reference build, set up as players set it up; the same with skills that wait on others forced to
+ * fire at their best point; or on its own.
+ */
+export type YMode = 'value' | 'forced' | 'alone';
 
-/** White skills, gold skills, and inherited uniques. */
-export type SkillRarity = 'white' | 'gold' | 'unique';
+/** The race phases as shares of its distance, named and coloured as in the simulator's course breakdown. */
+export const RACE_PHASES: readonly PlotBand[] = [
+  { from: 0, to: 1 / 6, label: 'Early race', color: 'var(--accent-secondary)' },
+  { from: 1 / 6, to: 2 / 3, label: 'Mid race', color: 'var(--accent-primary)' },
+  { from: 2 / 3, to: 1, label: 'Late race', color: 'var(--accent-purple)' }
+];
 
-export const SKILL_RARITIES: readonly SkillRarity[] = ['white', 'gold', 'unique'];
+/** The earliest a runner can start her final spurt, with HP to spare: the start of the late race. */
+const SPURT = finalSpurtSection(1);
+export const FINAL_SPURT_MARK: PlotMark = {
+  at: SPURT.start,
+  label: 'Final spurt can begin',
+  color: SPURT.color
+};
+
+/** What each value mode means, in a line under the toggle. */
+export const Y_MODE_NOTES: Record<YMode, string> = {
+  value:
+    'Added to the reference build. Skills like Groundwork count set up: firing where a few cheap skills trigger them.',
+  forced: 'Same build, with skills like Groundwork firing at their best spot.',
+  alone: 'Added to a runner with no other skills, like a solo sim.'
+};
+
+/** White skills, gold skills, inherited uniques, and the uniques runners have as their own. */
+export type SkillRarity = 'white' | 'gold' | 'inherited' | 'personal';
+
+export const SKILL_RARITIES: readonly SkillRarity[] = ['white', 'gold', 'inherited', 'personal'];
 
 /** Toggle one filter without changing any of the other selections. */
 export function toggleType<Type>(selected: ReadonlySet<Type>, type: Type): Set<Type> {
@@ -93,6 +131,9 @@ export interface PlotView {
   /** The median shown skill's value: the line between strong and weaker. */
   ySplit: number;
   quadrants: QuadrantLabels;
+  /** Behind the skills on the proc point axis: the race's phases, and where the final spurt can begin. */
+  bands: readonly PlotBand[];
+  marks: readonly PlotMark[];
 }
 
 interface Candidate {
@@ -105,14 +146,30 @@ interface Candidate {
 }
 
 function rarityOf(skill: SkillData): SkillRarity {
-  if (skill.skill_id >= INHERITED_UNIQUE_FROM) return 'unique';
+  if (skill.skill_id >= INHERITED_UNIQUE_FROM) return 'inherited';
+  if (skill.unique || skill.rarity >= 3) return 'personal';
   return skill.rarity === 2 ? 'gold' : 'white';
+}
+
+/** The rarities `points` hold, in filter order: a filter for a rarity without skills would show nothing. */
+export function raritiesOf(
+  points: readonly SkillPoint[],
+  skills: Map<number, SkillData>
+): SkillRarity[] {
+  const held = new Set<SkillRarity>();
+  for (const point of points) {
+    const skill = skills.get(point.skillId);
+    if (skill) held.add(rarityOf(skill));
+  }
+
+  return SKILL_RARITIES.filter((rarity) => held.has(rarity));
 }
 
 const TIERS: Record<SkillRarity, PlottedSkill['tier']> = {
   white: 'white',
   gold: 'gold',
-  unique: 'inherited'
+  inherited: 'inherited',
+  personal: 'personal'
 };
 
 /** A unique shows its character; any other skill its icon. */
@@ -126,12 +183,21 @@ function positionLabel(share: number, courseDistance: number | undefined): strin
   return `${Math.round(share * courseDistance)} m`;
 }
 
+/** A gated skill forced to fire at its best point, in the Optimal view; undefined for any other skill or view. */
+export function forcedValue(point: SkillPoint, yMode: YMode): TimedValue | undefined {
+  return yMode === 'forced' ? point.gated?.forced : undefined;
+}
+
 /**
  * The value plotted: per firing, or scaled by its proc rate. A skill forced to fire somewhere, or a ground, weather or
  * season skill on a CM whose day it holds on, is scaled by the rate it fires at when forced; the chart marks it forced.
+ * In the Optimal view a gated skill takes its best forced point's value and rate.
  */
 function plottedY(point: SkillPoint, skill: SkillData, options: PlotOptions): number {
-  const perFiring = options.yMode === 'value' ? point.win : point.winAlone;
+  const forced = forcedValue(point, options.yMode);
+  if (forced) return options.procScaled ? forced.expected : forced.win;
+
+  const perFiring = options.yMode === 'alone' ? point.winAlone : point.win;
   if (!options.procScaled) return perFiring;
 
   const firesAtForcedRate = point.forced > 0 || (options.day !== undefined && isDayBound(skill));
@@ -140,9 +206,36 @@ function plottedY(point: SkillPoint, skill: SkillData, options: PlotOptions): nu
   return perFiring * (point.expected / point.win);
 }
 
-function plottedX(point: SkillPoint, skill: SkillData, xMode: XMode): number | undefined {
-  if (xMode === 'position') return point.mean;
+function plottedX(point: SkillPoint, skill: SkillData, options: PlotOptions): number | undefined {
+  if (options.xMode === 'position') return forcedValue(point, options.yMode)?.mean ?? point.mean;
   return skill.baseCost;
+}
+
+/**
+ * A gated skill valued at its best timing: every one in the Optimal view, and in the In build view one no setup reaches
+ * on at least half the courses it is valued on.
+ */
+function atOptimalTiming(point: SkillPoint, yMode: YMode): boolean {
+  if (forcedValue(point, yMode) !== undefined) return true;
+  return yMode === 'value' && point.gated !== undefined && mostlyForced(point);
+}
+
+/**
+ * A day-bound skill valued as if its day held on at least half the courses it is valued on. On a CM the day is the
+ * meeting's, and it shows only where it holds.
+ */
+function forcedByDay(point: SkillPoint, options: PlotOptions): boolean {
+  return options.day === undefined && point.gated === undefined && mostlyForced(point);
+}
+
+function mostlyForced(point: SkillPoint): boolean {
+  return point.forced > 0 && point.forced * 2 >= point.courses;
+}
+
+/** On a single course in the In build view: a gated skill's setup buys skills to trigger it. */
+function setUpWithSkills(point: SkillPoint, yMode: YMode): boolean {
+  if (yMode !== 'value') return false;
+  return (point.gated?.setup?.feeders.length ?? 0) > 0;
 }
 
 function dayBoundShown(skill: SkillData, options: PlotOptions): boolean {
@@ -165,7 +258,7 @@ function candidatesOf(options: PlotOptions): Candidate[] {
     const kind = options.facts.get(skill.skill_id)?.kind ?? 'other';
     if (!compared && !options.kinds.has(kind)) continue;
 
-    const x = plottedX(point, skill, options.xMode);
+    const x = plottedX(point, skill, options);
     if (x === undefined) continue;
 
     const nameMatches = search === '' || skill.name.toLowerCase().includes(search);
@@ -242,9 +335,9 @@ export function plotView(options: PlotOptions): PlotView {
     xLabel: xMode === 'position' ? positionLabel(x, courseDistance) : `${x} SP`,
     matches,
     searchMatch,
-    // Forced on at least half the courses it is valued on: its value there is mostly an assumed day. On a CM the day
-    // is the meeting's, and a skill shows only where it holds.
-    forced: options.day === undefined && point.forced > 0 && point.forced * 2 >= point.courses
+    forced: forcedByDay(point, options),
+    optimal: atOptimalTiming(point, options.yMode),
+    setUp: setUpWithSkills(point, options.yMode)
   }));
   const ySplit = median(plotted.map((point) => point.y));
 
@@ -263,11 +356,13 @@ export function plotView(options: PlotOptions): PlotView {
       xSplit: 0.5,
       ySplit,
       quadrants: {
-        topLeft: 'Strong early skills',
-        topRight: 'Strong late skills',
-        bottomLeft: 'Weaker early skills',
-        bottomRight: 'Weaker late skills'
-      }
+        topLeft: 'Strong early',
+        topRight: 'Strong late',
+        bottomLeft: 'Weaker early',
+        bottomRight: 'Weaker late'
+      },
+      bands: RACE_PHASES,
+      marks: [FINAL_SPURT_MARK]
     };
   }
 
@@ -281,10 +376,12 @@ export function plotView(options: PlotOptions): PlotView {
     xSplit: (xAxis.min + xAxis.max) / 2,
     ySplit,
     quadrants: {
-      topLeft: 'Strong cheap skills',
-      topRight: 'Strong costly skills',
-      bottomLeft: 'Weaker cheap skills',
-      bottomRight: 'Weaker costly skills'
-    }
+      topLeft: 'Strong cheap',
+      topRight: 'Strong costly',
+      bottomLeft: 'Weaker cheap',
+      bottomRight: 'Weaker costly'
+    },
+    bands: [],
+    marks: []
   };
 }

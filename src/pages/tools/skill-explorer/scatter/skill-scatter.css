@@ -50,11 +50,8 @@
   text-align: center;
 }
 
+/* The plot fills the frame: tick labels and quadrant names sit inside it. */
 .plot-area {
-  --plot-left: 60px;
-  --plot-right: 20px;
-  --plot-top: 56px;
-  --plot-bottom: 48px;
   position: relative;
   width: 100%;
   height: var(--chart-height, max(420px, calc(100dvh - 340px)));
@@ -63,51 +60,9 @@
   border-radius: 10px;
   background: var(--bg-secondary);
 }
-.y-title {
-  position: absolute;
-  z-index: 3;
-  top: 10px;
-  left: 14px;
-  right: 14px;
-  overflow: hidden;
-  color: var(--text-secondary);
-  font-size: 0.72rem;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-  pointer-events: none;
-}
-.y-axis {
-  position: absolute;
-  top: var(--plot-top);
-  bottom: var(--plot-bottom);
-  left: 5px;
-  width: calc(var(--plot-left) - 14px);
-  pointer-events: none;
-}
-.y-axis span {
-  position: absolute;
-  right: 0;
-  transform: translateY(-50%);
-  color: var(--text-secondary);
-  font-size: 0.7rem;
-  font-variant-numeric: tabular-nums;
-  white-space: nowrap;
-}
-.y-axis .median {
-  display: grid;
-  justify-items: end;
-  color: var(--text-primary);
-  font-weight: 600;
-  line-height: 1.1;
-}
-.y-axis .median small {
-  color: var(--text-muted);
-  font-size: 0.62rem;
-  font-weight: 500;
-}
 .viewport {
   position: absolute;
-  inset: var(--plot-top) var(--plot-right) var(--plot-bottom) var(--plot-left);
+  inset: 0;
   overflow: hidden;
   touch-action: pan-y;
   user-select: none;
@@ -122,32 +77,42 @@
   cursor: grabbing;
 }
 
-.x-axis {
+/* Values above their line at the right edge; distances along the bottom, right of their line. Over the skills, on a
+   backdrop like their names, so an icon at the edge never hides one. */
+.y-tick,
+.x-tick {
   position: absolute;
-  right: var(--plot-right);
-  bottom: 24px;
-  left: var(--plot-left);
-  height: 1.3rem;
-  pointer-events: none;
-}
-.x-axis span {
-  position: absolute;
-  top: 0.25rem;
-  transform: translateX(-50%);
+  z-index: 2;
+  padding: 0 3px;
+  border-radius: 3px;
+  background: color-mix(in srgb, var(--bg-secondary) 84%, transparent);
   color: var(--text-secondary);
-  font-size: 0.72rem;
+  font-size: 0.68rem;
   font-variant-numeric: tabular-nums;
+  line-height: 1.2;
   white-space: nowrap;
-}
-.x-title {
-  position: absolute;
-  right: 10px;
-  bottom: 6px;
-  left: 10px;
-  color: var(--text-secondary);
-  font-size: 0.7rem;
-  text-align: center;
   pointer-events: none;
+}
+
+.y-tick {
+  right: 3px;
+  transform: translateY(-100%);
+}
+
+.y-tick.median {
+  color: var(--text-primary);
+  font-weight: 600;
+}
+
+.y-tick.median small {
+  color: var(--text-muted);
+  font-size: 0.62rem;
+  font-weight: 500;
+}
+
+.x-tick {
+  bottom: 3px;
+  margin-left: 1px;
 }
 
 .quadrants {
@@ -170,35 +135,82 @@
 
 .quadrant {
   position: absolute;
-  font-size: 0.78rem;
+  font-size: 0.72rem;
   font-weight: 700;
   letter-spacing: 0.06em;
   text-transform: uppercase;
   opacity: 0.8;
 }
 
+/* Each name keeps inside where the horizontal axis has values; the bottom ones sit above the distance labels. */
 .top-left {
-  top: 32px;
-  left: 0.85rem;
+  top: 6px;
+  left: calc(var(--domain-left) + 8px);
   color: var(--accent-success);
 }
 
 .top-right {
-  top: 32px;
-  right: 0.85rem;
+  top: 6px;
+  right: calc(var(--domain-right) + 8px);
   color: var(--accent-warning);
 }
 
 .bottom-left {
-  bottom: 52px;
-  left: 0.85rem;
+  bottom: 24px;
+  left: calc(var(--domain-left) + 8px);
   color: var(--accent-error);
 }
 
 .bottom-right {
-  right: 0.85rem;
-  bottom: 52px;
+  right: calc(var(--domain-right) + 8px);
+  bottom: 24px;
   color: var(--accent-warning);
+}
+
+/* Race phases behind the skills in their colours from the simulator's course breakdown, each named along its left line. */
+.band {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  border-left: 1px solid color-mix(in srgb, var(--band-color) 35%, transparent);
+  background: color-mix(in srgb, var(--band-color) 7%, transparent);
+  pointer-events: none;
+}
+
+/* Below the quadrant names in the top corners. */
+.band-label,
+.mark-label {
+  position: absolute;
+  top: 24px;
+  font-size: 0.64rem;
+  line-height: 1;
+  white-space: nowrap;
+  writing-mode: vertical-rl;
+}
+
+.band-label {
+  left: 4px;
+  color: var(--band-color);
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  opacity: 0.75;
+}
+
+.mark {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  border-left: 2px dashed var(--mark-color);
+  opacity: 0.85;
+  pointer-events: none;
+}
+
+/* On the line's left, so it never meets the name of a band starting at the same point. */
+.mark-label {
+  right: 5px;
+  color: var(--mark-color);
+  font-weight: 650;
 }
 
 .grid-row {
@@ -277,6 +289,14 @@
   cursor: grabbing;
 }
 
+/* A skill grows a little under the pointer. */
+@media (hover: hover) {
+  .viewport:not(.dragging) .skill-dot:hover {
+    z-index: 7;
+    transform: translate(-50%, -50%) scale(1.2);
+  }
+}
+
 .skill-dot img {
   width: 100%;
   height: 100%;
@@ -290,6 +310,10 @@
 
 .skill-dot.tier-inherited {
   border-color: var(--accent-pink);
+}
+
+.skill-dot.tier-personal {
+  border-color: var(--accent-purple);
 }
 
 .skill-dot.active {
@@ -321,21 +345,8 @@
 }
 
 @media (max-width: 767px) {
-  .plot-area {
-    --plot-left: 48px;
-    --plot-right: 18px;
-    --plot-top: 52px;
-    --plot-bottom: 46px;
-  }
-  .y-title {
-    font-size: 0.65rem;
-  }
   .quadrant {
     font-size: 0.6rem;
-  }
-  .top-left,
-  .bottom-left {
-    left: var(--plot-left);
   }
 }
 
@@ -349,12 +360,23 @@
   font-size: 9px;
   font-weight: 650;
 }
-/* Never fires for her: valued as if forced to. */
+/* Needs a day the race lacks: valued as if forced to. */
 .forced-tag {
   color: var(--accent-warning);
 }
 .skill-dot.forced {
   border: 1px dashed var(--accent-warning);
+}
+/* Waits on other skills: valued at its best timing. */
+.optimal-tag {
+  color: var(--accent-success);
+}
+.skill-dot.optimal {
+  border: 1px dashed var(--accent-success);
+}
+/* Waits on other skills: valued with the skills bought to trigger it. */
+.setup-tag {
+  color: var(--accent-purple);
 }
 .name.compared {
   z-index: 4;
@@ -403,10 +425,6 @@
   color: var(--accent-pink);
 }
 .comparison-controls {
-  position: absolute;
-  z-index: 4;
-  top: 4px;
-  right: 8px;
   display: flex;
   align-items: center;
   gap: 0.5rem;
@@ -416,19 +434,6 @@
   color: var(--accent-pink);
   font-size: 0.75rem;
   font-variant-numeric: tabular-nums;
-}
-.comparing .y-title {
-  right: 160px;
-}
-.comparing .top-right {
-  top: 44px;
-}
-@media (max-width: 767px) {
-  .comparing .y-title {
-    white-space: normal;
-    line-height: 1.2;
-    max-height: 2.4em;
-  }
 }
 
 .skill-layer {

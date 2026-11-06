@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { onMount, untrack } from 'svelte';
+  import { onMount } from 'svelte';
   import AppPage from '@/layouts/AppPage.svelte';
   import Disclosure from '@/components/overlays/Disclosure.svelte';
   import Banner from '@/components/feedback/Banner.svelte';
@@ -20,7 +20,12 @@
     trackName,
     type RaceCourse
   } from '@/lib/game-data/racing/courses';
-  import { loadSkills, skillImage, type SkillData } from '@/lib/game-data/skills/skills';
+  import {
+    loadSkills,
+    skillImage,
+    skillRarity,
+    type SkillData
+  } from '@/lib/game-data/skills/skills';
   import {
     loadSupportCards,
     type SupportCardData
@@ -55,23 +60,10 @@
     type UnvaluedSkills
   } from './skill-explorer/umas/uma-skills';
   import BuildPanel from './skill-explorer/build/BuildPanel.svelte';
-  import {
-    BUILD_RUNS,
-    BUILD_WINDOW_MINUTES,
-    MAX_BUILD_SKILLS,
-    addToBuild,
-    buildErrorText,
-    removeFromBuild,
-    sameBuild,
-    valueBuild,
-    type BuildValues
-  } from './skill-explorer/build/explorer-build';
   import SkillExplorerFilters from './skill-explorer/SkillExplorerFilters.svelte';
   import SkillScatter from './skill-explorer/scatter/SkillScatter.svelte';
-  import SkillCard, {
-    type RelatedSkill,
-    type TerrainSegment
-  } from './skill-explorer/skill-card/SkillCard.svelte';
+  import SkillCard, { type TerrainSegment } from './skill-explorer/skill-card/SkillCard.svelte';
+  import type { RelatedSkill } from './skill-explorer/SkillChipList.svelte';
   import { countGate, describeRequirements } from './skill-explorer/skill-card/skill-requirements';
   import {
     loadSkillEffects,
@@ -101,6 +93,7 @@
     isNegativeSkill,
     limitOf,
     plotView,
+    raritiesOf,
     type ShowLimit,
     type SkillRarity,
     type XMode,
@@ -154,15 +147,6 @@
   let showDayBound = $state(true);
   let procScaled = $state(true);
   let comparedSkillIds = $state.raw<ReadonlySet<number>>(new Set());
-
-  // The build being edited (none: the one the values are for), and values for a build the visitor picked.
-  let draftBuild = $state.raw<number[]>();
-  let valuedBuild = $state.raw<BuildValues & { key: string }>();
-  let buildLoading = $state(false);
-  let buildError = $state('');
-  let buildRequest: AbortController | undefined;
-  // Builds race on the simulator, so they change only once the visitor accepts that, for the rest of the visit.
-  let buildAccepted = $state(false);
 
   const explorerCourses = $derived(index?.courses ?? []);
 
@@ -268,17 +252,11 @@
       .sort((left, right) => left.label.localeCompare(right.label))
   ]);
 
-  /** A build is shown and can be edited on a single course for a single style. */
+  /** The reference build, which the values are measured in, is shown on a single course for a single style. */
   const buildStyle = $derived(selectedCourse && style !== 'all' ? style : undefined);
-  const buildKey = $derived(
-    selectedCourse && buildStyle ? `${selectedCourse.courseId}:${buildStyle}` : undefined
-  );
   const referenceBuild = $derived(buildStyle ? scopeData?.builds?.[buildStyle] : undefined);
-  const customValues = $derived(valuedBuild?.key === buildKey ? valuedBuild : undefined);
-  /** The build the values shown are measured in. */
-  const measuredBuild = $derived(customValues?.build ?? referenceBuild);
-  const editedBuild = $derived(draftBuild ?? measuredBuild);
-  const points = $derived(customValues?.points ?? scopeData?.styles[style] ?? []);
+  const points = $derived(scopeData?.styles[style] ?? []);
+  const rarityOptions = $derived(raritiesOf(points, allSkills));
 
   const view = $derived(
     scopeData
@@ -304,9 +282,11 @@
   );
 
   const yTitle = $derived(
-    (yMode === 'value'
-      ? `Est. win rate added to ${customValues ? 'your' : 'the reference'} build`
-      : 'Est. win rate gained on its own') + (procScaled ? ', over all races' : ', when it procs')
+    (yMode === 'alone'
+      ? 'Est. win rate gained on its own'
+      : 'Est. win rate added to the reference build' +
+        (yMode === 'forced' ? ', waiting skills forced' : '')) +
+      (procScaled ? ', over all races' : ', when it procs')
   );
   /** What the plot's axes mean: when it changes, the zoom starts again from the whole plot. */
   const viewKey = $derived(
@@ -388,25 +368,26 @@
   }
 
   /** A skill as other skills' cards name it: a unique by its character, any other by its icon. */
-  function relatedSkill(skillId: number, win?: number): RelatedSkill {
+  function relatedSkill(skillId: number): RelatedSkill {
     const skill = skills.get(skillId);
     const card = index?.skills.get(skillId)?.card;
     return {
       skillId,
       name: skill?.name ?? `Skill ${skillId}`,
       image: card === undefined ? skillImage(skill?.icon) : characterImagePath(card),
-      win
+      rarity: skillRarity(skill, Boolean(skill?.inherited))
     };
   }
 
-  /** Partners are found for the reference build only. */
+  /** Partners are found for the reference build only. Named without their gains: the model's sizes run several times
+   *  what races show, while its picks mostly hold. */
   function partnersOf(skillId: number): RelatedSkill[] {
-    if (style === 'all' || customValues) return [];
+    if (style === 'all') return [];
 
     const partners = scopeData?.partners?.[style]?.get(skillId) ?? [];
     return partners
       .filter((partner) => skills.has(partner.skillId))
-      .map((partner) => relatedSkill(partner.skillId, partner.win));
+      .map((partner) => relatedSkill(partner.skillId));
   }
 
   /** A count-gated skill's gate, and the scope's most valuable skills that mostly fire where it counts. */
@@ -434,55 +415,8 @@
     return { gate, feeders };
   }
 
-  function inMeasuredBuild(skillId: number): boolean {
-    return style !== 'all' && Boolean(measuredBuild?.includes(skillId));
-  }
-
-  /** Adding a skill or taking it out of the edited build; the values change once the build is valued. */
-  function editBuild(skillId: number) {
-    if (editedBuild === undefined) return;
-
-    draftBuild = editedBuild.includes(skillId)
-      ? removeFromBuild(editedBuild, skillId)
-      : addToBuild(editedBuild, skillId);
-    buildError = '';
-  }
-
-  /** Values `build`, the edited one from the row or the dialog's; the reference build needs no request. */
-  function valueEditedBuild(build: number[]) {
-    if (!selectedCourse || !buildStyle || !buildKey) return;
-    if (referenceBuild && sameBuild(build, referenceBuild)) return resetBuild();
-
-    draftBuild = build;
-    buildRequest?.abort();
-    const controller = new AbortController();
-    const key = buildKey;
-    buildRequest = controller;
-    buildLoading = true;
-    buildError = '';
-    valueBuild(selectedCourse.courseId, buildStyle, build, controller.signal)
-      .then((values) => {
-        valuedBuild = { ...values, key };
-        draftBuild = undefined;
-      })
-      .catch((error: unknown) => {
-        if (controller.signal.aborted) return;
-        buildError = buildErrorText(error);
-      })
-      .finally(() => {
-        if (buildRequest !== controller) return;
-        buildRequest = undefined;
-        buildLoading = false;
-      });
-  }
-
-  function resetBuild() {
-    buildRequest?.abort();
-    buildRequest = undefined;
-    buildLoading = false;
-    buildError = '';
-    draftBuild = undefined;
-    valuedBuild = undefined;
+  function inReferenceBuild(skillId: number): boolean {
+    return style !== 'all' && Boolean(referenceBuild?.includes(skillId));
   }
 
   function restorePick(loaded: ExplorerIndex): void {
@@ -599,12 +533,6 @@
     return () => controller.abort();
   });
 
-  // Another course or style starts again from its reference build.
-  $effect(() => {
-    void buildKey;
-    untrack(resetBuild);
-  });
-
   $effect(() => {
     if (index === undefined) return;
     saveCourseSelection({ courseId, meetingNumber });
@@ -649,6 +577,7 @@
   compactHeading
   routeId="skill-explorer"
   title="Skill Explorer"
+  badge="Beta"
   description="What each skill is worth and where it procs, on every course."
   width="wide"
 >
@@ -677,6 +606,7 @@
         bind:xMode
         bind:yMode
         bind:rarities
+        {rarityOptions}
         bind:kinds
         bind:search
         bind:umaCardId
@@ -707,23 +637,13 @@
         {#if scopeLoading}
           <Spinner size={18} />
         {/if}
-        {#if (buildStyle && editedBuild && measuredBuild) || target}
+        {#if (buildStyle && referenceBuild) || target}
           <!-- The values' build and target stats: they share the title row, and wrap to the next one together. -->
           <div class="scope-tools">
-            {#if buildStyle && editedBuild && measuredBuild}
+            {#if buildStyle && referenceBuild}
               <BuildPanel
-                build={editedBuild}
-                measured={measuredBuild}
-                reference={referenceBuild}
-                addable={points.map((point) => point.skillId)}
-                skillLookup={allSkills}
+                skills={referenceBuild.map((skillId) => relatedSkill(skillId))}
                 styleName={STYLE_NAMES[buildStyle]}
-                custom={customValues !== undefined}
-                edited={!sameBuild(editedBuild, measuredBuild) &&
-                  !(referenceBuild && sameBuild(editedBuild, referenceBuild))}
-                loading={buildLoading}
-                bind:accepted={buildAccepted}
-                onvalue={valueEditedBuild}
               />
             {/if}
             {#if target}
@@ -735,15 +655,6 @@
           </div>
         {/if}
       </div>
-
-      {#if buildError}
-        <Banner
-          title="The values for your build could not be updated"
-          tone="warning"
-        >
-          {buildError}
-        </Banner>
-      {/if}
 
       {#if scopeError}
         <Banner
@@ -769,6 +680,8 @@
           {yTitle}
           format={formatWinPoints}
           quadrants={view.quadrants}
+          bands={view.bands}
+          marks={view.marks}
           {viewKey}
           {comparedSkillIds}
           oncompare={toggleCompared}
@@ -821,11 +734,6 @@
             skills cost on average, before hints. Skills that need a certain season, weather or ground
             are left out of it. It changes with the course and the style. Long courses need more recoveries,
             sprints more acceleration, so the same skill can rank high in one CM and low in the next.
-            Open it and accept to swap in your own skills, or add one from a skill's card, then update
-            the values to see what each skill adds to your build. That takes the simulator 10–30 seconds
-            and fewer races than the reference build, so small differences there can be noise. You can
-            value {BUILD_RUNS} builds every {BUILD_WINDOW_MINUTES}
-            minutes.
           </p>
           <ul>
             <li>
@@ -833,7 +741,16 @@
               is what the skill adds to that build. A gold or ◎ takes the place of its weaker version
               in it. For a skill already in the build, it is what removing it costs. Both are scaled alike,
               so a build that already wins often does not make removing a skill look bigger than adding
-              one.
+              one. Skills that wait on other skills firing first, like Groundwork, count set up: the cheap
+              skills players buy to trigger them (four at most) open their window as early as they can,
+              and the skill is valued firing from there. What those cheap skills add on their own does
+              not count.
+            </li>
+            <li>
+              <strong>Optimal</strong>
+              is the same, except that skills like Groundwork fire at the best of the points tested across
+              their window: the most they add when timed well, whether or not a setup gets them there.
+              A skill's card lists every point, its setup and what it costs.
             </li>
             <li>
               <strong>Alone</strong>
@@ -859,7 +776,8 @@
           </p>
           <p>
             <strong>How accurate is it?</strong>
-            The values are best for comparing skills with each other. The exact numbers are estimates.
+            The values are best for comparing skills with each other. The exact numbers are estimates,
+            scaled per running style to match full race simulations of its most valuable skills.
             {#if margin !== undefined}
               Checked against full race simulations, 8 in 10 skills landed within {Math.round(
                 margin * 100
@@ -878,18 +796,20 @@
           <p>
             <strong>Special cases.</strong>
             A skill that needs the runner's own activations first, such as a count of skills used or recoveries,
-            is raced again with the skills that trigger it added. A ground, weather, season or night skill
-            whose condition the day lacks is valued as if it held and marked Forced. Scale by proc rate
-            then uses how often it procs when the condition holds. On a CM, these skills show only when
-            the race day matches. Elsewhere, you can hide them under Skill filters. Other skills that
-            never activate for the runner, and negative skills, are left out.
+            is valued set up (see In build above); one that four cheap skills cannot trigger shows its
+            optimal timing, marked Optimal. A ground, weather, season or night skill whose condition the
+            day lacks is valued as if it held and marked Forced. Scale by proc rate then uses how often
+            it procs when the condition holds. On a CM, these skills show only when the race day matches.
+            Elsewhere, you can hide them under Skill filters. Other skills that never activate for the
+            runner, and negative skills, are left out. So are skills in the game data that no player can
+            get, such as those only rivals in training carry.
           </p>
           <p>
             <strong>Picking an uma</strong>
             highlights her unique (as an inherited skill) and the skills she starts with or unlocks with
-            potential levels, from Global game data for umas out on Global and Japanese data for those
-            still to come. Skills from training events are not included. Only skills in the Global skill
-            list are shown.
+            potential levels: from Global game data for umas already on Global, and from Japanese data
+            for umas not on Global yet. Skills from training events are not highlighted. The chart shows
+            only skills on the Global skill list.
           </p>
         </div>
       </Disclosure>
@@ -919,14 +839,9 @@
       course={selectedCourse && terrain
         ? { distance: selectedCourse.distance, terrain }
         : undefined}
-      inBuild={inMeasuredBuild(skillId)}
-      build={buildAccepted && editedBuild && buildStyle && !buildLoading
-        ? {
-            has: editedBuild.includes(skillId),
-            full: editedBuild.length >= MAX_BUILD_SKILLS,
-            toggle: () => editBuild(skillId)
-          }
-        : undefined}
+      inBuild={inReferenceBuild(skillId)}
+      mode={yMode}
+      nameSkills={(ids) => ids.map((id) => relatedSkill(id))}
     />
   {/if}
 {/snippet}

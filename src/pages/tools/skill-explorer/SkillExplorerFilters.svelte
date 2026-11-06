@@ -13,7 +13,8 @@
     type ShowLimit,
     type SkillRarity,
     type XMode,
-    type YMode
+    type YMode,
+    Y_MODE_NOTES
   } from './skill-explorer-view';
   import TypeFilters from './TypeFilters.svelte';
   import UmaSelect from './umas/UmaSelect.svelte';
@@ -28,6 +29,8 @@
     xMode: XMode;
     yMode: YMode;
     rarities: ReadonlySet<SkillRarity>;
+    /** The rarities the shown skills have; only these get a filter. */
+    rarityOptions: readonly SkillRarity[];
     kinds: ReadonlySet<SkillKind>;
     search: string;
     umaCardId: number | undefined;
@@ -54,6 +57,7 @@
     xMode = $bindable(),
     yMode = $bindable(),
     rarities = $bindable(),
+    rarityOptions,
     kinds = $bindable(),
     search = $bindable(),
     umaCardId = $bindable(),
@@ -85,7 +89,8 @@
   const RARITY_NAMES: Record<SkillRarity, string> = {
     white: 'White',
     gold: 'Gold',
-    unique: 'Unique'
+    inherited: 'Inherited unique',
+    personal: 'Personal unique'
   };
   const KIND_NAMES: Record<SkillKind, string> = {
     speed: 'Speed',
@@ -222,6 +227,7 @@
         compact
         options={[
           { value: 'value', label: 'In build' },
+          { value: 'forced', label: 'Optimal' },
           { value: 'alone', label: 'Alone' }
         ]}
         bind:value={yMode}
@@ -300,7 +306,7 @@
             </div>
             <TypeFilters
               label="Rarity"
-              all={SKILL_RARITIES}
+              all={rarityOptions}
               names={RARITY_NAMES}
               bind:selected={rarities}
             />
@@ -346,6 +352,7 @@
       </InspectPopover>
     </div>
   </div>
+  <p class="mode-note">{Y_MODE_NOTES[yMode]}</p>
 </div>
 
 <style>
