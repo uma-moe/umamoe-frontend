@@ -38,8 +38,8 @@ describe('describeRequirements', () => {
 
     expect(lanes).toEqual([['Pace chaser', 'Changing lanes']]);
     expect(either).toEqual([
-      ['Sprint', 'From the late leg on'],
-      ['Mile', 'From the late leg on']
+      ['Sprint', 'From the late race on'],
+      ['Mile', 'From the late race on']
     ]);
   });
 
@@ -58,7 +58,7 @@ describe('countGate', () => {
       count: 3,
       counted: 'any',
       sections: [4, 16],
-      where: 'in the middle leg'
+      where: 'in the mid race'
     });
     expect(countGate('phase==1&corner==0')).toBeUndefined();
   });

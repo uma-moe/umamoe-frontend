@@ -1,5 +1,6 @@
 <script lang="ts">
   import type { Snippet } from 'svelte';
+  import Badge from '@/components/Badge.svelte';
 
   interface Props {
     title: string;
@@ -7,6 +8,8 @@
     description?: string;
     metadata?: string;
     eyebrow?: string;
+    /** A short tag beside the title, such as "Beta". */
+    badge?: string;
     tone?: 'brand' | 'primary' | 'warning' | 'rainbow';
     actions?: Snippet;
     leading?: Snippet;
@@ -21,6 +24,7 @@
     description,
     metadata,
     eyebrow,
+    badge,
     tone = 'brand',
     actions,
     leading,
@@ -46,6 +50,9 @@
         <div class="heading-leading">{@render leading()}</div>
       {/if}
       <h1 {id}>{title}</h1>
+      {#if badge}
+        <Badge tone="warning">{badge}</Badge>
+      {/if}
     </div>
     {#if metadata}
       <div class="heading-meta">

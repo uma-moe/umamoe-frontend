@@ -74,6 +74,42 @@ function shownIds(options: Partial<PlotOptions> = {}): number[] {
 }
 
 describe('Skill Explorer plot view', () => {
+  it('plots a gated skill at its best point in the Optimal view, and marks a setup that buys skills', () => {
+    const gated = {
+      ...point(200341, 1.6, 0.4),
+      expected: 0.64,
+      rate: 0.4,
+      gated: {
+        forced: { win: 5.2, expected: 4.7, rate: 0.9, mean: 0.02 },
+        setup: { feeders: [200011], sp: 110, at: 0.1 }
+      }
+    };
+    const plotted = (yMode: PlotOptions['yMode'], procScaled = false) =>
+      view({ points: [gated], yMode, procScaled }).plotted[0]!;
+
+    expect(plotted('forced')).toMatchObject({
+      y: 5.2,
+      x: 0.02,
+      forced: false,
+      optimal: true,
+      setUp: false
+    });
+    expect(plotted('forced', true).y).toBeCloseTo(4.7);
+    expect(plotted('value')).toMatchObject({
+      y: 1.6,
+      x: 0.4,
+      forced: false,
+      optimal: false,
+      setUp: true
+    });
+    expect(plotted('alone')).toMatchObject({ y: 0.8, setUp: false });
+    // Her build opening it as it is buys nothing.
+    const asBuilt = { ...gated, gated: { ...gated.gated, setup: { feeders: [], sp: 0, at: 0.1 } } };
+    expect(view({ points: [asBuilt], yMode: 'value' }).plotted[0]!.setUp).toBe(false);
+    // Any other skill reads the same in build and if forced.
+    expect(view({ yMode: 'forced' }).plotted).toEqual(view({ yMode: 'value' }).plotted);
+  });
+
   it('shows an exported skill only once its ID is in the loaded Global skill resources', () => {
     const upcomingId = 999991;
     const exported = [...points, point(upcomingId, 20, 0.5)];
@@ -228,10 +264,31 @@ describe('Skill Explorer plot view', () => {
 
   it('shows only the chosen rarities and kinds, so the best gold speed skill stands alone', () => {
     const goldSpeed = shownIds({ rarities: new Set(['gold']), kinds: new Set(['speed']) });
-    const uniques = shownIds({ rarities: new Set(['unique']) });
+    const uniques = shownIds({ rarities: new Set(['inherited']) });
 
     expect(goldSpeed).toEqual([200341]);
     expect(uniques).toEqual([900011]);
+  });
+
+  it("files a runner's own unique apart from the inherited ones", () => {
+    const personal = skill(100011, 'Personal', { rarity: 4, unique: true });
+    const shown = (rarity: 'inherited' | 'personal') =>
+      plotView({
+        points: [...points, point(100011, 0.6, 0.5)],
+        skills: new Map([...skills, [100011, personal]]),
+        facts,
+        xMode: 'position',
+        yMode: 'value',
+        rarities: new Set([rarity]),
+        kinds: new Set(SKILL_KINDS),
+        search: '',
+        showDayBound: false,
+        procScaled: false,
+        bestOfFamily: false
+      }).plotted.map((plotted) => [plotted.skillId, plotted.tier]);
+
+    expect(shown('personal')).toEqual([[100011, 'personal']]);
+    expect(shown('inherited')).toEqual([[900011, 'inherited']]);
   });
 
   it('shows a unique by its character', () => {
@@ -248,6 +305,18 @@ describe('Skill Explorer plot view', () => {
     expect(metres.xUnit).toEqual({ scale: 2000, suffix: ' m' });
   });
 
+  it('tints the race phases and marks where the final spurt can begin on the proc point axis only', () => {
+    const position = view();
+
+    expect(position.bands.map((band) => [band.from, band.to])).toEqual([
+      [0, 1 / 6],
+      [1 / 6, 2 / 3],
+      [2 / 3, 1]
+    ]);
+    expect(position.marks.map((mark) => mark.at)).toEqual([2 / 3]);
+    expect(view({ xMode: 'cost' })).toMatchObject({ bands: [], marks: [] });
+  });
+
   it('leaves out skills without an SP cost on the cost axis', () => {
     expect(view({ xMode: 'cost' }).plotted.map((plotted) => plotted.x)).toEqual([180, 110, 90]);
   });
@@ -262,6 +331,19 @@ describe('value axis', () => {
     expect(valuePercent(0.2, axis)).toBeLessThan(100);
   });
 
+  it('reaches down to +1.0% on every track', () => {
+    const axis = valueAxis([2, 8]);
+
+    expect(valuePercent(1, axis)).toBeCloseTo(100);
+    expect(axis.ticks[0]).toBe(1);
+  });
+
+  it('keeps more room below a skill under the floor than above the strongest', () => {
+    const axis = valueAxis([0.2, 0.6]);
+
+    expect(100 - valuePercent(0.2, axis)).toBeGreaterThan(valuePercent(0.6, axis) * 2);
+  });
+
   it('spreads small values more than large ones', () => {
     const axis = valueAxis([0.1, 4]);
 
@@ -273,9 +355,9 @@ describe('value axis', () => {
 
 describe('toggleType', () => {
   it('unchecks only the chosen type when all are selected', () => {
-    const selected = new Set(['white', 'gold', 'unique']);
+    const selected = new Set(['white', 'gold', 'inherited']);
 
-    expect([...toggleType(selected, 'gold')]).toEqual(['white', 'unique']);
+    expect([...toggleType(selected, 'gold')]).toEqual(['white', 'inherited']);
     expect(selected.size).toBe(3);
   });
 
@@ -283,6 +365,6 @@ describe('toggleType', () => {
     const empty = toggleType(new Set(['gold']), 'gold');
 
     expect(empty.size).toBe(0);
-    expect([...toggleType(empty, 'unique')]).toEqual(['unique']);
+    expect([...toggleType(empty, 'inherited')]).toEqual(['inherited']);
   });
 });

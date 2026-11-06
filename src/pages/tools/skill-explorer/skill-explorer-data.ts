@@ -88,6 +88,65 @@ export interface SkillPoint {
    * (the runners around her and other skills' activations counting as met; course, day and style still apply).
    */
   forced: number;
+  /** For a skill that waits on her other skills' activations, like Groundwork: its other timings. */
+  gated?: GatedValues;
+}
+
+/** A gated skill's value at one timing, read as a row's: per firing, over all races, its rate and mean proc point. */
+export interface TimedValue {
+  win: number;
+  expected: number;
+  rate: number;
+  mean: number;
+}
+
+/**
+ * The skills bought beside the reference build so they open a gated skill's gate by `at` (a share of the race): the
+ * earliest point any such setup reaches. None when the build opens it by then as it is.
+ */
+export interface GatedSetup {
+  feeders: number[];
+  /** The feeders' SP before hints. */
+  sp: number;
+  at: number;
+}
+
+/** A gated skill forced to fire from `at` (a share of the race) on. */
+export interface ForcedPoint extends TimedValue {
+  at: number;
+  /** The headline point, its value raced on fresh lobbies rather than the model's. */
+  raced: boolean;
+}
+
+/**
+ * A gated skill's values beyond its row (which is its If triggered value, at its headline point): forced to fire at
+ * its best point, the same build for every skill; on a single course, its setup and every forced point.
+ */
+export interface GatedValues {
+  forced: TimedValue;
+  setup?: GatedSetup;
+  points?: ForcedPoint[];
+}
+
+/**
+ * The forced point a gated skill's If triggered value is: the raced one, else the one its setup opens by, else (no
+ * setup reaches any) the one worth most.
+ */
+export function headlinePoint(gated: GatedValues): ForcedPoint | undefined {
+  const points = gated.points ?? [];
+  const raced = points.find((point) => point.raced);
+  if (raced !== undefined) return raced;
+  const opened = points.find((point) => point.at === gated.setup?.at);
+  if (opened !== undefined) return opened;
+  return mostWorth(points);
+}
+
+/** The value worth most over all races. */
+export function mostWorth<Value extends TimedValue>(values: Value[]): Value | undefined {
+  return values.reduce<Value | undefined>(
+    (best, value) => (best === undefined || value.expected > best.expected ? value : best),
+    undefined
+  );
 }
 
 /** A skill that raises another's value beside it, and by how many win points. */
@@ -192,6 +251,58 @@ export function parseRow(value: unknown): SkillPoint {
   };
 }
 
+function timedValue(value: Record<string, unknown>, what: string): TimedValue {
+  const win = finiteNumber(value.win, `${what} win points`);
+  const rate = finiteNumber(value.rate, `${what} fire rate`);
+  return { win, expected: win * rate, rate, mean: finiteNumber(value.mean, `${what} fire point`) };
+}
+
+function parseSetup(value: unknown): GatedSetup {
+  if (!isRecord(value) || !Array.isArray(value.feeders))
+    throw new Error('Skill Explorer data has an invalid setup.');
+  return {
+    feeders: value.feeders.map((id) => finiteNumber(id, 'setup skill')),
+    sp: finiteNumber(value.sp, 'setup SP'),
+    at: finiteNumber(value.at, 'setup point')
+  };
+}
+
+function parseForcedPoint(value: unknown): ForcedPoint {
+  if (!isRecord(value)) throw new Error('Skill Explorer data has an invalid forced point.');
+  return {
+    ...timedValue(value, 'forced point'),
+    at: finiteNumber(value.at, 'forced point'),
+    raced: value.raced === true
+  };
+}
+
+/** `{skill id: {forced: [win, over all races, rate, mean], setup?, points?}}`. */
+export function parseGated(value: unknown): Map<number, GatedValues> {
+  if (!isRecord(value)) return new Map();
+  return new Map(
+    Object.entries(value).map(([id, entry]) => {
+      if (!isRecord(entry) || !Array.isArray(entry.forced) || entry.forced.length !== 4)
+        throw new Error('Skill Explorer data has an invalid gated skill.');
+      const [win, expected, rate, mean] = entry.forced.map((number) =>
+        finiteNumber(number, 'forced value')
+      ) as [number, number, number, number];
+      const gated: GatedValues = { forced: { win, expected, rate, mean } };
+      if (entry.setup !== undefined) gated.setup = parseSetup(entry.setup);
+      if (Array.isArray(entry.points)) gated.points = entry.points.map(parseForcedPoint);
+      return [Number(id), gated];
+    })
+  );
+}
+
+/** `points` with each gated skill's values from `gated` attached. */
+export function withGated(points: SkillPoint[], gated: Map<number, GatedValues>): SkillPoint[] {
+  if (gated.size === 0) return points;
+  return points.map((point) => {
+    const values = gated.get(point.skillId);
+    return values === undefined ? point : { ...point, gated: values };
+  });
+}
+
 /** Per style, `{skill id: [[partner id, win points], ...]}`. */
 function parsePartners(value: unknown): ScopeData['partners'] {
   if (!isRecord(value)) return undefined;
@@ -240,10 +351,12 @@ export function parseScope(value: unknown): ScopeData {
   if (!isRecord(value) || !isRecord(value.styles))
     throw new Error('Skill Explorer data is invalid.');
   const styles = value.styles;
+  const gated = isRecord(value.gated) ? value.gated : {};
   const byStyle = Object.fromEntries(
     STYLE_KEYS.map((style) => {
       const rows = styles[style];
-      return [style, Array.isArray(rows) ? rows.map(parseRow) : []];
+      const points = Array.isArray(rows) ? rows.map(parseRow) : [];
+      return [style, withGated(points, parseGated(gated[style]))];
     })
   ) as Record<(typeof STYLE_KEYS)[number], SkillPoint[]>;
 
@@ -274,7 +387,10 @@ function parseMargins(value: unknown): ScopeData['margins'] {
  * Impossible styles keep their zero rows without diluting eligible styles; the fire point is weighted by proc rate.
  */
 export function averageStyles(styles: SkillPoint[][]): SkillPoint[] {
-  const totals = new Map<number, SkillPoint & { firedMean: number; eligibleStyles: number }>();
+  const totals = new Map<
+    number,
+    SkillPoint & { firedMean: number; eligibleStyles: number; forcedTotal?: TimedValue }
+  >();
   for (const points of styles) {
     for (const point of points) {
       let total = totals.get(point.skillId);
@@ -305,16 +421,37 @@ export function averageStyles(styles: SkillPoint[][]): SkillPoint[] {
       total.forced = Math.max(total.forced, point.forced);
       total.firedMean += point.mean * point.rate;
       total.courses = Math.max(total.courses, point.courses);
+      if (point.gated) {
+        total.forcedTotal ??= { win: 0, expected: 0, rate: 0, mean: 0 };
+        const forced = point.gated.forced;
+        total.forcedTotal.win += forced.win;
+        total.forcedTotal.expected += forced.expected;
+        total.forcedTotal.rate += forced.rate;
+        total.forcedTotal.mean += forced.mean * forced.rate;
+      }
       point.sections.forEach((share, index) => {
         total.sections[index]! += share;
       });
     }
   }
 
-  return [...totals.values()].map(({ firedMean, eligibleStyles, ...total }) => {
+  return [...totals.values()].map(({ firedMean, eligibleStyles, forcedTotal, ...total }) => {
     const count = Math.max(1, eligibleStyles);
+    const gated: Pick<SkillPoint, 'gated'> = forcedTotal
+      ? {
+          gated: {
+            forced: {
+              win: forcedTotal.win / count,
+              expected: forcedTotal.expected / count,
+              rate: forcedTotal.rate / count,
+              mean: forcedTotal.rate > 0 ? forcedTotal.mean / forcedTotal.rate : 0
+            }
+          }
+        }
+      : {};
     return {
       ...total,
+      ...gated,
       win: total.win / count,
       winAlone: total.winAlone / count,
       expected: total.expected / count,

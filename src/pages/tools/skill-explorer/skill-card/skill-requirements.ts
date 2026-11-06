@@ -26,13 +26,14 @@ const SURFACES = ['', 'Turf', 'Dirt'];
 const GROUNDS = ['', 'Firm', 'Good', 'Soft', 'Heavy'];
 const WEATHERS = ['', 'Sunny', 'Cloudy', 'Rainy', 'Snowy'];
 const SEASONS = ['', 'Spring', 'Summer', 'Fall', 'Winter', 'Spring'];
-const LEGS = ['the opening leg', 'the middle leg', 'the late leg', 'the last spurt'];
+/** The race state's phase names; the last spurt is the final sixth of the late race. */
+const PHASES = ['the early race', 'the mid race', 'the late race', 'the last spurt'];
 /** Where each kind of count gate counts activations. */
 const COUNT_WINDOWS: Record<string, string> = {
-  activate_count_start: 'in the opening leg',
-  activate_count_middle: 'in the middle leg',
+  activate_count_start: 'in the early race',
+  activate_count_middle: 'in the mid race',
   activate_count_later_half: 'in the second half',
-  activate_count_end_after: 'from the late leg on',
+  activate_count_end_after: 'from the late race on',
   activate_count_all: 'so far',
   activate_count_heal: 'so far'
 };
@@ -75,8 +76,8 @@ function ordinal(value: number): string {
   return `${value}${['th', 'st', 'nd', 'rd'][value % 10] ?? 'th'}`;
 }
 
-function leg(value: number): string {
-  return LEGS[value] ?? `phase ${value}`;
+function phaseName(value: number): string {
+  return PHASES[value] ?? `phase ${value}`;
 }
 
 function named(names: string[], value: number, what: string): string {
@@ -120,16 +121,16 @@ function describeTerm(term: Term, trackName: (id: number) => string): string | u
     case 'is_dirtgrade':
       return 'Dirt graded race';
     case 'phase':
-      if (at) return `In ${leg(value)}`;
-      if (op === '>=') return `From ${leg(value)} on`;
-      if (op === '<=') return `Up to ${leg(value)}`;
+      if (at) return `In ${phaseName(value)}`;
+      if (op === '>=') return `From ${phaseName(value)} on`;
+      if (op === '<=') return `Up to ${phaseName(value)}`;
       break;
     case 'phase_random':
-      return `Random point in ${leg(value)}`;
+      return `Random point in ${phaseName(value)}`;
     case 'phase_firsthalf_random':
-      return `First half of ${leg(value)}`;
+      return `First half of ${phaseName(value)}`;
     case 'phase_laterhalf_random':
-      return `Second half of ${leg(value)}`;
+      return `Second half of ${phaseName(value)}`;
     case 'is_lastspurt':
     case 'lastspurt':
       return 'In the last spurt';
@@ -194,7 +195,7 @@ function describeTerm(term: Term, trackName: (id: number) => string): string | u
     case 'change_order_onetime':
       return value <= 0 ? 'Just passed a runner' : 'Just lost a place';
     case 'change_order_up_end_after':
-      return `Gained ${value}+ places since the late leg`;
+      return `Gained ${value}+ places since the late race`;
     case 'change_order_up_finalcorner_after':
       return `Gained ${value}+ places since the final corner`;
     case 'is_overtake':
