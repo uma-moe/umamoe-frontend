@@ -1,0 +1,45 @@
+@import './runner-tile.css';
+
+.lineage-section {
+  display: grid;
+  align-content: start;
+  gap: 8px;
+  min-width: 0;
+  container-type: inline-size;
+}
+h3 {
+  margin: 0;
+  font-size: 12px;
+  font-weight: 600;
+}
+p {
+  margin: 0;
+  color: var(--text-secondary);
+  font-size: 12px;
+}
+/* One row per parent: the parent, then their own two parents. */
+.lineage {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 6px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.tile-meta {
+  color: var(--text-secondary);
+  font-size: 11px;
+}
+/* A narrow section turns the rows into columns, so each name keeps half the width. */
+@container (max-width: 439px) {
+  .lineage {
+    grid-auto-flow: column;
+    grid-template-rows: repeat(3, auto);
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+@container (min-width: 900px) {
+  .lineage {
+    grid-template-columns: repeat(6, minmax(0, 1fr));
+  }
+}

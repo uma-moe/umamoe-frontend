@@ -47,11 +47,12 @@
         {@const display = resource ? supportCardDisplay(resource) : undefined}
         {@const type = resource ? supportType(resource) : undefined}
         <li
+          class="tile"
           title={(display ? display.character + ', ' + display.title : 'Support ' + card.id) +
             ', limit break ' +
             card.lb}
         >
-          <span class="support-art">
+          <span class="tile-art">
             <Artwork
               src={supportCardImagePath(card.id)}
               fallbackSrc="/assets/images/placeholder-card.webp"
@@ -70,9 +71,9 @@
               />
             {/if}
           </span>
-          <div class="support-text">
-            <span class="support-name">{display?.character ?? 'Card ' + card.id}</span>
-            <div class="support-meta">
+          <div class="tile-text">
+            <span class="tile-name">{display?.character ?? 'Card ' + card.id}</span>
+            <div class="tile-meta">
               {#if resource && [1, 2, 3].includes(resource.rarity)}
                 {@const rarity = resource.rarity === 3 ? 'SSR' : resource.rarity === 2 ? 'SR' : 'R'}
                 <img

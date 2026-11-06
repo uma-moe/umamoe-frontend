@@ -1,3 +1,5 @@
+@import './runner-tile.css';
+
 .support-section {
   display: grid;
   align-content: start;
@@ -15,9 +17,7 @@ p {
   color: var(--text-secondary);
   font-size: 12px;
 }
-/* Each card as the game lists it: the art with its type in the corner, then the character over rarity and limit
-   break. The name keeps to one line and the metadata row has a fixed height, so a long name or a missing rarity never
-   shifts one tile against the others. */
+/* Each card shows its type in the corner of the art, and its rarity and limit break under the character. */
 .support-deck {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -25,35 +25,6 @@ p {
   margin: 0;
   padding: 0;
   list-style: none;
-}
-/* Three tiles in a row can be narrower than two, so the art and figures scale with the tile itself: between the
-   smallest and largest tile they always leave the name room and keep rarity and all four crystals inside. */
-.support-deck li {
-  --support-art-size: clamp(40px, 33cqi, 48px);
-  --support-rarity-size: clamp(16px, 12cqi, 20px);
-  container-type: inline-size;
-  display: grid;
-  grid-template-columns: auto minmax(0, 1fr);
-  align-items: center;
-  gap: 6px;
-  min-width: 0;
-  padding: 5px;
-  border: 1px solid var(--card-surface-border);
-  border-radius: var(--radius-md);
-  background: var(--card-surface-bg);
-}
-.support-art {
-  position: relative;
-  display: block;
-}
-.support-deck :global(.art) {
-  width: var(--support-art-size);
-  height: var(--support-art-size);
-  border: 0;
-  background: transparent;
-}
-.support-deck :global(.art img) {
-  object-fit: contain;
 }
 .support-type {
   position: absolute;
@@ -63,31 +34,10 @@ p {
   height: 15px;
   object-fit: contain;
 }
-.support-text {
-  display: grid;
-  gap: 4px;
-  min-width: 0;
-}
-.support-name {
-  min-width: 0;
-  overflow: hidden;
-  font-size: 12px;
-  font-weight: 500;
-  line-height: 1.25;
-  white-space: nowrap;
-  text-overflow: ellipsis;
-}
-.support-meta {
-  display: flex;
-  align-items: center;
-  gap: 4px;
-  height: var(--support-rarity-size);
-  min-width: 0;
-}
 .support-rarity {
   flex: none;
-  width: var(--support-rarity-size);
-  height: var(--support-rarity-size);
+  width: var(--tile-detail-size);
+  height: var(--tile-detail-size);
   object-fit: contain;
 }
 .support-lb {
@@ -111,8 +61,8 @@ p {
   grid-template-columns: repeat(6, minmax(0, 1fr));
   gap: 6px;
 }
-.compact .support-deck li {
-  --support-art-size: clamp(36px, 8cqi, 48px);
+.compact .tile {
+  --tile-art-size: clamp(36px, 8cqi, 48px);
   container-type: normal;
   grid-template-columns: minmax(0, 1fr);
   justify-items: center;
@@ -121,13 +71,13 @@ p {
   border: 0;
   background: none;
 }
-.compact .support-name,
+.compact .tile-name,
 .compact .support-rarity {
   display: none;
 }
 .compact .support-lb {
   font-size: clamp(8px, 3.5cqi, 12px);
 }
-.compact .support-meta {
+.compact .tile-meta {
   height: 12px;
 }

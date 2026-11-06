@@ -147,7 +147,7 @@ test('team details keep the summary compact and align support cards with long or
   const builds = dialog.locator('.builds article');
   await expect(builds).toHaveCount(3);
   const firstBuild = builds.first();
-  await expect(firstBuild.locator('.aptitude-cell')).toHaveCount(3);
+  await expect(firstBuild.locator('.aptitude-tile')).toHaveCount(3);
   await expect
     .poll(() =>
       firstBuild.locator('.aptitude').evaluateAll((grades) =>
@@ -175,13 +175,13 @@ test('team details keep the summary compact and align support cards with long or
   }
 
   const deck = firstBuild.locator('.support-deck');
-  await expect(deck.locator('.support-name').first()).toHaveText(longName);
+  await expect(deck.locator('.tile-name').first()).toHaveText(longName);
   await deck.scrollIntoViewIfNeeded();
   const geometry = await deck.locator('li').evaluateAll((tiles) =>
     tiles.map((tile) => {
       const bounds = tile.getBoundingClientRect();
-      const name = tile.querySelector('.support-name')?.getBoundingClientRect();
-      const metadata = tile.querySelector('.support-meta')?.getBoundingClientRect();
+      const name = tile.querySelector('.tile-name')?.getBoundingClientRect();
+      const metadata = tile.querySelector('.tile-meta')?.getBoundingClientRect();
 
       return {
         height: bounds.height,

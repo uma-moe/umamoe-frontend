@@ -4,16 +4,19 @@
   import type { HorseDiagnostics } from '@/lib/race/capture/race-diagnostics';
   import { formatRaceTime, ordinalPlace } from '@/lib/race/replay/race-display';
   import { loadSkills, skillPointTotal, type SkillData } from '@/lib/game-data/skills/skills';
+  import { normalizeVeteranRecord } from '@/lib/veterans/records/veteran-normalizer';
+  import { veteranSupportCards } from '@/lib/veterans/records/veteran-profile';
   import Button from '@/components/controls/Button.svelte';
   import AptitudeTile from '@/components/game/AptitudeTile.svelte';
   import StatStrip from '@/components/game/StatStrip.svelte';
   import ProfileVeteranIdentity from '@/pages/profile/veterans/ProfileVeteranIdentity.svelte';
   import { identity, score, stats } from '../../../analysis-view';
   import { raceAptitudes, type RaceContext } from '../../../runners/race-aptitudes';
+  import RunnerLineage from '../../../runners/RunnerLineage.svelte';
+  import RunnerSupportDeck from '../../../runners/RunnerSupportDeck.svelte';
   import DiagnosticsMetricHelp from '../../diagnostics/DiagnosticsMetricHelp.svelte';
   import { number } from '../../diagnostics/diagnostics-format';
   import { startOutcome } from '../../diagnostics/start-outcome';
-  import RunnerTrainingPreview from './RunnerTrainingPreview.svelte';
 
   let {
     runner,
@@ -51,6 +54,19 @@
   const start = $derived(horse ? startOutcome(horse, runner.result) : undefined);
   const result = $derived(runner.result);
   const timeBehind = $derived(result ? result.finishTime - winningTime : 0);
+  const deck = $derived(
+    veteranSupportCards(runner.raw).map((card) => ({
+      id: card.support_card_id,
+      lb: card.limit_break_count ?? 0
+    }))
+  );
+  const parents = $derived.by(() => {
+    try {
+      return normalizeVeteranRecord(runner.raw).parents;
+    } catch {
+      return [];
+    }
+  });
 
   onMount(() => {
     void loadSkills()
@@ -65,20 +81,17 @@
   style:--runner-color={color}
 >
   <div class="profile-zones">
-    <div class="profile-zone profile-identity">
+    <header class="profile-head">
       <ProfileVeteranIdentity
         summary={identity(runner)}
         score={score(runner) || undefined}
         rankPlacement="details"
       />
-    </div>
-    <section
-      class="profile-zone"
-      aria-label="Race result"
-    >
-      <h3>Result</h3>
       {#if result || horse}
-        <dl class="result-metrics">
+        <dl
+          class="result-metrics"
+          aria-label="Race result"
+        >
           {#if result}
             <div class="metric">
               <dt>Finish</dt>
@@ -125,7 +138,7 @@
       {:else}
         <p class="empty">No result was recorded.</p>
       {/if}
-    </section>
+    </header>
     <section
       class="profile-zone profile-build"
       aria-label="Build"
@@ -160,8 +173,11 @@
         {/each}
       </div>
     </section>
-    <div class="profile-zone profile-training">
-      <RunnerTrainingPreview {runner} />
+    <div class="profile-zone">
+      <RunnerSupportDeck {deck} />
+    </div>
+    <div class="profile-zone profile-lineage">
+      <RunnerLineage {parents} />
     </div>
   </div>
 </section>

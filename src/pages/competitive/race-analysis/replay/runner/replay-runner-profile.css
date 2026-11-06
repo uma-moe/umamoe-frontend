@@ -1,6 +1,7 @@
 /*
- * One card in four zones: who the runner is, how the race went, the build, and the deck and parents behind it.
- * The zones sit on the card's border colour with a 1px gap, so every layout draws its own dividers.
+ * One card, read like the build details: a band with who the runner is and how the race went, then the build, the
+ * support deck and the parents. The parts sit on the card's border colour with a 1px gap, so every layout draws its
+ * own dividers.
  */
 .runner-profile {
   container-type: inline-size;
@@ -13,6 +14,24 @@
   gap: 1px;
   background: var(--card-surface-border);
 }
+.profile-head {
+  grid-column: 1 / -1;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px 32px;
+  min-width: 0;
+  padding: 10px 14px;
+  background: color-mix(in srgb, var(--runner-color) 8%, var(--card-surface-bg));
+}
+.profile-head > :global(.veteran-identity) {
+  flex: 1 1 240px;
+  min-width: 0;
+}
+.profile-head :global(.race-style) {
+  color: var(--runner-color);
+}
 .profile-zone {
   display: grid;
   align-content: start;
@@ -21,22 +40,15 @@
   padding: 8px 14px 12px;
   background: var(--card-surface-bg);
 }
-.profile-identity {
-  align-content: center;
-  background: color-mix(in srgb, var(--runner-color) 8%, var(--card-surface-bg));
-}
-.profile-identity :global(.race-style) {
-  color: var(--runner-color);
-}
 h3 {
   margin: 0;
   font-size: 12px;
   font-weight: 600;
 }
 /* Every zone heading takes the height of the Build details button, so the headings line up across the card. */
-.profile-zone > h3,
 .zone-heading,
-.profile-training :global(h3) {
+.profile-zone :global(.support-section > h3),
+.profile-zone :global(.lineage-section > h3) {
   display: flex;
   align-items: center;
   min-height: 32px;
@@ -47,8 +59,8 @@ h3 {
 }
 .result-metrics {
   display: grid;
-  grid-template-columns: repeat(2, minmax(0, max-content));
-  gap: 10px 28px;
+  grid-template-columns: repeat(4, max-content);
+  gap: 8px 28px;
   margin: 0;
 }
 .metric {
@@ -103,43 +115,52 @@ h3 {
   height: 18px;
 }
 .race-aptitudes {
-  display: flex;
-  flex-wrap: wrap;
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 4px;
 }
 .race-aptitudes > :global(.aptitude-tile) {
-  flex: 1 1 88px;
-  max-width: 104px;
   white-space: nowrap;
 }
-/* A medium card keeps who, result and build on one row and gives the deck and parents a row of their own. */
-@container (min-width: 760px) {
-  .profile-zones {
-    grid-template-columns: minmax(0, 1.1fr) minmax(0, 1fr) minmax(0, 1.1fr);
+@container (max-width: 559px) {
+  .result-metrics {
+    flex: 1 1 100%;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
-  .profile-training {
+}
+/* A full-width build puts the stats beside the race aptitudes, as the build details do. The stats measure their own
+   width, so their column has a fixed one that fits four-digit stats. */
+@container (min-width: 520px) and (max-width: 899px) {
+  .profile-build {
+    grid-template-columns: 200px minmax(0, 1fr);
+    align-items: center;
+    column-gap: 24px;
+  }
+  .profile-build > .zone-heading {
+    grid-column: 1 / -1;
+  }
+}
+/* The build sits beside the deck once the deck keeps its two rows there; the parents take a row of their own. */
+@container (min-width: 900px) {
+  .profile-zones {
+    grid-template-columns: minmax(300px, 0.7fr) minmax(0, 1.3fr);
+  }
+  .profile-lineage {
     grid-column: 1 / -1;
   }
 }
 @container (min-width: 1300px) {
   .profile-zones {
-    grid-template-columns: minmax(0, 0.9fr) minmax(0, 0.9fr) minmax(0, 1fr) max-content;
+    grid-template-columns: minmax(300px, 0.65fr) minmax(0, 1fr) minmax(0, 1fr);
   }
-  .profile-training {
+  .profile-lineage {
     grid-column: auto;
   }
 }
-/* Two columns: who and result side by side, the build and the deck below. */
-@container (min-width: 520px) and (max-width: 759px) {
-  .profile-zones {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-  }
-  .profile-build,
-  .profile-training {
-    grid-column: 1 / -1;
-  }
-}
 @media (max-width: 600px) {
+  .profile-head {
+    padding: 8px 10px;
+  }
   .profile-zone {
     padding: 6px 10px 10px;
   }
