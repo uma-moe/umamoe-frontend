@@ -1,0 +1,146 @@
+/*
+ * One card in four zones: who the runner is, how the race went, the build, and the deck and parents behind it.
+ * The zones sit on the card's border colour with a 1px gap, so every layout draws its own dividers.
+ */
+.runner-profile {
+  container-type: inline-size;
+  padding: 0;
+  overflow: hidden;
+}
+.profile-zones {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 1px;
+  background: var(--card-surface-border);
+}
+.profile-zone {
+  display: grid;
+  align-content: start;
+  gap: 8px;
+  min-width: 0;
+  padding: 8px 14px 12px;
+  background: var(--card-surface-bg);
+}
+.profile-identity {
+  align-content: center;
+  background: color-mix(in srgb, var(--runner-color) 8%, var(--card-surface-bg));
+}
+.profile-identity :global(.race-style) {
+  color: var(--runner-color);
+}
+h3 {
+  margin: 0;
+  font-size: 12px;
+  font-weight: 600;
+}
+/* Every zone heading takes the height of the Build details button, so the headings line up across the card. */
+.profile-zone > h3,
+.zone-heading,
+.profile-training :global(h3) {
+  display: flex;
+  align-items: center;
+  min-height: 32px;
+}
+.zone-heading {
+  justify-content: space-between;
+  gap: 8px;
+}
+.result-metrics {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, max-content));
+  gap: 10px 28px;
+  margin: 0;
+}
+.metric {
+  min-width: 0;
+}
+.metric dt {
+  display: flex;
+  align-items: center;
+  height: 18px;
+  color: var(--text-secondary);
+  font-size: 11px;
+}
+.metric dt :global(.info-icon) {
+  width: 18px;
+  height: 18px;
+}
+.metric dd {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 2px 5px;
+  margin: 2px 0 0;
+  font-variant-numeric: tabular-nums;
+}
+.metric strong {
+  font-size: 15px;
+  font-weight: 650;
+  line-height: 1.2;
+}
+.metric small {
+  color: var(--text-secondary);
+  font-size: 11px;
+}
+.metric.caution strong {
+  color: var(--accent-warning);
+}
+.empty {
+  margin: 0;
+  color: var(--text-secondary);
+  font-size: 12px;
+}
+.profile-build :global(.values) {
+  grid-template-columns: repeat(3, max-content);
+  gap: 6px 16px;
+}
+.profile-build :global(.values dd) {
+  min-width: 4ch;
+  font-size: 13px;
+}
+.profile-build :global(.values img) {
+  width: 18px;
+  height: 18px;
+}
+.race-aptitudes {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+.race-aptitudes > :global(.aptitude-tile) {
+  flex: 1 1 88px;
+  max-width: 104px;
+  white-space: nowrap;
+}
+/* A medium card keeps who, result and build on one row and gives the deck and parents a row of their own. */
+@container (min-width: 760px) {
+  .profile-zones {
+    grid-template-columns: minmax(0, 1.1fr) minmax(0, 1fr) minmax(0, 1.1fr);
+  }
+  .profile-training {
+    grid-column: 1 / -1;
+  }
+}
+@container (min-width: 1300px) {
+  .profile-zones {
+    grid-template-columns: minmax(0, 0.9fr) minmax(0, 0.9fr) minmax(0, 1fr) max-content;
+  }
+  .profile-training {
+    grid-column: auto;
+  }
+}
+/* Two columns: who and result side by side, the build and the deck below. */
+@container (min-width: 520px) and (max-width: 759px) {
+  .profile-zones {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .profile-build,
+  .profile-training {
+    grid-column: 1 / -1;
+  }
+}
+@media (max-width: 600px) {
+  .profile-zone {
+    padding: 6px 10px 10px;
+  }
+}

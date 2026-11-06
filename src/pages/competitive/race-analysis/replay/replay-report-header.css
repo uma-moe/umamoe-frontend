@@ -1,20 +1,18 @@
-/*
- * Wide screens keep the whole header on one row: course, section tabs, race file. Narrower ones put the tabs and
- * the race file under the course; a phone gives the tabs the full width.
- */
+/* The course and the race file share the top row; the section tabs run along a subrow of their own. */
 .replay-header {
+  --header-inset: 14px;
   position: sticky;
   top: var(--utility-height);
   z-index: calc(var(--z-header) - 2);
   display: grid;
   grid-template-columns: minmax(0, 1fr) auto;
   grid-template-areas:
-    'title title'
-    'tabs actions';
+    'title actions'
+    'tabs tabs';
   align-items: center;
   gap: 10px 16px;
   margin: 0 0 8px;
-  padding: 10px 14px;
+  padding: 10px var(--header-inset) 8px;
   border-radius: var(--radius-lg);
   background: var(--surface-1);
 }
@@ -92,6 +90,9 @@ h2 {
   grid-area: tabs;
   display: flex;
   min-width: 0;
+  margin-inline: calc(var(--header-inset) * -1);
+  padding: 8px var(--header-inset) 0;
+  border-top: 1px solid var(--border-subtle);
 }
 /* One tab group: the section in view reads as the selected tab. */
 .report-links {
@@ -133,30 +134,13 @@ h2 {
   background: rgb(var(--accent-primary-rgb) / 0.12);
   color: var(--color-accent);
 }
-.tab-long {
+.tab-short {
   display: none;
-}
-@media (min-width: 1280px) {
-  .replay-header {
-    grid-template-columns: minmax(0, 1fr) auto auto;
-    grid-template-areas: 'title tabs actions';
-  }
-}
-@media (min-width: 1500px) {
-  .tab-long {
-    display: inline;
-  }
-  .tab-short {
-    display: none;
-  }
 }
 @media (max-width: 767px) {
   .replay-header {
-    grid-template-areas:
-      'title actions'
-      'tabs tabs';
+    --header-inset: 12px;
     gap: 8px 10px;
-    padding: 10px 12px;
   }
   /* A race picker needs the width, so it takes its own row. */
   .replay-header:has(.header-actions :global(.field)) {
@@ -189,7 +173,11 @@ h2 {
     flex: 1 1 0;
     padding-inline: 4px;
   }
-  .section-tab :global(svg) {
+  .section-tab :global(svg),
+  .tab-long {
     display: none;
+  }
+  .tab-short {
+    display: inline;
   }
 }

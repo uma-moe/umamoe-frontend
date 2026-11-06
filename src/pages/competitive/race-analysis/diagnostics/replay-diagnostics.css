@@ -129,9 +129,6 @@
   border-radius: var(--radius-md);
   background: var(--surface-2);
 }
-.runner-notice {
-  grid-column: 1 / -1;
-}
 @media (max-width: 1100px) {
   .runner-overview {
     grid-template-columns: minmax(0, 640px);

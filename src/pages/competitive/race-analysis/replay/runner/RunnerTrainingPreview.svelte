@@ -8,7 +8,7 @@
   import { portrait } from '../../../analysis-view';
   import RunnerSupportDeck from '../../../runners/RunnerSupportDeck.svelte';
 
-  let { runner, onbuild }: { runner: RaceRunner; onbuild: () => void } = $props();
+  let { runner }: { runner: RaceRunner } = $props();
 
   let characters = $state.raw(new Map<number, CharacterData>());
   const deck = $derived(
@@ -25,13 +25,6 @@
     }
   });
 
-  function openWithKeyboard(event: KeyboardEvent) {
-    if (event.key === 'Enter' || event.key === ' ') {
-      event.preventDefault();
-      onbuild();
-    }
-  }
-
   onMount(() => {
     void loadCharacters()
       .then((value) => (characters = value))
@@ -39,31 +32,16 @@
   });
 </script>
 
-<div class="training-previews">
-  <div
-    class="build-preview"
-    role="button"
-    tabindex="0"
-    aria-label="Open support deck in build details"
-    aria-haspopup="dialog"
-    onclick={onbuild}
-    onkeydown={openWithKeyboard}
+<div class="training-preview">
+  <RunnerSupportDeck
+    {deck}
+    compact
+  />
+  <section
+    class="lineage-preview"
+    aria-label="Parents and grandparents"
   >
-    <RunnerSupportDeck
-      {deck}
-      compact
-    />
-  </div>
-  <div
-    class="build-preview lineage-preview"
-    role="button"
-    tabindex="0"
-    aria-label="Open parents and grandparents in build details"
-    aria-haspopup="dialog"
-    onclick={onbuild}
-    onkeydown={openWithKeyboard}
-  >
-    <h3>Parents &amp; grandparents</h3>
+    <h3>Parents</h3>
     {#if parents.length}
       <div class="lineage">
         {#each [1, 2] as branch}
@@ -109,7 +87,7 @@
     {:else}
       <p>No inheritance setup was captured.</p>
     {/if}
-  </div>
+  </section>
 </div>
 
 <style>

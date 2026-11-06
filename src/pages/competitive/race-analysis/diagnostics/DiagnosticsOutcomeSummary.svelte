@@ -1,29 +1,25 @@
 <script lang="ts">
-  import type { Snippet } from 'svelte';
   import type { ParsedRaceCapture } from '@/lib/race/capture/race-capture-parser';
   import type { HorseDiagnostics } from '@/lib/race/capture/race-diagnostics';
   import DiagnosticsMetricHelp from './DiagnosticsMetricHelp.svelte';
   import { number } from './diagnostics-format';
+  import { startOutcome } from './start-outcome';
 
   let {
     capture,
     index,
-    horse,
-    notice
+    horse
   }: {
     capture: ParsedRaceCapture;
     index: number;
     horse: HorseDiagnostics | undefined;
-    notice?: Snippet;
   } = $props();
 
   const runner = $derived(capture.runners.find((r) => r.index === index));
-  const lateStart = $derived(
-    horse?.lostStartAccelerationFrame || (runner?.result?.startDelayTime ?? 0) >= 0.08
-  );
+  const start = $derived(horse ? startOutcome(horse, runner?.result) : undefined);
 </script>
 
-{#if horse}
+{#if horse && start}
   <dl
     class="outcome-summary"
     aria-label="Runner outcome summary"
@@ -39,32 +35,22 @@
     </div>
     <div
       class="outcome"
-      class:caution={lateStart}
+      class:caution={start.late}
     >
       <dt>Start<DiagnosticsMetricHelp label="Start" /></dt>
       <dd>
-        <strong>
-          {lateStart
-            ? 'Late'
-            : horse.lostStartAccelerationFrame === undefined &&
-                runner?.result?.startDelayTime === undefined
-              ? 'Not recorded'
-              : 'Normal'}
-        </strong>
+        <strong>{start.label}</strong>
         <span class="outcome-detail">
-          {#if runner?.result?.startDelayTime !== undefined}
-            <span>
-              {number(runner.result.startDelayTime * 1000, 1)} ms
-            </span>
-          {/if}{#if horse.lostStartAccelerationFrame}
+          {#if start.delayMs !== undefined}
+            <span>{number(start.delayMs, 1)} ms</span>
+          {/if}
+          {#if start.lostAccelerationFrame}
             <span>Lost acceleration frame</span>
           {/if}
         </span>
       </dd>
     </div>
   </dl>
-{:else if notice}
-  {@render notice()}
 {:else}
   <p class="fallback">
     Detailed simulation data is unavailable. Showing recorded skill activations and blocking events.

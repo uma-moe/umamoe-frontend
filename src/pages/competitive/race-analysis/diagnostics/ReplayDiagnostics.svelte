@@ -22,8 +22,7 @@
     skillNames,
     distance,
     overview,
-    buildPreview,
-    notice,
+    outcomeSummary = true,
     onseek,
     onselect
   }: {
@@ -32,9 +31,8 @@
     skillNames: Map<number, string>;
     distance: number;
     overview?: Snippet;
-    buildPreview?: Snippet;
-    /** Replaces the recorded-data note while there is no detailed simulation for this runner. */
-    notice?: Snippet;
+    /** Off when the caller already shows the runner's course loss and start. */
+    outcomeSummary?: boolean;
     onseek: (time: number) => void;
     onselect: (index: number) => void;
   } = $props();
@@ -76,39 +74,23 @@
   {#if overview}
     <div class="runner-overview">
       {@render overview()}
-      {#if buildPreview}
-        {@render buildPreview()}
-        {#if !horse}
-          <div class="runner-notice">
-            <DiagnosticsOutcomeSummary
-              {capture}
-              {index}
-              {horse}
-              {notice}
-            />
-          </div>
-        {/if}
-      {:else}
-        <div class="runner-setup">
-          <RunnerSupportDeck
-            {deck}
-            compact
-          />
-          <DiagnosticsOutcomeSummary
-            {capture}
-            {index}
-            {horse}
-            {notice}
-          />
-        </div>
-      {/if}
+      <div class="runner-setup">
+        <RunnerSupportDeck
+          {deck}
+          compact
+        />
+        <DiagnosticsOutcomeSummary
+          {capture}
+          {index}
+          {horse}
+        />
+      </div>
     </div>
-  {:else}
+  {:else if outcomeSummary}
     <DiagnosticsOutcomeSummary
       {capture}
       {index}
       {horse}
-      {notice}
     />
   {/if}
 

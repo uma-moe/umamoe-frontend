@@ -50,7 +50,7 @@
 
   const turnNames: Record<number, string> = { 1: 'Right-handed', 2: 'Left-handed' };
 
-  /** A tab's `short` name is the one narrower screens show. */
+  /** A tab's `short` name is the one a phone shows. */
   type ReportSection = { id: string; icon: IconName; label: string; short: string };
 
   const raceSections: ReportSection[] = [

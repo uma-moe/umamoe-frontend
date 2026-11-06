@@ -1,27 +1,36 @@
-.training-previews {
+.training-preview {
+  --deck-tile: 44px;
+  --deck-gap: 6px;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: start;
+  gap: 12px 24px;
+  min-width: 0;
+}
+/* Fixed tiles keep the six cards together instead of spreading them across a wide zone. The deck measures its
+   own width for its tiles, so it needs one set here. */
+.training-preview :global(.support-section) {
+  flex: none;
+  width: calc(var(--deck-tile) * 6 + var(--deck-gap) * 5);
+}
+.training-preview :global(.support-deck) {
+  grid-template-columns: repeat(6, var(--deck-tile));
+  gap: var(--deck-gap);
+}
+.training-preview :global(.support-deck li) {
+  --support-art-size: var(--deck-tile);
+}
+.training-preview :global(.support-lb) {
+  font-size: 10px;
+}
+.lineage-preview {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) 190px;
-  gap: 10px;
+  align-content: start;
+  gap: 8px;
   min-width: 0;
-  container-type: inline-size;
-}
-.build-preview {
-  min-width: 0;
-  padding: 10px 12px;
-  border: 1px solid var(--border-subtle);
-  border-radius: var(--radius-md);
-  background: var(--surface-2);
-  cursor: pointer;
-}
-.build-preview:hover {
-  border-color: var(--accent-primary);
-}
-.build-preview:focus-visible {
-  outline: 2px solid var(--accent-primary);
-  outline-offset: 2px;
 }
 h3 {
-  margin: 0 0 8px;
+  margin: 0;
   font-size: 12px;
   font-weight: 600;
 }
@@ -32,10 +41,8 @@ p {
 }
 .lineage {
   display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
+  grid-template-columns: repeat(2, max-content);
   gap: 14px;
-  max-width: 180px;
-  margin-inline: auto;
 }
 .branch {
   display: grid;
@@ -73,9 +80,4 @@ p {
 .parent :global(.art) {
   width: 40px;
   height: 40px;
-}
-@container (max-width: 480px) {
-  .build-preview {
-    grid-column: 1 / -1;
-  }
 }
