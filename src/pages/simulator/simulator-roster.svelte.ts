@@ -99,13 +99,16 @@ export function importSimulatorUmas(umas: SimulatorUma[], replace = false): void
   simulatorRoster.configured = true;
 }
 
-/** The runners a room draw keeps: the user's own, without the example field or the last draw. */
+/**
+ * The runners a room draw or a new populated field keeps: the user's own and the ones they edited, without the
+ * example field, the last populated field or the last draw.
+ */
 export function roomRunners(): SimulatorUma[] {
   return ownRunners().filter((uma) => !isDrawnOpponent(uma));
 }
 
-/** Seats drawn teams beside the kept runners, each team on the lowest team number the kept runners leave free. */
-export function seatCmRoom(teams: SimulatorUma[][], snapshotId: string): void {
+/** Seats teams beside the kept runners, each team on the lowest team number the kept runners leave free. */
+function seatTeams(teams: SimulatorUma[][]): void {
   const kept = roomRunners();
   const usedTeams = new Set(kept.map((uma) => uma.teamId ?? 0));
   const seated = teams.flatMap((team) => {
@@ -113,7 +116,7 @@ export function seatCmRoom(teams: SimulatorUma[][], snapshotId: string): void {
     while (usedTeams.has(teamId)) teamId++;
     usedTeams.add(teamId);
 
-    return team.map((uma) => ({ ...uma, teamId, drawnFrom: snapshotId }));
+    return team.map((uma) => ({ ...uma, teamId }));
   });
 
   if (kept.length + seated.length > MAX_FIELD)
@@ -121,6 +124,23 @@ export function seatCmRoom(teams: SimulatorUma[][], snapshotId: string): void {
 
   simulatorRoster.umas = [...kept, ...seated];
   simulatorRoster.configured = true;
+}
+
+export function seatCmRoom(teams: SimulatorUma[][], snapshotId: string): void {
+  seatTeams(teams.map((team) => team.map((uma) => ({ ...uma, drawnFrom: snapshotId }))));
+}
+
+/** Seats a populated field's teams, as the simulator grouped them, beside the runners the field keeps. */
+export function seatPopulatedField(umas: SimulatorUma[]): void {
+  const teams = new Map<number, SimulatorUma[]>();
+  for (const uma of umas) {
+    const teamId = uma.teamId ?? 0;
+    const team = teams.get(teamId);
+    if (team) team.push(uma);
+    else teams.set(teamId, [uma]);
+  }
+
+  seatTeams([...teams.values()]);
 }
 
 /** Saved as empty too, so a reload does not bring the example field back. */

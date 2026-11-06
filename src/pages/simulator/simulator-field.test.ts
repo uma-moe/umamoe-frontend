@@ -1,10 +1,13 @@
 import { describe, expect, it } from 'vitest';
 import {
   claimRunner,
+  GENERATED_FIELD_SOURCE,
   isDrawnOpponent,
+  MOB_SOURCE,
   replaceSimulatorField,
   restoreSimulatorField,
   seatCmRoom,
+  seatPopulatedField,
   simulatorRoster,
   simulatorTeamColors
 } from './simulator-roster.svelte';
@@ -87,5 +90,49 @@ describe('a CM room drawn beside the user’s runners', () => {
       ...team('Fifth').map((uma) => uma.name),
       ...team('Sixth').map((uma) => uma.name)
     ]);
+  });
+});
+
+describe('a populated field beside the user’s runners', () => {
+  const populated = (name: string) =>
+    [1, 2, 3].flatMap((teamId) =>
+      [1, 2, 3].map((member) => ({
+        ...runner(name + ' ' + teamId + '.' + member),
+        teamId,
+        source: GENERATED_FIELD_SOURCE
+      }))
+    );
+
+  it('keeps the user’s own runners and seats the populated teams on free team numbers', () => {
+    const own = { ...runner('Seiun Sky'), teamId: 1 };
+    simulatorRoster.umas = [own];
+
+    seatPopulatedField(populated('First'));
+
+    const teams = simulatorRoster.umas.slice(1).map((uma) => uma.teamId);
+    expect(simulatorRoster.umas[0]).toEqual(own);
+    expect(teams).toEqual([2, 2, 2, 3, 3, 3, 4, 4, 4]);
+  });
+
+  it('replaces the last populated field, its mobs and draws, but keeps a populated runner the user edited', () => {
+    simulatorRoster.umas = [];
+    seatPopulatedField(populated('First'));
+    const edited = simulatorRoster.umas[0]!;
+    claimRunner(edited);
+    simulatorRoster.umas.push({ ...runner('Mob'), source: MOB_SOURCE });
+    simulatorRoster.umas.push({ ...runner('Drawn'), drawnFrom: 'cm21' });
+
+    seatPopulatedField(populated('Second'));
+
+    const names = simulatorRoster.umas.map((uma) => uma.name);
+    expect(names).toEqual(['First 1.1', ...populated('Second').map((uma) => uma.name)]);
+  });
+
+  it('refuses a populated field that would overfill the race', () => {
+    const own = Array.from({ length: 10 }, (_, index) => runner('Own ' + index));
+    simulatorRoster.umas = own;
+
+    expect(() => seatPopulatedField(populated('First'))).toThrow('at most 18');
+    expect(simulatorRoster.umas).toEqual(own);
   });
 });

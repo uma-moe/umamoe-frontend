@@ -146,25 +146,23 @@ test('Populating explains a course without CM data and the minute limit', async 
   await expect(page.getByText(/once a minute. Try again in 42 seconds/)).toBeVisible();
 });
 
-test('Repopulating asks before replacing the user’s runners', async ({ page }) => {
+test('Repopulating keeps the user’s own and edited runners', async ({ page }) => {
   await gotoRaceField(page);
   const field = page.getByRole('region', { name: 'Race field', exact: true });
-  await field
-    .getByRole('button', { name: /^Edit / })
-    .first()
-    .click();
+  const edit = field.getByRole('button', { name: /^Edit / }).first();
+  const editLabel = (await edit.getAttribute('aria-label')) ?? '';
+  await edit.click();
   await page.getByRole('button', { name: 'Save Uma', exact: true }).click();
 
   await field.getByRole('button', { name: 'Repopulate', exact: true }).click();
-  const dialog = page.getByRole('dialog', { name: 'Replace the field?' });
-  await expect(dialog).toBeVisible();
-  await dialog.getByRole('button', { name: 'Cancel', exact: true }).click();
-  await expect(field.locator('.runner')).toHaveCount(9);
 
-  await field.getByRole('button', { name: 'Repopulate', exact: true }).click();
-  await dialog.getByRole('button', { name: 'Populate', exact: true }).click();
-  await expect(dialog).toBeHidden();
-  await expect(field.locator('.runner')).toHaveCount(9);
+  await expect(page.getByRole('dialog', { name: 'Replace the field?' })).toHaveCount(0);
+  await expect(field.locator('.runner')).toHaveCount(10);
+  await expect(field.getByRole('button', { name: /^Edit / }).first()).toHaveAttribute(
+    'aria-label',
+    editLabel
+  );
+  await expect(page.getByText(/Kept your 1 runner\./)).toBeVisible();
 });
 
 test('Course setup preserves every searchable resource option and its breakdown', async ({

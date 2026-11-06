@@ -9,7 +9,6 @@
   import Banner from '@/components/feedback/Banner.svelte';
   import Button from '@/components/controls/Button.svelte';
   import TextField from '@/components/controls/TextField.svelte';
-  import Dialog from '@/components/overlays/Dialog.svelte';
   import { HttpError } from '@/services/http/http-client';
   import SimulatorShell from './shell/SimulatorShell.svelte';
   import SimulatorUmaField from './setup/runner/SimulatorUmaField.svelte';
@@ -44,9 +43,11 @@
   import {
     simulatorRoster,
     importSimulatorUmas,
-    isPlaceholderRunner,
+    MAX_FIELD,
     replaceSimulatorField,
     restoreSimulatorField,
+    roomRunners,
+    seatPopulatedField,
     simulatorTeamColor,
     simulatorTeamColors
   } from './simulator-roster.svelte';
@@ -57,6 +58,7 @@
   import { loadCharacters } from '@/lib/game-data/characters';
   import { buildFieldRequest } from './requests/field-request';
   import { simulatorUmasFromField } from './setup/field/field-population';
+  import { LOBBY_SIZE } from '@/pages/competitive/champions-meeting/archetypes/lobby/lobby-slots';
 
   const GATE_OPTIONS: Array<{ value: MonteCarloGateOrder; label: string; title: string }> = [
     { value: 'sent', label: 'As set', title: 'Every race starts each runner from her own gate' },
@@ -82,7 +84,6 @@
     populateError = $state(''),
     busy = $state(false),
     populating = $state(false),
-    replaceOpen = $state(false),
     codeOpen = $state(false);
 
   async function showStep(value: 'setup' | 'report') {
@@ -104,9 +105,6 @@
   );
 
   const canRun = $derived(Boolean(course) && simulatorRoster.umas.length >= 2 && !seedInvalid);
-
-  /** Populating silently replaces only a field the simulator itself filled. */
-  const hasOwnRunners = $derived(simulatorRoster.umas.some((uma) => !isPlaceholderRunner(uma)));
 
   function loadExample() {
     const example = createExampleRace();
@@ -151,15 +149,6 @@
       : 'course ' + courseId;
   }
 
-  function beginPopulate() {
-    if (hasOwnRunners) {
-      replaceOpen = true;
-      return;
-    }
-
-    void populate();
-  }
-
   /** Why populate failed, in words: a CM-less course and the backend's limits need explaining. */
   function populateErrorText(reason: unknown): string {
     if (reason instanceof HttpError && reason.status === 429) {
@@ -179,9 +168,16 @@
       : message;
   }
 
-  /** Fill the field with real CM runners for the settings on screen. */
+  /** Seat real CM runners for the settings on screen, replacing only the last populated field. */
   async function populate() {
     if (!course || busy || populating || seedInvalid) return;
+
+    // Checked before the request, which the backend allows once a minute.
+    if (roomRunners().length + LOBBY_SIZE > MAX_FIELD) {
+      populateError =
+        'Populating adds nine CM runners beside yours, and a race takes at most 18. Remove runners to make room.';
+      return;
+    }
 
     populating = true;
     populateError = '';
@@ -204,16 +200,26 @@
       const response = await simulatorRepository.field({ body: { ...body } });
       const characters = await loadCharacters().catch(() => new Map());
       const umas = simulatorUmasFromField(response.result, characters);
-      replaceSimulatorField(umas, {});
-      simulatorSession.umaId = umas[0]?.id ?? '';
+      seatPopulatedField(umas);
+      const selectionKept = simulatorRoster.umas.some((uma) => uma.id === simulatorSession.umaId);
+      if (!selectionKept) simulatorSession.umaId = umas[0]?.id ?? '';
+
       const source = response.result.source;
       const target = courseLabel(source.course_id);
       const origin =
         source.from_course_id === undefined
           ? ' from ' + target
           : ' from ' + courseLabel(source.from_course_id) + ', adapted to ' + target;
+      const kept = simulatorRoster.umas.length - umas.length;
+      const keptNote =
+        kept > 0 ? ' Kept your ' + kept + (kept === 1 ? ' runner.' : ' runners.') : '';
       simulatorSession.importNotice =
-        'Populated ' + umas.length + ' real CM runners' + origin + ' for these race settings.';
+        'Populated ' +
+        umas.length +
+        ' real CM runners' +
+        origin +
+        ' for these race settings.' +
+        keptNote;
       error = '';
     } catch (reason) {
       populateError = populateErrorText(reason);
@@ -348,9 +354,9 @@
     loading={populating}
     disabled={!course || seedInvalid || busy || populating}
     title={simulatorRoster.umas.length
-      ? 'Replace the field with a new CM field'
+      ? 'Replace the populated runners with a new CM field; your own and edited runners stay'
       : 'Fill the field with real CM runners'}
-    onclick={beginPopulate}
+    onclick={populate}
   >
     {simulatorRoster.umas.length ? 'Repopulate' : 'Populate'}
   </Button>
@@ -646,35 +652,6 @@
     return undefined;
   }}
 />
-
-<Dialog
-  bind:open={replaceOpen}
-  title="Replace the field?"
-  compact
-  maxWidth="420px"
->
-  <p class="replace-note">
-    Populating replaces the {simulatorRoster.umas.length} runners on the field with real CM runners for
-    these race settings.
-  </p>
-  {#snippet actions()}
-    <Button
-      variant="secondary"
-      onclick={() => (replaceOpen = false)}
-    >
-      Cancel
-    </Button>
-    <Button
-      icon="users-add"
-      onclick={() => {
-        replaceOpen = false;
-        void populate();
-      }}
-    >
-      Populate
-    </Button>
-  {/snippet}
-</Dialog>
 
 <style>
   @import './race-sim-page.css';

@@ -155,11 +155,6 @@
   font-size: 12px;
   border-radius: var(--radius-sm);
 }
-.replace-note {
-  margin: 0;
-  font-size: 13px;
-  color: var(--text-secondary);
-}
 .race-main[hidden] {
   display: none;
 }
