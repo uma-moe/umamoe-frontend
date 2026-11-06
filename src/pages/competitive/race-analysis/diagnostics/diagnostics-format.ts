@@ -208,6 +208,25 @@ export function sampleRows(
   }));
 }
 
+export type ModeTone = 'good' | 'bad' | 'neutral';
+
+/** Modes that gain speed or spare HP help the runner; rushing and being blocked cost it. */
+const modeTones: Partial<Record<string, ModeTone>> = {
+  conservePower: 'good',
+  downhill: 'good',
+  dueling: 'good',
+  positionKeepSpeedUp: 'good',
+  positionKeepOvertake: 'good',
+  positionKeepPaceUp: 'good',
+  positionKeepPaceUpEx: 'good',
+  rushing: 'bad',
+  blocked: 'bad'
+};
+
+export function modeTone(key: string): ModeTone {
+  return modeTones[key] ?? 'neutral';
+}
+
 export function modeSpans(
   capture: ParsedRaceCapture,
   horse: HorseDiagnostics | undefined,

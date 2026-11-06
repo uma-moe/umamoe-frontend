@@ -143,8 +143,11 @@ h3 {
 .metric .time-behind {
   flex-basis: 100%;
 }
-.metric.caution strong {
-  color: var(--accent-warning);
+.metric.good strong {
+  color: var(--accent-success);
+}
+.metric.bad strong {
+  color: var(--accent-error);
 }
 .empty {
   margin: 0;
@@ -194,6 +197,10 @@ h3 {
 @container runner-profile (min-width: 700px) {
   .profile-deck :global(.support-deck) {
     grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+  /* The parents zone can be wider than the tree here; the tree sits in its middle. */
+  .profile-parents :global(.lineage) {
+    justify-content: center;
   }
   .profile-zones {
     grid-template-columns: 280px max-content minmax(max-content, 1fr);

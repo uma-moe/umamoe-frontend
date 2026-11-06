@@ -17,7 +17,7 @@ h4 small {
   font-variant-numeric: tabular-nums;
 }
 .rng-value.positive {
-  color: var(--accent-secondary);
+  color: var(--accent-success);
 }
 .rng-value.negative {
   color: var(--accent-error);

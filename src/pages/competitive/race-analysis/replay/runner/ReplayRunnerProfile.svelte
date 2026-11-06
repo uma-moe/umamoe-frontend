@@ -148,7 +148,8 @@
             </div>
             <div
               class="metric"
-              class:caution={start.late}
+              class:good={start.label === 'Normal'}
+              class:bad={start.late}
             >
               <dt>Start<DiagnosticsMetricHelp label="Start" /></dt>
               <dd>

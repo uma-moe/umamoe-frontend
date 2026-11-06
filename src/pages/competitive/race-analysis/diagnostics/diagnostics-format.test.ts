@@ -4,6 +4,7 @@ import type { DiagnosticRow, HorseDiagnostics } from '@/lib/race/capture/race-di
 import {
   modeRows,
   modeSpans,
+  modeTone,
   seekTimeLabel,
   skillActivationOutcome,
   skillRows
@@ -240,5 +241,22 @@ describe('seek time labels', () => {
 
   it('carries a millisecond that rounds up to a full minute', () => {
     expect(seekTimeLabel(59.9996)).toBe('1:00.000');
+  });
+});
+
+describe('race behaviour tones', () => {
+  it('reads modes that gain speed or spare HP as good', () => {
+    expect(modeTone('positionKeepPaceUp')).toBe('good');
+    expect(modeTone('downhill')).toBe('good');
+  });
+
+  it('reads rushing and being blocked as bad', () => {
+    expect(modeTone('rushing')).toBe('bad');
+    expect(modeTone('blocked')).toBe('bad');
+  });
+
+  it('leaves pace down and unknown modes neutral', () => {
+    expect(modeTone('positionKeepPaceDown')).toBe('neutral');
+    expect(modeTone('spotStruggle')).toBe('neutral');
   });
 });
