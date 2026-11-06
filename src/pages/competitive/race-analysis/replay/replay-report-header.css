@@ -77,7 +77,8 @@ h2 {
 .race-facts span {
   white-space: nowrap;
 }
-.race-facts span + span::before {
+/* The separator trails its fact, so a wrapped line ends on a dot rather than starting with one. */
+.race-facts span:not(:last-child)::after {
   content: '·';
   margin: 0 6px;
   opacity: 0.7;
@@ -177,8 +178,9 @@ h2 {
     font-size: 15px;
   }
   .race-facts {
+    display: flex;
+    flex-wrap: wrap;
     font-size: 11px;
-    white-space: normal;
   }
   .report-links {
     flex: 1;
