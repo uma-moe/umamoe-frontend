@@ -28,10 +28,40 @@
   padding: 10px 14px 12px;
   background: var(--card-surface-bg);
 }
+/* The finishing position leads, as the results table's first column does. */
 .profile-identity {
   grid-area: identity;
-  align-content: center;
+  display: flex;
+  align-items: center;
+  gap: 14px;
   background: color-mix(in srgb, var(--runner-color) 8%, var(--card-surface-bg));
+}
+.profile-identity > :global(.veteran-identity) {
+  min-width: 0;
+}
+.finish-place {
+  display: grid;
+  justify-items: center;
+  flex: none;
+  min-width: 42px;
+  margin: 0;
+  font-variant-numeric: tabular-nums;
+}
+.finish-place strong {
+  color: var(--text-primary);
+  font-size: 22px;
+  font-weight: 700;
+  line-height: 1.1;
+}
+.finish-place small {
+  color: var(--text-secondary);
+  font-size: 11px;
+}
+.finish-place.winner strong {
+  color: var(--accent-warning);
+}
+.finish-place.podium strong {
+  color: var(--accent-primary);
 }
 .profile-identity :global(.race-style) {
   color: var(--runner-color);
@@ -69,7 +99,7 @@ h3 {
 .profile-build :global(.tile-stats) {
   grid-template-columns: repeat(3, minmax(0, 1fr));
 }
-/* Each result on one line: what it is, then its value. */
+/* Each result beside its label; the time behind the winner sits under the finish time. */
 .result-metrics {
   display: grid;
   grid-template-columns: max-content minmax(0, max-content);
@@ -109,6 +139,9 @@ h3 {
 .metric small {
   color: var(--text-secondary);
   font-size: 11px;
+}
+.metric .time-behind {
+  flex-basis: 100%;
 }
 .metric.caution strong {
   color: var(--accent-warning);
@@ -178,7 +211,11 @@ h3 {
       'build deck parents';
   }
   .result-metrics {
-    grid-template-columns: repeat(4, minmax(max-content, 1fr));
+    grid-template-columns: repeat(3, minmax(max-content, 1fr));
+  }
+  /* The band has room beside the finish time, so its gap to the winner stays on the same line. */
+  .metric .time-behind {
+    flex-basis: auto;
   }
   .metric {
     grid-template-columns: minmax(0, 1fr);
@@ -191,7 +228,7 @@ h3 {
 @container runner-profile (min-width: 1480px) {
   .profile-zones {
     grid-template-columns:
-      fit-content(260px) minmax(280px, 320px) max-content minmax(400px, 1fr)
+      fit-content(320px) minmax(280px, 320px) max-content minmax(400px, 1fr)
       max-content;
     grid-template-areas: 'identity build result deck parents';
   }

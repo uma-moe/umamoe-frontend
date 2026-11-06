@@ -79,6 +79,17 @@
 >
   <div class="profile-zones">
     <div class="profile-zone profile-identity">
+      {#if result}
+        <p
+          class="finish-place"
+          class:winner={result.finishOrder === 1}
+          class:podium={result.finishOrder === 2 || result.finishOrder === 3}
+        >
+          <span class="sr-only">Finished</span>
+          <strong>{ordinalPlace(result.finishOrder)}</strong>
+          <small>of {fieldSize}</small>
+        </p>
+      {/if}
       <ProfileVeteranIdentity
         summary={identity(runner)}
         score={score(runner) || undefined}
@@ -118,17 +129,10 @@
         <dl class="result-metrics">
           {#if result}
             <div class="metric">
-              <dt>Finish</dt>
-              <dd>
-                <strong>{ordinalPlace(result.finishOrder)}</strong>
-                <small>of {fieldSize}</small>
-              </dd>
-            </div>
-            <div class="metric">
               <dt>Finish time</dt>
               <dd>
                 <strong>{formatRaceTime(result.finishTime)}</strong>
-                <small>
+                <small class="time-behind">
                   {result.finishOrder === 1 ? 'Winner' : '+' + timeBehind.toFixed(2) + ' s'}
                 </small>
               </dd>
