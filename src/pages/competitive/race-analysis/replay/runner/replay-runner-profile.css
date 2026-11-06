@@ -31,13 +31,45 @@
 /* The finishing position leads, as the results table's first column does. */
 .profile-identity {
   grid-area: identity;
+  align-content: space-between;
+  gap: 12px;
+  background: color-mix(in srgb, var(--runner-color) 8%, var(--card-surface-bg));
+}
+.identity-head {
   display: flex;
   align-items: center;
   gap: 14px;
-  background: color-mix(in srgb, var(--runner-color) 8%, var(--card-surface-bg));
-}
-.profile-identity > :global(.veteran-identity) {
   min-width: 0;
+}
+.identity-head > :global(.veteran-identity) {
+  min-width: 0;
+}
+.race-entry {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+  margin: 0;
+}
+.race-entry dt {
+  color: var(--text-secondary);
+  font-size: 11px;
+}
+.race-entry dd {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  margin: 0;
+  font-variant-numeric: tabular-nums;
+}
+.race-entry strong {
+  font-size: 14px;
+  font-weight: 650;
+  line-height: 1.4;
+}
+.race-entry img {
+  flex: none;
+  width: 20px;
+  height: 20px;
 }
 .finish-place {
   display: grid;
@@ -143,10 +175,10 @@ h3 {
 .metric .time-behind {
   flex-basis: 100%;
 }
-.metric.good strong {
+.good strong {
   color: var(--accent-success);
 }
-.metric.bad strong {
+.bad strong {
   color: var(--accent-error);
 }
 .empty {
@@ -190,6 +222,18 @@ h3 {
     grid-column: 1 / -1;
   }
 }
+/* A band-wide identity zone puts the race entry beside who the runner is; the name gives way first. */
+@container runner-profile (min-width: 520px) and (max-width: 699px) {
+  .profile-identity {
+    grid-template-columns: minmax(0, max-content) minmax(max-content, 1fr);
+    align-content: center;
+    align-items: center;
+    column-gap: 32px;
+  }
+  .race-entry {
+    grid-template-columns: repeat(3, minmax(max-content, 1fr));
+  }
+}
 /*
  * Two rows: who the runner is, how the race went and their parents, then the build beside the deck. The build column
  * runs through both rows, so the dividers line up.
@@ -209,26 +253,28 @@ h3 {
       'build deck deck';
   }
 }
-/* The build, the deck and the parents keep their desktop row; who the runner is and the result form a band above. */
+/*
+ * The build, the deck and the parents keep their desktop row. Who the runner is runs as a band above the build and the
+ * deck, with the race entry beside the name, and the result sits above the parents.
+ */
 @container runner-profile (min-width: 1100px) and (max-width: 1479px) {
   .profile-zones {
     grid-template-columns: minmax(280px, 320px) minmax(400px, 1fr) max-content;
     grid-template-areas:
-      'identity result result'
+      'identity identity result'
       'build deck parents';
   }
-  .result-metrics {
+  .profile-identity {
+    grid-template-columns: minmax(0, max-content) minmax(max-content, 1fr);
+    align-content: center;
+    align-items: center;
+    column-gap: 40px;
+  }
+  .race-entry {
     grid-template-columns: repeat(3, minmax(max-content, 1fr));
   }
-  /* The band has room beside the finish time, so its gap to the winner stays on the same line. */
   .metric .time-behind {
     flex-basis: auto;
-  }
-  .metric {
-    grid-template-columns: minmax(0, 1fr);
-    grid-column: auto;
-    align-content: start;
-    gap: 2px;
   }
 }
 /* One row once the deck's names fit; who the runner is takes only the width it needs. */

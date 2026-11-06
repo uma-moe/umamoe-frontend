@@ -2,7 +2,13 @@
   import { onMount } from 'svelte';
   import type { RaceRunner } from '@/lib/race/capture/race-capture-parser';
   import type { HorseDiagnostics } from '@/lib/race/capture/race-diagnostics';
-  import { formatRaceTime, ordinalPlace } from '@/lib/race/replay/race-display';
+  import {
+    formatRaceTime,
+    moodIcon,
+    moodName,
+    ordinalPlace,
+    type MoodName
+  } from '@/lib/race/replay/race-display';
   import { loadSkills, skillPointTotal, type SkillData } from '@/lib/game-data/skills/skills';
   import { normalizeVeteranRecord } from '@/lib/veterans/records/veteran-normalizer';
   import { veteranSupportCards } from '@/lib/veterans/records/veteran-profile';
@@ -34,6 +40,14 @@
     color: string;
   } = $props();
 
+  const moodTones: Record<MoodName, 'good' | 'bad' | 'neutral'> = {
+    Awful: 'bad',
+    Bad: 'bad',
+    Normal: 'neutral',
+    Good: 'good',
+    Great: 'good'
+  };
+
   let skillCatalog = $state.raw(new Map<number, SkillData>());
 
   /** Null until the catalog prices every learned skill. */
@@ -51,6 +65,11 @@
   const start = $derived(horse ? startOutcome(horse, runner.result) : undefined);
   const result = $derived(runner.result);
   const timeBehind = $derived(result ? result.finishTime - winningTime : 0);
+  const popularity = $derived.by(() => {
+    const rank = horse?.popularity ?? Number(runner.raw.popularity);
+    return Number.isInteger(rank) && rank > 0 ? rank : undefined;
+  });
+  const mood = $derived(moodName(runner.raw.motivation));
   const deck = $derived(
     veteranSupportCards(runner.raw).map((card) => ({
       id: card.support_card_id,
@@ -79,22 +98,56 @@
 >
   <div class="profile-zones">
     <div class="profile-zone profile-identity">
-      {#if result}
-        <p
-          class="finish-place"
-          class:winner={result.finishOrder === 1}
-          class:podium={result.finishOrder === 2 || result.finishOrder === 3}
-        >
-          <span class="sr-only">Finished</span>
-          <strong>{ordinalPlace(result.finishOrder)}</strong>
-          <small>of {fieldSize}</small>
-        </p>
-      {/if}
-      <ProfileVeteranIdentity
-        summary={identity(runner)}
-        score={score(runner) || undefined}
-        rankPlacement="details"
-      />
+      <div class="identity-head">
+        {#if result}
+          <p
+            class="finish-place"
+            class:winner={result.finishOrder === 1}
+            class:podium={result.finishOrder === 2 || result.finishOrder === 3}
+          >
+            <span class="sr-only">Finished</span>
+            <strong>{ordinalPlace(result.finishOrder)}</strong>
+            <small>of {fieldSize}</small>
+          </p>
+        {/if}
+        <ProfileVeteranIdentity
+          summary={identity(runner)}
+          score={score(runner) || undefined}
+          rankPlacement="details"
+        />
+      </div>
+      <dl
+        class="race-entry"
+        aria-label="Race entry"
+      >
+        <div>
+          <dt>Gate</dt>
+          <dd><strong>{runner.index + 1}</strong></dd>
+        </div>
+        {#if popularity !== undefined}
+          <div>
+            <dt>Popularity</dt>
+            <dd><strong>{ordinalPlace(popularity)}</strong></dd>
+          </div>
+        {/if}
+        {#if mood}
+          <div
+            class:good={moodTones[mood] === 'good'}
+            class:bad={moodTones[mood] === 'bad'}
+          >
+            <dt>Mood</dt>
+            <dd>
+              <img
+                src={moodIcon(mood)}
+                alt=""
+                width="20"
+                height="20"
+              />
+              <strong>{mood}</strong>
+            </dd>
+          </div>
+        {/if}
+      </dl>
     </div>
     <section
       class="profile-zone profile-build"
