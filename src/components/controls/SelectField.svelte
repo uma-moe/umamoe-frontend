@@ -387,16 +387,20 @@
     border-bottom: 0;
   }
   .select-panel button:has(.rich-copy) {
-    min-height: 42px;
-    gap: 6px;
-    padding-block: 5px;
+    min-height: 34px;
+    gap: 8px;
+    padding-block: 3px;
+  }
+  .select-panel button:has(.rich-copy) img {
+    width: 32px;
+    height: 24px;
+    margin-right: 0;
   }
   .select-panel button > :global(svg) {
     flex: 0 0 auto;
   }
   .rich-copy {
     display: grid;
-    gap: 2px;
     line-height: 1.1;
   }
   .rich-copy > span {
@@ -408,6 +412,7 @@
     overflow: hidden;
     text-overflow: ellipsis;
     font-size: var(--select-description-size, 10px);
+    line-height: 1.15;
     color: var(--select-description-color, var(--accent-secondary));
   }
   .select-panel button img {
