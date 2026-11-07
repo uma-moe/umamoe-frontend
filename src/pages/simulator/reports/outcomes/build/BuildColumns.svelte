@@ -3,6 +3,7 @@
   import Button from '@/components/controls/Button.svelte';
   import BuildColumnHead from './BuildColumnHead.svelte';
   import BuildSkillRow from './BuildSkillRow.svelte';
+  import { sortByGameOrder } from '@/lib/game-data/skills/skill-order';
   import {
     checkText,
     contributionScale,
@@ -61,6 +62,8 @@
 {#snippet buildCard(build: TheorizedBuild, index: number)}
   {@const title = ordinal(index + 1)}
   {@const scale = contributionScale(build.cells)}
+  <!-- The shop's order, so the plan can be bought in one pass; `build.cells` keeps the worth order. -->
+  {@const inShopOrder = sortByGameOrder(build.cells, (cell) => cell.skill.offer.skill)}
   <article
     class="column"
     class:pick={index === 0}
@@ -84,7 +87,7 @@
       class="cells"
       aria-label={index === 0 ? 'Skills to buy' : 'Skills in the ' + title + ' build'}
     >
-      {#each build.cells as cell (cell.skill.key)}
+      {#each inShopOrder as cell (cell.skill.key)}
         <li>
           <BuildSkillRow
             offer={cell.skill.offer}

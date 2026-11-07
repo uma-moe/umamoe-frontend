@@ -14,6 +14,11 @@
   let open = $state(false);
   let history = $state(false);
 
+  /** Development can suppress the automatic release dialog; the footer's What's new still opens it. */
+  const autoOpen = !['false', '0'].includes(
+    String(import.meta.env.VITE_UPDATE_NOTIFICATION ?? '').toLowerCase()
+  );
+
   const updates = UPDATE_LOG.map((update) => ({
     ...update,
     categories: update.categories.filter(
@@ -55,6 +60,8 @@
   });
 
   onMount(() => {
+    if (!autoOpen) return;
+
     let stopped = false;
     let timer: ReturnType<typeof setInterval> | undefined;
     void afterPageReady().then(() => {

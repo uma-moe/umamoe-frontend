@@ -1,5 +1,6 @@
 <script lang="ts">
   import { skillImage } from '@/lib/game-data/skills/skills';
+  import { sortByGameOrder } from '@/lib/game-data/skills/skill-order';
   import BuildSkillRow from './BuildSkillRow.svelte';
   import {
     contributionScale,
@@ -21,6 +22,8 @@
   let { skills, ruledOut, unprocessed = [], skillUnit = 'lengths', phaseBounds }: Props = $props();
 
   const scale = $derived(contributionScale(skills));
+  /** The shop's order, so the list reads as the shop does; `skills` keeps the worth order. */
+  const inShopOrder = $derived(sortByGameOrder(skills, (skill) => skill.offer.skill));
 </script>
 
 {#if skills.length}
@@ -32,7 +35,7 @@
       All skill scores <span>{skills.length}</span>
     </h3>
     <ul class="skills">
-      {#each skills as skill (skill.key)}
+      {#each inShopOrder as skill (skill.key)}
         <li class:dimmed={!skill.bought}>
           <BuildSkillRow
             offer={skill.offer}

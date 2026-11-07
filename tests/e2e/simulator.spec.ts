@@ -11,6 +11,59 @@ const cm = JSON.parse(
   gunzipSync(readFileSync('tests/e2e/fixtures/hakuraku-cm.json.gz')).toString()
 );
 
+/** A nine-runner field the auto-populate endpoint can answer with, so race tests start as they used to. */
+function generatedField() {
+  const cards = [100201, 103201, 106801, 100103, 100701, 101101, 100602, 102101, 106001];
+  const styles = ['Nige', 'Senko', 'Sashi'];
+  return {
+    schema_version: 1,
+    source: { kind: 'rooms', course_id: 10506 },
+    layout: { teams: 3, team_size: 3, mobs: 0, mob_team_size: 3 },
+    teams: [1, 2, 3].map((teamId) => ({
+      team_id: teamId,
+      kind: 'player',
+      runners: [0, 1, 2].map((member) => ({
+        card_id: cards[(teamId - 1) * 3 + member],
+        stats: { speed: 1200, stamina: 900, power: 1000, guts: 600, wisdom: 800 },
+        running_style: styles[member],
+        motivation: 4,
+        aptitudes: {
+          distance: [7, 7, 7, 7],
+          running_style: [7, 7, 7, 7],
+          ground: [7, 7]
+        },
+        skills: [
+          { skill_id: 200001, level: 1 },
+          { skill_id: 200012, level: 1 }
+        ],
+        frame_order: (teamId - 1) * 3 + member + 1,
+        team_member_id: member + 1,
+        team_id: teamId,
+        is_mob: false
+      }))
+    }))
+  };
+}
+
+async function populateField(page: Page) {
+  await page
+    .getByRole('button', { name: /^(Populate|Repopulate)$/ })
+    .first()
+    .click();
+  await expect(page.locator('.field .runner')).toHaveCount(9);
+}
+
+async function gotoRaceField(page: Page) {
+  await page.goto('/simulator/race');
+  await populateField(page);
+}
+
+async function loadExampleField(page: Page) {
+  await page.getByRole('button', { name: 'Import', exact: true }).click();
+  await page.getByRole('menuitem', { name: 'Load example', exact: true }).click();
+  await expect(page.locator('.field .runner')).toHaveCount(9);
+}
+
 async function expandField(page: Page) {
   await expect(page.getByRole('region', { name: 'Race field', exact: true })).toBeVisible();
 }
@@ -31,6 +84,7 @@ async function openBuildCode(page: Page) {
 async function useTwoRunners(page: Page) {
   await expandField(page);
   const field = page.getByRole('region', { name: 'Race field', exact: true });
+  if ((await field.locator('.runner').count()) === 0) await populateField(page);
   while ((await field.locator('.runner').count()) > 2) {
     await field
       .getByRole('button', { name: /^Delete / })
@@ -64,6 +118,53 @@ test.beforeEach(async ({ page }) => {
   await page.route('**/resources/*/room_match_races.json*', (route) =>
     route.fulfill({ json: { races: [{ race_instance_id: 800023, course_set_id: 10506 }] } })
   );
+  await page.route('**/api/sim/field', (route) => route.fulfill({ json: generatedField() }));
+});
+
+test('Race field opens empty and populates for its race settings', async ({ page }) => {
+  await page.goto('/simulator/race');
+  await expect(page.locator('.field .runner')).toHaveCount(0);
+  await expect(page.getByText('CM races only')).toBeVisible();
+  const populate = page.getByRole('button', { name: 'Populate', exact: true });
+  await expect(populate.first()).toBeEnabled();
+  await populate.first().click();
+  await expect(page.locator('.field .runner')).toHaveCount(9);
+  await expect(page.getByText(/Populated 9 real CM runners/)).toBeVisible();
+});
+
+test('Populating explains a course without CM data and the minute limit', async ({ page }) => {
+  let reply = { status: 503, json: { error: 'no published CM snapshot for course 10601' } };
+  await page.route('**/api/sim/field', (route) => route.fulfill(reply));
+
+  await page.goto('/simulator/race');
+  const populate = page.getByRole('button', { name: 'Populate', exact: true }).first();
+  await populate.click();
+  await expect(page.getByText(/This course has no CM data/)).toBeVisible();
+
+  reply = { status: 429, headers: { 'retry-after': '42' }, json: { error: 'rate_limited' } };
+  await populate.click();
+  await expect(page.getByText(/once a minute. Try again in 42 seconds/)).toBeVisible();
+});
+
+test('Repopulating asks before replacing the user’s runners', async ({ page }) => {
+  await gotoRaceField(page);
+  const field = page.getByRole('region', { name: 'Race field', exact: true });
+  await field
+    .getByRole('button', { name: /^Edit / })
+    .first()
+    .click();
+  await page.getByRole('button', { name: 'Save Uma', exact: true }).click();
+
+  await field.getByRole('button', { name: 'Repopulate', exact: true }).click();
+  const dialog = page.getByRole('dialog', { name: 'Replace the field?' });
+  await expect(dialog).toBeVisible();
+  await dialog.getByRole('button', { name: 'Cancel', exact: true }).click();
+  await expect(field.locator('.runner')).toHaveCount(9);
+
+  await field.getByRole('button', { name: 'Repopulate', exact: true }).click();
+  await dialog.getByRole('button', { name: 'Populate', exact: true }).click();
+  await expect(dialog).toBeHidden();
+  await expect(field.locator('.runner')).toHaveCount(9);
 });
 
 test('Course setup preserves every searchable resource option and its breakdown', async ({
@@ -78,6 +179,7 @@ test('Course setup preserves every searchable resource option and its breakdown'
   );
 
   await page.goto('/simulator/race');
+  await populateField(page);
   // The setup reads top to bottom: the race with its course and sampling, then the field; running stays in the bar
   // under them.
   const race = page.getByRole('region', { name: 'Race', exact: true }),
@@ -574,7 +676,7 @@ for (const count of [2, 9, 18])
         });
       });
 
-      await page.goto('/simulator/race');
+      await gotoRaceField(page);
       if (count === 2) await useTwoRunners(page);
       if (count === 18)
         for (let i = 0; i < 9; i++)
@@ -859,6 +961,7 @@ test('Default comparison uses complete CM builds and Veterans is a collection pi
   page
 }) => {
   await page.goto('/simulator/race');
+  await loadExampleField(page);
   await expect(page.locator('.field .runner')).toHaveCount(9);
   await expect(page.locator('.field .team-indicator')).toHaveText([
     'Blue team',
@@ -1358,6 +1461,7 @@ test('Color teams support custom colors, direct row actions and independent runn
   page
 }) => {
   await page.goto('/simulator/race');
+  await loadExampleField(page);
   const field = page.getByRole('region', { name: 'Race field', exact: true }),
     first = field.locator('.runner').first();
 
@@ -1459,6 +1563,7 @@ test('Setup shows a compact card per runner with her stats, skill points, skill 
 
   await page.setViewportSize({ width: 1920, height: 1080 });
   await page.goto('/simulator/race');
+  await loadExampleField(page);
   const cards = page.locator('.field .runner'),
     first = cards.first(),
     skillList = first.getByRole('button', { name: 'Skills for Silence Suzuka', exact: true });
@@ -2065,7 +2170,10 @@ test('Build search prices the skills on offer by hint and answers with the skill
   }
 
   await expect(page.getByRole('group', { name: 'Hint for Corner Recovery ○' })).toContainText('5');
-  await expect(offers.getByRole('listitem').first()).toContainText('102 SP');
+  // The game's shop order: the gold she buys sits above the ○ it upgrades, so the list can be bought in one pass.
+  const offerRows = offers.getByRole('listitem');
+  await expect(offerRows.first()).toContainText('Swinging Maestro');
+  await expect(offerRows.nth(1)).toContainText('102 SP');
   await find.click();
   const result = page.getByRole('region', { name: 'Result', exact: true });
   // The answer: how many skills to buy, their SP and what they gain her. An upgrade and the skill it builds on are one
@@ -2320,7 +2428,10 @@ test('Build codes load the runner, the course, the goal and what she can buy on 
   const offers = page.getByRole('list', { name: 'Skills on offer' });
   await expect(offers.getByRole('listitem')).toHaveCount(3);
   // Fast Learner takes another 10% off: 170 at hint 5 is 50% off.
-  await expect(offers.getByRole('listitem').first()).toContainText(/Corner Recovery.*85 SP/);
+  const cornerRecovery = offers
+    .getByRole('listitem')
+    .filter({ has: page.getByRole('group', { name: 'Hint for Corner Recovery ○' }) });
+  await expect(cornerRecovery).toContainText(/Corner Recovery.*85 SP/);
   // Team Trials draws its course per race, so she races the distance's pool of tracks, one per race.
   const tracks = page.getByRole('group', { name: 'Tracks', exact: true });
   await expect(tracks).toContainText('1 of 1 courses');
@@ -2363,7 +2474,8 @@ test('Build codes load the runner, the course, the goal and what she can buy on 
   await expect(page.locator('#hp-stamina')).toHaveValue('1104');
   // A code pasted on the race sim opens the dialog with both runners, who join the field.
   await page.getByRole('link', { name: 'Race sim', exact: true }).click();
-  await expect(page.locator('.field .runner')).toHaveCount(9);
+  await expect(page.locator('.field .runner')).toHaveCount(0);
+  await populateField(page);
   await page.evaluate((text) => {
     const data = new DataTransfer();
     data.setData('text', text);
@@ -2374,7 +2486,7 @@ test('Build codes load the runner, the course, the goal and what she can buy on 
 
   await expect(dialog.getByText('Runners', { exact: true })).toBeVisible();
   await expect(dialog).toContainText(
-    'both runners to the race field in place of the example runners'
+    'both runners to the race field in place of the generated field'
   );
   await dialog.getByRole('button', { name: 'Load', exact: true }).click();
   await expect(page.locator('.field .runner')).toHaveCount(2);

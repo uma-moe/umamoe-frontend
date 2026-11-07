@@ -53,6 +53,35 @@ describe('Skill Explorer data', () => {
     expect(scope.styles.all[0]!.win).toBeCloseTo(4.8);
   });
 
+  it('attaches the forced value, setup and forced points of a gated skill to its row', () => {
+    const scope = parseScope({
+      ...courseFile,
+      gated: {
+        '1': {
+          '200011': {
+            forced: [5.2, 4.7, 0.9, 0.02],
+            setup: { feeders: [200331, 200341], sp: 270, at: 0.1 },
+            points: [
+              { at: 0.1, win: 4.4, rate: 0.9, mean: 0.12, raced: true },
+              { at: 0.3, win: 5.2, rate: 0.9, mean: 0.32 }
+            ]
+          }
+        }
+      }
+    });
+
+    const gated = scope.styles['1'][0]!.gated!;
+    expect(gated.forced).toEqual({ win: 5.2, expected: 4.7, rate: 0.9, mean: 0.02 });
+    expect(gated.setup).toEqual({ feeders: [200331, 200341], sp: 270, at: 0.1 });
+    expect(gated.points?.[0]).toMatchObject({ at: 0.1, raced: true });
+    expect(gated.points?.[0]?.expected).toBeCloseTo(3.96);
+    expect(gated.points?.[1]?.raced).toBe(false);
+    // Every style averaged keeps the forced value, not the single course's setup.
+    expect(scope.styles.all[0]!.gated).toEqual({
+      forced: { win: 5.2, expected: 4.7, rate: 0.9, mean: 0.02 }
+    });
+  });
+
   it('reads the partners of each skill on a single course', () => {
     const scope = parseScope(courseFile);
 

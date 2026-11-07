@@ -88,12 +88,21 @@ header p {
   margin: 0;
 }
 
+.worth.gated {
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+
 .worth > div {
   min-width: 0;
   padding: 4px 6px;
   border: 1px solid var(--border-primary);
   border-radius: 5px;
   background: var(--bg-secondary);
+}
+
+/* The value the chart shows. */
+.worth > div.shown {
+  border-color: rgb(var(--accent-primary-rgb) / 0.45);
 }
 
 .worth dt {
@@ -201,46 +210,114 @@ h4 {
   margin: 0.2rem 0;
 }
 
-.related ul {
-  display: grid;
-  gap: 0.2rem;
-  margin: 0;
-  padding: 0;
-  list-style: none;
-}
-
-.related li {
-  display: grid;
-  grid-template-columns: 20px minmax(0, 1fr) auto;
-  gap: 0.4rem;
-  align-items: center;
-  font-size: 0.75rem;
-}
-
-.related li img {
-  width: 20px;
-  height: 20px;
-  object-fit: cover;
-  object-position: top;
-  border-radius: 4px;
-}
-
-.related .name {
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.related .gain {
-  color: var(--accent-success);
+/* Timings as one table: names left, numbers right-aligned under the column names each group's heading row gives. It
+   runs into the card's side padding, so its strips span the card while its text lines up with the rest. */
+.timing table {
+  width: calc(100% + 20px);
+  margin: 0.2rem -10px 0;
+  border-collapse: collapse;
+  font-size: 0.72rem;
   font-variant-numeric: tabular-nums;
 }
 
-.gate {
-  margin: 0 0 0.25rem;
+.timing th,
+.timing td {
+  padding: 4px 6px;
+}
+
+.timing tr > :first-child {
+  padding-left: 10px;
+}
+
+.timing tr > :last-child {
+  padding-right: 10px;
+}
+
+.timing .group th {
+  padding-top: 10px;
+  border-bottom: 1px solid var(--border-primary);
+  color: var(--text-muted);
+  font-size: 0.62rem;
+  font-weight: 600;
+  text-align: right;
+  white-space: nowrap;
+}
+
+.timing .group th[scope='colgroup'] {
   color: var(--text-secondary);
-  font-size: 0.72rem;
-  line-height: 1.35;
+  letter-spacing: 0.05em;
+  text-align: left;
+  text-transform: uppercase;
+}
+
+.timing .group:first-child th {
+  padding-top: 0;
+}
+
+/* Each timing below the heading is set off from the one above by a faint line. */
+.timing tbody:not(.group) + tbody:not(.group) {
+  border-top: 1px solid color-mix(in srgb, var(--border-primary) 55%, transparent);
+}
+
+.timing tbody th[scope='row'] {
+  width: 100%;
+  color: var(--text-secondary);
+  font-weight: 400;
+  text-align: left;
+  white-space: nowrap;
+}
+
+.timing tbody td {
+  color: var(--text-muted);
+  text-align: right;
+  white-space: nowrap;
+}
+
+/* The highlighted timing: a plain strip across the card, lined above and below. */
+.timing tbody.chosen {
+  border-block: 1px solid rgb(var(--accent-primary-rgb) / 0.35);
+  background: rgb(var(--accent-primary-rgb) / 0.09);
+}
+
+.timing tbody.chosen + tbody:not(.group) {
+  border-top-color: transparent;
+}
+
+.timing tbody.chosen th[scope='row'] {
+  color: var(--text-primary);
+}
+
+.timing .value {
+  font-weight: 650;
+}
+
+.timing .value.positive {
+  color: var(--accent-success);
+}
+
+.timing .value.negative {
+  color: var(--accent-error);
+}
+
+.timing .tag {
+  margin-left: 6px;
+  color: var(--text-muted);
+  font-size: 0.62rem;
+  font-weight: 400;
+}
+
+/* Where the bought skills open the gate, under their chips. */
+.set-up .note {
+  margin: 0.3rem 0 0;
+  color: var(--text-muted);
+  font-size: 0.7rem;
+}
+
+.timing .legend {
+  display: block;
+  margin-top: 0.25rem;
+  color: var(--text-muted);
+  font-size: 0.66rem;
 }
 
 svg {
@@ -250,20 +327,17 @@ svg {
   border-radius: 6px;
 }
 
+/* The simulator's race phase colours, as on the explorer's chart. */
 .phase-0 {
-  fill: rgb(var(--accent-success-rgb) / 0.08);
+  fill: color-mix(in srgb, var(--accent-secondary) 8%, transparent);
 }
 
 .phase-1 {
-  fill: rgb(var(--on-surface-rgb) / 0.03);
+  fill: color-mix(in srgb, var(--accent-primary) 8%, transparent);
 }
 
 .phase-2 {
-  fill: rgb(var(--accent-warning-rgb) / 0.08);
-}
-
-.phase-3 {
-  fill: rgb(var(--accent-error-rgb) / 0.09);
+  fill: color-mix(in srgb, var(--accent-purple) 8%, transparent);
 }
 
 .phase-label {
@@ -340,10 +414,6 @@ figcaption {
 .ends span + span::before {
   margin-right: 0.5rem;
   content: '–';
-}
-
-.build-toggle {
-  display: flex;
 }
 
 .notes {

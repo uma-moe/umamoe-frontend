@@ -49,6 +49,8 @@
     dismissTouchTooltip?: boolean;
     zoomable?: boolean;
     onaxisclick?: (value: number) => void;
+    /** The x-axis value under the pointer, or undefined once it leaves the plot. */
+    onaxishover?: (value: number | undefined) => void;
     onplotclick?: (x: number, y: number) => void;
     onzoom?: (start: number, end: number) => void;
   }
@@ -61,6 +63,7 @@
     dismissTouchTooltip = false,
     zoomable = false,
     onaxisclick,
+    onaxishover,
     onplotclick,
     onzoom
   }: Props = $props();
@@ -153,21 +156,33 @@
   onMount(() => {
     const mountedChart = echarts.init(host, undefined, { renderer: 'svg' });
     chart = mountedChart;
-    mountedChart.getZr().on('click', (event) => {
-      if (!onaxisclick && !onplotclick) return;
+
+    const axisValueAt = (x: number, y: number) => {
       const grids = Array.isArray(option.grid) ? option.grid : [option.grid];
       const gridIndex = grids.findIndex((_, index) =>
-        mountedChart.containPixel({ gridIndex: index }, [event.offsetX, event.offsetY])
+        mountedChart.containPixel({ gridIndex: index }, [x, y])
       );
 
-      if (gridIndex < 0) return;
-      const value = (
-        mountedChart.convertFromPixel({ gridIndex }, [event.offsetX, event.offsetY]) as number[]
-      )[0];
+      if (gridIndex < 0) return undefined;
+      const value = (mountedChart.convertFromPixel({ gridIndex }, [x, y]) as number[])[0];
 
-      if (typeof value === 'number' && Number.isFinite(value)) onaxisclick?.(value);
+      return typeof value === 'number' && Number.isFinite(value) ? value : undefined;
+    };
+
+    mountedChart.getZr().on('click', (event) => {
+      if (!onaxisclick && !onplotclick) return;
+      const value = axisValueAt(event.offsetX, event.offsetY);
+      if (value === undefined) return;
+
+      onaxisclick?.(value);
       onplotclick?.(event.offsetX, event.offsetY);
     });
+
+    mountedChart.getZr().on('mousemove', (event) => {
+      onaxishover?.(axisValueAt(event.offsetX, event.offsetY));
+    });
+
+    mountedChart.getZr().on('globalout', () => onaxishover?.(undefined));
 
     mountedChart.on('datazoom', () => {
       const zoom = (mountedChart.getOption().dataZoom as { start: number; end: number }[])[0];

@@ -5,65 +5,49 @@
   gap: 10px;
 }
 .first-check-detail {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 6px;
   margin: 0 0 10px;
   color: var(--text-secondary);
   font-size: 12px;
   line-height: 1.5;
 }
-.first-check-detail button {
-  padding: 0;
-  border: 0;
-  background: none;
-  color: var(--accent-primary);
-  font: inherit;
-  text-decoration: underline;
-  cursor: pointer;
-}
-/* Both columns end on one line: the shorter column's cards grow to the taller one. */
 .report-grid {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
-  align-items: stretch;
+  align-items: start;
   gap: 10px;
 }
-.behaviour-report {
+.procs-column,
+.behaviour-column {
   display: flex;
   flex-direction: column;
   gap: 10px;
   min-width: 0;
 }
-.measurement-data {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr);
-  gap: 10px;
-  min-width: 0;
-}
-.decision-reports {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 10px;
-  align-items: start;
-  min-width: 0;
-}
-@media (max-width: 1100px) {
-  .decision-reports {
-    grid-template-columns: minmax(0, 1fr);
+/*
+ * Beside the behaviour cards, skill procs and position keep share their column's height instead of setting it.
+ * Each grows until it shows every row; when both need more than half, they split the height and scroll, and
+ * height left over goes to position keep.
+ */
+@media (min-width: 1101px) {
+  .report-grid.detailed {
+    align-items: stretch;
   }
-}
-.measurement-data :global(.ui-button--ghost.ui-button--sm) {
-  padding: 0;
-  font-weight: 500;
-}
-.measurement-data :global(.compact[open] > .disclosure-content) {
-  margin-top: 2px;
-}
-.measurement-data :global(.compact summary) {
-  min-height: 30px;
+  .report-grid.detailed .procs-column {
+    display: grid;
+    grid-template-rows: minmax(0, max-content) minmax(0, auto);
+    contain: size;
+    min-height: 520px;
+  }
 }
 .simulation-meta {
   display: flex;
   flex-wrap: wrap;
   gap: 4px 16px;
+  padding-block: 6px;
   font-size: 10px;
   color: var(--text-secondary);
 }
@@ -90,17 +74,6 @@
   height: 30px;
   box-sizing: border-box;
 }
-/* A seek time is the same compact button in every table, period list and heading. Placing it by its
-   container outranks the race page's general small-button rule. */
-.diagnostics :global(:is(td, li, .section-heading) .ui-button.ui-button--sm.ui-button--secondary) {
-  min-height: 22px;
-  padding: 0 7px;
-  gap: 4px;
-  font-size: 11px;
-  font-weight: 600;
-  line-height: 1.2;
-  font-variant-numeric: tabular-nums;
-}
 .diagnostics :global(table) {
   font-size: 12px;
 }
@@ -118,20 +91,23 @@
 /* The skill table needs its full width before the behaviour column does. */
 @media (max-width: 1500px) {
   .report-grid {
-    grid-template-columns: minmax(0, 1.7fr) minmax(0, 1fr);
+    grid-template-columns: minmax(0, 1.3fr) minmax(0, 1fr);
   }
 }
 @media (max-width: 1100px) {
   .report-grid {
     grid-template-columns: minmax(0, 1fr);
   }
+  .procs-column > :global(.position-decisions) {
+    max-height: 480px;
+  }
   /* Below the skills the cards wrap in rows: cards that share a row share its height, and a card left
      alone in a row takes the full width. */
-  .behaviour-report {
+  .behaviour-column {
     flex-direction: row;
     flex-wrap: wrap;
   }
-  .behaviour-report > :global(*) {
+  .behaviour-column > :global(*) {
     flex: 1 1 340px;
   }
 }
@@ -152,9 +128,6 @@
   border: 1px solid var(--border-subtle);
   border-radius: var(--radius-md);
   background: var(--surface-2);
-}
-.runner-notice {
-  grid-column: 1 / -1;
 }
 @media (max-width: 1100px) {
   .runner-overview {

@@ -1,9 +1,11 @@
 <script lang="ts">
-  import type { Snippet } from 'svelte';
+  import type { ComponentProps, Snippet } from 'svelte';
   import type { ParsedRaceCapture } from '@/lib/race/capture/race-capture-parser';
   import { formatRaceTime, trackDetailName } from '@/lib/race/replay/race-display';
+  import Badge from '@/components/Badge.svelte';
   import Icon from '@/components/Icon.svelte';
   import type { IconName } from '@/components/icon-types';
+  import type { DetailedSimulation } from '../detailed-simulation';
   import type { Course, CourseData } from './replay-course';
 
   let {
@@ -13,6 +15,7 @@
     distance,
     endTime,
     trackOverride,
+    simulation,
     hasSession,
     current,
     height = $bindable(0),
@@ -25,6 +28,7 @@
     distance: number;
     endTime: number;
     trackOverride: string;
+    simulation: DetailedSimulation;
     hasSession: boolean;
     /** The section in view, which its tab marks. */
     current: string;
@@ -33,31 +37,26 @@
     onjump: (section: string) => void;
   } = $props();
 
-  const conditions = $derived(
-    [
-      capture.track.condition
-        ? trackDetailName('condition', capture.track.condition) + ' ground'
-        : undefined,
-      capture.track.weather ? trackDetailName('weather', capture.track.weather) : undefined,
-      capture.track.season ? trackDetailName('season', capture.track.season) : undefined,
-      course
-        ? course.turn === 1
-          ? 'Right-handed'
-          : course.turn === 2
-            ? 'Left-handed'
-            : 'Straight'
-        : undefined
-    ]
-      .filter(Boolean)
-      .join(', ') || 'Conditions were not included in this capture'
-  );
+  type BadgeTone = ComponentProps<typeof Badge>['tone'];
 
-  /** A tab's `short` name is the one a phone shows, keeping the bar one row. */
+  const simulationBadges: Record<DetailedSimulation['status'], { tone: BadgeTone; label: string }> =
+    {
+      ready: { tone: 'success', label: 'Detailed resimulation' },
+      queued: { tone: 'accent', label: 'Resimulation queued' },
+      running: { tone: 'accent', label: 'Resimulating…' },
+      failed: { tone: 'warning', label: 'Resimulation failed' },
+      unavailable: { tone: 'neutral', label: 'Recorded race' }
+    };
+
+  const turnNames: Record<number, string> = { 1: 'Right-handed', 2: 'Left-handed' };
+
+  /** A tab's `short` name is the one a phone shows. */
   type ReportSection = { id: string; icon: IconName; label: string; short: string };
 
   const raceSections: ReportSection[] = [
     { id: 'results', icon: 'rankings', label: 'Race results', short: 'Results' },
-    { id: 'replay', icon: 'race', label: 'Race replay', short: 'Replay' }
+    { id: 'replay', icon: 'race', label: 'Race replay', short: 'Replay' },
+    { id: 'runner', icon: 'chart', label: 'Runner analysis', short: 'Runner' }
   ];
 
   const sessionSection: ReportSection = {
@@ -67,6 +66,35 @@
     short: 'Session'
   };
 
+  const trackName = $derived(
+    course ? (courses?.names[course.raceTrackId] ?? 'Track') : 'Race capture'
+  );
+  const courseLength = $derived.by(() => {
+    const metres = Math.round(distance).toLocaleString() + ' m';
+    if (!course) return metres;
+
+    return metres + (course.surface === 1 ? ' turf' : ' dirt');
+  });
+  const courseNote = $derived.by(() => {
+    if (trackOverride) return 'Manual course';
+    if (capture.courseId) return undefined;
+
+    return 'Choose the course in Display options';
+  });
+  const raceFacts = $derived(
+    [
+      capture.track.condition
+        ? trackDetailName('condition', capture.track.condition) + ' ground'
+        : undefined,
+      capture.track.weather ? trackDetailName('weather', capture.track.weather) : undefined,
+      capture.track.season ? trackDetailName('season', capture.track.season) : undefined,
+      course ? (turnNames[course.turn] ?? 'Straight') : undefined,
+      capture.runners.length + ' runners',
+      formatRaceTime(endTime),
+      courseNote
+    ].filter((fact) => fact !== undefined)
+  );
+  const simulationBadge = $derived(simulationBadges[simulation.status]);
   const sections = $derived(hasSession ? [...raceSections, sessionSection] : raceSections);
 </script>
 
@@ -78,38 +106,29 @@
     <span class="replay-icon">
       <Icon
         name="course"
-        size={22}
+        size={18}
       />
     </span>
-    <div>
-      <div class="course-heading">
+    <div class="title-text">
+      <div class="title-line">
         <h2>
-          {(course ? (courses?.names[course.raceTrackId] ?? 'Track') : 'Race capture') +
-            ', ' +
-            Math.round(distance).toLocaleString() +
-            ' m' +
-            (course ? ', ' + (course.surface === 1 ? 'Turf' : 'Dirt') : '')}
+          {trackName}
+          <span class="course-length">{courseLength}</span>
         </h2>
-        <div class="capture-summary">
-          <span>{capture.runners.length} runners, {formatRaceTime(endTime)}</span>
-          <strong>{capture.detailed ? 'Detailed resimulation' : 'Recorded race'}</strong>
-        </div>
-      </div>
-      <p>
-        {conditions}
-        <span class="course-source">
-          {trackOverride
-            ? 'Manual course'
-            : capture.courseId
-              ? 'Course detected'
-              : 'Select a course in Display options'}
+        <span role="status">
+          <Badge tone={simulationBadge.tone}>{simulationBadge.label}</Badge>
         </span>
+      </div>
+      <p
+        class="race-facts"
+        title={raceFacts.join(' · ')}
+      >
+        {#each raceFacts as fact}
+          <span>{fact}</span>
+        {/each}
       </p>
     </div>
   </div>
-  {#if headerActions}
-    <div class="header-actions">{@render headerActions()}</div>
-  {/if}
   <nav
     class="report-navigation"
     aria-label="Jump to analysis section"
@@ -133,6 +152,9 @@
       {/each}
     </div>
   </nav>
+  {#if headerActions}
+    <div class="header-actions">{@render headerActions()}</div>
+  {/if}
 </header>
 
 <style>

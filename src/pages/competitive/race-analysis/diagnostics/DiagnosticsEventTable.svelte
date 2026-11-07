@@ -2,7 +2,7 @@
   import type { ParsedRaceCapture } from '@/lib/race/capture/race-capture-parser';
   import { diagnosticLabel, raceMetricHelp } from '@/lib/race/capture/race-diagnostics';
   import DataTable, { type TableColumn } from '@/components/data/DataTable.svelte';
-  import Button from '@/components/controls/Button.svelte';
+  import SeekTimeButton from './SeekTimeButton.svelte';
   import RaceSkill from '@/pages/competitive/runners/RaceSkill.svelte';
   import DiagnosticsRunnerReference from './DiagnosticsRunnerReference.svelte';
   import { number, rows, seekRow } from './diagnostics-format';
@@ -16,6 +16,7 @@
     index,
     skillNames,
     maxHeight,
+    fill = false,
     onseek,
     onselect
   }: {
@@ -25,8 +26,10 @@
     capture: ParsedRaceCapture;
     index: number;
     skillNames: Map<number, string>;
-    /** Replaces the default nine-row height, for a table that fills a column. */
+    /** Replaces the default nine-row height. */
     maxHeight?: number;
+    /** Scrolls inside the height its container gives it, instead of a fixed number of rows. */
+    fill?: boolean;
     onseek: (time: number) => void;
     onselect: (index: number) => void;
   } = $props();
@@ -51,19 +54,19 @@
     caption={title}
     rows={rows(value)}
     {columns}
-    maxHeight={maxHeight ?? (Array.isArray(value) && value.length > 9 ? 300 : undefined)}
+    maxHeight={fill
+      ? undefined
+      : (maxHeight ?? (Array.isArray(value) && value.length > 9 ? 300 : undefined))}
+    {fill}
     onrowclick={(row) => seekRow(row, onseek)}
     emptyMessage="No observations recorded for this runner."
   >
     {#snippet cell(row, column)}
       {#if /^(time|startTime|endTime)$/.test(column.key) && typeof row[column.key] === 'number'}
-        <Button
-          variant="secondary"
-          size="sm"
-          onclick={() => onseek(Number(row[column.key]))}
-        >
-          {Number(row[column.key]).toFixed(3)} s
-        </Button>
+        <SeekTimeButton
+          time={Number(row[column.key])}
+          {onseek}
+        />
       {:else if /^(horseIndex|.*HorseIndex)$/.test(column.key) && Number(row[column.key]) >= 0}
         <DiagnosticsRunnerReference
           {capture}

@@ -1,92 +1,34 @@
+/* One line from tablet up: the switcher shrinks before Build details would wrap under it. */
 .report-heading {
   display: flex;
-  flex-wrap: wrap;
   align-items: center;
-  gap: 12px;
+  gap: 8px 12px;
   margin-bottom: 8px;
 }
+.report-heading > :global(.ui-button) {
+  flex: none;
+  margin-left: auto;
+}
 h2 {
+  flex: none;
   margin: 0;
   font-size: 17px;
   font-weight: 650;
 }
-.report-actions {
-  margin-left: auto;
-  display: flex;
-  align-items: center;
-  gap: 8px;
+.runner-report {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 10px;
 }
-.report-heading > :global(.outcome-summary) {
-  padding: 0;
-  border: 0;
-  gap: 8px 16px;
-}
-.report-heading > :global(.runner-navigation) {
-  flex: 0 0 auto;
-  flex-wrap: nowrap;
-  width: 550px;
-  max-width: 100%;
-}
-.report-actions > :global(.ui-button) {
-  min-height: 28px;
-  padding-inline: 12px;
-  font-size: 11px;
-}
-@media (max-width: 767px) {
-  .report-heading {
-    display: grid;
-    grid-template-columns: minmax(0, 1fr) auto;
-    gap: 8px;
-  }
-  .report-heading :global(.runner-navigation) {
-    display: contents;
-  }
-  .report-heading :global(.runner-navigation > .ui-button) {
-    justify-self: start;
-  }
-  .report-heading :global(.runner-switcher) {
-    grid-column: 1/-1;
-    grid-row: 2;
-    max-width: none;
-  }
-  .report-actions {
-    grid-column: 2;
-    grid-row: 1;
-  }
-  .report-heading > :global(.outcome-summary) {
-    grid-column: 1 / -1;
-    grid-row: 3;
-  }
-}
-/* CM Data's build card, cut to what this race needs: the skill table below lists the learned skills. */
-.runner-card {
-  min-width: 0;
-  container-type: inline-size;
-}
-/* A wide card puts the stats beside the aptitudes, which keep the width their labels need. */
-@container (min-width: 440px) {
-  .runner-card :global(.build.compact > .build-content) {
-    grid-template-columns: 180px minmax(0, 1fr);
-    align-items: center;
-    column-gap: 12px;
-    row-gap: 4px;
-  }
-}
-.runner-results small {
-  margin-left: 4px;
-  color: var(--text-secondary);
-  font-size: 10px;
-  font-weight: 400;
-}
-
 @media (max-width: 767px) {
   .report-heading {
     flex-wrap: wrap;
-    gap: 10px;
-    margin-bottom: 8px;
   }
-  .report-actions > :global(.ui-button) {
-    min-height: var(--touch-target);
+  /* The switcher takes its own line under the title and Build details. */
+  .report-heading :global(.runner-switcher) {
+    order: 1;
+    flex: 1 1 100%;
+    max-width: none;
   }
 }
 @media (max-width: 700px) {

@@ -13,6 +13,8 @@
     dismissTouchTooltip?: boolean;
     zoomable?: boolean;
     onaxisclick?: (value: number) => void;
+    /** The x-axis value under the pointer, or undefined once it leaves the plot. */
+    onaxishover?: (value: number | undefined) => void;
     onplotclick?: (x: number, y: number) => void;
     onzoom?: (start: number, end: number) => void;
   }
@@ -25,6 +27,7 @@
     dismissTouchTooltip = false,
     zoomable = false,
     onaxisclick,
+    onaxishover,
     onplotclick,
     onzoom
   }: Props = $props();
@@ -82,6 +85,7 @@
       {dismissTouchTooltip}
       {zoomable}
       {onaxisclick}
+      {onaxishover}
       {onplotclick}
       {onzoom}
     />

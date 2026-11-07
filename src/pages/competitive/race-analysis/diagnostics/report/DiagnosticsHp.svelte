@@ -1,7 +1,7 @@
 <script lang="ts">
   import type { ParsedRaceCapture } from '@/lib/race/capture/race-capture-parser';
   import DataTable from '@/components/data/DataTable.svelte';
-  import Button from '@/components/controls/Button.svelte';
+  import SeekTimeButton from '../SeekTimeButton.svelte';
   import RaceSkill from '@/pages/competitive/runners/RaceSkill.svelte';
   import { number, signed } from '../diagnostics-format';
   import { hpReport } from './hp-report';
@@ -163,13 +163,10 @@
         >
           {#snippet cell(row, column)}
             {#if column.key === 'time'}
-              <Button
-                variant="secondary"
-                size="sm"
-                onclick={() => onseek(Number(row.time))}
-              >
-                {Number(row.time).toFixed(3)} s
-              </Button>
+              <SeekTimeButton
+                time={Number(row.time)}
+                {onseek}
+              />
             {:else if column.key === 'skillId'}
               <span class="skill-chip-cell">
                 <RaceSkill

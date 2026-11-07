@@ -6,14 +6,25 @@
     type SkillEffectAlternative
   } from '@/lib/game-data/skills/skill-effects';
   import LazyEChartsSurface from '@/components/charts/LazyEChartsSurface.svelte';
+  import Button from '@/components/controls/Button.svelte';
+  import Checkbox from '@/components/controls/Checkbox.svelte';
+  import InfoIcon from '@/components/feedback/InfoIcon.svelte';
+  import InspectPopover from '@/components/overlays/InspectPopover.svelte';
   import { theme } from '@/stores/theme';
   import {
     accelerationWindows,
     distanceAtTime,
+    sampleAt,
     speedSamples,
     timeAtDistance
   } from './acceleration-activations';
-  import { speedAccelerationChart } from './speed-acceleration-chart';
+  import {
+    plottedSamples,
+    speedAccelerationChart,
+    speedLineReading,
+    speedLines,
+    type SpeedLineId
+  } from './speed-acceleration-chart';
 
   let {
     capture,
@@ -29,10 +40,20 @@
     onseek: (time: number) => void;
   } = $props();
 
+  const legendId = $props.id();
+
   let mechanics = $state.raw(new Map<number, SkillEffectAlternative[]>());
   let status = $state<'loading' | 'ready' | 'error'>('loading');
+  let hidden = $state<SpeedLineId[]>([]);
+  let hoveredDistance = $state<number>();
+
   const samples = $derived(speedSamples(capture, index, distance));
   const windows = $derived(accelerationWindows(capture, index, mechanics));
+  const hoveredSample = $derived(
+    hoveredDistance === undefined
+      ? undefined
+      : sampleAt(plottedSamples(samples), hoveredDistance, 'distance')
+  );
   const chart = $derived(
     speedAccelerationChart({
       samples,
@@ -40,7 +61,8 @@
       raceDistance: distance,
       dark: $theme === 'dark',
       names: skillNames,
-      toDistance: (time) => distanceAtTime(capture, index, time)
+      toDistance: (time) => distanceAtTime(capture, index, time),
+      hidden
     })
   );
 
@@ -59,17 +81,52 @@
     if (time !== undefined) onseek(time);
   }
 
+  function toggleLine(id: SpeedLineId, shown: boolean) {
+    hidden = shown ? hidden.filter((line) => line !== id) : [...hidden, id];
+  }
+
   onMount(() => {
     void load();
   });
 </script>
 
 <section
-  class="report-block report-card acceleration-report"
+  class="report-card acceleration-report"
   aria-label="Speed and acceleration"
 >
   <header class="section-heading">
-    <h3>Speed &amp; acceleration</h3>
+    <div class="chart-title">
+      <h3>Speed &amp; acceleration</h3>
+      <InspectPopover label="About speed and acceleration">
+        {#snippet trigger()}
+          <InfoIcon />
+        {/snippet}
+        <p>
+          Bars show active acceleration skills. Hover for measured acceleration; click to review in
+          replay.
+        </p>
+      </InspectPopover>
+    </div>
+    <div
+      class="legend"
+      role="group"
+      aria-label="Shown lines"
+    >
+      {#each speedLines as line}
+        <div
+          class="legend-item"
+          style:--color-accent={line.color}
+        >
+          <Checkbox
+            id={legendId + '-' + line.id}
+            label={line.label}
+            description={speedLineReading(hoveredSample, line)}
+            checked={!hidden.includes(line.id)}
+            onchange={(shown) => toggleLine(line.id, shown)}
+          />
+        </div>
+      {/each}
+    </div>
   </header>
   {#if samples.length}
     <LazyEChartsSurface
@@ -78,48 +135,31 @@
       label="Current and target speed with acceleration skill windows"
       zoomable
       onaxisclick={seek}
+      onaxishover={(value) => (hoveredDistance = value)}
     />
-  {:else}<p>No speed samples recorded.</p>{/if}
-  {#if status === 'loading'}<p>Loading acceleration skills…</p>
-  {:else if status === 'error'}<p>
-      Could not load acceleration skills. <button
-        class="retry"
-        type="button"
+  {:else}
+    <p class="status">No speed samples recorded.</p>
+  {/if}
+  {#if status === 'loading'}
+    <p class="status">Loading acceleration skills…</p>
+  {:else if status === 'error'}
+    <p class="status">
+      Could not load acceleration skills.
+      <Button
+        variant="secondary"
+        size="sm"
+        icon="refresh"
         onclick={load}
       >
         Retry
-      </button>
+      </Button>
     </p>
-  {:else if !windows.length}<p>No acceleration skills activated.</p>{/if}
-  <p>
-    Bars show active acceleration skills. Hover for measured acceleration; click to review in
-    replay.
-  </p>
+  {:else if !windows.length}
+    <p class="status">No acceleration skills activated.</p>
+  {/if}
 </section>
 
 <style>
   @import '../report-card.css';
-  @import '../report/report-section.css';
-  .section-heading {
-    display: flex;
-    align-items: center;
-    flex-wrap: wrap;
-    gap: 8px;
-    margin-bottom: 10px;
-  }
-  p {
-    margin: 8px 0 0;
-    font-size: 11px;
-    color: var(--text-secondary);
-    line-height: 1.5;
-  }
-  .retry {
-    padding: 0;
-    border: 0;
-    background: none;
-    color: var(--accent-primary);
-    font: inherit;
-    text-decoration: underline;
-    cursor: pointer;
-  }
+  @import './diagnostics-acceleration.css';
 </style>

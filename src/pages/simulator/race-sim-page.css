@@ -155,8 +155,14 @@
   font-size: 12px;
   border-radius: var(--radius-sm);
 }
-.import-notice + .import-notice {
-  margin-top: 8px;
+.replace-note {
+  margin: 0;
+  font-size: 13px;
+  color: var(--text-secondary);
+}
+/* The position-skill option, under the field. */
+.position-checks {
+  padding-bottom: 8px;
 }
 .race-main[hidden] {
   display: none;

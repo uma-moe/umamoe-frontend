@@ -13,6 +13,8 @@
     description?: string;
     metadata?: string;
     eyebrow?: string;
+    /** A short tag beside the title, such as "Beta". */
+    badge?: string;
     tone?: 'brand' | 'primary' | 'warning' | 'rainbow';
     width?: PageWidth;
     actions?: Snippet;
@@ -34,6 +36,7 @@
     description,
     metadata,
     eyebrow,
+    badge,
     tone = 'brand',
     width = 'normal',
     actions,
@@ -92,6 +95,7 @@
       {description}
       {metadata}
       {eyebrow}
+      {badge}
       {tone}
       {actions}
       {flush}

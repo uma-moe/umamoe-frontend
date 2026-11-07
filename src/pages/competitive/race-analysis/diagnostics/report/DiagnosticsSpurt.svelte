@@ -2,7 +2,7 @@
   import type { ParsedRaceCapture } from '@/lib/race/capture/race-capture-parser';
   import type { DiagnosticRow, HorseDiagnostics } from '@/lib/race/capture/race-diagnostics';
   import { theme } from '@/stores/theme';
-  import Button from '@/components/controls/Button.svelte';
+  import SeekTimeButton from '../SeekTimeButton.svelte';
   import LazyEChartsSurface from '@/components/charts/LazyEChartsSurface.svelte';
   import Icon from '@/components/Icon.svelte';
   import DiagnosticsEventTable from '../DiagnosticsEventTable.svelte';
@@ -91,16 +91,19 @@
 >
   <header class="section-heading">
     <h3>
-      Last-spurt decision <small class:caution={spurtCompromised}>{spurtOutcome}</small>
+      Last-spurt decision
+      <small
+        class:good={!spurtCompromised}
+        class:bad={spurtCompromised}
+      >
+        {spurtOutcome}
+      </small>
     </h3>
     {#if typeof spurt.time === 'number'}
-      <Button
-        variant="secondary"
-        size="sm"
-        onclick={() => onseek(Number(spurt.time))}
-      >
-        {spurt.time.toFixed(3)} s
-      </Button>
+      <SeekTimeButton
+        time={Number(spurt.time)}
+        {onseek}
+      />
     {/if}
     <button
       class="calculation-toggle"
@@ -141,7 +144,10 @@
               label="HP balance"
             />
           </dt>
-          <dd class:caution={spurtHpBalance < 0}>
+          <dd
+            class:good={spurtHpBalance > 0}
+            class:bad={spurtHpBalance < 0}
+          >
             {(spurtHpBalance > 0 ? '+' : '') + number(spurtHpBalance)}
             <small>HP</small>
           </dd>
@@ -176,7 +182,10 @@
           <strong>{number(spurt.fullSpurtNeedHp, 2)} HP</strong>
         </span>
         <b aria-hidden="true">=</b>
-        <span class:shortfall={spurtHpBalance < 0}>
+        <span
+          class:good={spurtHpBalance > 0}
+          class:bad={spurtHpBalance < 0}
+        >
           <small>{spurtHpBalance < 0 ? 'HP shortfall' : 'HP spare'}</small>
           <strong>{signed(spurtHpBalance)} HP</strong>
         </span>

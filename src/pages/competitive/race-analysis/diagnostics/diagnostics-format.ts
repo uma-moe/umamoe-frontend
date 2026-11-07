@@ -102,6 +102,15 @@ export function timeLabel(value: number) {
   return rounded === 0 ? '0:00' : formatRaceTime(rounded, rounded % 1 ? 1 : 0);
 }
 
+/** A race time to the millisecond, `m:ss.sss`, so every seek time in the report has one shape and width. */
+export function seekTimeLabel(value: number) {
+  const milliseconds = Math.max(0, Math.round(value * 1000));
+  const minutes = Math.floor(milliseconds / 60_000);
+  const seconds = (milliseconds - minutes * 60_000) / 1000;
+
+  return minutes + ':' + seconds.toFixed(3).padStart(6, '0');
+}
+
 export function signed(value: number, digits = 2) {
   const rounded = Number(value.toFixed(digits));
   return (rounded > 0 ? '+' : '') + rounded.toFixed(digits);
@@ -197,6 +206,25 @@ export function sampleRows(
     targetSpeed: horse?.targetSpeeds?.[i] ?? '—',
     acceleration: horse?.accelerationRates?.[i] ?? '—'
   }));
+}
+
+export type ModeTone = 'good' | 'bad' | 'neutral';
+
+/** Modes that gain speed or spare HP help the runner; rushing and being blocked cost it. */
+const modeTones: Partial<Record<string, ModeTone>> = {
+  conservePower: 'good',
+  downhill: 'good',
+  dueling: 'good',
+  positionKeepSpeedUp: 'good',
+  positionKeepOvertake: 'good',
+  positionKeepPaceUp: 'good',
+  positionKeepPaceUpEx: 'good',
+  rushing: 'bad',
+  blocked: 'bad'
+};
+
+export function modeTone(key: string): ModeTone {
+  return modeTones[key] ?? 'neutral';
 }
 
 export function modeSpans(

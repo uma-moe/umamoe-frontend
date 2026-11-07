@@ -73,6 +73,7 @@ export type BuildCodePage =
       raceInstanceId?: unknown;
       gateOrder?: unknown;
       runs?: unknown;
+      positionChecksPass?: unknown;
     }
   | { tab: 'stamina'; setup: unknown }
   | { tab: 'build'; setup: unknown };

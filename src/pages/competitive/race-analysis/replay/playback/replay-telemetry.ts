@@ -9,12 +9,12 @@ import { raceTimeAtDistance } from '@/lib/race/replay/race-replay';
 import { hpRemainingColor } from '@/lib/race/replay/race-display';
 import { diagnosticHorse } from '@/lib/race/capture/race-diagnostics';
 import { finalSpurtSection } from '@/lib/race/final-spurt';
+import { phaseBandArea, racePhaseBands, type PhaseMarkArea } from '../../race-phase-bands';
 import {
   trajectorySeries,
   type RaceSignalMeans,
   type RaceTrajectory
 } from '@/lib/race/replay/race-ensemble';
-import { RACE_PHASES } from '../replay-course';
 
 export interface TelemetrySignal {
   value: string;
@@ -23,7 +23,7 @@ export interface TelemetrySignal {
   color: string;
 }
 
-type MarkArea = [Record<string, unknown>, { xAxis: number }];
+type MarkArea = PhaseMarkArea;
 
 /** A mean race: every sampled race behind it, and each runner's mean signals at the mean capture's frames. */
 export interface TelemetryEnsemble {
@@ -92,32 +92,14 @@ export function telemetryPhases(
   telemetryEnd: number,
   dark: boolean
 ): MarkArea[] {
-  return RACE_PHASES.flatMap((phase) => {
+  return racePhaseBands.flatMap((phase) => {
     const start = raceTimeAtDistance(capture.frames, distanceMax * phase.start),
       end =
         phase.end === 1
           ? telemetryEnd
           : (raceTimeAtDistance(capture.frames, distanceMax * phase.end) ?? telemetryEnd);
 
-    return start === undefined
-      ? []
-      : [
-          [
-            {
-              name: phase.label,
-              xAxis: start,
-              itemStyle: { color: phase.color, opacity: 0.07 },
-              label: {
-                show: true,
-                position: 'insideTop',
-                fontSize: 9,
-                color: dark ? '#abb4c3' : '#566071',
-                formatter: phase.label.replace(' race', '')
-              }
-            },
-            { xAxis: end }
-          ] satisfies MarkArea
-        ];
+    return start === undefined ? [] : [phaseBandArea({ phase, start, end, dark })];
   });
 }
 

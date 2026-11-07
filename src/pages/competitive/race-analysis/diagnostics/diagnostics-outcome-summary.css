@@ -48,8 +48,11 @@ p {
   gap: 4px 6px;
   color: var(--text-secondary);
 }
-.outcome.caution strong {
-  color: var(--accent-warning);
+.outcome.good strong {
+  color: var(--accent-success);
+}
+.outcome.bad strong {
+  color: var(--accent-error);
 }
 .fallback {
   padding: 8px 10px;

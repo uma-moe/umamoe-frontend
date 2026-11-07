@@ -9,8 +9,11 @@ p {
   color: var(--text-secondary);
   line-height: 1.5;
 }
-.report-facts dd.caution {
-  color: var(--accent-warning);
+.report-facts dd.good {
+  color: var(--accent-success);
+}
+.report-facts dd.bad {
+  color: var(--accent-error);
 }
 .spurt-report {
   display: flex;
@@ -100,8 +103,11 @@ p {
   color: var(--text-secondary);
   font-weight: 500;
 }
-.hp-equation .shortfall strong {
-  color: var(--accent-warning);
+.hp-equation .good strong {
+  color: var(--accent-success);
+}
+.hp-equation .bad strong {
+  color: var(--accent-error);
 }
 .spurt-comparison {
   width: 100%;

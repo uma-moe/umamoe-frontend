@@ -147,7 +147,7 @@ test('team details keep the summary compact and align support cards with long or
   const builds = dialog.locator('.builds article');
   await expect(builds).toHaveCount(3);
   const firstBuild = builds.first();
-  await expect(firstBuild.locator('.aptitude-cell')).toHaveCount(3);
+  await expect(firstBuild.locator('.aptitude-tile')).toHaveCount(3);
   await expect
     .poll(() =>
       firstBuild.locator('.aptitude').evaluateAll((grades) =>

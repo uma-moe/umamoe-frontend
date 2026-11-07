@@ -32,7 +32,15 @@ const TICK_SPACING = 1 / 7;
 /** Narrowest span of the axis, in root space, so a few close values do not fill the plot. */
 const MIN_ROOT_SPAN = 0.3;
 
-/** The value axis spanning `values`, padded so the extreme icons stay inside the plot. */
+/** Win points every track's value axis reaches down to, so the weakest skills sit clear of the axis. */
+const VALUE_FLOOR = 1;
+
+/** Room above the highest value and below the lowest, as shares of the values' span: the top is barely padded, as the
+ * icon layout keeps the extreme icons inside the plot; skills below the floor keep the bottom room under them. */
+const TOP_ROOM = 0.03;
+const BOTTOM_ROOM = 0.08;
+
+/** The value axis spanning `values`, from the floor or a little below the lowest, whichever is lower. */
 export function valueAxis(values: number[]): ValueAxis {
   if (values.length === 0) return { low: -MIN_ROOT_SPAN, high: MIN_ROOT_SPAN, ticks: [0] };
 
@@ -40,9 +48,8 @@ export function valueAxis(values: number[]): ValueAxis {
   const highestRoot = signedRoot(Math.max(...values));
   const centre = (lowestRoot + highestRoot) / 2;
   const span = Math.max(highestRoot - lowestRoot, MIN_ROOT_SPAN);
-  const padding = span * 0.08;
-  const low = centre - span / 2 - padding;
-  const high = centre + span / 2 + padding;
+  const low = Math.min(signedRoot(VALUE_FLOOR), centre - span / 2 - span * BOTTOM_ROOM);
+  const high = centre + span / 2 + span * TOP_ROOM;
   return { low, high, ticks: valueTicks(low, high) };
 }
 
@@ -74,19 +81,16 @@ export function valuePercent(value: number, axis: ValueAxis): number {
   return ((axis.high - signedRoot(value)) / (axis.high - axis.low)) * 100;
 }
 
-/** Room kept at each end of the horizontal axis, in percent, so edge icons are not clipped. */
-const LINEAR_MARGIN = 3;
-
-/** Distance from the left of the plot, in percent. */
+/** Distance from the left of the plot, in percent: the axis spans its full width (icons at the ends are kept inside
+ * by the icon layout). */
 export function linearPercent(value: number, axis: LinearAxis): number {
   const share = axis.max > axis.min ? (value - axis.min) / (axis.max - axis.min) : 0.5;
-  return LINEAR_MARGIN + share * (100 - 2 * LINEAR_MARGIN);
+  return share * 100;
 }
 
 /** The value at `share` of the plot's width from its left: `linearPercent` turned around. */
 export function linearValueAt(share: number, axis: LinearAxis): number {
-  const inner = (share * 100 - LINEAR_MARGIN) / (100 - 2 * LINEAR_MARGIN);
-  return axis.min + inner * (axis.max - axis.min);
+  return axis.min + share * (axis.max - axis.min);
 }
 
 /** About `count` round ticks across a domain. */

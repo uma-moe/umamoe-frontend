@@ -1,0 +1,276 @@
+/*
+ * One card in five zones, read left to right: who the runner is, the build, how the race went, the support deck and
+ * the parents. The zones sit on the card's border colour with a 1px gap, so every layout draws its own dividers.
+ */
+/* Named, because the stat strip and the deck are containers of their own and would otherwise answer the queries. */
+.runner-profile {
+  container: runner-profile / inline-size;
+  padding: 0;
+  overflow: hidden;
+}
+.profile-zones {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  grid-template-areas:
+    'identity'
+    'result'
+    'build'
+    'deck'
+    'parents';
+  gap: 1px;
+  background: var(--card-surface-border);
+}
+.profile-zone {
+  display: grid;
+  align-content: start;
+  gap: 8px;
+  min-width: 0;
+  padding: 10px 14px 12px;
+  background: var(--card-surface-bg);
+}
+/*
+ * Who the runner is, on one grid: the portrait heads a column the labels share, and the name heads the column the
+ * figures share, so every value starts where the name does. The style badge closes the title row.
+ */
+.profile-identity {
+  grid-area: identity;
+  grid-template-columns: 40px minmax(0, max-content) auto;
+  gap: 10px 12px;
+  background: color-mix(in srgb, var(--runner-color) 8%, var(--card-surface-bg));
+}
+.identity-title,
+.profile-identity .zone-metrics {
+  display: grid;
+  grid-template-columns: subgrid;
+  grid-column: 1 / -1;
+  column-gap: 12px;
+}
+.identity-title {
+  align-items: center;
+}
+.profile-identity .metric dd {
+  grid-column: 2 / -1;
+}
+.identity-title h3 {
+  font-size: 15px;
+  font-weight: 650;
+  line-height: 1.2;
+}
+.trainer {
+  margin: 2px 0 0;
+  color: var(--text-secondary);
+  font-size: 11px;
+}
+.style-badge {
+  width: 40px;
+  height: 40px;
+}
+/* Runaway has no game badge, so it keeps the results table's ring in the style colour around the name. */
+.style-pill {
+  display: inline-grid;
+  place-items: center;
+  height: 24px;
+  padding: 0 7px;
+  border: 2px solid var(--style-color);
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--style-color) 16%, transparent);
+  font-size: 10px;
+  font-weight: 800;
+  text-transform: uppercase;
+}
+.profile-build {
+  grid-area: build;
+}
+.profile-result {
+  grid-area: result;
+}
+.profile-deck {
+  grid-area: deck;
+}
+.profile-parents {
+  grid-area: parents;
+}
+h3 {
+  margin: 0;
+  font-size: 12px;
+  font-weight: 600;
+}
+.race-aptitudes {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 4px;
+}
+.race-aptitudes > :global(.aptitude-tile) {
+  padding-inline: 6px;
+  white-space: nowrap;
+}
+.race-aptitudes :global(.label) {
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.profile-build :global(.tile-stats) {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+/* Each figure beside its label; the time behind the winner sits under the finish time. */
+.zone-metrics {
+  display: grid;
+  grid-template-columns: max-content minmax(0, max-content);
+  gap: 7px 16px;
+  margin: 0;
+}
+.metric {
+  display: grid;
+  grid-template-columns: subgrid;
+  grid-column: 1 / -1;
+  align-items: baseline;
+}
+.metric dt {
+  display: flex;
+  align-items: center;
+  height: 18px;
+  color: var(--text-secondary);
+  font-size: 11px;
+}
+.metric dt :global(.info-icon) {
+  width: 18px;
+  height: 18px;
+}
+.metric dd {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 2px 5px;
+  margin: 0;
+  font-variant-numeric: tabular-nums;
+}
+.metric strong {
+  font-size: 14px;
+  font-weight: 650;
+  line-height: 1.2;
+}
+.metric small {
+  color: var(--text-secondary);
+  font-size: 11px;
+}
+.metric .time-behind {
+  flex-basis: 100%;
+}
+.metric dd > :global(.rank),
+.metric-icon {
+  flex: none;
+  align-self: center;
+}
+.metric-icon {
+  width: 16px;
+  height: 16px;
+}
+.metric.winner strong {
+  color: var(--accent-warning);
+}
+.metric.podium strong {
+  color: var(--accent-primary);
+}
+.good strong {
+  color: var(--accent-success);
+}
+.bad strong {
+  color: var(--accent-error);
+}
+.empty {
+  margin: 0;
+  color: var(--text-secondary);
+  font-size: 12px;
+}
+/* Smaller support cards than the build details, so the deck's two rows match the build beside it. */
+.profile-deck :global(.support-deck li) {
+  --support-art-size: 36px;
+  --support-rarity-size: 16px;
+  gap: 6px;
+  padding: 4px;
+}
+.profile-deck :global(.support-text) {
+  gap: 3px;
+}
+.profile-deck :global(.support-name) {
+  font-size: 11px;
+}
+.profile-deck :global(.support-lb) {
+  font-size: 11px;
+}
+/* Who the runner is beside the result, the build beside the parents, then the deck across the card. */
+@container runner-profile (min-width: 520px) and (max-width: 699px) {
+  .profile-zones {
+    grid-template-columns: minmax(290px, max-content) minmax(0, 1fr);
+    grid-template-areas:
+      'identity result'
+      'build parents'
+      'deck deck';
+  }
+  .profile-parents :global(.lineage) {
+    justify-content: center;
+  }
+}
+/*
+ * Two rows: who the runner is, how the race went and their parents, then the build beside the deck. The build column
+ * runs through both rows, so the dividers line up.
+ */
+@container runner-profile (min-width: 700px) {
+  .profile-deck :global(.support-deck) {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+  /* The parents zone can be wider than the tree here; the tree sits in its middle. */
+  .profile-parents :global(.lineage) {
+    justify-content: center;
+  }
+  .profile-zones {
+    grid-template-columns: 280px max-content minmax(max-content, 1fr);
+    grid-template-areas:
+      'identity result parents'
+      'build deck deck';
+  }
+}
+/*
+ * The desktop row on a laptop: the deck shows each card as its art over the limit break, as the compact deck does, so
+ * the row fits without truncating names.
+ */
+@container runner-profile (min-width: 1100px) and (max-width: 1479px) {
+  .profile-zones {
+    grid-template-columns:
+      fit-content(320px) minmax(280px, 1fr) max-content minmax(160px, 210px)
+      max-content;
+    grid-template-areas: 'identity build result deck parents';
+  }
+  .profile-deck :global(.support-deck li) {
+    --support-art-size: 36px;
+    grid-template-columns: minmax(0, 1fr);
+    justify-items: center;
+    gap: 2px;
+    padding: 0;
+    border: 0;
+    background: none;
+  }
+  .profile-deck :global(.support-deck) {
+    row-gap: 6px;
+  }
+  .profile-deck :global(.support-name),
+  .profile-deck :global(.support-rarity) {
+    display: none;
+  }
+  .profile-deck :global(.support-meta) {
+    height: 10px;
+  }
+}
+/* One row once the deck's names fit; who the runner is takes only the width it needs. */
+@container runner-profile (min-width: 1480px) {
+  .profile-zones {
+    grid-template-columns:
+      fit-content(320px) minmax(280px, 320px) max-content minmax(400px, 1fr)
+      max-content;
+    grid-template-areas: 'identity build result deck parents';
+  }
+}
+@media (max-width: 600px) {
+  .profile-zone {
+    padding: 8px 10px 10px;
+  }
+}

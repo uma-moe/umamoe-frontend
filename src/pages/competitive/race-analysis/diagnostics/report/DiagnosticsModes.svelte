@@ -2,9 +2,9 @@
   import type { ParsedRaceCapture } from '@/lib/race/capture/race-capture-parser';
   import { raceMetricHelp, type HorseDiagnostics } from '@/lib/race/capture/race-diagnostics';
   import DataTable from '@/components/data/DataTable.svelte';
-  import Button from '@/components/controls/Button.svelte';
+  import SeekTimeButton from '../SeekTimeButton.svelte';
   import Icon from '@/components/Icon.svelte';
-  import { display, modeRows, modeSpans, seekRow } from '../diagnostics-format';
+  import { display, modeRows, modeSpans, modeTone, seekRow } from '../diagnostics-format';
 
   let {
     capture,
@@ -50,13 +50,10 @@
   >
     {#snippet cell(row, column)}
       {#if column.key === 'time'}
-        <Button
-          variant="secondary"
-          size="sm"
-          onclick={() => onseek(Number(row.time))}
-        >
-          {Number(row.time).toFixed(3)} s
-        </Button>
+        <SeekTimeButton
+          time={Number(row.time)}
+          {onseek}
+        />
       {:else if column.key === 'periods'}
         <button
           class="period-toggle"
@@ -74,7 +71,13 @@
           </span>
         </button>
       {:else if column.key === 'duration'}
-        {Number(row.duration).toFixed(2)} s
+        {@const tone = modeTone(String(row.id))}
+        <span
+          class:good={tone === 'good'}
+          class:bad={tone === 'bad'}
+        >
+          {Number(row.duration).toFixed(2)} s
+        </span>
       {:else}
         {row[column.key]}
       {/if}
@@ -87,21 +90,15 @@
         {#each modeSpans(capture, horse, String(row.id), index) as span}
           <li>
             <span>
-              <Button
-                variant="secondary"
-                size="sm"
-                onclick={() => onseek(span.startTime)}
-              >
-                {span.startTime.toFixed(3)} s
-              </Button>
+              <SeekTimeButton
+                time={span.startTime}
+                {onseek}
+              />
               <span class="period-arrow">→</span>
-              <Button
-                variant="secondary"
-                size="sm"
-                onclick={() => onseek(span.endTime)}
-              >
-                {span.endTime.toFixed(3)} s
-              </Button>
+              <SeekTimeButton
+                time={span.endTime}
+                {onseek}
+              />
             </span>
             {#if 'phase' in span && span.phase !== undefined}
               <span>{display(span.phase, 'phase')}</span>
@@ -141,6 +138,12 @@
   }
   .period-toggle > span {
     display: flex;
+  }
+  .good {
+    color: var(--accent-success);
+  }
+  .bad {
+    color: var(--accent-error);
   }
   .period-toggle .opened {
     transform: rotate(180deg);

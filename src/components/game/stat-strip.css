@@ -326,6 +326,12 @@ dd small {
   line-height: 1.2;
   text-transform: capitalize;
 }
+.tile-stats.compact > div,
+.tile-stats.compact > div + div {
+  min-height: 28px;
+  grid-template-rows: auto;
+  padding-block: 2px;
+}
 @container (max-width: 380px) {
   .tile-stats > div,
   .tile-stats > div + div {

@@ -1,0 +1,61 @@
+.lineage-section {
+  --grandparent-size: 34px;
+  --parent-size: 48px;
+  display: grid;
+  align-content: start;
+  gap: 8px;
+  min-width: 0;
+}
+h3 {
+  margin: 0;
+  font-size: 12px;
+  font-weight: 600;
+}
+p {
+  margin: 0;
+  color: var(--text-secondary);
+  font-size: 12px;
+}
+/* Each parent under their own two parents, joined like a family tree. */
+.lineage {
+  display: grid;
+  grid-template-columns: repeat(2, max-content);
+  gap: 16px;
+}
+.branch {
+  display: grid;
+  justify-items: center;
+  gap: 10px;
+}
+.grandparents {
+  position: relative;
+  display: flex;
+  gap: 8px;
+  padding-bottom: 6px;
+}
+.grandparents::before {
+  content: '';
+  position: absolute;
+  left: calc(var(--grandparent-size) / 2);
+  right: calc(var(--grandparent-size) / 2);
+  bottom: 0;
+  height: 6px;
+  border: 1px solid var(--border-secondary);
+  border-top: 0;
+}
+.grandparents::after {
+  content: '';
+  position: absolute;
+  left: 50%;
+  bottom: -10px;
+  height: 10px;
+  border-left: 1px solid var(--border-secondary);
+}
+.grandparent :global(.art) {
+  width: var(--grandparent-size);
+  height: var(--grandparent-size);
+}
+.parent :global(.art) {
+  width: var(--parent-size);
+  height: var(--parent-size);
+}

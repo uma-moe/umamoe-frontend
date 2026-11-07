@@ -6,14 +6,14 @@ import { toolLinks } from './tool-links';
 
 export type RouteGroup = 'main' | 'community' | 'competitive' | 'research' | 'tools' | 'system';
 
-export const navigationBadges: Readonly<Record<string, 'New' | 'Updated' | undefined>> = {
+export const navigationBadges: Readonly<Record<string, 'New' | 'Updated' | 'Beta' | undefined>> = {
   '/competitive': 'New',
   '/competitive/race-analysis': 'New',
   '/competitive/cm-data': 'New',
   '/research': 'New',
   '/tools': 'New',
   '/simulator/race': 'New',
-  '/tools/skill-explorer': 'New',
+  '/tools/skill-explorer': 'Beta',
   '/simulator/hp': 'New',
   '/simulator/skills': 'New',
   '/tools/master-data': 'New'

@@ -1,29 +1,28 @@
 <script lang="ts">
   import { formatWinPoints } from '../scatter/scatter-scale';
-  import { SECTIONS, type SkillPoint } from '../skill-explorer-data';
+  import {
+    SECTIONS,
+    headlinePoint,
+    mostWorth,
+    type GatedSetup,
+    type GatedValues,
+    type SkillPoint
+  } from '../skill-explorer-data';
+  import type { YMode } from '../skill-explorer-view';
   import type { CountGate } from './skill-requirements';
   import type { SkillEffectDetails } from './skill-effects';
   import type { SkillProvider, SkillProviders } from './skill-providers';
   import { finalSpurtSection, FINAL_SPURT_HELP } from '@/lib/race/final-spurt';
-  import Button from '@/components/controls/Button.svelte';
   import Disclosure from '@/components/overlays/Disclosure.svelte';
   import PickupImages from '@/components/cards/PickupImages.svelte';
   import SkillPoints from '@/components/game/SkillPoints.svelte';
+  import SkillChipList, { type RelatedSkill } from '../SkillChipList.svelte';
 
   export interface TerrainSegment {
     start: number;
     end: number;
     label: string;
     color: string;
-  }
-
-  /** Another skill named on the card: a partner with what it adds beside this one, or a skill that feeds its gate. */
-  export interface RelatedSkill {
-    skillId: number;
-    name: string;
-    image?: string;
-    /** Win points it raises this skill's value by, for a partner. */
-    win?: number;
   }
 
   interface Props {
@@ -50,8 +49,10 @@
     course?: { distance: number; terrain: TerrainSegment[] };
     /** In the build the values are measured in. */
     inBuild: boolean;
-    /** On a single course and style: whether the edited build holds it, and adding or removing it there. */
-    build?: { has: boolean; full: boolean; toggle: () => void };
+    /** The value the chart shows: in build, optimal or alone. */
+    mode: YMode;
+    /** Skills named with their icons, for a gated skill's setup. */
+    nameSkills: (skillIds: number[]) => RelatedSkill[];
   }
 
   let {
@@ -70,16 +71,16 @@
     scopeCourses,
     course,
     inBuild,
-    build
+    mode,
+    nameSkills
   }: Props = $props();
   const sourcesId = $props.id();
 
-  // The final leg is the last sixth; a runner's spurt can begin earlier, in late race.
+  // The race phases in course sections, as in the simulator's course breakdown; the final spurt can begin when late race starts.
   const PHASES = [
     { label: 'Early', from: 0, to: 4 },
-    { label: 'Middle', from: 4, to: 16 },
-    { label: 'Late', from: 16, to: 20 },
-    { label: 'Final', from: 20, to: 24 }
+    { label: 'Mid race', from: 4, to: 16 },
+    { label: 'Late race', from: 16, to: 24 }
   ];
   const WIDTH = 276;
   const HEIGHT = 48;
@@ -94,6 +95,16 @@
   const neverFires = $derived(point.forced > 0 && point.forced >= point.courses);
   const peak = $derived(Math.max(0.05, ...point.sections));
   const meanLabel = $derived(placeLabel(point.mean));
+
+  /** A skill that waits on her other skills: forced to fire at points of its gate. */
+  const gated = $derived(point.gated);
+  /** The forced points the Set up value is (its setup's, or with none its best) and the Optimal value is (its best). */
+  const setUpPoint = $derived(gated ? headlinePoint(gated) : undefined);
+  const bestPoint = $derived(mostWorth(gated?.points ?? []));
+
+  function percent(share: number): string {
+    return `${Math.round(share * 100)}%`;
+  }
 
   function placeLabel(share: number): string {
     return course ? `${Math.round(share * course.distance)} m` : `${Math.round(share * 100)}%`;
@@ -132,18 +143,44 @@
     </div>
   </header>
 
-  <dl class="worth">
-    <div>
-      <dt>In build</dt>
-      <dd
-        class:positive={point.win > 0}
-        class:negative={point.win < 0}
-      >
-        {formatWinPoints(point.win)}
-        <small>win rate</small>
-      </dd>
+  <dl
+    class="worth"
+    class:gated={gated !== undefined}
+  >
+    <div class:shown={mode === 'value' || (mode === 'forced' && !gated)}>
+      <dt>{gated ? 'Set up' : 'In build'}</dt>
+      {#if gated && neverFires}
+        <dd>
+          —
+          <small>can't be set up</small>
+        </dd>
+      {:else}
+        <dd
+          class:positive={point.win > 0}
+          class:negative={point.win < 0}
+        >
+          {formatWinPoints(point.win)}
+          <small>{setUpPoint ? `from ${placeLabel(setUpPoint.at)}` : 'win rate'}</small>
+        </dd>
+      {/if}
     </div>
-    <div>
+    {#if gated}
+      <div class:shown={mode === 'forced'}>
+        <dt>Optimal</dt>
+        <dd
+          class:positive={gated.forced.win > 0}
+          class:negative={gated.forced.win < 0}
+        >
+          {formatWinPoints(gated.forced.win)}
+          <small>
+            {bestPoint
+              ? `from ${placeLabel(bestPoint.at)}`
+              : `mean ${placeLabel(gated.forced.mean)}`}
+          </small>
+        </dd>
+      </div>
+    {/if}
+    <div class:shown={mode === 'alone'}>
       <dt>Alone</dt>
       <dd
         class:positive={point.winAlone > 0}
@@ -161,7 +198,7 @@
           <small>from the gate</small>
         {:else if neverFires}
           {Math.round(point.rate * 100)}%
-          <small>if forced, mean {meanLabel}</small>
+          <small>{gated ? 'optimal' : 'if forced'}, mean {meanLabel}</small>
         {:else}
           {Math.round(point.rate * 100)}%
           <small>mean {meanLabel}</small>
@@ -189,15 +226,21 @@
       <p>{@render numberText(alternative.effects.join(', '))}</p>
       <small>{@render numberText(alternative.duration)}</small>
     {:else}
-      <p class="unavailable">Numeric effect data unavailable.</p>
+      <p class="unavailable">No effect data.</p>
     {/each}
   </section>
 
-  {#if point.forced > 0}
+  {#if point.forced > 0 && gated}
     <p class="forced">
-      Needs a ground, weather or season the explorer's day lacks{point.courses > 1
+      {point.courses > 1
+        ? `Can't be set up on ${point.forced} of ${point.courses} courses, so those count its optimal timing.`
+        : "Four cheap skills can't open its gate here, so only its optimal timing has a value."}
+    </p>
+  {:else if point.forced > 0}
+    <p class="forced">
+      Needs other ground, weather or season{point.courses > 1
         ? ` on ${point.forced} of ${point.courses} courses`
-        : ''}: valued as if that day held, at the rate it fires then.
+        : ''}, so it's valued as if the day had it.
     </p>
   {/if}
 
@@ -217,22 +260,25 @@
     {@render procChart()}
   {/if}
 
-  {#if gate}
+  {#if gated}
+    {@render timing(gated)}
+  {/if}
+
+  {#if gated?.setup}
+    {@render setUp(gated.setup)}
+  {/if}
+
+  {#if gate && !gated?.setup}
     <section class="related">
       <h4>Fed by</h4>
-      <p class="gate">
-        <span class="number">{gate.gate.count}</span>
-        of her {gate.gate.counted === 'recovery' ? 'recovery skills' : 'skills'} must fire {gate
-          .gate.where} first. Skills that fire there:
-      </p>
-      {@render relatedList(gate.feeders)}
+      <SkillChipList skills={gate.feeders} />
     </section>
   {/if}
 
   {#if partners.length > 0}
     <section class="related">
       <h4>Works best with</h4>
-      {@render relatedList(partners)}
+      <SkillChipList skills={partners} />
     </section>
   {/if}
 
@@ -275,20 +321,6 @@
     {/if}
   </section>
 
-  {#if build}
-    <div class="build-toggle">
-      <Button
-        size="sm"
-        variant="secondary"
-        icon={build.has ? 'close' : 'add'}
-        disabled={!build.has && build.full}
-        onclick={build.toggle}
-      >
-        {build.has ? 'Remove from build' : 'Add to build'}
-      </Button>
-    </div>
-  {/if}
-
   {#if inBuild || scopeCourses > 1}
     <ul class="notes">
       {#if inBuild}
@@ -323,23 +355,88 @@
   />
 {/snippet}
 
-{#snippet relatedList(skills: RelatedSkill[])}
-  <ul>
-    {#each skills as skill (skill.skillId)}
-      <li>
-        {#if skill.image}
-          <img
-            src={skill.image}
-            alt=""
+{#snippet timing(values: GatedValues)}
+  {@const points = values.points ?? []}
+  {@const highlighted = mode === 'forced' ? bestPoint : setUpPoint}
+  <section class="timing">
+    <h4>Timing</h4>
+    {#if points.length > 0}
+      <!-- Each timing is its own body, so the highlight strip covers the whole row. -->
+      <table>
+        <tbody class="group">
+          <tr>
+            <th scope="colgroup">Firing from</th>
+            <th scope="col">Win rate</th>
+            <th scope="col">Fires</th>
+            <th scope="col">Mean proc</th>
+          </tr>
+        </tbody>
+        {#each points as forcedPoint (forcedPoint.at)}
+          {@const tags = [
+            forcedPoint.at === values.setup?.at ? 'set up' : '',
+            forcedPoint === bestPoint ? 'optimal' : ''
+          ].filter(Boolean)}
+          <tbody class:chosen={forcedPoint === highlighted}>
+            <tr>
+              <th scope="row">
+                {placeLabel(forcedPoint.at)}
+                {#if tags.length > 0}
+                  <small
+                    class="tag"
+                    title={forcedPoint.raced
+                      ? "Measured in fresh races, not the model's read"
+                      : undefined}
+                  >
+                    {tags.join(' · ')}
+                  </small>
+                {/if}
+              </th>
+              {@render numbers(forcedPoint.win, forcedPoint.rate, forcedPoint.mean)}
+            </tr>
+          </tbody>
+        {/each}
+      </table>
+    {:else}
+      <small class="legend">Pick one course to see timings.</small>
+    {/if}
+  </section>
+{/snippet}
+
+<!-- The skills bought so the gate opens where the Set up value fires from. -->
+{#snippet setUp(setup: GatedSetup)}
+  <section class="related set-up">
+    <div class="effect-heading">
+      <h4>Set up with</h4>
+      {#if setup.feeders.length > 0}
+        <span class="sp-cost">
+          <SkillPoints
+            value={setup.sp}
+            note="Base cost of the skills added, before hint discounts"
           />
-        {/if}
-        <span class="name">{skill.name}</span>
-        {#if skill.win !== undefined}
-          <span class="gain">{formatWinPoints(skill.win)}</span>
-        {/if}
-      </li>
-    {/each}
-  </ul>
+        </span>
+      {/if}
+    </div>
+    {#if setup.feeders.length > 0}
+      <SkillChipList skills={nameSkills(setup.feeders)} />
+      <p class="note">They open its gate around {placeLabel(setup.at)}.</p>
+    {:else}
+      <p class="note">
+        Nothing extra: the reference build opens its gate around {placeLabel(setup.at)}.
+      </p>
+    {/if}
+  </section>
+{/snippet}
+
+{#snippet numbers(win: number, rate: number, mean: number)}
+  <td
+    class="value"
+    class:positive={win > 0}
+    class:negative={win < 0}
+  >
+    {formatWinPoints(win)}
+  </td>
+  <td>{percent(rate)}</td>
+  <td>{placeLabel(mean)}</td>
 {/snippet}
 
 {#snippet procChart()}

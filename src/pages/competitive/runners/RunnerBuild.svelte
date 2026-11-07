@@ -9,10 +9,9 @@
   import StatStrip from '@/components/game/StatStrip.svelte';
   import AptitudeGrid from '@/components/game/AptitudeGrid.svelte';
   import RaceSkill from './RaceSkill.svelte';
-  import type { AptitudeGradeValue } from '@/components/game/AptitudeGrade.svelte';
   import AptitudeTile from '@/components/game/AptitudeTile.svelte';
-  import { runningStyleName } from '@/lib/race/replay/race-display';
   import { identity, score, stats } from '../analysis-view';
+  import { aptitudeGrades, raceAptitudes } from './race-aptitudes';
 
   let {
     runner,
@@ -71,8 +70,6 @@
     )
   );
 
-  const grades = ['G', 'F', 'E', 'D', 'C', 'B', 'A', 'S'] as AptitudeGradeValue[];
-
   const aptitudeItems = $derived(
     (aptitudes.length
       ? aptitudes
@@ -87,7 +84,7 @@
         : id.includes('ground') || id === 'surface'
           ? 'Track'
           : 'Style',
-      grade: grades[Math.max(0, value - 1)] ?? 'G'
+      grade: aptitudeGrades[Math.max(0, value - 1)] ?? 'G'
     }))
   );
 
@@ -112,71 +109,7 @@
       : stats(runner)
   );
 
-  const raceAptitudes = $derived.by(() => {
-    if (!raceContext) return [];
-    const style = runner.result?.runningStyle ?? Number(runner.raw.runningStyle);
-    const styleKey = ['', 'nige', 'senko', 'sashi', 'oikomi', 'nige'][style];
-    const surfaceKey =
-      raceContext.surface === 1 ? 'turf' : raceContext.surface === 2 ? 'dirt' : undefined;
-
-    const distance = raceContext.distance;
-    const distanceKey = distance
-      ? distance <= 1400
-        ? 'short'
-        : distance <= 1800
-          ? 'mile'
-          : distance <= 2400
-            ? 'middle'
-            : 'long'
-      : undefined;
-
-    // Captures without per-category grades, such as the demo races, only carry summary grades.
-    const hasCategoryGrades = aptitudes.length > 0;
-    const aptitude = (
-      key: string | undefined,
-      aggregate: string,
-      summary: keyof RaceRunner['aptitudes']
-    ) => {
-      const camel = key?.replace(/_([a-z])/g, (_, letter: string) => letter.toUpperCase());
-      const recorded = key ? (runner.raw[key] ?? runner.raw[camel!]) : undefined;
-      const fallback = hasCategoryGrades ? undefined : runner.aptitudes[summary];
-      const value = Number(recorded ?? runner.raw[aggregate] ?? fallback);
-
-      return grades[value - 1];
-    };
-
-    return [
-      {
-        group: 'Distance',
-        label: distanceKey
-          ? { short: 'Sprint', mile: 'Mile', middle: 'Medium', long: 'Long' }[distanceKey]
-          : undefined,
-        grade: aptitude(
-          distanceKey ? 'proper_distance_' + distanceKey : undefined,
-          'apt_distance',
-          'distance'
-        )
-      },
-      {
-        group: 'Track',
-        label: surfaceKey ? (surfaceKey === 'turf' ? 'Turf' : 'Dirt') : undefined,
-        grade: aptitude(
-          surfaceKey ? 'proper_ground_' + surfaceKey : undefined,
-          'apt_ground',
-          'surface'
-        )
-      },
-      {
-        group: 'Style',
-        label: styleKey ? runningStyleName(style, true) : undefined,
-        grade: aptitude(
-          styleKey ? 'proper_running_style_' + styleKey : undefined,
-          'apt_style',
-          'style'
-        )
-      }
-    ];
-  });
+  const raceAptitudeTiles = $derived(raceContext ? raceAptitudes(runner, raceContext) : []);
 
   onMount(() => {
     // Compact cards include the SP total; until the catalog loads it reads as a dash.
@@ -232,7 +165,7 @@
           class="compact-aptitudes race-aptitudes"
           aria-label="Aptitudes for this race"
         >
-          {#each raceAptitudes as item}
+          {#each raceAptitudeTiles as item}
             <AptitudeTile
               label={item.label ?? item.group}
               grade={item.grade}

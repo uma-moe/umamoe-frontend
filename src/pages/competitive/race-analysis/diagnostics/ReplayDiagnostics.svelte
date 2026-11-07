@@ -13,6 +13,7 @@
   import DiagnosticsTraces from './measurements/DiagnosticsTraces.svelte';
   import DiagnosticsAcceleration from './measurements/DiagnosticsAcceleration.svelte';
   import { hpReport } from './report/hp-report';
+  import SeekTimeButton from './SeekTimeButton.svelte';
   import { number } from './diagnostics-format';
 
   let {
@@ -21,8 +22,7 @@
     skillNames,
     distance,
     overview,
-    buildPreview,
-    notice,
+    outcomeSummary = true,
     onseek,
     onselect
   }: {
@@ -31,9 +31,8 @@
     skillNames: Map<number, string>;
     distance: number;
     overview?: Snippet;
-    buildPreview?: Snippet;
-    /** Replaces the recorded-data note while there is no detailed simulation for this runner. */
-    notice?: Snippet;
+    /** Off when the caller already shows the runner's course loss and start. */
+    outcomeSummary?: boolean;
     onseek: (time: number) => void;
     onselect: (index: number) => void;
   } = $props();
@@ -72,8 +71,34 @@
   class="diagnostics"
   aria-label={(runner?.name ?? 'Runner') + ' detailed diagnostics'}
 >
-  {#snippet report()}
-    <div class="report-grid">
+  {#if overview}
+    <div class="runner-overview">
+      {@render overview()}
+      <div class="runner-setup">
+        <RunnerSupportDeck
+          {deck}
+          compact
+        />
+        <DiagnosticsOutcomeSummary
+          {capture}
+          {index}
+          {horse}
+        />
+      </div>
+    </div>
+  {:else if outcomeSummary}
+    <DiagnosticsOutcomeSummary
+      {capture}
+      {index}
+      {horse}
+    />
+  {/if}
+
+  <div
+    class="report-grid"
+    class:detailed={Boolean(horse)}
+  >
+    <div class="procs-column">
       <DiagnosticsSkills
         {capture}
         {index}
@@ -82,82 +107,7 @@
         {onseek}
       />
       {#if horse}
-        <div class="behaviour-report">
-          <DiagnosticsHp
-            {capture}
-            {index}
-            {skillNames}
-            {onseek}
-            onspurt={spurt ? openSpurtBreakdown : undefined}
-          />
-          <DiagnosticsModes
-            {index}
-            {capture}
-            {horse}
-            {onseek}
-            bind:expandedMode
-          />
-        </div>
-      {:else}
-        <DiagnosticsModes
-          {capture}
-          {index}
-          {horse}
-          {onseek}
-          bind:expandedMode
-        />
-      {/if}
-    </div>
-  {/snippet}
-
-  {#if overview}
-    <div class="runner-overview">
-      {@render overview()}
-      {#if buildPreview}
-        {@render buildPreview()}
-        {#if !horse}
-          <div class="runner-notice">
-            <DiagnosticsOutcomeSummary
-              {capture}
-              {index}
-              {horse}
-              {notice}
-            />
-          </div>
-        {/if}
-      {:else}
-        <div class="runner-setup">
-          <RunnerSupportDeck
-            {deck}
-            compact
-          />
-          <DiagnosticsOutcomeSummary
-            {capture}
-            {index}
-            {horse}
-            {notice}
-          />
-        </div>
-      {/if}
-    </div>
-  {:else}
-    <DiagnosticsOutcomeSummary
-      {capture}
-      {index}
-      {horse}
-      {notice}
-    />
-  {/if}
-
-  {@render report()}
-  {#if horse}
-    <div
-      class="measurement-data"
-      aria-label="Runner simulation data"
-    >
-      <div class="decision-reports">
         <DiagnosticsTraces
-          id={instanceId}
           {capture}
           {index}
           {horse}
@@ -165,6 +115,26 @@
           {onseek}
           {onselect}
         />
+      {/if}
+    </div>
+    <div class="behaviour-column">
+      {#if horse}
+        <DiagnosticsHp
+          {capture}
+          {index}
+          {skillNames}
+          {onseek}
+          onspurt={spurt ? openSpurtBreakdown : undefined}
+        />
+      {/if}
+      <DiagnosticsModes
+        {index}
+        {capture}
+        {horse}
+        {onseek}
+        bind:expandedMode
+      />
+      {#if horse}
         <DiagnosticsAcceleration
           {capture}
           {index}
@@ -172,26 +142,26 @@
           {skillNames}
           {onseek}
         />
-      </div>
-      <div class="simulation-source report-card">
-        <footer class="simulation-meta">
-          <span>
-            Engine <strong>{capture.detailed?.engineBuild}</strong>
-          </span>
-          <span>
-            Seed <strong>{capture.detailed?.seed}</strong>
-          </span>
-          <span>
-            Schema <strong>{capture.detailed?.annotations.schemaVersion}</strong>
-          </span>
-          {#if typeof horse.popularity === 'number'}
-            <span>
-              Popularity <strong>{horse.popularity}</strong>
-            </span>
-          {/if}
-        </footer>
-      </div>
+      {/if}
     </div>
+  </div>
+  {#if horse}
+    <footer class="simulation-meta report-card">
+      <span>
+        Engine <strong>{capture.detailed?.engineBuild}</strong>
+      </span>
+      <span>
+        Seed <strong>{capture.detailed?.seed}</strong>
+      </span>
+      <span>
+        Schema <strong>{capture.detailed?.annotations.schemaVersion}</strong>
+      </span>
+      {#if typeof horse.popularity === 'number'}
+        <span>
+          Popularity <strong>{horse.popularity}</strong>
+        </span>
+      {/if}
+    </footer>
   {/if}
 </section>
 
@@ -205,18 +175,14 @@
     <p class="first-check-detail">
       Starting HP: {number(hp.hp.start)}.
       {#if hp.checkTime !== undefined}
-        Spurt check:
-        <button
-          type="button"
-          onclick={() => {
-            if (hp.checkTime === undefined) return;
+        Spurt check
+        <SeekTimeButton
+          time={hp.checkTime}
+          onseek={(time) => {
             breakdownOpen = false;
-            onseek(hp.checkTime);
+            onseek(time);
           }}
-        >
-          {hp.checkTime.toFixed(3)} s
-        </button>
-        .
+        />
       {/if}
     </p>
     <DiagnosticsSpurt

@@ -61,7 +61,7 @@ describe('Application route manifest', () => {
     ]);
     expect(tools.children?.map((child) => child.badge)).toEqual([
       'New',
-      'New',
+      'Beta',
       'New',
       'New',
       undefined,

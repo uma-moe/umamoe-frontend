@@ -80,11 +80,11 @@
 
   let currentSection = $state('results');
   let headerHeight = $state(0);
-  let runnerAnalysisOpen = $state(false);
-  let resultsPanel = $state<HTMLElement>(),
-    runnerPanel = $state<HTMLElement>();
-  let resultsScrollY: number | undefined;
-  let resultsFocus: HTMLElement | undefined;
+
+  // The tallest the runner analysis has been for this race at this width: a shorter runner never shrinks the page under the reader.
+  let analysisHeight = $state(0),
+    analysisWidth = $state(0),
+    analysisMinHeight = $state(0);
 
   const finishOrder = $derived(
     [...capture.runners].sort(
@@ -104,6 +104,7 @@
   );
 
   const trackId = $derived(trackOverride || String(capture.courseId ?? ''));
+  const replaySimulation = $derived(simulation ?? recordedSimulation(capture));
 
   let shapes = $state.raw<Record<string, CourseShape>>(),
     geometryError = $state('');
@@ -228,7 +229,7 @@
   async function reviewRunner(index: number) {
     selected = String(index);
     await flush();
-    jump('replay');
+    scrollToSection('replay');
   }
 
   function scrollToSection(section: string) {
@@ -239,37 +240,9 @@
   }
 
   async function inspectRunner(index: number) {
-    replay.pause();
-    if (!runnerAnalysisOpen) {
-      resultsScrollY = currentSection === 'results' ? scrollY : undefined;
-      const active = document.activeElement;
-      resultsFocus =
-        active instanceof HTMLElement && resultsPanel?.contains(active) ? active : undefined;
-    }
-
     selected = String(index);
-    runnerAnalysisOpen = true;
     await flush();
-    scrollToSection('results');
-    runnerPanel?.querySelector<HTMLButtonElement>('button')?.focus({ preventScroll: true });
-  }
-
-  async function showResults() {
-    replay.pause();
-    runnerAnalysisOpen = false;
-    await flush();
-    resultsFocus?.focus({ preventScroll: true });
-    if (resultsScrollY !== undefined) window.scrollTo({ top: resultsScrollY, behavior: 'instant' });
-    else scrollToSection('results');
-  }
-
-  function jump(section: string) {
-    if (section === 'results' && runnerAnalysisOpen) {
-      void showResults();
-      return;
-    }
-
-    scrollToSection(section);
+    scrollToSection('runner');
   }
 
   function stepRunner(direction: number) {
@@ -345,13 +318,7 @@
     untrack(() => {
       replay.pause();
       replay.time = capture.frames[0]?.time ?? 0;
-      if (
-        !ensemble &&
-        (!runnerAnalysisOpen || !capture.runners.some((r) => r.index === Number(selected)))
-      )
-        selected = String(capture.runners[0]?.index ?? 0);
-      resultsScrollY = undefined;
-      resultsFocus = undefined;
+      if (!ensemble) selected = String(capture.runners[0]?.index ?? 0);
       trackOverride = '';
       visibility = {};
     });
@@ -372,6 +339,19 @@
     capture;
     untrack(() => {
       replay.time = Math.min(replay.bounds.endTime, Math.max(replay.bounds.startTime, replay.time));
+    });
+  });
+
+  $effect(() => {
+    race;
+    analysisWidth;
+    analysisMinHeight = 0;
+  });
+
+  $effect(() => {
+    const height = analysisHeight;
+    untrack(() => {
+      if (height > analysisMinHeight) analysisMinHeight = height;
     });
   });
 
@@ -433,11 +413,12 @@
       distance={replay.bounds.distanceMax}
       endTime={replay.bounds.endTime}
       {trackOverride}
+      simulation={replaySimulation}
       {hasSession}
       current={currentSection}
       bind:height={headerHeight}
       {headerActions}
-      onjump={jump}
+      onjump={scrollToSection}
     />
   {/if}
   <ReplayDisplayOptions
@@ -466,76 +447,12 @@
         class="analysis-section results-panel"
         data-report-section="results"
         aria-label="Race results section"
-        bind:this={resultsPanel}
       >
-        <div hidden={runnerAnalysisOpen}>
-          <ReplayResults
-            capture={{ ...capture, raceDistance: replay.bounds.distanceMax }}
-            selectedIndex={replay.runner?.index}
-            oninspect={inspectRunner}
-          />
-        </div>
-        <div
-          class="runner-panel"
-          hidden={!runnerAnalysisOpen}
-          bind:this={runnerPanel}
-        >
-          {#if replay.runner}
-            <ReplayRunnerAnalysis
-              {replay}
-              runner={replay.runner}
-              {course}
-              {skillNames}
-              simulation={simulation ?? recordedSimulation(capture)}
-              onretry={onretrysimulation}
-              onbuild={() => (buildOpen = true)}
-              onseek={reviewTime}
-              onselect={reviewRunner}
-            >
-              {#snippet navigation()}
-                <div class="runner-navigation">
-                  <Button
-                    variant="secondary"
-                    size="sm"
-                    icon="arrow-left"
-                    onclick={showResults}
-                  >
-                    All results
-                  </Button>
-                  <div class="runner-switcher">
-                    <Button
-                      variant="secondary"
-                      size="sm"
-                      ariaLabel="Previous runner in finish order"
-                      disabled={runnerPosition <= 0}
-                      onclick={() => stepRunner(-1)}
-                    >
-                      ←
-                    </Button>
-                    <div class="runner-select">
-                      <SelectField
-                        id="analysis-runner"
-                        label="Runner"
-                        hideLabel
-                        options={runnerChoices}
-                        bind:value={selected}
-                      />
-                    </div>
-                    <Button
-                      variant="secondary"
-                      size="sm"
-                      ariaLabel="Next runner in finish order"
-                      disabled={runnerPosition >= finishOrder.length - 1}
-                      onclick={() => stepRunner(1)}
-                    >
-                      →
-                    </Button>
-                  </div>
-                </div>
-              {/snippet}
-            </ReplayRunnerAnalysis>
-          {/if}
-        </div>
+        <ReplayResults
+          capture={{ ...capture, raceDistance: replay.bounds.distanceMax }}
+          selectedIndex={replay.runner?.index}
+          oninspect={inspectRunner}
+        />
       </section>
     {/if}
     <section
@@ -672,6 +589,58 @@
       </div>
     </section>
     {#if !overviewOnly}
+      <section
+        class="analysis-section runner-panel"
+        data-report-section="runner"
+        aria-label="Runner analysis section"
+        style:min-height={analysisMinHeight ? analysisMinHeight + 'px' : undefined}
+        bind:offsetHeight={analysisHeight}
+        bind:clientWidth={analysisWidth}
+      >
+        {#if replay.runner}
+          <ReplayRunnerAnalysis
+            {replay}
+            runner={replay.runner}
+            {course}
+            {skillNames}
+            simulation={replaySimulation}
+            onretry={onretrysimulation}
+            onbuild={() => (buildOpen = true)}
+            onseek={reviewTime}
+            onselect={reviewRunner}
+          >
+            {#snippet navigation()}
+              <div class="runner-switcher">
+                <Button
+                  variant="secondary"
+                  size="sm"
+                  icon="arrow-left"
+                  ariaLabel="Previous runner in finish order"
+                  disabled={runnerPosition <= 0}
+                  onclick={() => stepRunner(-1)}
+                />
+                <div class="runner-select">
+                  <SelectField
+                    id="analysis-runner"
+                    label="Runner"
+                    hideLabel
+                    options={runnerChoices}
+                    bind:value={selected}
+                  />
+                </div>
+                <Button
+                  variant="secondary"
+                  size="sm"
+                  icon="arrow-right"
+                  ariaLabel="Next runner in finish order"
+                  disabled={runnerPosition >= finishOrder.length - 1}
+                  onclick={() => stepRunner(1)}
+                />
+              </div>
+            {/snippet}
+          </ReplayRunnerAnalysis>
+        {/if}
+      </section>
       {#if hasSession}
         <div
           class="session-report"
