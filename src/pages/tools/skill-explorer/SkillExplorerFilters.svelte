@@ -13,8 +13,7 @@
     type ShowLimit,
     type SkillRarity,
     type XMode,
-    type YMode,
-    Y_MODE_NOTES
+    type YMode
   } from './skill-explorer-view';
   import TypeFilters from './TypeFilters.svelte';
   import UmaSelect from './umas/UmaSelect.svelte';
@@ -217,7 +216,7 @@
         label="Horizontal axis"
         compact
         options={[
-          { value: 'position', label: 'Proc point' },
+          { value: 'position', label: 'Activation point' },
           { value: 'cost', label: 'SP cost' }
         ]}
         bind:value={xMode}
@@ -253,7 +252,7 @@
     <Checkbox
       variant="field"
       id="skill-explorer-proc-scaled"
-      label="Scale by proc rate"
+      label="Over all races"
       bind:checked={procScaled}
     />
     <div
@@ -331,8 +330,8 @@
                 label="Ground, weather, season and night skills"
                 ariaLabel="Ground, weather, season and night skills"
                 description={dayFromMeeting
-                  ? "Set by the CM's day: shown where it holds"
-                  : 'Valued as if their day held, marked Forced'}
+                  ? "Set by the CM's race day: shown when it matches"
+                  : 'Valued as if the race day had their condition, marked Forced'}
                 disabled={dayFromMeeting}
                 bind:checked={showDayBound}
               />
@@ -352,7 +351,6 @@
       </InspectPopover>
     </div>
   </div>
-  <p class="mode-note">{Y_MODE_NOTES[yMode]}</p>
 </div>
 
 <style>
