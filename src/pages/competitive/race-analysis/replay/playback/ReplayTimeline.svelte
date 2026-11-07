@@ -52,8 +52,14 @@
   let width = $state(0),
     labelWidth = $state(0),
     plotWidth = $state(0),
+    scrollAreaWidth = $state(0),
+    overflowing = $state(false),
     scrollArea = $state<HTMLDivElement>(),
     tracks = $state<HTMLDivElement>();
+
+  let tracksLeft = 0,
+    tracksWidth = 0,
+    scrollLeft = 0;
 
   /** The width at which the toolbar becomes one row with room for the chart view, as in replay-playback-controls.css. */
   const TOOLBAR_ROW_WIDTH = 900;
@@ -72,17 +78,33 @@
 
   const progress = $derived(percent(time));
 
+  // Layout is measured only when sizes change: reading it on every playback frame forced a full
+  // page layout per frame.
   $effect(() => {
-    progress;
     width;
     labelWidth;
-    if (!scrollArea || !tracks || scrollArea.scrollWidth <= scrollArea.clientWidth) return;
-    const cursor = tracks.offsetLeft + (tracks.clientWidth * progress) / 100;
-    if (
-      cursor < scrollArea.scrollLeft + labelWidth + 10 ||
-      cursor > scrollArea.scrollLeft + scrollArea.clientWidth - 12
-    )
-      scrollArea.scrollLeft = cursor - labelWidth - (scrollArea.clientWidth - labelWidth) / 2;
+    plotWidth;
+    scrollAreaWidth;
+    if (!scrollArea || !tracks) return;
+
+    overflowing = scrollArea.scrollWidth > scrollArea.clientWidth;
+    tracksLeft = tracks.offsetLeft;
+    tracksWidth = tracks.clientWidth;
+    scrollLeft = scrollArea.scrollLeft;
+  });
+
+  // A scrolled timeline keeps the playback cursor in view.
+  $effect(() => {
+    if (!scrollArea || !overflowing) return;
+
+    const cursor = tracksLeft + (tracksWidth * progress) / 100;
+    const inView =
+      cursor >= scrollLeft + labelWidth + 10 && cursor <= scrollLeft + scrollAreaWidth - 12;
+
+    if (inView) return;
+
+    scrollLeft = cursor - labelWidth - (scrollAreaWidth - labelWidth) / 2;
+    scrollArea.scrollLeft = scrollLeft;
   });
 
   const ticks = $derived(
@@ -166,6 +188,8 @@
   <!-- svelte-ignore a11y_no_noninteractive_tabindex (The shared horizontal timeline must be reachable with the keyboard.) -->
   <div
     bind:this={scrollArea}
+    bind:clientWidth={scrollAreaWidth}
+    onscroll={(event) => (scrollLeft = event.currentTarget.scrollLeft)}
     class="timeline-scroll"
     role="region"
     aria-label="Course and skills"

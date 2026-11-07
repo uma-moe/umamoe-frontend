@@ -14,6 +14,7 @@ import {
   type RaceSignalMeans,
   type RaceTrajectory
 } from '@/lib/race/replay/race-ensemble';
+import { RACE_PHASES } from '../replay-course';
 
 export interface TelemetrySignal {
   value: string;
@@ -91,12 +92,7 @@ export function telemetryPhases(
   telemetryEnd: number,
   dark: boolean
 ): MarkArea[] {
-  return [
-    { name: 'Early race', start: 0, end: 1 / 6, color: '#b5b9c2' },
-    { name: 'Mid race', start: 1 / 6, end: 2 / 3, color: '#6ab7ee' },
-    { name: 'Late race', start: 2 / 3, end: 5 / 6, color: '#dfba72' },
-    { name: 'Final leg', start: 5 / 6, end: 1, color: '#bd91d1' }
-  ].flatMap((phase) => {
+  return RACE_PHASES.flatMap((phase) => {
     const start = raceTimeAtDistance(capture.frames, distanceMax * phase.start),
       end =
         phase.end === 1
@@ -108,7 +104,7 @@ export function telemetryPhases(
       : [
           [
             {
-              name: phase.name,
+              name: phase.label,
               xAxis: start,
               itemStyle: { color: phase.color, opacity: 0.07 },
               label: {
@@ -116,7 +112,7 @@ export function telemetryPhases(
                 position: 'insideTop',
                 fontSize: 9,
                 color: dark ? '#abb4c3' : '#566071',
-                formatter: phase.name.replace(' race', '')
+                formatter: phase.label.replace(' race', '')
               }
             },
             { xAxis: end }

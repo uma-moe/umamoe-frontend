@@ -1,5 +1,4 @@
 <script lang="ts">
-  import type { Snippet } from 'svelte';
   import type { RaceRunner } from '@/lib/race/capture/race-capture-parser';
   import {
     formatRaceTime,
@@ -7,6 +6,7 @@
     hpRemainingColor
   } from '@/lib/race/replay/race-display';
   import Icon from '@/components/Icon.svelte';
+  import Button from '@/components/controls/Button.svelte';
   import IconButton from '@/components/controls/IconButton.svelte';
   import Artwork from '@/components/game/Artwork.svelte';
   import { portrait, styleColors } from '@/pages/competitive/analysis-view';
@@ -17,23 +17,51 @@
   let {
     replay,
     showBlocked,
+    overlay = false,
+    width = $bindable(0),
     visibility = $bindable({}),
-    selected = $bindable('0'),
-    children
+    selected = $bindable('0')
   }: {
     replay: ReplayState;
     showBlocked: boolean;
+    /** Floats over the top-right corner of the replay stage instead of following it. */
+    overlay?: boolean;
+    width?: number;
     visibility?: Record<number, number>;
     selected?: string;
-    children?: Snippet;
   } = $props();
 
   const hpColor = (value?: number) => hpRemainingColor(value, $theme === 'dark');
+  const anyHidden = $derived(Object.values(visibility).some((value) => value > 0));
 
   function formatHp(value?: number) {
     if (value === undefined) return '—';
     const percent = Math.round(value * 10) / 10;
     return (percent === 0 || percent === 100 ? String(percent) : percent.toFixed(1)) + '%';
+  }
+
+  function formatGap(finished: boolean, gap: number | undefined, finish: number | undefined) {
+    if (finished) {
+      if (replay.ensemble) return 'At line';
+
+      return finish === undefined ? '—' : formatRaceTime(finish, 2);
+    }
+
+    if (gap === undefined) return '—';
+
+    return gap < 0.05 ? 'Lead' : gap.toFixed(1) + ' m';
+  }
+
+  function gapTitle(finished: boolean) {
+    if (!finished) return 'Distance behind the leader';
+
+    return replay.ensemble ? 'All samples finished' : 'Finish time';
+  }
+
+  function placeOf(runner: RaceRunner, order: number, finished: boolean) {
+    if (finished) return replay.ensemble ? undefined : replay.finishRanks.get(runner.index);
+
+    return replay.readoutFrame ? order + 1 : undefined;
   }
 
   function cycle(r: RaceRunner, focus = false) {
@@ -50,48 +78,16 @@
 
 <aside
   class="live-roster"
+  class:overlay
   aria-label="Race field"
+  bind:clientWidth={width}
 >
-  <header>
-    <div class="field-heading">
-      <h3>
-        Race field <span>{replay.capture.runners.length}</span>
-      </h3>
-      <span class="field-order">
-        {replay.ensemble
-          ? 'Mean position'
-          : replay.finishedCount === replay.capture.runners.length
-            ? 'Finish order'
-            : 'Live order'}
-      </span>
-      {#if Object.values(visibility).some((value) => value > 0)}
-        <IconButton
-          size="sm"
-          icon="eye"
-          label="Show all runners"
-          onclick={() => (visibility = {})}
-        />
-      {/if}
-    </div>
-    <p>
-      {replay.finishedCount
-        ? replay.finishedCount + ' / ' + replay.capture.runners.length + ' finished'
-        : 'Select a runner to follow'}
-    </p>
-  </header>
   <div class="field-runners">
     {#each replay.fieldOrder as r, index (r.index)}
-      {@const horse = replay.frame?.horses[r.index]}
+      {@const horse = replay.readoutFrame?.horses[r.index]}
       {@const finished = replay.hasFinished(r)}
-      {@const place = finished
-        ? replay.ensemble
-          ? undefined
-          : replay.finishRanks.get(r.index)
-        : replay.frame
-          ? index + 1
-          : undefined}
-      {@const gap = horse ? Math.max(0, replay.leader - horse.distance) : undefined}
-      {@const finish = replay.finishTimes.get(r.index)}
+      {@const place = placeOf(r, index, finished)}
+      {@const gap = horse ? Math.max(0, replay.readoutLeader - horse.distance) : undefined}
       <div
         class="field-runner"
         class:finished
@@ -146,23 +142,9 @@
           </span>
           <span
             class="field-gap"
-            title={finished
-              ? replay.ensemble
-                ? 'All samples finished'
-                : 'Finish time'
-              : 'Distance behind the leader'}
+            title={gapTitle(finished)}
           >
-            {finished
-              ? replay.ensemble
-                ? 'At line'
-                : finish === undefined
-                  ? '—'
-                  : formatRaceTime(finish, 2)
-              : gap === undefined
-                ? '—'
-                : gap < 0.05
-                  ? 'Lead'
-                  : gap.toFixed(1) + ' m'}
+            {formatGap(finished, gap, replay.finishTimes.get(r.index))}
             <small class:finish-status={finished}>
               {#if finished}
                 <Icon
@@ -188,7 +170,16 @@
       </div>
     {/each}
   </div>
-  {@render children?.()}
+  {#if anyHidden}
+    <Button
+      variant="secondary"
+      size="sm"
+      icon="eye"
+      onclick={() => (visibility = {})}
+    >
+      Show all runners
+    </Button>
+  {/if}
 </aside>
 
 <style>

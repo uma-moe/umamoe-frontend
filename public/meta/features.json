@@ -173,7 +173,7 @@
       "description": "Upload Uma Musume races to inspect runner speed, HP, positioning, skill activations, and race mechanics in an interactive replay.",
       "path": "/competitive/race-analysis",
       "group": "competitive",
-      "icon": "race",
+      "icon": "analysis",
       "navigation": "secondary",
       "width": "wide",
       "status": "migration",

@@ -74,3 +74,10 @@ export function timedSection<T extends { start: number; end: number }>(
 
 export const slopeLabel = (value: number) =>
   value === 0 ? 'Level' : (value > 0 ? 'Uphill +' : 'Downhill ') + (value / 10000).toFixed(1) + '%';
+
+/** A gradient with an up or down arrow, for labels on the course. */
+export function slopeText(value: number) {
+  if (value > 0) return '▲ ' + slopeLabel(value);
+  if (value < 0) return '▼ ' + slopeLabel(value);
+  return slopeLabel(value);
+}

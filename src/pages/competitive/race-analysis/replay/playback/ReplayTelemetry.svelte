@@ -46,9 +46,9 @@
 
   const selectedFinish = $derived(replay.finishTimes.get(replay.runner?.index ?? 0));
   const telemetryFrame = $derived(
-    selectedFinish !== undefined && replay.time >= selectedFinish
-      ? (replay.finishFrames.get(replay.runner?.index ?? 0) ?? replay.frame)
-      : replay.frame
+    selectedFinish !== undefined && replay.readoutTime >= selectedFinish
+      ? (replay.finishFrames.get(replay.runner?.index ?? 0) ?? replay.readoutFrame)
+      : replay.readoutFrame
   );
 
   const combinedSignals = $derived.by(() => {
@@ -118,7 +118,7 @@
 
     if (!sample || !horse) return undefined;
     if (ensemble && (signal === 'hp' || signal === 'gap'))
-      return meanTrajectorySignal(ensemble, replay.time, replay.runner?.index ?? 0, signal);
+      return meanTrajectorySignal(ensemble, replay.readoutTime, replay.runner?.index ?? 0, signal);
     if (signal === 'speed') return horse.speed / 100;
     if (signal === 'hp')
       return Math.min(

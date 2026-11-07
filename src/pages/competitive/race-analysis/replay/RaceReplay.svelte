@@ -2,6 +2,7 @@
   import { onDestroy, onMount, tick as flush, untrack } from 'svelte';
   import type { Snippet } from 'svelte';
   import { Spring } from 'svelte/motion';
+  import { MediaQuery } from 'svelte/reactivity';
   import type { ParsedRaceCapture } from '@/lib/race/capture/race-capture-parser';
   import { replayViewport } from '@/lib/race/replay/race-replay';
   import Button from '@/components/controls/Button.svelte';
@@ -20,13 +21,13 @@
   } from './replay-course';
   import { loadReplaySettings, saveReplaySettings } from './replay-settings';
   import { runnerCallouts, skillWindows } from './replay-callouts';
+  import { finishCentre, finishFocus } from './replay-finish-camera';
   import { ReplayState } from './replay-state.svelte';
   import ReplayReportHeader from './ReplayReportHeader.svelte';
   import ReplayDisplayOptions from './ReplayDisplayOptions.svelte';
   import ReplayStageTools from './stage/ReplayStageTools.svelte';
   import ReplayPositionStage from './stage/ReplayPositionStage.svelte';
   import ReplayRoster from './stage/ReplayRoster.svelte';
-  import ReplayRunnerSnapshot from './stage/ReplayRunnerSnapshot.svelte';
   import ReplayCourseMap from './map/ReplayCourseMap.svelte';
   import ReplayPlayback, { type EnsembleTimeline } from './playback/ReplayPlayback.svelte';
   import ReplayEnsembleViews from './ensemble/ReplayEnsembleViews.svelte';
@@ -48,7 +49,6 @@
     suspended = false,
     ensembleTimeline,
     simulation,
-    onanalyse,
     onretrysimulation
   }: {
     capture: ParsedRaceCapture;
@@ -65,7 +65,6 @@
     suspended?: boolean;
     /** Defaults to what the capture itself carries, for viewers that never load a simulation. */
     simulation?: DetailedSimulation;
-    onanalyse?: (focus: { runner: number; time: number }) => void;
     onretrysimulation?: () => void;
   } = $props();
 
@@ -122,6 +121,12 @@
     focusView = $state<string>(savedSettings.layout);
 
   const mapPrimary = $derived(focusView === 'map');
+
+  // Narrow screens list the field below the stage; wider ones float it over the stage corner.
+  const wideStage = new MediaQuery('min-width: 951px');
+  let fieldWidth = $state(0);
+  const fieldOverlay = $derived(wideStage.current && toggles.field);
+  const fieldInset = $derived(fieldOverlay ? fieldWidth + 20 : 0);
 
   const course = $derived(courses?.courses[trackId]);
   const replay = new ReplayState({
@@ -185,16 +190,34 @@
   });
 
   const displayedLaneMax = $derived(laneScaleMode === 'fixed' ? laneTarget : laneScale.current);
-  const positionViewport = $derived.by(() => {
+  // The follow camera of both views, for a stretch of course of any length: it keeps the leader
+  // forward while racing and turns to rest on the finish.
+  function cameraWindow(length: number) {
     const { bounds, leader } = replay;
-    const width = viewport.max - viewport.min,
-      distance = Math.max(0, Math.min(bounds.distanceMax, leader));
+    const distance = Math.max(0, Math.min(bounds.distanceMax, leader));
 
-    const edge = Math.min(1, distance / width, (bounds.distanceMax - distance) / width);
-    // Keep the leader forward during racing; gently center the start and finish.
-    const center = distance - width * 0.3 * edge * edge * (3 - 2 * edge);
-    return { min: center - width / 2, max: center + width / 2 };
-  });
+    // Ease out of the centred start.
+    const edge = Math.min(1, distance / length);
+    const following = distance - length * 0.3 * edge * edge * (3 - 2 * edge);
+    const center = finishCentre(following, {
+      leader: distance,
+      finish: bounds.distanceMax,
+      window: length
+    });
+
+    return { min: center - length / 2, max: center + length / 2 };
+  }
+
+  const positionViewport = $derived(cameraWindow(viewport.max - viewport.min));
+
+  // Both views centre the finish on the whole stage, including the part under the race field.
+  const finishProgress = $derived(
+    finishFocus(
+      replay.leader,
+      replay.bounds.distanceMax,
+      positionViewport.max - positionViewport.min
+    )
+  );
 
   async function reviewTime(value: number) {
     replay.seek(value);
@@ -277,12 +300,6 @@
 
     const id = current?.dataset.reportSection;
     if (id !== undefined && id !== currentSection) currentSection = id;
-  }
-
-  function analyseRunner() {
-    replay.pause();
-    if (overviewOnly) onanalyse?.({ runner: replay.runner?.index ?? 0, time: replay.time });
-    else void inspectRunner(replay.runner?.index ?? 0);
   }
 
   function seekDistance(distance: number) {
@@ -404,6 +421,7 @@
   class="replay"
   class:overview={overviewOnly}
   class:ensemble-view={!!ensemble}
+  data-surface={course?.surface === 2 ? 'dirt' : 'turf'}
   style:--replay-header-height={headerHeight + 'px'}
   bind:this={report}
 >
@@ -576,38 +594,29 @@
               laneMax={displayedLaneMax}
               {laneTarget}
               {positionViewport}
+              finishFocus={finishProgress}
               {visibility}
+              {fieldInset}
               bind:selected
             />
           {:else if shapes}
             <ReplayCourseMap
-              toolbarStart={replayTitle}
-              toolbarEnd={replayTools}
-              viewDistance={toggles.cone ? courses?.baseViewDistance : undefined}
-              blockerIndex={toggles.blocked ? replay.blocker : -1}
-              blocking={toggles.blocked ? replay.blockingNow : []}
-              pacemakerIndex={toggles.positionKeep ? replay.pacemaker : undefined}
-              skillEvents={toggles.skills ? replay.recentSkills : []}
-              runnerLabels={callouts}
-              timers={toggles.skillTimers}
-              minimap={toggles.minimap}
-              frames={capture.frames}
-              laneWidth={replay.laneWidth}
-              onseekdistance={seekDistance}
+              {replay}
+              {toggles}
+              {callouts}
               {course}
               shape={shapes[trackId]}
-              onselectcourse={() => (settingsOpen = true)}
-              frame={replay.frame}
-              runners={capture.runners}
-              raceOrder={replay.fieldOrder.map((r) => r.index)}
-              bind:selected
-              {visibility}
-              teamColor={replay.teamColor}
+              viewDistance={courses?.baseViewDistance}
               viewport={positionViewport}
-              slopes={toggles.slopes}
-              showSpeed={toggles.speed}
-              showAcceleration={toggles.accel}
-              acceleration={replay.acceleration}
+              {cameraWindow}
+              laneMax={displayedLaneMax}
+              {visibility}
+              {fieldInset}
+              bind:selected
+              onseekdistance={seekDistance}
+              onselectcourse={() => (settingsOpen = true)}
+              toolbarStart={replayTitle}
+              toolbarEnd={replayTools}
             />
           {:else}
             <div class="map-loading fullscreen-target">
@@ -639,22 +648,16 @@
               {/if}
             </div>
           {/if}
-          <ReplayRoster
-            {replay}
-            showBlocked={toggles.blocked}
-            bind:visibility
-            bind:selected
-          >
-            {#if replay.runner}
-              <ReplayRunnerSnapshot
-                {replay}
-                runner={replay.runner}
-                {skillNames}
-                onanalyse={analyseRunner}
-                bind:selected
-              />
-            {/if}
-          </ReplayRoster>
+          {#if toggles.field}
+            <ReplayRoster
+              {replay}
+              overlay={fieldOverlay}
+              showBlocked={toggles.blocked}
+              bind:width={fieldWidth}
+              bind:visibility
+              bind:selected
+            />
+          {/if}
         {/if}
         <ReplayPlayback
           {replay}

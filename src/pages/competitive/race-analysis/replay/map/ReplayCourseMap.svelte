@@ -1,103 +1,124 @@
 <script lang="ts">
   import { onDestroy, untrack, type Snippet } from 'svelte';
   import { prefersReducedMotion } from 'svelte/motion';
-  import type { RaceEvent, RaceFrame, RaceRunner } from '@/lib/race/capture/race-capture-parser';
-  import {
-    raceFrameAtTime,
-    replayLaneMetres,
-    type InterpolatedRaceFrame
-  } from '@/lib/race/replay/race-replay';
+  import { raceFrameAtTime, replayLaneMetres } from '@/lib/race/replay/race-replay';
+  import { runningStyleName } from '@/lib/race/replay/race-display';
   import Button from '@/components/controls/Button.svelte';
-  import Artwork from '@/components/game/Artwork.svelte';
-  import { portrait } from '@/pages/competitive/analysis-view';
-  import type { Course, CourseShape } from '../replay-course';
+  import { styleColors } from '@/pages/competitive/analysis-view';
+  import {
+    positionKeepZones,
+    trackStatusAt,
+    type Course,
+    type CourseShape
+  } from '../replay-course';
   import {
     replayTrack,
+    withRunIn,
+    withRunOut,
     fitTrackCamera,
-    followTrackCamera,
     trackBasis,
-    trackSection,
+    trackSectionPoints,
     trackUnitsPerMetre
   } from '../replay-track';
+  import type { ReplayState } from '../replay-state.svelte';
+  import type { ReplayToggles } from '../replay-display';
+  import type { RunnerCallout } from '../replay-callouts';
+  import { finishFocus } from '../replay-finish-camera';
+  import ReplayRunnerMarker, { crowdedRunners } from '../ReplayRunnerMarker.svelte';
+  import ReplayBrandMark from '../ReplayBrandMark.svelte';
   import { CourseMapCamera } from './course-map-camera.svelte';
-  import { TrackLabelMotion } from './track-label-motion.svelte';
-  import { dotRadius, placeCallouts } from './course-map-labels';
+  import { screenPoints } from './screen-projection';
   import ReplayMapToolbar from './ReplayMapToolbar.svelte';
   import ReplayMapCourse from './ReplayMapCourse.svelte';
   import ReplayMapLandmarks from './ReplayMapLandmarks.svelte';
-  import ReplayMapRunners from './ReplayMapRunners.svelte';
   import ReplayCourseMinimap from './ReplayCourseMinimap.svelte';
-  import type { RunnerCallout } from '../replay-callouts';
+  import ReplayTrackStatus from './ReplayTrackStatus.svelte';
+  import ReplayMapRibbons from './ReplayMapRibbons.svelte';
+  import { MAP_LABELS_INSIDE, MAP_RIBBONS_OUTSIDE } from '../course-ribbons';
 
   let {
+    replay,
+    toggles,
+    callouts,
     course,
     shape,
-    frame,
-    frames,
-    laneWidth,
     viewDistance,
-    blockerIndex = -1,
-    blocking = [],
-    onseekdistance,
-    skillEvents = [],
-    runnerLabels = new Map(),
-    timers = false,
-    minimap = false,
-    runners,
-    raceOrder,
-    selected = $bindable('0'),
-    visibility,
-    teamColor,
     viewport,
-    slopes = true,
-    showSpeed = false,
-    showAcceleration = false,
-    acceleration,
-    pacemakerIndex,
+    cameraWindow,
+    laneMax,
+    visibility,
+    fieldInset = 0,
+    selected = $bindable('0'),
+    onseekdistance,
     onselectcourse,
     toolbarStart,
     toolbarEnd
   }: {
-    blocking?: { horseIndex: number; blockerHorseIndex: number }[];
-    viewDistance?: number;
-    blockerIndex?: number;
-    skillEvents?: RaceEvent[];
-    runnerLabels?: Map<number, RunnerCallout[]>;
-    timers?: boolean;
-    /** Shows the full course beside the following camera. */
-    minimap?: boolean;
+    replay: ReplayState;
+    toggles: ReplayToggles;
+    callouts: Map<number, RunnerCallout[]>;
     course?: Course;
     shape?: CourseShape;
-    frame?: InterpolatedRaceFrame;
-    frames: RaceFrame[];
-    laneWidth: number;
-    onseekdistance: (distance: number) => void;
-    runners: RaceRunner[];
-    raceOrder: number[];
-    selected?: string;
-    visibility: Record<number, number>;
-    teamColor: (runner: RaceRunner) => string;
+    /** The base view distance from resources, drawn as a cone when enabled. */
+    viewDistance?: number;
+    /** The race window, shared with race positions. */
     viewport: { min: number; max: number };
-    slopes?: boolean;
-    showSpeed?: boolean;
-    showAcceleration?: boolean;
-    acceleration?: (index: number) => number;
-    pacemakerIndex?: number;
+    /** The follow camera shared with race positions, for a stretch of course of a given length. */
+    cameraWindow: (length: number) => { min: number; max: number };
+    /** The lane range shown, in capture lane units, shared with race positions. */
+    laneMax: number;
+    visibility: Record<number, number>;
+    /** Width covered by the race field overlay at the right edge, kept clear of runners. */
+    fieldInset?: number;
+    selected?: string;
+    onseekdistance: (distance: number) => void;
     onselectcourse: () => void;
     toolbarStart?: Snippet;
     toolbarEnd?: Snippet;
   } = $props();
 
+  const BLOCK_STOP_OFFSET = 26;
+  const BLOCK_STOP_HALF_WIDTH = 10;
+  // Lanes are metres from the inner rail, where the frame begins.
+  const FRAMED_OUTER_MARGIN = 1.5;
+  const RAIL_CLEARANCE_PIXELS = 22;
+  // Narrower maps frame a shorter stretch of the race window, so portraits keep room on the track.
+  const FULL_WINDOW_PIXELS = 720;
+  const KEEP_LABEL_ROW = 13;
+  // Labels are drawn above their baseline point, so they fit closer to the bottom edge.
+  const LABEL_EDGE = 24;
+  const LABEL_BOTTOM_EDGE = 4;
+  const LABEL_HALF_WIDTH = 36;
+  const LABEL_ASCENT = 9;
+  const LABEL_DESCENT = 3;
+  const BRAND_INSET = { left: 12, bottom: 8 };
+
   let laneDetail = $state(true);
+  let brandWidth = $state(0),
+    brandHeight = $state(0);
 
-  const view = new CourseMapCamera(() => framingPoints);
-  const labels = new TrackLabelMotion();
-
-  const lateralScale = $derived(laneDetail ? 2 : 1);
+  const view: CourseMapCamera = new CourseMapCamera({
+    framing: () => framingPoints,
+    inset: () => fieldInset,
+    centreShift: () => (fieldInset / 2) * finishProgress,
+    infieldEdge: () => infieldEdge
+  });
 
   const helpId = $props.id();
 
-  const points = $derived(shape ? replayTrack(shape) : []);
+  const frame = $derived(replay.frame);
+  const frames = $derived(replay.capture.frames);
+  const runners = $derived(replay.capture.runners);
+  const laneWidth = $derived(replay.laneWidth);
+  const lateralScale = $derived(laneDetail ? 2 : 1);
+
+  const RUN_OUT_METRES = 80;
+  // The camera centres the start like race positions, so track continues behind the gate.
+  const RUN_IN_METRES = 80;
+
+  const points = $derived(
+    shape ? withRunIn(withRunOut(replayTrack(shape), RUN_OUT_METRES), RUN_IN_METRES) : []
+  );
   const units = $derived(trackUnitsPerMetre(points));
 
   const offsetAt = (distance: number, lane: number) => {
@@ -109,26 +130,42 @@
     };
   };
 
+  const pixelsPerMetre = $derived(Math.max(0.01, units * view.current.scale));
+
+  // Lane zero sits half a portrait off the inner rail, as in race positions. Lanes beyond it are
+  // compressed so the outermost lane still meets the outer rail.
+  const railClearance = $derived(
+    Math.min(laneWidth / 2, RAIL_CLEARANCE_PIXELS / (pixelsPerMetre * lateralScale))
+  );
+
+  const runnerLane = (lanePosition: number) =>
+    railClearance + replayLaneMetres(lanePosition, laneWidth) * (1 - railClearance / laneWidth);
+
+  const lanePoint = (horse: { distance: number; lanePosition: number }) =>
+    offsetAt(horse.distance, runnerLane(horse.lanePosition));
+
   const roadPoints = $derived(points.map((p) => offsetAt(p.distance, laneWidth / 2)));
   const outerPoints = $derived(points.map((p) => offsetAt(p.distance, laneWidth)));
+  const startLanes = $derived(
+    frames[0]?.horses.map((horse) => runnerLane(horse.lanePosition)) ?? []
+  );
+
   const seekLimit = $derived(Math.max(0, ...(frames.at(-1)?.horses.map((h) => h.distance) ?? [])));
-  const places = $derived(new Map(raceOrder.map((index, position) => [index, position + 1])));
   const selectedRunner = $derived(runners.find((r) => r.index === Number(selected)));
   const markers = $derived(
-    runners
-      .filter((r) => visibility[r.index] !== 2 && frame?.horses[r.index])
-      .map((r) => {
-        const horse = frame!.horses[r.index]!,
-          lane = replayLaneMetres(horse.lanePosition, laneWidth);
+    runners.flatMap((runner) => {
+      const horse = frame?.horses[runner.index];
+      if (!horse || visibility[runner.index] === 2) return [];
 
-        return { runner: r, horse, lane, point: offsetAt(horse.distance, lane) };
-      })
+      return [{ runner, horse, point: lanePoint(horse) }];
+    })
   );
 
   const cone = $derived.by(() => {
     const horse = frame?.horses[Number(selected)];
-    if (!horse || !viewDistance || !points.length) return '';
-    const lane = replayLaneMetres(horse.lanePosition, laneWidth);
+    if (!toggles.cone || !horse || !viewDistance || !points.length) return '';
+
+    const lane = runnerLane(horse.lanePosition);
     // ponytail: illustrative base cone; exact skill-adjusted visibility needs engine telemetry.
     const side = (sign: number) =>
       Array.from({ length: 13 }, (_, i) =>
@@ -138,111 +175,129 @@
         )
       );
 
-    return [...side(-1), ...side(1).reverse()].map((p) => p.x + ',' + p.y).join(' ');
+    return screenPoints(view.matrix, [...side(-1), ...side(1).reverse()]);
   });
 
   const blockLinks = $derived(
-    blocking.flatMap((pair) => {
-      const horse = frame?.horses[pair.horseIndex],
-        other = frame?.horses[pair.blockerHorseIndex];
+    !toggles.blocked
+      ? []
+      : replay.blockingNow.flatMap((pair) => {
+          const horse = frame?.horses[pair.horseIndex],
+            other = frame?.horses[pair.blockerHorseIndex];
 
-      if (
-        !horse ||
-        !other ||
-        visibility[pair.horseIndex] === 2 ||
-        visibility[pair.blockerHorseIndex] === 2
-      )
-        return [];
-      const a = view.project(
-          offsetAt(horse.distance, replayLaneMetres(horse.lanePosition, laneWidth))
-        ),
-        b = view.project(offsetAt(other.distance, replayLaneMetres(other.lanePosition, laneWidth)));
+          if (!horse || !other) return [];
+          if (visibility[pair.horseIndex] === 2 || visibility[pair.blockerHorseIndex] === 2)
+            return [];
 
-      const basis = trackBasis(points, other.distance, course?.turn);
-      const normal = view.rotate(basis.nx, basis.ny);
-      return [{ ...pair, a, b, nx: normal.x, ny: normal.y }];
-    })
+          const a = view.project(lanePoint(horse)),
+            b = view.project(lanePoint(other));
+
+          // The stop bar sits at the blocker's portrait edge, facing the blocked runner.
+          const length = Math.hypot(a.x - b.x, a.y - b.y) || 1,
+            ux = (a.x - b.x) / length,
+            uy = (a.y - b.y) / length;
+
+          const stop = { x: b.x + ux * BLOCK_STOP_OFFSET, y: b.y + uy * BLOCK_STOP_OFFSET };
+          return [
+            {
+              ...pair,
+              a,
+              b,
+              stop: {
+                x1: stop.x - uy * BLOCK_STOP_HALF_WIDTH,
+                y1: stop.y + ux * BLOCK_STOP_HALF_WIDTH,
+                x2: stop.x + uy * BLOCK_STOP_HALF_WIDTH,
+                y2: stop.y - ux * BLOCK_STOP_HALF_WIDTH
+              }
+            }
+          ];
+        })
   );
 
   const trail = $derived(
-    [
-      ...frames.slice(
-        raceFrameAtTime(frames, (frame?.time ?? 0) - 3)?.sourceIndex ?? 0,
-        (frame?.sourceIndex ?? 0) + 1
-      ),
-      ...(frame ? [frame] : [])
-    ]
-      .flatMap((f) => {
-        const h = f.horses[Number(selected)];
-        return h ? [offsetAt(h.distance, replayLaneMetres(h.lanePosition, laneWidth))] : [];
+    screenPoints(
+      view.matrix,
+      [
+        ...frames.slice(
+          raceFrameAtTime(frames, (frame?.time ?? 0) - 3)?.sourceIndex ?? 0,
+          (frame?.sourceIndex ?? 0) + 1
+        ),
+        ...(frame ? [frame] : [])
+      ].flatMap((f) => {
+        const horse = f.horses[Number(selected)];
+        return horse ? [lanePoint(horse)] : [];
       })
-      .map((p) => p.x + ',' + p.y)
-      .join(' ')
-  );
-
-  const labelSize = $derived(view.width < 600 ? 28 : 36);
-  const overlayHeight = $derived((Number(showSpeed) + Number(showAcceleration)) * 14);
-  const occupiedLane = $derived(
-    Math.max(
-      0,
-      ...markers
-        .filter((m) => m.horse.distance >= viewport.min && m.horse.distance <= viewport.max)
-        .map((m) => m.lane)
     )
   );
 
-  const occupiedWidth = $derived(occupiedLane + 2);
-  const framedLanes = $derived(Math.max(Math.min(laneWidth, 10), occupiedWidth));
-  const followPoints = $derived(points.map((p) => offsetAt(p.distance, occupiedWidth / 2)));
+  // The follow camera frames the race positions window across the shared lane range, so both views
+  // show the same stretch of course and lanes.
+  const framedOuterLane = $derived(replayLaneMetres(laneMax, laneWidth) + FRAMED_OUTER_MARGIN);
+  const framedLength = $derived(
+    (viewport.max - viewport.min) * Math.min(1, view.frameWidth / FULL_WINDOW_PIXELS)
+  );
+
+  const framed = $derived(cameraWindow(framedLength));
+  const framedCentre = $derived((framed.min + framed.max) / 2);
+
+  // The finish comes to rest at the centre of the whole map, including under the race field.
+  const finishProgress = $derived(
+    finishFocus(replay.leader, replay.bounds.distanceMax, framedLength)
+  );
+
+  const followPoints = $derived(points.map((p) => offsetAt(p.distance, framedOuterLane / 2)));
   const heading = $derived.by(() => {
-    const tangent = trackBasis(points, (viewport.min + viewport.max) / 2, course?.turn);
+    const tangent = trackBasis(points, framedCentre, course?.turn);
     const angle = -Math.atan2(tangent.ty, tangent.tx),
       previous = untrack(() => view.motion.target.angle);
 
     return previous + Math.atan2(Math.sin(angle - previous), Math.cos(angle - previous));
   });
 
-  const followCamera = $derived.by(() => {
-    const camera = followTrackCamera(
-      roadPoints,
-      viewport,
-      view.width,
-      view.height,
-      view.followZoom,
-      heading
-    );
+  const framingPoints = $derived(
+    [
+      framed.min,
+      ...points
+        .filter((p) => p.distance > framed.min && p.distance < framed.max)
+        .map((p) => p.distance),
+      framed.max
+    ].flatMap((distance) => [offsetAt(distance, 0), offsetAt(distance, framedOuterLane)])
+  );
 
-    // Use the same course basis as the dots and landmarks, including the finish.
-    const centre = offsetAt((viewport.min + viewport.max) / 2, framedLanes / 2);
-    return { ...camera, x: centre.x, y: centre.y };
+  // The heading turns the course to run left to right, so the outward normal points up or down.
+  const infieldEdge = $derived.by(() => {
+    const basis = trackBasis(points, framedCentre, course?.turn);
+    return view.rotate(basis.nx, basis.ny, heading).y < 0 ? 'bottom' : 'top';
   });
 
-  const windowPoints = $derived([
-    offsetAt(viewport.min, framedLanes / 2),
-    ...roadPoints.filter((p) => p.distance > viewport.min && p.distance < viewport.max),
-    offsetAt(viewport.max, framedLanes / 2)
-  ]);
+  const fitFramed = (aim: { x: number; y: number }) =>
+    fitTrackCamera(framingPoints, view.frameWidth, view.frameHeight, 0, {
+      x: aim.x,
+      y: aim.y,
+      scale: 32,
+      angle: heading
+    });
 
-  // Reserve a little space at both rails for portraits beside the actual positions.
-  const portraitClearance = $derived(
-    24 / (Math.max(0.01, units * followCamera.scale) * lateralScale)
-  );
+  // Aiming a frame's height outside the inner rail lets the fit settle with the rail at the
+  // infield edge, so spare height goes to the outer lanes rather than the empty infield.
+  const framedAim = $derived.by(() => {
+    const { scale } = fitFramed(offsetAt(framedCentre, 0));
+    const pixelsPerLane = scale * units * lateralScale;
+    const outwardLanes = pixelsPerLane > 0 ? view.frameHeight / pixelsPerLane : 0;
 
-  const framingPoints = $derived(
-    windowPoints.flatMap((p) => [
-      offsetAt(p.distance, -portraitClearance),
-      offsetAt(p.distance, framedLanes + portraitClearance)
-    ])
-  );
+    return offsetAt(framedCentre, outwardLanes);
+  });
 
-  const framedCamera = $derived(
-    fitTrackCamera(framingPoints, view.width, view.height, 0, followCamera)
-  );
+  const framedCamera = $derived.by(() => {
+    const fitted = fitFramed(framedAim);
+    return { ...fitted, scale: fitted.scale * view.followZoom };
+  });
 
   const target = $derived(
     view.following
       ? framedCamera
-      : (view.manual ?? fitTrackCamera([...points, ...outerPoints], view.width, view.height, 0))
+      : (view.manual ??
+          fitTrackCamera([...points, ...outerPoints], view.frameWidth, view.frameHeight, 0))
   );
 
   $effect(() => {
@@ -274,76 +329,141 @@
     void view.motion.set(view.motion.current, { instant: true });
   });
 
-  const pixelsPerMetre = $derived(Math.max(0.01, units * view.current.scale));
-
+  const drawnStart = $derived(points[0]?.distance ?? 0);
+  const drawnLength = $derived(points.at(-1)?.distance ?? 0);
   const displayRange = $derived(
     view.following
       ? {
-          min: Math.max(0, viewport.min - Math.max(view.width, view.height) / pixelsPerMetre / 2),
+          min: Math.max(
+            drawnStart,
+            viewport.min - Math.max(view.width, view.height) / pixelsPerMetre / 2
+          ),
           max: Math.min(
-            shape?.distance ?? 0,
-            viewport.max + Math.max(view.width, view.height) / pixelsPerMetre / 2
+            drawnLength,
+            viewport.max + Math.max(view.width, view.height) / pixelsPerMetre
           )
         }
-      : { min: 0, max: shape?.distance ?? 0 }
+      : { min: drawnStart, max: drawnLength }
+  );
+
+  const keepZones = $derived(
+    toggles.positionKeep ? positionKeepZones(replay.leader, replay.bounds.distanceMax) : []
   );
 
   const screenMarkers = $derived(
     markers
-      .map((marker) => {
-        const inward = marker.lane > laneWidth / 2 ? -1 : 1;
-        return {
-          ...marker,
-          anchor: view.project(marker.point),
-          normal: view.rotate(marker.point.nx * inward, marker.point.ny * inward),
-          tangent: view.rotate(marker.point.tx, marker.point.ty)
-        };
-      })
+      .map((marker) => ({ ...marker, anchor: view.project(marker.point) }))
       .filter(
         (m) =>
-          m.anchor.x >= 0 &&
-          m.anchor.x <= view.width &&
-          m.anchor.y >= 0 &&
-          m.anchor.y <= view.height
+          m.anchor.x >= -20 &&
+          m.anchor.x <= view.width + 20 &&
+          m.anchor.y >= -20 &&
+          m.anchor.y <= view.height + 20
       )
   );
 
-  onDestroy(() => {
-    void labels.motion.set(labels.motion.current, { instant: true });
-  });
-
-  $effect(() => {
-    labels.place({
-      anchors: screenMarkers.map((m) => ({
-        index: m.runner.index,
-        ...m.anchor,
-        nx: m.normal.x,
-        ny: m.normal.y,
-        tx: m.tangent.x,
-        ty: m.tangent.y,
-        progress: -(places.get(m.runner.index) ?? m.runner.index + 1)
-      })),
-      runners: runners.map((r) => r.index),
-      labelSize,
-      overlayHeight,
-      width: view.width,
-      height: view.height,
-      following: view.following,
-      time: frame?.time ?? 0
-    });
-  });
-
-  const callouts = $derived(
-    placeCallouts(screenMarkers, labels.motion.current, labelSize, Number(selected))
+  const crowded = $derived(
+    crowdedRunners(
+      screenMarkers.map((m) => ({ index: m.runner.index, x: m.anchor.x, y: m.anchor.y }))
+    )
   );
 
   const visible = (p: { x: number; y: number }, margin = 20) =>
     p.x >= margin && p.x <= view.width - margin && p.y >= margin && p.y <= view.height - margin;
 
-  const clearLabel = (p: { x: number; y: number }) =>
-    visible(p, 24) && callouts.every((c) => Math.hypot(c.x - p.x, c.y - p.y) > 40);
+  const inLabelArea = (p: { x: number; y: number }) => {
+    if (p.x < LABEL_EDGE || p.x > view.width - LABEL_EDGE) return false;
+    if (p.y < LABEL_EDGE || p.y > view.height - LABEL_BOTTOM_EDGE) return false;
 
-  const packPath = $derived(trackSection(followPoints, viewport.min, viewport.max));
+    const besideBrand = p.y + LABEL_DESCENT < brandBox.top || p.y - LABEL_ASCENT > brandBox.bottom;
+    return p.x > brandBox.right + LABEL_HALF_WIDTH || besideBrand;
+  };
+
+  const clearLabel = (p: { x: number; y: number }) =>
+    inLabelArea(p) &&
+    screenMarkers.every((m) => Math.hypot(m.anchor.x - p.x, m.anchor.y - p.y) > 32);
+
+  const lateralPixelsPerMetre = $derived(pixelsPerMetre * lateralScale);
+
+  const keepLabels = $derived.by(() =>
+    keepZones.flatMap((zone, row) => {
+      if (zone.end <= 0) return [];
+
+      // Rows step inwards from the framed outer lanes so neighbouring zones keep their labels.
+      const lane = framedOuterLane - (6 + row * KEEP_LABEL_ROW) / lateralPixelsPerMetre;
+      const anchor = view.project(offsetAt(Math.max(0, zone.start), lane));
+      if (!visible(anchor, 8)) return [];
+
+      return [{ ...anchor, style: zone.style }];
+    })
+  );
+
+  // While following, the section ribbon runs just outside the outer rail, and the slope ribbon and
+  // course labels just inside it.
+  const ribbonsShown = $derived(view.following && (toggles.course || toggles.slopes));
+
+  // The field overlay keeps a column at the right clear of runners. Without it, the minimap moves to
+  // the outer side of the track, where the frame leaves its spare height.
+  const minimapTop = $derived(fieldInset > 0 || !view.infieldBelow ? undefined : 8);
+
+  const brandBox = $derived({
+    right: BRAND_INSET.left + brandWidth,
+    top: view.height - BRAND_INSET.bottom - brandHeight,
+    bottom: view.height - BRAND_INSET.bottom
+  });
+
+  // The labels inside the rail stay clear of the framed outer lanes, so they never cover runners.
+  const innermostRibbonShift = $derived(
+    (framedOuterLane - laneWidth) * lateralPixelsPerMetre + MAP_LABELS_INSIDE
+  );
+
+  const railOnMap = (distance: number) => {
+    const rail = offsetAt(distance, laneWidth);
+    return { at: view.project(rail), outward: view.rotate(rail.nx, rail.ny) };
+  };
+
+  // The ribbons stay on the outer rail and curve off the map with it. Only when the rail lies beyond
+  // the map edge all along the frame do they move in, together, until the section ribbon shows.
+  const ribbonShift = $derived.by(() => {
+    let closest = -Infinity;
+    for (const point of trackSectionPoints(points, displayRange.min, displayRange.max)) {
+      const { at, outward } = railOnMap(point.distance);
+      if (at.x < 0 || at.x > view.frameWidth) continue;
+
+      const room = outward.y < 0 ? at.y / -outward.y : (view.height - at.y) / outward.y;
+      closest = Math.max(closest, room - MAP_RIBBONS_OUTSIDE);
+    }
+
+    if (closest === -Infinity) return 0;
+
+    return Math.max(innermostRibbonShift, Math.min(0, closest));
+  });
+
+  // A point the given pixels outside the outer rail, or inside it when negative.
+  const ribbonAt = (offset: number, distance: number) => {
+    const { at, outward } = railOnMap(distance),
+      reach = ribbonShift + offset;
+
+    return { x: at.x + outward.x * reach, y: at.y + outward.y * reach };
+  };
+
+  const ribbonLine = (offset: number, start: number, end: number) => {
+    const from = Math.max(start, displayRange.min),
+      to = Math.min(end, displayRange.max);
+
+    if (from >= to) return [];
+
+    return trackSectionPoints(points, from, to).map((point) => ({
+      ...ribbonAt(offset, point.distance),
+      distance: point.distance
+    }));
+  };
+
+  const packPath = $derived(
+    view.following
+      ? ''
+      : screenPoints(view.matrix, trackSectionPoints(followPoints, viewport.min, viewport.max))
+  );
 </script>
 
 <section
@@ -373,99 +493,50 @@
     class="map-scene fullscreen-target"
     bind:clientWidth={view.width}
     bind:clientHeight={view.height}
+    onwheel={view.wheel}
   >
-    <div class="map-caption">
-      <strong>Window</strong>
-      <span>
-        {Math.round(viewport.min).toLocaleString()}–{Math.round(viewport.max).toLocaleString()} m
-      </span>
-      {#if laneDetail}
-        <small>Lane spacing ×2</small>
-      {/if}{#if cone}
-        <small
-          class="cone-label"
-          title="Illustrative base view range from resources. Skill modifiers and exact visible identities are not returned by the simulator."
-        >
-          Base view {viewDistance} m
-        </small>
-      {/if}
-    </div>
-    {#if blockerIndex >= 0}
-      {@const blocker = runners.find((r) => r.index === blockerIndex)}{#if blocker}
-        <button
-          class="map-blocker"
-          onclick={() => (selected = String(blockerIndex))}
-          title="Inspect the reported front blocker"
-        >
-          <Artwork
-            src={portrait(blocker.cardId)}
-            alt=""
-            size="xs"
-          />
-          <span>
-            <small>BLOCKING {selectedRunner?.name}</small>
-            <strong>{blocker.name}</strong>
-          </span>
-        </button>
-      {/if}
-    {/if}
-    {#if minimap && shape && view.following}
-      <ReplayCourseMinimap
-        {shape}
-        {frame}
-        {runners}
-        {viewport}
-        selected={Number(selected)}
-        {visibility}
-        {teamColor}
-      />
-    {/if}
     {#if points.length}
-      <!-- Runner callouts provide keyboard selection; the background supports pan and zoom. -->
+      <!-- Runner markers provide keyboard selection; the background supports pan and zoom. -->
       <!-- svelte-ignore a11y_no_static_element_interactions -->
       <svg
         bind:this={view.element}
         class="course-map"
-        style:--portrait-size={labelSize + 'px'}
         viewBox={'0 0 ' + view.width + ' ' + view.height}
         role="group"
         aria-label="Race course and runner positions"
         aria-describedby={helpId}
-        onwheel={view.wheel}
         onpointerdown={view.beginDrag}
         onpointermove={view.moveDrag}
         onpointerup={view.endDrag}
         onpointercancel={view.endDrag}
         ondblclick={view.follow}
       >
-        <defs>
-          <clipPath id={helpId + '-track'}>
-            <rect
-              x="0"
-              y="0"
-              width={view.width}
-              height={view.height}
-            />
-          </clipPath>
-        </defs>
-        <g clip-path={'url(#' + helpId + '-track)'}>
+        <g>
           <ReplayMapCourse
-            camera={view.current}
-            mapWidth={view.width}
-            mapHeight={view.height}
+            matrix={view.matrix}
             {course}
+            courseDistance={shape?.distance ?? 0}
             {points}
             {roadPoints}
             {outerPoints}
+            {offsetAt}
+            {laneWidth}
+            unitsPerMetre={units}
+            {pixelsPerMetre}
             {displayRange}
-            trackWidth={laneWidth * units * lateralScale}
-            {slopes}
+            trackWidth={laneWidth * lateralScale * pixelsPerMetre}
+            {startLanes}
+            gateOpen={(frame?.time ?? 0) > (frames[0]?.time ?? 0)}
+            showSpurt={toggles.course && !ribbonsShown}
+            showSections={toggles.course && !view.following}
+            showSlopes={toggles.slopes && !view.following}
+            {keepZones}
             {packPath}
-            packWidth={occupiedWidth * units * lateralScale}
+            packWidth={framedOuterLane * lateralScale * pixelsPerMetre}
             {cone}
             {trail}
             trailColor={selectedRunner && visibility[selectedRunner.index] !== 2
-              ? teamColor(selectedRunner)
+              ? replay.teamColor(selectedRunner)
               : undefined}
           />
           <ReplayMapLandmarks
@@ -479,62 +550,71 @@
             {visible}
             {clearLabel}
             {seekLimit}
+            showCourse={toggles.course}
+            showSlopes={toggles.slopes}
+            captions={!view.following}
             {onseekdistance}
           />
+          {#if ribbonsShown}
+            <ReplayMapRibbons
+              {course}
+              raceDistance={replay.bounds.distanceMax}
+              width={view.width}
+              height={view.height}
+              showCourse={toggles.course}
+              showSlopes={toggles.slopes}
+              showPositionKeep={toggles.positionKeep}
+              {ribbonLine}
+              {ribbonAt}
+              brand={brandBox}
+            />
+          {/if}
         </g>
         {#each blockLinks as link}
           <g
             class="block-connection"
             class:focused={link.horseIndex === Number(selected) ||
               link.blockerHorseIndex === Number(selected)}
-            aria-label={(runners.find((r) => r.index === link.horseIndex)?.name ?? 'Runner') +
-              ' blocked by ' +
-              (runners.find((r) => r.index === link.blockerHorseIndex)?.name ?? 'runner')}
           >
             <path
               class="block-link"
               d={'M' + link.a.x + ' ' + link.a.y + ' L' + link.b.x + ' ' + link.b.y}
             />
-            <circle
-              cx={link.a.x}
-              cy={link.a.y}
-              r={dotRadius + 4}
-            />
-            <path
+            <line
               class="block-stop"
-              d={'M' +
-                (link.b.x - link.nx * 10) +
-                ' ' +
-                (link.b.y - link.ny * 10) +
-                ' L' +
-                (link.b.x + link.nx * 10) +
-                ' ' +
-                (link.b.y + link.ny * 10)}
+              x1={link.stop.x1}
+              y1={link.stop.y1}
+              x2={link.stop.x2}
+              y2={link.stop.y2}
             />
           </g>
         {/each}
-        <ReplayMapRunners
-          {callouts}
-          {places}
-          {helpId}
-          {labelSize}
-          {overlayHeight}
-          mapWidth={view.width}
-          mapHeight={view.height}
-          {blocking}
-          {blockerIndex}
-          {skillEvents}
-          {runnerLabels}
-          {timers}
-          {visibility}
-          {teamColor}
-          {showSpeed}
-          {showAcceleration}
-          {acceleration}
-          {pacemakerIndex}
-          bind:selected
-        />
       </svg>
+      {#each keepLabels as label}
+        <span
+          class="keep-label"
+          style:left={label.x + 'px'}
+          style:top={label.y + 'px'}
+          style:background={styleColors[label.style]}
+        >
+          {runningStyleName(label.style)}
+        </span>
+      {/each}
+      <div class="map-markers">
+        {#each screenMarkers as marker (marker.runner.index)}
+          <ReplayRunnerMarker
+            {replay}
+            runner={marker.runner}
+            {toggles}
+            callouts={callouts.get(marker.runner.index)}
+            x={marker.anchor.x}
+            y={marker.anchor.y}
+            crowded={crowded.has(marker.runner.index)}
+            dim={visibility[marker.runner.index] === 1}
+            onselect={() => (selected = String(marker.runner.index))}
+          />
+        {/each}
+      </div>
     {:else}
       <p
         class="unavailable"
@@ -548,6 +628,31 @@
           Select course
         </Button>
       </p>
+    {/if}
+    {#if points.length && !view.following && (toggles.course || toggles.slopes)}
+      <ReplayTrackStatus
+        status={trackStatusAt(course, replay.bounds.distanceMax, replay.leader)}
+        showCourse={toggles.course}
+        showSlopes={toggles.slopes}
+      />
+    {/if}
+    <ReplayBrandMark
+      left={BRAND_INSET.left}
+      bottom={BRAND_INSET.bottom}
+      bind:width={brandWidth}
+      bind:height={brandHeight}
+    />
+    {#if toggles.minimap && shape && view.following}
+      <ReplayCourseMinimap
+        {shape}
+        {frame}
+        {runners}
+        {viewport}
+        selected={Number(selected)}
+        {visibility}
+        teamColor={replay.teamColor}
+        top={minimapTop}
+      />
     {/if}
   </div>
 </section>
