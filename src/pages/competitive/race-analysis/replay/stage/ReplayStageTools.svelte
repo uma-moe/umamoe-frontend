@@ -46,8 +46,8 @@
         <strong>Reading the replay</strong>
         <small>
           Drag to pan. Ctrl / ⌘ + scroll to zoom. Follow window keeps the racing pack in view. Lanes
-          ×2 expands lane spacing. Portraits and dots share the current race position number; gold
-          marks the leader.
+          ×2 expands lane spacing. Each portrait sits on the runner's exact position and shows their
+          starting gate.
         </small>
         <small>
           Select a runner to follow their speed, HP and skills. Use the timeline to jump to any

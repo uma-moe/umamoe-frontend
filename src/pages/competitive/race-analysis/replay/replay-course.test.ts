@@ -10,7 +10,10 @@ import {
   loadRaceCourse,
   resolveReplayCourses,
   courseLandmarks,
-  courseSegments
+  courseSegments,
+  numberedSegments,
+  sectionBorders,
+  positionKeepZones
 } from './replay-course';
 import { replayTrack, trackPointAtDistance } from './replay-track';
 
@@ -114,14 +117,109 @@ it('uses resource distances and grades for upcoming section, slope and phase mar
     ]
   });
 
-  expect(landmarks).toContainEqual({ distance: 300, label: 'Uphill +1.5%', color: '#bd7581' });
-  expect(landmarks).toContainEqual({ distance: 400, label: 'Downhill -1.0%', color: '#719bdd' });
+  expect(landmarks).toContainEqual({
+    distance: 300,
+    label: 'Uphill +1.5%',
+    color: '#bd7581',
+    kind: 'slope'
+  });
+  expect(landmarks).toContainEqual({
+    distance: 400,
+    label: 'Downhill -1.0%',
+    color: '#719bdd',
+    kind: 'slope'
+  });
   expect(landmarks.filter((m) => m.distance === 400).some((m) => m.label === 'Level ground')).toBe(
     false
   );
   expect(landmarks.find((m) => m.label === 'Final spurt window')?.distance).toBe(800);
   expect(landmarks.at(-1)?.label).toBe('Finish');
   expect(courseLandmarks(undefined)).toEqual([]);
+});
+
+it('names where each corner starts and ends, leading into the final straight', () => {
+  const course = {
+    raceTrackId: 10006,
+    distance: 2000,
+    surface: 1,
+    turn: 2,
+    corners: [
+      { start: 400, length: 300 },
+      { start: 1000, length: 400 }
+    ],
+    straights: [
+      { start: 0, end: 400 },
+      { start: 700, end: 1000 },
+      { start: 1400, end: 2000 }
+    ],
+    slopes: []
+  };
+
+  const borders = sectionBorders(course).map(({ distance, label }) => ({ distance, label }));
+
+  expect(borders).toEqual([
+    { distance: 400, label: 'Corner 1 start' },
+    { distance: 700, label: 'Corner 1 end' },
+    { distance: 1000, label: 'Final corner start' },
+    { distance: 1400, label: 'Final straight' }
+  ]);
+  expect(sectionBorders(undefined)).toEqual([]);
+});
+
+it('numbers back-to-back corners and gives them one shared border', () => {
+  const course = {
+    raceTrackId: 10006,
+    distance: 2000,
+    surface: 1,
+    turn: 2,
+    corners: [
+      { start: 300, length: 200 },
+      { start: 500, length: 200 },
+      { start: 1200, length: 300 }
+    ],
+    straights: [
+      { start: 0, end: 300 },
+      { start: 700, end: 1200 },
+      { start: 1500, end: 2000 }
+    ],
+    slopes: []
+  };
+
+  const borders = sectionBorders(course).map(({ distance, label }) => ({ distance, label }));
+  const sections = numberedSegments(course).map((segment) => segment.label);
+
+  expect(borders).toEqual([
+    { distance: 300, label: 'Corner 1 start' },
+    { distance: 500, label: 'Corner 2 start' },
+    { distance: 700, label: 'Corner 2 end' },
+    { distance: 1200, label: 'Final corner start' },
+    { distance: 1500, label: 'Final straight' }
+  ]);
+  expect(sections).toEqual([
+    'Straight',
+    'Corner 1',
+    'Corner 2',
+    'Straight',
+    'Final corner',
+    'Final straight'
+  ]);
+});
+
+it('ends a corner without a following straight as a plain corner end', () => {
+  const course = {
+    raceTrackId: 10006,
+    distance: 1600,
+    surface: 1,
+    turn: 2,
+    corners: [{ start: 600, length: 400 }],
+    straights: [{ start: 0, end: 600 }],
+    slopes: []
+  };
+
+  expect(sectionBorders(course).map((border) => border.label)).toEqual([
+    'Final corner start',
+    'Final corner end'
+  ]);
 });
 
 it('loads a meeting course by its exact race instance and leaves unknown courses unavailable', async () => {
@@ -178,4 +276,13 @@ it('fills unrecorded section ranges without assuming a straight or changing repl
   ]);
 
   expect(courseSegments(undefined, true)).toEqual([]);
+});
+
+it('places position keep zones behind the leader until position keeping ends', () => {
+  const zones = positionKeepZones(500, 2000);
+
+  expect(zones.map((zone) => zone.style)).toEqual([2, 3, 4]);
+  expect(zones.map((zone) => zone.end)).toEqual([497, 500 - 6.5 * 1.8, 500 - 7.5 * 1.8]);
+  expect(zones[0]?.start).toBeCloseTo(500 - 5 * 1.8);
+  expect(positionKeepZones((2000 * 10) / 24, 2000)).toEqual([]);
 });

@@ -11,7 +11,8 @@
     viewport,
     selected,
     visibility,
-    teamColor
+    teamColor,
+    top
   }: {
     shape: CourseShape;
     frame?: InterpolatedRaceFrame;
@@ -20,6 +21,8 @@
     selected: number;
     visibility: Record<number, number>;
     teamColor: (runner: RaceRunner) => string;
+    /** Distance from the top of the view; without it, the minimap sits in the bottom corner. */
+    top?: number;
   } = $props();
 
   const points = $derived(replayTrack(shape));
@@ -54,6 +57,8 @@
 {#if points.length}
   <figure
     class="course-minimap"
+    class:top={top !== undefined}
+    style:top={top === undefined ? undefined : top + 'px'}
     aria-label={'Course overview, ' +
       Math.round(Math.max(0, viewport.min)) +
       ' to ' +
@@ -99,6 +104,9 @@
     background: color-mix(in srgb, var(--surface-1) 88%, transparent);
     box-shadow: 0 2px 8px rgb(0 0 0 / 0.25);
     pointer-events: none;
+  }
+  .course-minimap.top {
+    bottom: auto;
   }
   svg {
     display: block;

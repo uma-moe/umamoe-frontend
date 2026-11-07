@@ -1,0 +1,153 @@
+/* Markers move by transform from the layer origin, so playback never relayouts the stage. */
+.replay-marker {
+  position: absolute;
+  top: 0;
+  left: 0;
+  z-index: 2;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  width: 40px;
+  height: 40px;
+  margin: -20px 0 0 -20px;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--text-primary);
+  cursor: pointer;
+  will-change: transform;
+  pointer-events: auto;
+}
+.replay-marker.selected,
+.replay-marker:focus-visible {
+  z-index: 4;
+}
+.replay-marker:hover {
+  z-index: 5;
+}
+.replay-marker:focus-visible {
+  outline: 2px solid var(--accent-primary);
+  outline-offset: 5px;
+  border-radius: 50%;
+}
+.portrait {
+  position: relative;
+  display: block;
+  border: 2px solid var(--runner-color);
+  border-radius: 50%;
+  background: var(--surface-1);
+  box-shadow: 0 1px 3px rgb(0 0 0 / 0.45);
+}
+.replay-marker.selected .portrait {
+  box-shadow:
+    0 0 0 3px var(--surface-1),
+    0 0 0 5px var(--runner-color),
+    0 1px 3px rgb(0 0 0 / 0.45);
+}
+.replay-marker.triggered .portrait {
+  box-shadow:
+    0 0 0 3px color-mix(in srgb, var(--accent-warning) 70%, transparent),
+    0 1px 3px rgb(0 0 0 / 0.45);
+}
+.replay-marker.front-blocked .portrait {
+  outline: 2px solid var(--accent-error);
+  outline-offset: 3px;
+}
+.portrait b {
+  position: absolute;
+  right: -3px;
+  bottom: -2px;
+  padding: 1px 4px;
+  border-radius: 4px;
+  background: var(--runner-color);
+  color: #141923;
+  font-size: 10px;
+  font-weight: 700;
+}
+.hp {
+  position: absolute;
+  top: calc(100% + 4px);
+  display: block;
+  width: 40px;
+  height: 6px;
+  overflow: hidden;
+  border: 1px solid rgb(0 0 0 / 0.45);
+  border-radius: 3px;
+  background: var(--surface-3);
+}
+.hp i {
+  display: block;
+  height: 100%;
+}
+.marker-name {
+  position: absolute;
+  bottom: calc(100% + 8px);
+  display: none;
+  padding: 2px 5px;
+  border-radius: 3px;
+  background: var(--surface-1);
+  font-size: 10px;
+  font-weight: 600;
+  white-space: nowrap;
+  pointer-events: none;
+}
+.replay-marker:hover .marker-name,
+.replay-marker:focus-visible .marker-name {
+  display: block;
+}
+.replay-marker:has(.marker-callouts):hover .marker-name {
+  display: none;
+}
+.blocked {
+  position: absolute;
+  top: -8px;
+  right: -13px;
+  color: var(--accent-error);
+  font-size: 18px;
+  font-weight: 800;
+  text-shadow: 0 1px 2px var(--surface-1);
+}
+.marker-callouts {
+  position: absolute;
+  bottom: calc(100% + 4px);
+  left: 50%;
+  z-index: 3;
+  transform: translateX(-50%);
+}
+.marker-telemetry {
+  position: absolute;
+  top: calc(100% + 13px);
+  display: flex;
+  gap: 6px;
+  padding: 2px 7px;
+  border-radius: 4px;
+  background: color-mix(in srgb, var(--surface-1) 84%, transparent);
+  font-size: 10px;
+  line-height: 13px;
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+}
+.marker-telemetry > span + span {
+  padding-left: 6px;
+  border-left: 1px solid var(--border-primary);
+  color: var(--text-secondary);
+}
+.crowded .marker-telemetry {
+  visibility: hidden;
+}
+.crowded.selected .marker-telemetry,
+.crowded:hover .marker-telemetry,
+.crowded:focus-visible .marker-telemetry {
+  visibility: visible;
+}
+.dim {
+  opacity: 0.25;
+}
+@media (max-width: 700px) {
+  .marker-name {
+    max-width: 90px;
+    overflow: hidden;
+    font-size: 9px;
+    text-overflow: ellipsis;
+  }
+}

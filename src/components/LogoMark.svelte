@@ -171,8 +171,8 @@
     alt={label}
     width={size}
     height={size}
-    style:width={size + 'px'}
-    style:height={size + 'px'}
+    style:width={fluid ? '100%' : size + 'px'}
+    style:height={fluid ? '100%' : size + 'px'}
   />
 {/if}
 

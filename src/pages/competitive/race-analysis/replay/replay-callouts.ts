@@ -58,13 +58,6 @@ export function skillWindows(capture: ParsedRaceCapture): SkillWindow[] {
   );
 }
 
-/** The runner's skills that stay active for the whole race. */
-export function wholeRaceSkillIds(capture: ParsedRaceCapture, index: number): number[] {
-  return skillActivityRows(capture, index)
-    .filter((row) => row.periods.some(lastsWholeRace))
-    .map((row) => row.id);
-}
-
 function skillCallouts(
   windows: SkillWindow[],
   time: number,

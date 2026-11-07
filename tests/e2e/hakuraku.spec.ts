@@ -472,7 +472,6 @@ test('race field follows live positions and locks individual finishes with trimm
     slider = page.getByRole('slider', { name: 'Replay time', exact: true });
   await expect(page.getByRole('button', { name: /^Seek to final spurt window at/ })).toHaveCount(1);
 
-  await expect(field.locator('.field-order')).toHaveText('Live order');
   expect(
     await field
       .locator('.field-runner')
@@ -486,6 +485,8 @@ test('race field follows live positions and locks individual finishes with trimm
   await expect
     .poll(async () => Number(await slider.getAttribute('max')))
     .toBeCloseTo(selectedFinish, 5);
+  // The chart renderer only loads near the viewport, below the replay stage.
+  await page.getByRole('figure', { name: 'Race telemetry', exact: true }).scrollIntoViewIfNeeded();
   await expect(page.locator('.chart-host svg path[fill="#f5f5f5"]').first()).toBeVisible();
   if (info.project.name === 'mobile-chromium')
     await page.getByRole('button', { name: 'Telemetry display options', exact: true }).click();
@@ -569,7 +570,6 @@ test('race field follows live positions and locks individual finishes with trimm
     ).toHaveText((rounded === 0 || rounded === 100 ? String(rounded) : rounded.toFixed(1)) + '%');
   }
 
-  await expect(field.locator('.field-order')).toHaveText('Finish order');
   expect(
     await field
       .locator('.field-runner')
@@ -577,7 +577,6 @@ test('race field follows live positions and locks individual finishes with trimm
   ).toEqual(ordered.map((r) => r.index));
   await seek(0);
   await expect(field.locator('.finished')).toHaveCount(0);
-  await expect(field.locator('.field-order')).toHaveText('Live order');
   if (info.project.name === 'chromium') {
     const reading = await page.locator('.telemetry-reading').boundingBox(),
       plot = await page.locator('.chart-host').boundingBox();
@@ -589,9 +588,13 @@ test('race field follows live positions and locks individual finishes with trimm
 
     expect(signals[0]).toBeLessThan(signals[1]!);
     expect(signals[1]).toBeLessThan(signals[2]!);
-    expect(
-      await field.locator('.field-runner.chosen').evaluate((e) => getComputedStyle(e).boxShadow)
-    ).toBe('none');
+    const shadowOf = (row: import('@playwright/test').Locator) =>
+      row.evaluate((e) => getComputedStyle(e).boxShadow);
+
+    // Overlay rows share one depth shadow; choosing a runner adds no glow.
+    expect(await shadowOf(field.locator('.field-runner.chosen'))).toBe(
+      await shadowOf(field.locator('.field-runner:not(.chosen)').first())
+    );
   }
 
   await expandTelemetry(page);
@@ -711,19 +714,15 @@ test('race field keeps nine runners visible when blocking and activation details
     await seek(0);
     await expect(field.locator('.field-hp strong')).toHaveText(Array(9).fill('100%'));
     const emptyFeed = (await page.locator('.skill-feed').boundingBox())!,
-      emptySnapshot = (await page.locator('.runner-snapshot').boundingBox())!,
-      emptyMap = (await page.locator('.map-scene').boundingBox())!;
+      emptyStage = (await page.locator('.positions-target').boundingBox())!;
 
     await seek(1);
     await expect(field.locator('.field-hp strong')).toHaveText(Array(9).fill('99.9%'));
     await expect(page.locator('.skill-trigger')).toHaveCount(9);
-    await expect(page.locator('.blocker-link')).toBeVisible();
-    await expect(page.locator('.current-skills .active-skill')).toHaveCount(1);
+    await expect(page.locator('.field-runner.front-blocked')).toHaveCount(1);
+    await expect(page.locator('.race-stage .replay-marker.front-blocked')).toHaveCount(1);
     expect((await page.locator('.skill-feed').boundingBox())!.height).toBe(emptyFeed.height);
-    expect((await page.locator('.runner-snapshot').boundingBox())!.height).toBe(
-      emptySnapshot.height
-    );
-    expect((await page.locator('.map-scene').boundingBox())!.height).toBe(emptyMap.height);
+    expect((await page.locator('.positions-target').boundingBox())!.height).toBe(emptyStage.height);
     if (size) {
       await expect
         .poll(() => field.evaluate((e) => e.scrollHeight - e.clientHeight))
@@ -738,14 +737,6 @@ test('race field keeps nine runners visible when blocking and activation details
       ).toBe(true);
     }
 
-    await page.getByRole('button', { name: 'Following details', exact: true }).click();
-    const details = page.getByRole('dialog', { name: 'Following details', exact: true });
-    await expect(details).toContainText('Blocked by Gate 2');
-    await expect(details.locator('.snapshot-skill')).toHaveCount(1);
-    expect((await page.locator('.runner-snapshot').boundingBox())!.height).toBe(
-      emptySnapshot.height
-    );
-    await page.getByRole('button', { name: 'Close Following details', exact: true }).click();
     await toggleComparison();
     await page
       .getByRole('toolbar', { name: 'Playback and telemetry controls', exact: true })
@@ -819,6 +810,9 @@ test('lane range follows playback continuously and eases the axis and runners af
   for (const [name, json] of Object.entries(replayCourses))
     await page.route(`**/resources/*/${name}.json*`, (route) => route.fulfill({ json }));
   await page.emulateMedia({ reducedMotion: 'no-preference' });
+  await page.addInitScript(() =>
+    localStorage.setItem('replay_settings', JSON.stringify({ laneScaleMode: 'automatic' }))
+  );
   await page.goto('/competitive/race-analysis');
   await page.getByRole('button', { name: 'Try one demo race', exact: true }).click();
   await page.getByRole('radio', { name: 'Race positions', exact: true }).click();
@@ -837,7 +831,22 @@ test('lane range follows playback continuously and eases the axis and runners af
     panel = await page.locator('.positions-target').boundingBox();
 
   expect(plot!.width / panel!.width).toBeGreaterThan(0.9);
-  await expect(stage.locator('.race-boundary[data-distance="0"]')).toHaveAttribute('x1', '500');
+  const boundaryX = async (selector: string) => {
+    const line = (await stage.locator(selector).boundingBox())!,
+      plane = (await page.locator('.track-plane').boundingBox())!;
+
+    return line.x + line.width / 2 - plane.x;
+  };
+
+  // The start is centred in the part of the stage the race field overlay leaves clear.
+  const startX = await boundaryX('.race-boundary[data-distance="0"]'),
+    overlay = page.locator('.live-roster.overlay');
+
+  expect(startX).toBeGreaterThan(plot!.width * 0.3);
+  if (await overlay.count()) {
+    const field = (await overlay.boundingBox())!;
+    expect(plot!.x + startX).toBeLessThan(field.x);
+  }
   // Both expansion and contraction must ease, even when playback is paused.
   for (const time of [35, 0]) {
     const samples = await stage.evaluate(async (element, time) => {
@@ -847,6 +856,17 @@ test('lane range follows playback continuously and eases the axis and runners af
       const before = Number(stage.dataset.laneMax),
         start = performance.now(),
         samples = [];
+
+      // Lane positions are read in the lane axis, which spans the outermost lane to lane zero.
+      const lanePosition = () => {
+        const axis = stage.querySelector('.lane-axis')!.getBoundingClientRect(),
+          marker = stage.querySelector('.replay-marker')!.getBoundingClientRect();
+
+        return {
+          position: (100 * (axis.bottom - (marker.top + marker.height / 2))) / axis.height,
+          axisHeight: axis.height
+        };
+      };
 
       slider.value = String(time);
       slider.dispatchEvent(new Event('input', { bubbles: true }));
@@ -858,7 +878,7 @@ test('lane range follows playback continuously and eases the axis and runners af
           elapsed: performance.now() - start,
           max: Number(stage.dataset.laneMax),
           target: Number(stage.dataset.laneTarget),
-          position: parseFloat(stage.querySelector<HTMLElement>('.replay-marker')!.style.bottom)
+          ...lanePosition()
         });
       }
 
@@ -884,8 +904,10 @@ test('lane range follows playback continuously and eases the axis and runners af
     for (const frame of frames) {
       expect(frame.max).toBeGreaterThanOrEqual(Math.min(before, target) - scaleTolerance);
       expect(frame.max).toBeLessThanOrEqual(Math.max(before, target) + scaleTolerance);
-      // CSS serializes percentage positions with finite precision; compare in plot coordinates.
-      expect(Math.abs(frame.position - lane / frame.max)).toBeLessThan(0.001);
+      // Markers snap to whole device pixels; compare in rendered pixels.
+      expect(
+        (Math.abs(frame.position - lane / frame.max) * frame.axisHeight) / 100
+      ).toBeLessThanOrEqual(1.01);
     }
   }
 
@@ -918,7 +940,11 @@ test('lane range follows playback continuously and eases the axis and runners af
     slider.dispatchEvent(new Event('input', { bubbles: true }));
   });
 
-  await expect(stage.locator('.race-boundary').last()).toHaveAttribute('x1', '500');
+  // The finish comes to rest at the centre of the whole stage, under the race field overlay too.
+  const stageWidth = (await page.locator('.track-plane').boundingBox())!.width;
+  await expect
+    .poll(async () => Math.abs((await boundaryX('.race-boundary >> nth=-1')) - stageWidth / 2))
+    .toBeLessThanOrEqual(1);
 });
 
 test('course map centers the finish and removes portraits when runners leave the screen', async ({
@@ -945,7 +971,6 @@ test('course map centers the finish and removes portraits when runners leave the
   const map = page.getByRole('group', { name: 'Race course and runner positions', exact: true }),
     slider = page.getByRole('slider', { name: 'Replay time', exact: true });
 
-  await expect(map).toBeVisible();
   const seek = async (time: number) =>
     slider.evaluate((e, time) => {
       (e as HTMLInputElement).value = String(time);
@@ -954,6 +979,7 @@ test('course map centers the finish and removes portraits when runners leave the
 
   for (const view of ['Course map']) {
     await page.getByRole('radio', { name: view, exact: true }).click();
+    await expect(map).toBeVisible();
     await seek(1);
     const finish = map.getByRole('button', { name: 'Jump to Finish at 2400 metres', exact: true });
     await expect(finish).toBeAttached();
@@ -966,6 +992,7 @@ test('course map centers the finish and removes portraits when runners leave the
           const a = path.getPointAtLength(0),
             b = path.getPointAtLength(path.getTotalLength());
 
+          // The camera rests on the finish at the centre of the whole map.
           return Math.abs((a.x + b.x) / 2 - svg.viewBox.baseVal.width / 2);
         })
       )
@@ -1003,38 +1030,19 @@ test('course map centers the finish and removes portraits when runners leave the
       })
     ).toBeLessThan(0.01);
 
-    const atFinish = Number(await map.locator('.runner-location').getAttribute('cx'));
-    await expect
-      .poll(() =>
-        map.locator('.map-runner').evaluate((g) => {
-          const portrait = g.querySelector<SVGForeignObjectElement>('.runner-callout')!,
-            dot = g.querySelector<SVGCircleElement>('.runner-location')!;
+    const markers = page.locator('.map-markers .replay-marker');
+    const markerLeft = () =>
+      markers.first().evaluate((e) => new DOMMatrixReadOnly(getComputedStyle(e).transform).m41);
 
-          const distance = Math.hypot(
-            portrait.x.baseVal.value + portrait.width.baseVal.value / 2 - dot.cx.baseVal.value,
-            portrait.y.baseVal.value + portrait.height.baseVal.value / 2 - dot.cy.baseVal.value
-          );
-
-          return (
-            distance >= portrait.width.baseVal.value / 2 + 6 &&
-            distance <= portrait.width.baseVal.value / 2 + 14
-          );
-        })
-      )
-      .toBe(true);
-
+    const atFinish = await markerLeft();
     await seek(1.25);
-    await expect(map.locator('.runner-callout')).toHaveCount(1);
-    expect(Number(await map.locator('.runner-location').getAttribute('cx'))).toBeGreaterThan(
-      atFinish + 10
-    );
+    await expect(markers).toHaveCount(1);
+    expect(await markerLeft()).toBeGreaterThan(atFinish + 10);
     await seek(20);
-    await expect(map.locator('.map-runner')).toHaveCount(0);
-    if (view === 'Race positions')
-      await expect(page.locator('.race-stage .replay-marker')).toHaveCount(0);
+    await expect(markers).toHaveCount(0);
     // Seeking back restores the portrait and its captured position.
     await seek(1);
-    await expect(map.locator('.runner-callout')).toHaveCount(1);
+    await expect(markers).toHaveCount(1);
   }
 
   await page
@@ -1042,7 +1050,7 @@ test('course map centers the finish and removes portraits when runners leave the
     .screenshot({ path: info.outputPath('centered-map-finish.png') });
 });
 
-test('course portraits keep breathing room without jitter and match the live field order', async ({
+test('course map portraits sit on runner positions with gate numbers and the shared overlays', async ({
   page
 }, info) => {
   for (const [name, json] of Object.entries(replayCourses))
@@ -1050,273 +1058,112 @@ test('course portraits keep breathing room without jitter and match the live fie
   await page.emulateMedia({ reducedMotion: 'no-preference' });
   await page.goto('/competitive/race-analysis');
   await page.getByRole('button', { name: 'Try one demo race', exact: true }).click();
-  const map = page.getByRole('group', { name: 'Race course and runner positions', exact: true });
-  await expect(map.locator('.runner-callout')).toHaveCount(9);
-  await expect(page.locator('.map-caption>span')).toHaveText('-40–40 m');
-  const nearPositions = () =>
-    map.evaluate((svg) =>
-      [...svg.querySelectorAll('.map-runner')].every((g) => {
-        const label = g.querySelector<SVGForeignObjectElement>('.runner-callout')!,
-          dot = g.querySelector<SVGCircleElement>('.runner-location')!;
+  await page.getByRole('radio', { name: 'Course map', exact: true }).click();
+  const markers = page.locator('.map-markers .replay-marker');
+  await expect(markers).toHaveCount(9);
 
-        return (
-          Math.hypot(
-            label.x.baseVal.value + label.width.baseVal.value / 2 - dot.cx.baseVal.value,
-            label.y.baseVal.value + label.height.baseVal.value / 2 - dot.cy.baseVal.value
-          ) <= 98
-        );
-      })
-    );
+  const gates = await markers.evaluateAll((items) =>
+    items.map((item) => ({
+      gate: item.querySelector('.portrait b')!.textContent!.trim(),
+      index: (item as HTMLElement).dataset.runnerIndex
+    }))
+  );
 
-  await expect.poll(nearPositions).toBe(true);
-  await page
-    .locator('.map-scene')
-    .screenshot({ path: info.outputPath('nearby-packed-portraits.png') });
+  expect(gates.every((item) => item.gate === String(Number(item.index) + 1))).toBe(true);
+
+  const clearOfField = () =>
+    page.evaluate(() => {
+      const field = document.querySelector('.live-roster.overlay')?.getBoundingClientRect();
+      const clearRight = field ? field.left : innerWidth;
+      return [...document.querySelectorAll('.map-markers .replay-marker .portrait')].every(
+        (portrait) => portrait.getBoundingClientRect().right <= clearRight
+      );
+    });
 
   await page.getByRole('slider', { name: 'Replay time', exact: true }).evaluate((e) => {
-    (e as HTMLInputElement).value = '5';
+    (e as HTMLInputElement).value = '20';
     e.dispatchEvent(new Event('input', { bubbles: true }));
   });
 
+  await expect.poll(clearOfField).toBe(true);
   await page.getByRole('button', { name: 'Play', exact: true }).click();
-  const motion = await map.evaluate(async (svg) => {
+  const motion = await page.evaluate(async () => {
     const read = () =>
-      [...svg.querySelectorAll<SVGGElement>('.map-runner')].map((g) => {
-        const label = g.querySelector<SVGForeignObjectElement>('.runner-callout')!,
-          dot = g.querySelector<SVGCircleElement>('.runner-location')!;
-
-        return {
-          id: g.dataset.runnerIndex,
-          x: label.x.baseVal.value + label.width.baseVal.value / 2,
-          y: label.y.baseVal.value + label.height.baseVal.value / 2,
-          dx: dot.cx.baseVal.value,
-          dy: dot.cy.baseVal.value
-        };
+      [...document.querySelectorAll<HTMLElement>('.map-markers .replay-marker')].map((item) => {
+        const position = new DOMMatrixReadOnly(getComputedStyle(item).transform);
+        return { id: item.dataset.runnerIndex, x: position.m41, y: position.m42 };
       });
-
-    const frameDuration = 1000 / 60;
-    await new Promise(requestAnimationFrame);
-    let sampledAt = performance.now(),
-      previousStep = frameDuration;
 
     const start = read();
-    let previous = start,
-      beforePrevious = start,
-      maxOffsetChange = 0,
-      maxDistance = 0,
-      minDistance = Infinity,
-      minSpacing = Infinity,
-      maxCrossings = 0,
-      frames = 0;
-
-    const jitter: number[] = [];
-    const labelSize =
-      svg.querySelector<SVGForeignObjectElement>('.runner-callout')!.width.baseVal.value;
-
-    const end = performance.now() + 4000;
-    while (performance.now() < end) {
+    let frames = 0;
+    const until = performance.now() + 2000;
+    while (performance.now() < until) {
       await new Promise(requestAnimationFrame);
-      const now = performance.now();
-      const step = Math.max(1, now - sampledAt);
-      sampledAt = now;
-      const next = read();
       frames++;
-      const links = next.map((p) => {
-        const scale = Math.max(0, 1 - (labelSize / 2 + 3) / Math.hypot(p.x - p.dx, p.y - p.dy));
-        return {
-          a: { x: p.dx, y: p.dy },
-          b: { x: p.dx + (p.x - p.dx) * scale, y: p.dy + (p.y - p.dy) * scale }
-        };
-      });
-
-      const side = (p: { x: number; y: number }, q: typeof p, r: typeof p) =>
-        (q.x - p.x) * (r.y - p.y) - (q.y - p.y) * (r.x - p.x);
-
-      let crossings = 0;
-      for (let i = 0; i < links.length; i++)
-        for (const other of links.slice(i + 1)) {
-          const { a, b } = links[i]!,
-            { a: c, b: d } = other;
-
-          if (side(a, b, c) * side(a, b, d) < -1e-6 && side(c, d, a) * side(c, d, b) < -1e-6)
-            crossings++;
-        }
-
-      maxCrossings = Math.max(maxCrossings, crossings);
-      for (const p of next) {
-        maxDistance = Math.max(maxDistance, Math.hypot(p.x - p.dx, p.y - p.dy));
-        minDistance = Math.min(minDistance, Math.hypot(p.x - p.dx, p.y - p.dy));
-        for (const other of next)
-          if (other.id !== p.id)
-            minSpacing = Math.min(minSpacing, Math.hypot(p.x - other.x, p.y - other.y));
-        const old = previous.find((q) => q.id === p.id);
-        // Compare motion at 60 Hz even when the browser skips an animation frame.
-        if (old)
-          maxOffsetChange = Math.max(
-            maxOffsetChange,
-            (Math.hypot(p.x - p.dx - (old.x - old.dx), p.y - p.dy - (old.y - old.dy)) *
-              frameDuration) /
-              step
-          );
-        const prior = beforePrevious.find((q) => q.id === p.id);
-        if (frames > 1 && old && prior)
-          jitter.push(
-            Math.hypot(
-              ((p.x - p.dx - (old.x - old.dx)) * frameDuration) / step -
-                ((old.x - old.dx - (prior.x - prior.dx)) * frameDuration) / previousStep,
-              ((p.y - p.dy - (old.y - old.dy)) * frameDuration) / step -
-                ((old.y - old.dy - (prior.y - prior.dy)) * frameDuration) / previousStep
-            )
-          );
-      }
-
-      beforePrevious = previous;
-      previous = next;
-      previousStep = step;
     }
 
-    const dotMovement = Math.max(
-      ...previous.map((p) => {
-        const old = start.find((q) => q.id === p.id)!;
-        return Math.hypot(p.dx - old.dx, p.dy - old.dy);
+    const end = read();
+    const movement = Math.max(
+      ...end.map((p) => {
+        const old = start.find((q) => q.id === p.id);
+        return old ? Math.hypot(p.x - old.x, p.y - old.y) : 0;
       })
     );
 
-    jitter.sort((a, b) => a - b);
-    return {
-      frames,
-      maxOffsetChange,
-      maxDistance,
-      minDistance,
-      minSpacing,
-      maxCrossings,
-      labelSize,
-      dotMovement,
-      p99Jitter: jitter[Math.floor(jitter.length * 0.99)] ?? 0
-    };
+    return { frames, movement };
   });
 
   await page.getByRole('button', { name: 'Pause', exact: true }).click();
   expect(motion.frames).toBeGreaterThan(20);
-  expect(motion.dotMovement).toBeGreaterThan(5);
-  expect(motion.maxDistance).toBeLessThanOrEqual(98);
-  expect(motion.minDistance).toBeGreaterThanOrEqual(motion.labelSize / 2 + 6);
-  // SVG coordinates and the portrait spring settle within a hundredth of a pixel.
-  expect(motion.minSpacing).toBeGreaterThanOrEqual(motion.labelSize + 8 - 0.01);
-  expect(motion.maxCrossings).toBe(0);
-  expect(motion.maxOffsetChange).toBeLessThan(5);
-  expect(motion.p99Jitter).toBeLessThan(1.5);
-  const order = await page
-    .locator('.field-runner')
-    .evaluateAll((rows) => rows.map((row) => (row as HTMLElement).dataset.runnerIndex));
+  // The camera follows the race window, so the field drifts only slowly across a phone screen.
+  expect(motion.movement).toBeGreaterThan(2);
+  await expect.poll(clearOfField).toBe(true);
 
-  expect(
-    await map.locator('.map-runner').evaluateAll(
-      (groups, order) =>
-        groups.every((g) => {
-          const position = String(order.indexOf((g as SVGGElement).dataset.runnerIndex) + 1);
-          return (
-            g.querySelector('.runner-portrait b')!.textContent === position &&
-            g.classList.contains('leading') === (position === '1')
-          );
-        }),
-      order
-    )
-  ).toBe(true);
-
-  const portraitOffsets = () =>
-    map.locator('.map-runner').evaluateAll((groups) =>
-      groups.map((g) => {
-        const label = g.querySelector<SVGForeignObjectElement>('.runner-callout')!,
-          dot = g.querySelector<SVGCircleElement>('.runner-location')!;
-
-        return {
-          id: (g as SVGGElement).dataset.runnerIndex,
-          dx: label.x.baseVal.value + label.width.baseVal.value / 2 - dot.cx.baseVal.value,
-          dy: label.y.baseVal.value + label.height.baseVal.value / 2 - dot.cy.baseVal.value
-        };
-      })
-    );
-
-  const beforeOverlays = await portraitOffsets();
   await page.getByRole('button', { name: 'Display options', exact: true }).click();
+  await page.getByRole('button', { name: 'HP bars', exact: true }).click();
   await page.getByRole('button', { name: 'Speed [m/s]', exact: true }).click();
   await page.getByRole('button', { name: 'Acceleration [m/s²]', exact: true }).click();
   await page.getByRole('button', { name: 'Done', exact: true }).click();
-  const afterOverlays = await portraitOffsets();
-  expect(
-    Math.max(
-      ...afterOverlays.map((p) => {
-        const old = beforeOverlays.find((q) => q.id === p.id)!;
-        return Math.hypot(p.dx - old.dx, p.dy - old.dy);
-      })
-    )
-  ).toBeLessThan(12);
-
-  await expect(map.locator('.map-runner.selected .runner-speed')).toBeVisible();
-  await expect(map.locator('.map-runner.selected .runner-acceleration')).toBeVisible();
-  expect(
-    await map.locator('.runner-telemetry').evaluateAll((values) =>
-      values.every((value) => {
-        const text = value.getBoundingClientRect(),
-          dot = value
-            .closest('.map-runner')!
-            .querySelector('.runner-location')!
-            .getBoundingClientRect();
-
-        return (
-          text.top > dot.bottom ||
-          text.bottom < dot.top ||
-          text.left > dot.right ||
-          text.right < dot.left
-        );
-      })
-    )
-  ).toBe(true);
-
-  const captionsClear = () =>
-    map.evaluate((svg) => {
-      const obstacles = [...svg.querySelectorAll('.runner-callout,.runner-location')].map((e) =>
-        e.getBoundingClientRect()
+  await expect(markers.locator('.hp')).toHaveCount(9);
+  await expect(
+    page.locator('.map-markers .replay-marker.selected .marker-telemetry')
+  ).toBeVisible();
+  if (info.project.name === 'chromium') {
+    const exposed = await page.evaluate(() => {
+      const crowded = document.querySelectorAll<HTMLElement>(
+        '.map-markers .replay-marker.crowded:not(.selected)'
       );
 
-      const visible = [...svg.querySelectorAll('.runner-name,.runner-telemetry')].filter((e) => {
-        const style = getComputedStyle(e);
-        return style.display !== 'none' && style.visibility !== 'hidden';
-      });
+      for (const marker of crowded) {
+        const box = marker.querySelector('.portrait')!.getBoundingClientRect();
+        const x = box.left + box.width / 2,
+          y = box.top + box.height / 2;
 
-      return visible.every((e) => {
-        const text = e.getBoundingClientRect(),
-          map = svg.getBoundingClientRect();
+        if (marker.contains(document.elementFromPoint(x, y)))
+          return { index: marker.dataset.runnerIndex!, x, y };
+      }
 
-        return (
-          text.left >= map.left &&
-          text.right <= map.right &&
-          text.top >= map.top &&
-          text.bottom <= map.bottom &&
-          obstacles.every(
-            (p) =>
-              text.top >= p.bottom ||
-              text.bottom <= p.top ||
-              text.left >= p.right ||
-              text.right <= p.left
-          )
-        );
-      });
+      return undefined;
     });
 
-  await expect.poll(captionsClear).toBe(true);
-  if (info.project.name === 'chromium') {
-    const crowded = map.locator('.map-runner.crowded:not(.selected)').first();
-    await expect(crowded.locator('.runner-speed')).toHaveCSS('visibility', 'hidden');
-    await crowded.locator('.runner-callout').hover();
-    await expect(crowded.locator('.runner-speed')).toBeVisible();
-    await expect.poll(captionsClear).toBe(true);
+    expect(exposed).toBeDefined();
+    const crowded = page.locator(
+      `.map-markers .replay-marker[data-runner-index="${exposed!.index}"]`
+    );
+
+    await expect(crowded.locator('.marker-telemetry')).toHaveCSS('visibility', 'hidden');
+    await page.mouse.move(exposed!.x, exposed!.y);
+    await expect(crowded.locator('.marker-telemetry')).toBeVisible();
   }
+
+  await page.getByRole('button', { name: 'Display options', exact: true }).click();
+  await page.getByRole('button', { name: 'Race field', exact: true }).click();
+  await page.getByRole('button', { name: 'Done', exact: true }).click();
+  await expect(page.locator('.live-roster')).toHaveCount(0);
 
   await page
     .locator('.map-scene')
-    .screenshot({ path: info.outputPath('nearby-moving-portraits.png') });
+    .screenshot({ path: info.outputPath('course-map-portraits.png') });
 });
 
 test('race uploads keep replay and session sections together, retaining valid files', async ({
@@ -1345,6 +1192,7 @@ test('race uploads keep replay and session sections together, retaining valid fi
 
   const playback = page.getByRole('region', { name: 'Race playback', exact: true });
   const focus = page.getByRole('radiogroup', { name: 'Primary replay view', exact: true });
+  await focus.getByRole('radio', { name: 'Course map', exact: true }).click();
   await expect(focus.getByRole('radio', { name: 'Course map', exact: true })).toHaveAttribute(
     'aria-checked',
     'true'
@@ -1356,7 +1204,7 @@ test('race uploads keep replay and session sections together, retaining valid fi
   expect(
     await page.locator('.race-stage').evaluate((stage) => {
       const box = stage.getBoundingClientRect();
-      return [...stage.querySelectorAll('.replay-marker .art,.distance-axis span')].every((e) => {
+      return [...stage.querySelectorAll('.replay-marker .art')].every((e) => {
         const b = e.getBoundingClientRect();
         return (
           b.left >= box.left && b.right <= box.right && b.top >= box.top && b.bottom <= box.bottom
@@ -1549,8 +1397,7 @@ test('race uploads keep replay and session sections together, retaining valid fi
     .first()
     .click();
 
-  await expect(page.locator('.map-runner.blocked-runner')).not.toHaveCount(0);
-  await expect(page.locator('.map-blocker')).toBeVisible();
+  await expect(page.locator('.map-markers .replay-marker.front-blocked')).not.toHaveCount(0);
   await expect(page.locator('.block-connection.focused')).toBeVisible();
   await expect(page.locator('.field-runner.front-blocked')).not.toHaveCount(0);
   await page
@@ -1562,7 +1409,7 @@ test('race uploads keep replay and session sections together, retaining valid fi
   await page.locator('.skill-period').first().click();
   await expect(page.getByRole('button', { name: 'Race replay', exact: true })).toBeVisible();
   await expect(page.getByLabel('Recent course skill triggers', { exact: true })).toBeVisible();
-  await expect(page.locator('.map-runner.triggered')).not.toHaveCount(0);
+  await expect(page.locator('.map-markers .replay-marker.triggered')).not.toHaveCount(0);
   const feed = page.getByLabel('Recent course skill triggers', { exact: true });
   expect(
     await feed.evaluate(
@@ -1656,8 +1503,10 @@ test('race uploads keep replay and session sections together, retaining valid fi
   expect(
     new Set(
       await page
-        .locator('.runner-location')
-        .evaluateAll((elements) => elements.map((e) => e.getAttribute('cy')))
+        .locator('.map-markers .replay-marker')
+        .evaluateAll((elements) =>
+          elements.map((e) => new DOMMatrixReadOnly(getComputedStyle(e).transform).m42)
+        )
     ).size
   ).toBeGreaterThan(1);
   await expect(page.getByRole('complementary', { name: 'Race field', exact: true })).toBeVisible();
@@ -1678,16 +1527,17 @@ test('race uploads keep replay and session sections together, retaining valid fi
 
   await page.getByRole('button', { name: 'Show all runners', exact: true }).click();
   const map = page.getByRole('group', { name: 'Race course and runner positions', exact: true });
+  const mapMarkers = page.locator('.map-markers .replay-marker');
   await expect(map).toBeVisible();
   await expect(
-    map.getByRole('button', { name: 'Follow ' + followName + ' on course', exact: true })
+    page.locator('.map-markers').getByRole('button', { name: 'Inspect ' + followName, exact: true })
   ).toHaveAttribute('aria-pressed', 'true');
 
-  const portraitPick = map.locator('.map-runner').last();
-  await portraitPick.locator('.runner-callout').click();
+  const portraitPick = mapMarkers.last();
+  await portraitPick.click();
   await expect(portraitPick).toHaveAttribute('aria-pressed', 'true');
-  const mapPick = map.locator('.map-runner').first(),
-    mapName = (await mapPick.getAttribute('aria-label'))!.slice(7, -10);
+  const mapPick = mapMarkers.first(),
+    mapName = (await mapPick.getAttribute('aria-label'))!.slice('Inspect '.length);
 
   await mapPick.focus();
   await page.keyboard.press('Enter');
@@ -1701,8 +1551,37 @@ test('race uploads keep replay and session sections together, retaining valid fi
     'true'
   );
 
-  await expect(map.locator('.runner-portrait')).toHaveCount(9);
-  await expect(map.locator('circle.runner-location')).toHaveCount(9);
+  await expect(mapMarkers).toHaveCount(9);
+  // The follow camera keeps the leader beside the field overlay and runs the race left to right.
+  const fieldFraming = () =>
+    page.evaluate(() => {
+      const scene = document.querySelector('.map-scene')!.getBoundingClientRect();
+      const field = document.querySelector('.live-roster.overlay')?.getBoundingClientRect();
+      const clearRight = field ? field.left : scene.right;
+      const markers = [
+        ...document.querySelectorAll<HTMLElement>('.map-markers .replay-marker')
+      ].map((marker) => ({
+        distance: Number(/, ([\d.]+) m, lane/.exec(marker.title)![1]),
+        portrait: marker.querySelector('.portrait')!.getBoundingClientRect()
+      }));
+
+      const ordered = [...markers].sort((a, b) => a.distance - b.distance);
+      const leader = ordered.at(-1)!,
+        last = ordered[0]!;
+
+      const centre = (box: DOMRect) => box.left + box.width / 2;
+      const spread = leader.distance - last.distance;
+      return {
+        count: markers.length,
+        leaderFramed:
+          leader.portrait.left >= scene.left &&
+          leader.portrait.right <= clearRight &&
+          leader.portrait.top >= scene.top &&
+          leader.portrait.bottom <= scene.bottom,
+        forward: spread < 5 || centre(leader.portrait) > centre(last.portrait)
+      };
+    });
+
   const savedTime = await scrubber.inputValue();
   for (const time of ['10', '30', '90']) {
     await scrubber.evaluate((e, value) => {
@@ -1710,75 +1589,14 @@ test('race uploads keep replay and session sections together, retaining valid fi
       e.dispatchEvent(new Event('input', { bubbles: true }));
     }, time);
 
-    await expect
-      .poll(() =>
-        map.evaluate((svg) => {
-          const portraits = [...svg.querySelectorAll<SVGForeignObjectElement>('.runner-callout')];
-          const dots = [...svg.querySelectorAll<SVGCircleElement>('.runner-location')];
-          const path = svg.querySelector<SVGPolylineElement>('.pack-range')!,
-            matrix = svg
-              .querySelector<SVGGElement>('.track-camera')!
-              .transform.baseVal.consolidate()!.matrix;
-
-          const a = path.points.getItem(0),
-            b = path.points.getItem(path.points.numberOfItems - 1);
-
-          const dx = matrix.a * (b.x - a.x) + matrix.c * (b.y - a.y),
-            dy = matrix.b * (b.x - a.x) + matrix.d * (b.y - a.y);
-
-          return (
-            dx > 0 &&
-            Math.abs(dy) < dx * 0.2 &&
-            portraits.length === 9 &&
-            dots.length === 9 &&
-            [...svg.querySelectorAll('.map-runner')].every((g) => {
-              const dot = g.querySelector<SVGCircleElement>('.runner-location')!,
-                portrait = g.querySelector<SVGForeignObjectElement>('.runner-callout')!;
-
-              const connector = g.querySelector<SVGPolygonElement>('.runner-leader')!,
-                start = connector.points.getItem(0),
-                left = connector.points.getItem(1),
-                right = connector.points.getItem(2),
-                end = { x: (left.x + right.x) / 2, y: (left.y + right.y) / 2 };
-
-              const distance = Math.hypot(
-                dot.cx.baseVal.value - portrait.x.baseVal.value - portrait.width.baseVal.value / 2,
-                dot.cy.baseVal.value - portrait.y.baseVal.value - portrait.height.baseVal.value / 2
-              );
-
-              return (
-                Math.hypot(start.x - dot.cx.baseVal.value, start.y - dot.cy.baseVal.value) < 0.01 &&
-                Math.abs(
-                  Math.hypot(
-                    end.x - portrait.x.baseVal.value - portrait.width.baseVal.value / 2,
-                    end.y - portrait.y.baseVal.value - portrait.height.baseVal.value / 2
-                  ) - Math.min(distance, portrait.width.baseVal.value / 2 - 4)
-                ) < 0.01
-              );
-            }) &&
-            portraits.every((p) => {
-              const x = p.x.baseVal.value,
-                y = p.y.baseVal.value,
-                w = p.width.baseVal.value,
-                h = p.height.baseVal.value;
-
-              return dots.every(
-                (dot) =>
-                  Math.hypot(x + w / 2 - dot.cx.baseVal.value, y + h / 2 - dot.cy.baseVal.value) >
-                  w / 2 + dot.r.baseVal.value + 2
-              );
-            })
-          );
-        })
-      )
-      .toBe(true);
+    await expect.poll(fieldFraming).toEqual({ count: 9, leaderFramed: true, forward: true });
 
     if (info.project.name === 'chromium' && time === '30') {
       await map.scrollIntoViewIfNeeded();
       const box = (await map.boundingBox())!,
-        dot = map.locator('.runner-location').first();
+        marker = mapMarkers.first();
 
-      const before = (await dot.boundingBox())!;
+      const before = (await marker.boundingBox())!;
       await page.mouse.move(box.x + box.width * 0.1, box.y + box.height * 0.7);
       await page.mouse.down();
       await page.mouse.move(box.x + box.width * 0.1 + 50, box.y + box.height * 0.7 + 15, {
@@ -1793,7 +1611,7 @@ test('race uploads keep replay and session sections together, retaining valid fi
 
       await expect
         .poll(async () => {
-          const after = (await dot.boundingBox())!;
+          const after = (await marker.boundingBox())!;
           return Math.abs(after.x - before.x - 50) < 2 && Math.abs(after.y - before.y - 15) < 2;
         })
         .toBe(true);
@@ -1807,14 +1625,6 @@ test('race uploads keep replay and session sections together, retaining valid fi
     e.dispatchEvent(new Event('input', { bubbles: true }));
   }, savedTime);
 
-  await expect(map.locator('.runner-location .art')).toHaveCount(0);
-  expect(
-    new Set(
-      await map
-        .locator('.runner-location')
-        .evaluateAll((elements) => elements.map((e) => e.getAttribute('data-lane-metres')))
-    ).size
-  ).toBeGreaterThan(1);
   await expect(map.locator('.runner-trail')).toHaveCount(1);
   await expect(map.locator('.map-distance').first()).toBeVisible();
   const transform = () => map.locator('.track-camera').getAttribute('transform');
@@ -1859,7 +1669,7 @@ test('race uploads keep replay and session sections together, retaining valid fi
 
       return (
         Math.hypot(b.x - a.x, b.y - a.y) /
-        Number(svg.querySelector('.track-base')!.getAttribute('stroke-width'))
+        Number(svg.querySelector('.track-surface')!.getAttribute('stroke-width'))
       );
     });
 
@@ -1876,7 +1686,9 @@ test('race uploads keep replay and session sections together, retaining valid fi
   await expect(page.getByRole('tablist', { name: 'Course camera', exact: true })).toHaveCount(0);
   await expect(page.getByRole('button', { name: 'Compact pack', exact: true })).toHaveCount(0);
   const runnerPosition = () =>
-    map.locator('.map-runner.selected .runner-leader').getAttribute('points');
+    page
+      .locator('.map-markers .replay-marker.selected')
+      .evaluate((e) => (e as HTMLElement).style.left + ' ' + (e as HTMLElement).style.top);
 
   const beforeSeek = await runnerPosition();
   await page.getByLabel('Replay time', { exact: true }).evaluate((element) => {
@@ -1886,24 +1698,7 @@ test('race uploads keep replay and session sections together, retaining valid fi
 
   await expect.poll(runnerPosition).not.toBe(beforeSeek);
   const assertWindowVisible = async () => {
-    const visible = await map.evaluate(async (svg) => {
-      await new Promise(requestAnimationFrame);
-      const box = (svg as SVGSVGElement).viewBox.baseVal,
-        path = svg.querySelector<SVGPolylineElement>('.pack-range')!;
-
-      const matrix = svg
-        .querySelector<SVGGElement>('.track-camera')!
-        .transform.baseVal.consolidate()!.matrix;
-
-      return Array.from({ length: path.points.numberOfItems }, (_, i) => {
-        const p = path.points.getItem(i),
-          screen = new DOMPoint(p.x, p.y).matrixTransform(matrix);
-
-        return screen.x >= 0 && screen.y >= 0 && screen.x <= box.width && screen.y <= box.height;
-      }).every(Boolean);
-    });
-
-    expect(visible).toBe(true);
+    await expect.poll(async () => (await fieldFraming()).leaderFramed).toBe(true);
   };
 
   await assertWindowVisible();
@@ -1951,26 +1746,26 @@ test('race uploads keep replay and session sections together, retaining valid fi
   await page.getByRole('button', { name: 'Acceleration [m/s²]', exact: true }).click();
   await page.getByRole('button', { name: 'Done', exact: true }).click();
   await expect(map).toBeVisible();
-  await expect(map.locator('.runner-speed')).toHaveCount(await map.locator('.map-runner').count());
-  await expect(map.locator('.runner-acceleration')).toHaveCount(
-    await map.locator('.map-runner').count()
-  );
-  await expect(map.locator('.runner-speed').first()).toContainText('m/s');
-  await expect(map.locator('.runner-acceleration').first()).toContainText('m/s²');
+  const telemetry = page.locator('.map-markers .marker-telemetry');
+  await expect(telemetry).toHaveCount(await mapMarkers.count());
+  await expect(telemetry.first().getByTitle('Speed (m/s)', { exact: true })).toBeAttached();
+  await expect(telemetry.first().getByTitle('Acceleration (m/s²)', { exact: true })).toBeAttached();
   expect(
-    await map.locator('.runner-telemetry').evaluateAll((values) =>
-      values.every((value) => {
-        const rect = value.getBoundingClientRect(),
-          map = value.closest('svg')!.getBoundingClientRect();
+    await page
+      .locator('.map-markers .replay-marker.selected .marker-telemetry')
+      .evaluateAll((values) =>
+        values.every((value) => {
+          const rect = value.getBoundingClientRect(),
+            map = value.closest('.map-scene')!.getBoundingClientRect();
 
-        return (
-          rect.left >= map.left &&
-          rect.right <= map.right &&
-          rect.top >= map.top &&
-          rect.bottom <= map.bottom
-        );
-      })
-    )
+          return (
+            rect.left >= map.left &&
+            rect.right <= map.right &&
+            rect.top >= map.top &&
+            rect.bottom <= map.bottom
+          );
+        })
+      )
   ).toBe(true);
 
   await page.screenshot({ path: info.outputPath('race-replay.png'), fullPage: true });
@@ -2059,6 +1854,8 @@ test('race analysis is one continuous report with preserved selection and compac
     await page.route(`**/resources/*/${name}.json*`, (route) => route.fulfill({ json }));
   await page.goto('/competitive/race-analysis');
   await page.getByRole('button', { name: 'Try one demo race', exact: true }).click();
+  await page.getByRole('radio', { name: 'Course map', exact: true }).click();
+  await page.evaluate(() => window.scrollTo(0, 0));
   if (page.viewportSize()!.width > 1000) {
     // The viewport height belongs to the replay itself; page and race headers sit above it.
     for (const height of [1080, 960]) {
@@ -2165,24 +1962,19 @@ test('race analysis is one continuous report with preserved selection and compac
     const layout = (await page.locator('.replay-layout').boundingBox())!,
       timeline = (await page.locator('.replay-timeline').boundingBox())!;
 
-    const map = (await page.locator('.fullscreen-target').boundingBox())!,
-      field = (await page.locator('.live-roster').boundingBox())!;
+    const map = (await page.locator('.map-scene').boundingBox())!,
+      field = (await page.locator('.live-roster.overlay').boundingBox())!;
 
     expect(Math.abs(timeline.x - layout.x)).toBeLessThan(1);
     expect(Math.abs(timeline.width - layout.width)).toBeLessThan(1);
-    expect(timeline.y).toBeGreaterThanOrEqual(Math.max(map.y + map.height, field.y + field.height));
+    expect(Math.abs(map.width - layout.width)).toBeLessThan(2);
+    expect(timeline.y).toBeGreaterThanOrEqual(map.y + map.height);
+    expect(field.x + field.width).toBeLessThanOrEqual(map.x + map.width);
+    expect(field.y).toBeGreaterThanOrEqual(map.y);
+    expect(field.y + field.height).toBeLessThanOrEqual(map.y + map.height);
     await expect
       .poll(() => page.locator('.field-runners').evaluate((e) => e.scrollHeight - e.clientHeight))
       .toBeLessThanOrEqual(1);
-    expect(
-      await page
-        .locator('.runner-snapshot')
-        .evaluate(
-          (e) =>
-            e.querySelector('.runner-extra')!.getBoundingClientRect().bottom <=
-            e.getBoundingClientRect().bottom + 1
-        )
-    ).toBe(true);
   }
 
   await expect(page.locator('.race-stage')).toBeHidden();
@@ -2263,8 +2055,7 @@ test('race analysis is one continuous report with preserved selection and compac
   // Inspecting jumps to the runner analysis, which can leave the inspected row outside the rendered window.
   await openRaceSection(page, 'Race results');
   await expect(inspected).toHaveAttribute('aria-pressed', 'true');
-  await expect(page.locator('.runner-panel .runner-snapshot')).toHaveCount(0);
-  await expect(page.locator('.replay-panel .runner-snapshot')).toHaveCount(1);
+  await expect(page.locator('.runner-snapshot')).toHaveCount(0);
   await page.getByRole('button', { name: 'Skill activity details', exact: true }).click();
   const skillDetails = page.getByRole('dialog', { name: 'Skill activity details', exact: true });
   await skillDetails.getByRole('checkbox', { name: 'All learned skills', exact: true }).check();
@@ -3970,11 +3761,8 @@ test('automatic resimulation falls back on failure and exposes simulator decisio
     e.dispatchEvent(new Event('input', { bubbles: true }));
   });
 
+  await expect(page.locator('.replay-marker .marker-callouts').first()).toContainText('0.5s');
   await openRaceSection(page, 'Runner analysis');
-  await page.getByRole('button', { name: 'Following details', exact: true }).click();
-  await expect(page.locator('.live-diagnostics')).toContainText('20.00 m/s');
-  await expect(page.locator('.runner-snapshot')).toContainText('0.5s left');
-  await page.getByRole('button', { name: 'Close Following details', exact: true }).click();
   const activity = page.getByRole('region', { name: 'Skill activity timeline', exact: true });
   await expect(activity.locator('.skill-period:not(.activation-only)')).toHaveCount(1);
   await activity.getByRole('button', { name: 'Skill activity details', exact: true }).click();
@@ -4027,9 +3815,13 @@ test('automatic resimulation falls back on failure and exposes simulator decisio
   });
 
   await openRaceSection(page, 'Race replay');
-  await expect(page.locator('.map-blocker')).toContainText('Blocker Suzuka');
-  await expect(page.locator('.map-runner.blocker')).toHaveCount(1);
-  await expect(page.locator('.map-runner.triggered')).not.toHaveCount(0);
+  await expect(page.locator('.field-runner.front-blocked')).toHaveCount(1);
+  await expect(page.locator('.replay-marker.front-blocked')).toHaveCount(1);
+  await expect(page.locator('.replay-marker.triggered')).not.toHaveCount(0);
+  await expect(page.locator('.view-cone')).toHaveCount(0);
+  await page.getByRole('button', { name: 'Display options', exact: true }).click();
+  await page.getByRole('button', { name: 'Base view cone', exact: true }).click();
+  await page.getByRole('button', { name: 'Done', exact: true }).click();
   await expect(page.locator('.view-cone')).toBeVisible();
   await expect(page.locator('.block-connection')).toBeVisible();
   await openRaceSection(page, 'Runner analysis');
@@ -4465,9 +4257,6 @@ test('automatic resimulation falls back on failure and exposes simulator decisio
   });
 
   await openRaceSection(page, 'Runner analysis');
-  await page.getByRole('button', { name: 'Following details', exact: true }).click();
-  await expect(page.locator('.live-diagnostics')).toBeVisible();
-  await page.getByRole('button', { name: 'Close Following details', exact: true }).click();
   expect(calls).toBe(2); // Exported detailed captures already contain the simulation.
   // Exercise the expanded report with enough real skill rows to expose spacing and clipping.
   const reportHorse = response.annotations.horses[0]!;

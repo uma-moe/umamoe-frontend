@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import type { RaceFrame } from '../capture/race-capture-parser';
 import {
   raceFrameAtTime,
+  smoothRaceFrameAtTime,
   raceReplayBounds,
   replayProgress,
   replayViewport,
@@ -72,6 +73,55 @@ describe('race replay domain', () => {
 
     expect(raceFrameAtTime(frames, 3.99)?.horses[0]?.blockFrontHorseIndex).toBe(-1);
     expect(raceFrameAtTime(frames, 4)?.horses[0]?.blockFrontHorseIndex).toBe(2);
+  });
+
+  it('eases playback through samples at the recorded speeds', () => {
+    const horse = (distance: number, lanePosition: number, speed: number) => ({
+      distance,
+      lanePosition,
+      speed,
+      hp: 0,
+      temptationMode: 0,
+      blockFrontHorseIndex: -1
+    });
+
+    const sparse: RaceFrame[] = [
+      { time: 0, horses: [horse(0, 0, 1000)] },
+      { time: 1, horses: [horse(15, 400, 2000)] },
+      { time: 2, horses: [horse(35, 400, 2000)] }
+    ];
+
+    const distanceAt = (time: number) => smoothRaceFrameAtTime(sparse, time)!.horses[0]!.distance;
+    const speedAt = (time: number) => (distanceAt(time + 1e-4) - distanceAt(time - 1e-4)) / 2e-4;
+
+    expect(distanceAt(1)).toBe(15);
+    expect(speedAt(1 - 1e-3)).toBeCloseTo(20, 1);
+    expect(speedAt(1 + 1e-3)).toBeCloseTo(20, 1);
+  });
+
+  it('keeps eased lanes between their samples', () => {
+    const lanes = [0, 600, 600, 0].map((lanePosition, time) => ({
+      time,
+      horses: [
+        {
+          distance: time * 20,
+          lanePosition,
+          speed: 2000,
+          hp: 0,
+          temptationMode: 0,
+          blockFrontHorseIndex: -1
+        }
+      ]
+    }));
+
+    const samples = Array.from(
+      { length: 31 },
+      (_, i) => smoothRaceFrameAtTime(lanes, i / 10)!.horses[0]!.lanePosition
+    );
+
+    expect(Math.min(...samples)).toBe(0);
+    expect(Math.max(...samples)).toBe(600);
+    expect(smoothRaceFrameAtTime(lanes, 1.5)!.horses[0]!.lanePosition).toBe(600);
   });
 
   it('clamps playback outside the available timeline', () => {

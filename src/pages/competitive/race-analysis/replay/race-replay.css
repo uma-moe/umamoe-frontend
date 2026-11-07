@@ -1,24 +1,39 @@
 .replay {
-  grid-template-columns: minmax(0, 1fr);
   --control-height: 32px;
-  min-width: 0;
+  --track-surface: #2f5137;
+  --track-stripe: #355a3d;
+  --track-ground: #1b2a21;
+  --track-infield: #253f2c;
+  --track-rail: #e8ecf0;
+  --track-pole: #e8463a;
+  --track-marking: rgb(255 255 255 / 0.22);
+  --track-ink: #c5d0c7;
   display: grid;
+  grid-template-columns: minmax(0, 1fr);
   gap: 0;
+  min-width: 0;
+}
+.replay[data-surface='dirt'] {
+  --track-surface: #5e4734;
+  --track-stripe: #664e39;
+}
+:global([data-theme='light']) .replay {
+  --track-surface: #86b77c;
+  --track-stripe: #91c187;
+  --track-ground: #c6d9c0;
+  --track-infield: #74a76b;
+  --track-rail: #ffffff;
+  --track-marking: rgb(255 255 255 / 0.55);
+  --track-ink: #2c3b2f;
+}
+:global([data-theme='light']) .replay[data-surface='dirt'] {
+  --track-surface: #c09a6c;
+  --track-stripe: #c8a374;
 }
 h2 {
+  margin: 0;
   font-size: 17px;
   font-weight: 650;
-  margin: 0;
-}
-.analysis-section {
-  min-width: 0;
-  padding: 0 16px 16px;
-}
-.replay-layout {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) 320px;
-  gap: 12px 16px;
-  align-items: start;
 }
 .replay :global(.ui-button.sm) {
   min-height: 32px;
@@ -26,78 +41,17 @@ h2 {
 .notice {
   margin-bottom: 12px;
 }
-.fullscreen-target {
-  min-width: 0;
-  background: var(--surface-1);
-  border-radius: var(--radius-lg);
-  overflow: hidden;
-}
-.replay-layout:fullscreen {
-  overflow: auto;
-  padding: 12px 16px;
-  background: var(--surface-1);
-}
-.stage-heading {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 10px;
-  padding: 0 2px;
-  grid-column: 1/-1;
-}
-.map-loading {
-  height: clamp(320px, 38dvh, 410px);
-  display: grid;
-  place-items: center;
-}
-@media (max-width: 1150px) {
-  .replay-layout {
-    grid-template-columns: minmax(0, 1fr) 280px;
-    gap: 12px;
-  }
-}
-@media (max-width: 950px) {
-  .replay-layout {
-    grid-template-columns: 1fr;
-  }
-}
-@media (max-width: 700px) {
-  .map-loading {
-    height: 390px;
-  }
-  h2 {
-    font-size: 14px;
-  }
-  .analysis-section {
-    padding: 0 10px 12px;
-  }
-  .stage-heading {
-    padding: 0 2px;
-    padding-block: 0;
-  }
-}
-.stage-heading {
-  padding-bottom: 4px;
-}
 .race-panels {
-  min-width: 0;
   display: grid;
   gap: 20px;
+  min-width: 0;
   padding-top: 12px;
 }
-.stage-heading {
-  flex-wrap: wrap;
-}
-.replay-view {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  flex-wrap: wrap;
-}
 .analysis-section {
+  min-width: 0;
   padding: 16px;
-  background: var(--surface-1);
   border-radius: var(--radius-lg);
+  background: var(--surface-1);
 }
 .results-panel {
   padding: 0;
@@ -107,9 +61,9 @@ h2 {
 }
 .runner-switcher {
   display: flex;
+  flex: 0 1 440px;
   align-items: center;
   gap: 4px;
-  flex: 0 1 440px;
   min-width: min(100%, 260px);
 }
 .runner-select {
@@ -122,8 +76,91 @@ h2 {
 }
 .session-report {
   min-width: 0;
-  border-top: 1px solid var(--border-subtle);
   padding-top: 12px;
+  border-top: 1px solid var(--border-subtle);
+}
+.replay-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  align-items: start;
+  gap: 10px;
+}
+.replay-layout:fullscreen {
+  overflow: auto;
+  padding: 12px 16px;
+  background: var(--surface-1);
+}
+/* The minimap shares the right edge with the race field overlay. */
+.replay-layout:has(:global(.course-minimap)) :global(.live-roster.overlay) {
+  max-height: calc(100% - 112px);
+}
+.stage-heading {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  grid-column: 1/-1;
+  padding: 0 0 8px;
+  border-bottom: 1px solid var(--border-subtle);
+}
+.stage-heading h2 {
+  font-size: 18px;
+}
+.replay-view {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 12px;
+}
+.fullscreen-target {
+  grid-column: 1;
+  grid-row: 2;
+  align-self: stretch;
+  min-width: 0;
+  overflow: hidden;
+  border-radius: var(--radius-lg);
+  background: var(--track-ground);
+}
+.map-loading {
+  display: grid;
+  place-items: center;
+  height: clamp(320px, 38dvh, 410px);
+}
+@media (min-width: 951px) {
+  .replay-panel {
+    height: min(100dvh, 1080px);
+    min-height: 720px;
+    padding: 12px 16px;
+    box-sizing: border-box;
+  }
+  .replay-layout {
+    height: 100%;
+    grid-template-rows: auto minmax(160px, 1fr) auto;
+  }
+  .replay-layout:fullscreen {
+    height: 100dvh;
+    box-sizing: border-box;
+  }
+  .map-loading {
+    height: 100%;
+    min-height: 0;
+  }
+}
+@media (min-width: 951px) and (max-height: 850px) {
+  .replay-layout {
+    row-gap: 8px;
+  }
+}
+@media (max-width: 950px) {
+  .fullscreen-target {
+    grid-column: auto;
+    grid-row: auto;
+    order: 1;
+  }
+  .stage-heading {
+    order: 0;
+  }
 }
 @media (max-width: 767px) {
   .race-panels {
@@ -140,72 +177,15 @@ h2 {
     padding: 8px;
   }
 }
-.fullscreen-target {
-  grid-column: 1;
-  grid-row: 2;
-  align-self: stretch;
-}
-.stage-heading {
-  padding: 0 0 8px;
-  border-bottom: 1px solid var(--border-subtle);
-}
-.stage-heading h2 {
-  font-size: 18px;
-}
-@media (min-width: 951px) {
-  .replay-layout {
-    height: 100%;
-    grid-template-columns: minmax(0, 1fr) 360px;
-    grid-template-rows: auto minmax(160px, 1fr) auto;
-    gap: 10px 16px;
-  }
-  .replay-panel {
-    height: min(100dvh, 1080px);
-    min-height: 720px;
-    padding: 12px 16px;
-    box-sizing: border-box;
-  }
-  .replay-layout:fullscreen {
-    height: 100dvh;
-    box-sizing: border-box;
-  }
-  .fullscreen-target {
-    height: 100%;
-    min-height: 0;
-  }
-  .map-loading {
-    height: 100%;
-    min-height: 0;
-  }
-  .race-panels {
-    padding-top: 12px;
-  }
-}
-@media (min-width: 951px) and (max-height: 850px) {
-  .replay-layout {
-    row-gap: 8px;
-  }
-}
-@media (min-width: 951px) and (max-width: 1400px) {
-  .replay-layout {
-    grid-template-columns: minmax(0, 1fr) 320px;
-  }
-}
-@media (max-width: 950px) {
-  .fullscreen-target {
-    grid-column: auto;
-    grid-row: auto;
-  }
-  .stage-heading {
-    order: 0;
-  }
-  .fullscreen-target {
-    order: 1;
-  }
-}
 @media (max-width: 700px) {
+  h2 {
+    font-size: 14px;
+  }
   .stage-heading h2 {
     font-size: 16px;
+  }
+  .map-loading {
+    height: 390px;
   }
 }
 .overview {
@@ -215,9 +195,9 @@ h2 {
   padding-top: 0;
 }
 .overview .analysis-section.replay-panel {
+  padding: 0;
   border: 0;
   border-radius: 0;
-  padding: 0;
   background: transparent;
 }
 @media (min-width: 951px) {
@@ -236,9 +216,9 @@ h2 {
   }
 }
 .ensemble-view .analysis-section.replay-panel {
-  padding: 0;
   height: auto;
   min-height: 0;
+  padding: 0;
 }
 .ensemble-view .replay-layout:not(:fullscreen) {
   display: block;

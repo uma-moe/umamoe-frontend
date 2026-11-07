@@ -2,7 +2,9 @@
   import type { ParsedRaceCapture } from '@/lib/race/capture/race-capture-parser';
   import { raceMetricHelp, type HorseDiagnostics } from '@/lib/race/capture/race-diagnostics';
   import DataTable from '@/components/data/DataTable.svelte';
+  import InfoIcon from '@/components/feedback/InfoIcon.svelte';
   import Icon from '@/components/Icon.svelte';
+  import InspectPopover from '@/components/overlays/InspectPopover.svelte';
   import type { IconName } from '@/components/icon-types';
   import RaceSkill from '@/pages/competitive/runners/RaceSkill.svelte';
   import { isSkillOutcome, skillRows, type SkillOutcome } from '../diagnostics-format';
@@ -181,7 +183,19 @@
               {/if}
             </span>
             {#if row.reason}
-              <small class="impossible-reason">{row.reason}</small>
+              <span class="impossible-help">
+                <InspectPopover
+                  label={'Why ' +
+                    (skillNames.get(Number(row.id)) ?? 'skill ' + row.id) +
+                    ' is impossible'}
+                  openOnHover
+                >
+                  {#snippet trigger()}
+                    <InfoIcon />
+                  {/snippet}
+                  <p>{row.reason}</p>
+                </InspectPopover>
+              </span>
             {/if}
           {/if}
         {/snippet}
@@ -278,12 +292,21 @@
   .skill-status.caution {
     --status-color: var(--accent-warning);
   }
-  /* Indented past the 16px badge and its gap; wraps rather than widening the column. */
-  .impossible-reason {
-    display: block;
-    padding-left: 23px;
-    color: var(--text-secondary);
-    font-size: 10px;
+  .impossible-help {
+    display: inline-flex;
+    vertical-align: middle;
+    margin-left: 3px;
+  }
+  .impossible-help :global(.trigger) {
+    display: grid;
+    place-items: center;
+    min-width: 20px;
+    min-height: 24px;
+  }
+  .impossible-help p {
+    margin: 0;
+    font-size: 11px;
+    line-height: 1.6;
     white-space: normal;
   }
 </style>

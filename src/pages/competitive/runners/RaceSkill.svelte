@@ -13,12 +13,14 @@
     id,
     name,
     iconOnly = false,
+    withIcon = true,
     fill = false,
     level
   }: {
     id: number;
     name?: string;
     iconOnly?: boolean;
+    withIcon?: boolean;
     /** Stretch to the container's width. */
     fill?: boolean;
     /** Shown inside the chip, after the name. */
@@ -42,7 +44,7 @@
 
 <SkillChip
   name={skill?.name ?? name ?? 'Skill ' + id}
-  icon={skillImage(skill?.icon)}
+  icon={withIcon ? skillImage(skill?.icon) : undefined}
   rarity={skillRarity(skill, resolved.inherited)}
   compact
   {iconOnly}

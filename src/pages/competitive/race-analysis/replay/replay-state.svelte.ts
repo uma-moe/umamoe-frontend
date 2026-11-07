@@ -1,6 +1,6 @@
 import type { ParsedRaceCapture, RaceRunner } from '@/lib/race/capture/race-capture-parser';
 import {
-  raceFrameAtTime,
+  smoothRaceFrameAtTime,
   raceReplayBounds,
   replayLaneMetres,
   raceTimeAtDistance
@@ -15,6 +15,8 @@ import {
 } from '@/lib/race/capture/race-diagnostics';
 import type { RaceTrajectory } from '@/lib/race/replay/race-ensemble';
 import type { Course } from './replay-course';
+
+const READOUTS_PER_SECOND = 10;
 
 /** Team ring colors for captures without a team color; fixed so they read on both themes. */
 export const replayTeamColors = ['#69b7ee', '#e69c72', '#c79be7', '#78bba3'];
@@ -63,13 +65,24 @@ export class ReplayState {
     raceReplayBounds(this.capture.frames, this.#source.distance() ?? this.capture.raceDistance)
   );
 
-  frame = $derived(raceFrameAtTime(this.capture.frames, this.time));
+  frame = $derived(smoothRaceFrameAtTime(this.capture.frames, this.time));
   runner = $derived(
     this.capture.runners.find((r) => r.index === Number(this.#source.selected())) ??
       this.capture.runners[0]
   );
 
   leader = $derived(Math.max(0, ...(this.frame?.horses.map((h) => h.distance) ?? [])));
+
+  // While playing, text readouts change ten times a second: every text change costs the page a
+  // layout, and digits cannot be read at the display's frame rate anyway.
+  readoutTime = $derived(
+    this.playing ? Math.floor(this.time * READOUTS_PER_SECOND) / READOUTS_PER_SECOND : this.time
+  );
+
+  readoutFrame = $derived(smoothRaceFrameAtTime(this.capture.frames, this.readoutTime));
+  readoutLeader = $derived(
+    Math.max(0, ...(this.readoutFrame?.horses.map((h) => h.distance) ?? []))
+  );
   laneWidth = $derived.by(() => {
     const capturedWidth = this.capture.laneDistanceMax;
     if (capturedWidth !== undefined && capturedWidth > 0)
@@ -197,7 +210,7 @@ export class ReplayState {
 
   fieldHp = (index: number, finished: boolean) => {
     const result = this.hpResults.get(index),
-      hp = finished ? result?.finish : this.frame?.horses[index]?.hp;
+      hp = finished ? result?.finish : this.readoutFrame?.horses[index]?.hp;
 
     return hp !== undefined && result?.max
       ? Math.min(100, Math.max(0, (hp / result.max) * 100))
@@ -207,8 +220,8 @@ export class ReplayState {
   hasFinished = (r: RaceRunner) => {
     const finish = this.finishTimes.get(r.index);
     return finish !== undefined
-      ? this.time >= finish
-      : (this.frame?.horses[r.index]?.distance ?? 0) >= this.bounds.distanceMax;
+      ? this.readoutTime >= finish
+      : (this.readoutFrame?.horses[r.index]?.distance ?? 0) >= this.bounds.distanceMax;
   };
 
   finishedCount = $derived(this.capture.runners.filter(this.hasFinished).length);
@@ -219,8 +232,8 @@ export class ReplayState {
         (this.hasFinished(a) && this.hasFinished(b)
           ? (this.finishRanks.get(a.index) ?? Infinity) -
             (this.finishRanks.get(b.index) ?? Infinity)
-          : (this.frame?.horses[b.index]?.distance ?? 0) -
-            (this.frame?.horses[a.index]?.distance ?? 0))
+          : (this.readoutFrame?.horses[b.index]?.distance ?? 0) -
+            (this.readoutFrame?.horses[a.index]?.distance ?? 0))
     )
   );
 
@@ -228,12 +241,12 @@ export class ReplayState {
     const exact = detailedSample(
       this.capture.detailed,
       diagnosticHorse(this.capture, index),
-      this.time,
+      this.readoutTime,
       'accelerationRates'
     );
 
     if (exact !== undefined) return exact;
-    const source = this.frame?.sourceIndex ?? 0,
+    const source = this.readoutFrame?.sourceIndex ?? 0,
       left = this.capture.frames[source],
       right = this.capture.frames[source + 1];
 

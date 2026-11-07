@@ -3,6 +3,7 @@ import { appHttp } from '@/services/http/app-http';
 import { resourceCache } from '@/services/resources/resource-cache';
 import { finalSpurtSection } from '@/lib/race/final-spurt';
 import { TRACK_NAMES } from '@/lib/game-data/racing/courses';
+import { racePhaseBands, type RacePhaseBand } from '../race-phase-bands';
 
 export type Course = {
   raceTrackId: number;
@@ -177,6 +178,14 @@ export async function loadRaceCourse(raceInstanceId?: number): Promise<Course | 
   return id === undefined ? undefined : data.courses[id];
 }
 
+const SECTION_COLORS = {
+  straight: '#64918c',
+  finalStraight: '#419168',
+  corner: '#7b7ea8',
+  finalCorner: '#bb9148',
+  unspecified: '#737d8a'
+};
+
 export function courseSegments(course: Course | undefined, includeGaps = false) {
   if (!course) return [];
   const lastStraight = Math.max(...course.straights.map((s) => s.start)),
@@ -187,13 +196,13 @@ export function courseSegments(course: Course | undefined, includeGaps = false) 
       start: s.start,
       end: s.end,
       label: s.start === lastStraight ? 'Final straight' : 'Straight',
-      color: s.start === lastStraight ? '#419168' : '#64918c'
+      color: s.start === lastStraight ? SECTION_COLORS.finalStraight : SECTION_COLORS.straight
     })),
     ...course.corners.map((s) => ({
       start: s.start,
       end: s.start + s.length,
       label: s.start === lastCorner ? 'Final corner' : 'Corner',
-      color: s.start === lastCorner ? '#bb9148' : '#7b7ea8'
+      color: s.start === lastCorner ? SECTION_COLORS.finalCorner : SECTION_COLORS.corner
     }))
   ].sort((a, b) => a.start - b.start);
 
@@ -207,36 +216,166 @@ export function courseSegments(course: Course | undefined, includeGaps = false) 
   return boundaries.slice(0, -1).map((start, index) => ({
     ...(segments.find((segment) => start >= segment.start && start < segment.end) ?? {
       label: 'Unspecified',
-      color: '#737d8a'
+      color: SECTION_COLORS.unspecified
     }),
     start,
     end: boundaries[index + 1]!
   }));
 }
 
+export function slopeColor(slope: number) {
+  if (slope > 0) return '#bd7581';
+  if (slope < 0) return '#719bdd';
+  return '#9ca5b4';
+}
+
+export type SectionBorder = { distance: number; label: string; color: string };
+
+const cornerNumber = (course: Course, start: number) =>
+  course.corners
+    .map((corner) => corner.start)
+    .sort((a, b) => a - b)
+    .indexOf(start) + 1;
+
+/** Course sections with corners numbered in race order, as the simulator's course profile names them. */
+export function numberedSegments(course: Course | undefined) {
+  if (!course) return [];
+
+  return courseSegments(course).map((segment) =>
+    segment.label === 'Corner'
+      ? { ...segment, label: 'Corner ' + cornerNumber(course, segment.start) }
+      : segment
+  );
+}
+
+/** Where corners begin and end inside the race, coloured by the section that follows. */
+export function sectionBorders(course: Course | undefined): SectionBorder[] {
+  if (!course) return [];
+  const lastStraight = Math.max(...course.straights.map((s) => s.start)),
+    lastCorner = Math.max(...course.corners.map((s) => s.start));
+
+  const borders: SectionBorder[] = [];
+  for (const corner of course.corners) {
+    const final = corner.start === lastCorner,
+      name = final ? 'Final corner' : 'Corner ' + cornerNumber(course, corner.start),
+      end = corner.start + corner.length;
+
+    borders.push({
+      distance: corner.start,
+      label: name + ' start',
+      color: final ? SECTION_COLORS.finalCorner : SECTION_COLORS.corner
+    });
+
+    // Back-to-back corners share one border, named by the corner that starts there.
+    if (course.corners.some((next) => next.start === end)) continue;
+
+    const next = course.straights.find((straight) => straight.start === end);
+    if (next?.start === lastStraight)
+      borders.push({ distance: end, label: 'Final straight', color: SECTION_COLORS.finalStraight });
+    else
+      borders.push({
+        distance: end,
+        label: name + ' end',
+        color: next ? SECTION_COLORS.straight : SECTION_COLORS.unspecified
+      });
+  }
+
+  for (const straight of course.straights) {
+    if (borders.some((border) => border.distance === straight.start)) continue;
+
+    const final = straight.start === lastStraight;
+    borders.push({
+      distance: straight.start,
+      label: final ? 'Final straight' : 'Straight',
+      color: final ? SECTION_COLORS.finalStraight : SECTION_COLORS.straight
+    });
+  }
+
+  return borders
+    .filter((border) => border.distance > 0 && border.distance < course.distance)
+    .sort((a, b) => a.distance - b.distance);
+}
+
+export type TrackStatus = {
+  phase: RacePhaseBand;
+  section?: { label: string; color: string };
+  /** Gradient in ten-thousandths, as the course data gives it; 0 on level ground. */
+  slope: number;
+};
+
+/** The race phase, course section and gradient at a distance. */
+export function trackStatusAt(
+  course: Course | undefined,
+  raceDistance: number,
+  distance: number
+): TrackStatus {
+  const fraction = raceDistance > 0 ? distance / raceDistance : 0;
+  const phase = racePhaseBands.find((candidate) => fraction < candidate.end) ?? racePhaseBands[3];
+
+  const section = numberedSegments(course).find(
+    (segment) => distance >= segment.start && distance < segment.end
+  );
+
+  const slope =
+    course?.slopes.find((run) => distance >= run.start && distance < run.start + run.length)
+      ?.slope ?? 0;
+
+  return { phase, section, slope };
+}
+
+export type CourseLandmarkKind = 'section' | 'slope' | 'phase' | 'finish';
+
 export function courseLandmarks(course: Course | undefined) {
   if (!course) return [];
   const hills = course.slopes.filter((s) => s.slope !== 0);
-  return [
-    ...courseSegments(course).map((s) => ({ distance: s.start, label: s.label, color: s.color })),
-    ...hills.flatMap((s) => [
-      {
-        distance: s.start,
-        label: (s.slope > 0 ? 'Uphill +' : 'Downhill ') + (s.slope / 10000).toFixed(1) + '%',
-        color: s.slope > 0 ? '#bd7581' : '#719bdd'
-      },
-      ...(hills.some((next) => next.start === s.start + s.length)
-        ? []
-        : [{ distance: s.start + s.length, label: 'Level ground', color: '#9ca5b4' }])
-    ]),
-    { distance: course.distance / 6, label: 'Mid race', color: '#69b7ee' },
-    {
-      distance: finalSpurtSection(course.distance).start,
-      label: 'Final spurt window',
-      color: finalSpurtSection(course.distance).color
-    },
-    { distance: course.distance, label: 'Finish', color: '#e5e7eb' }
-  ]
+  const spurt = finalSpurtSection(course.distance);
+  const landmarks: { distance: number; label: string; color: string; kind: CourseLandmarkKind }[] =
+    [
+      ...sectionBorders(course).map((border) => ({ ...border, kind: 'section' as const })),
+      ...hills.flatMap((s) => [
+        {
+          distance: s.start,
+          label: (s.slope > 0 ? 'Uphill +' : 'Downhill ') + (s.slope / 10000).toFixed(1) + '%',
+          color: slopeColor(s.slope),
+          kind: 'slope' as const
+        },
+        ...(hills.some((next) => next.start === s.start + s.length)
+          ? []
+          : [
+              {
+                distance: s.start + s.length,
+                label: 'Level ground',
+                color: slopeColor(0),
+                kind: 'slope' as const
+              }
+            ])
+      ]),
+      { distance: course.distance / 6, label: 'Mid race', color: '#69b7ee', kind: 'phase' },
+      { distance: spurt.start, label: 'Final spurt window', color: spurt.color, kind: 'phase' },
+      { distance: (course.distance * 5) / 6, label: 'Final leg', color: '#bd91d1', kind: 'phase' },
+      { distance: course.distance, label: 'Finish', color: '#e5e7eb', kind: 'finish' }
+    ];
+
+  return landmarks
     .filter((m) => m.distance >= 0 && m.distance <= course.distance)
     .sort((a, b) => a.distance - b.distance);
+}
+
+export interface PositionKeepZone {
+  /** Running style that keeps this gap: 2 Pace Chaser, 3 Late Surger, 4 End Closer. */
+  style: number;
+  start: number;
+  end: number;
+}
+
+/** Distance bands behind the leader where each running style keeps position, while it lasts. */
+export function positionKeepZones(leader: number, raceDistance: number): PositionKeepZone[] {
+  if (leader >= (raceDistance * 10) / 24) return [];
+
+  const factor = 1 + (raceDistance - 1000) * 0.0008;
+  return [
+    { style: 2, min: 3, max: 5 * factor },
+    { style: 3, min: 6.5 * factor, max: 7 * factor },
+    { style: 4, min: 7.5 * factor, max: 8 * factor }
+  ].map((zone) => ({ style: zone.style, start: leader - zone.max, end: leader - zone.min }));
 }

@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import type { ParsedRaceCapture } from '@/lib/race/capture/race-capture-parser';
 import type { HorseDiagnostics } from '@/lib/race/capture/race-diagnostics';
 import { makeDemoRaces } from '@/pages/competitive/demo-races';
-import { runnerCallouts, skillWindows, wholeRaceSkillIds } from './replay-callouts';
+import { runnerCallouts, skillWindows } from './replay-callouts';
 
 const base = makeDemoRaces(1)[0]!;
 
@@ -30,8 +30,12 @@ describe('whole-race skills', () => {
     { skillId: 30, detailIndex: 0, startTime: 40, endTime: 108.36 }
   ]);
 
-  it('lists only skills active from the gate for longer than a timed effect', () => {
-    expect(wholeRaceSkillIds(race, 0)).toEqual([10]);
+  it('marks only skills active from the gate for longer than a timed effect', () => {
+    const wholeRaceSkills = skillWindows(race)
+      .filter((window) => window.runner === 0 && window.wholeRace)
+      .map((window) => window.skillId);
+
+    expect(wholeRaceSkills).toEqual([10]);
   });
 
   it('keeps them out of the course labels while timed skills are labelled', () => {
