@@ -3,6 +3,7 @@ import { appHttp } from '@/services/http/app-http';
 import { resourceCache } from '@/services/resources/resource-cache';
 import { finalSpurtSection } from '@/lib/race/final-spurt';
 import { TRACK_NAMES } from '@/lib/game-data/racing/courses';
+import { racePhaseBands, type RacePhaseBand } from '../race-phase-bands';
 
 export type Course = {
   raceTrackId: number;
@@ -295,18 +296,8 @@ export function sectionBorders(course: Course | undefined): SectionBorder[] {
     .sort((a, b) => a.distance - b.distance);
 }
 
-/** Race phases as fractions of the race distance. */
-export const RACE_PHASES = [
-  { label: 'Early race', start: 0, end: 1 / 6, color: '#b5b9c2' },
-  { label: 'Mid race', start: 1 / 6, end: 2 / 3, color: '#6ab7ee' },
-  { label: 'Late race', start: 2 / 3, end: 5 / 6, color: '#dfba72' },
-  { label: 'Final leg', start: 5 / 6, end: 1, color: '#bd91d1' }
-] as const;
-
-export type RacePhase = (typeof RACE_PHASES)[number];
-
 export type TrackStatus = {
-  phase: RacePhase;
+  phase: RacePhaseBand;
   section?: { label: string; color: string };
   /** Gradient in ten-thousandths, as the course data gives it; 0 on level ground. */
   slope: number;
@@ -319,7 +310,7 @@ export function trackStatusAt(
   distance: number
 ): TrackStatus {
   const fraction = raceDistance > 0 ? distance / raceDistance : 0;
-  const phase = RACE_PHASES.find((candidate) => fraction < candidate.end) ?? RACE_PHASES[3];
+  const phase = racePhaseBands.find((candidate) => fraction < candidate.end) ?? racePhaseBands[3];
 
   const section = numberedSegments(course).find(
     (segment) => distance >= segment.start && distance < segment.end

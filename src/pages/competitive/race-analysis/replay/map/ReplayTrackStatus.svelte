@@ -18,7 +18,7 @@
   aria-label="Leader’s place on the course"
 >
   {#if showCourse}
-    <li style:--status-color={status.phase.color}>{status.phase.label}</li>
+    <li style:--status-color={status.phase.color}>{status.phase.name}</li>
     {#if status.section}
       <li style:--status-color={status.section.color}>{status.section.label}</li>
     {/if}

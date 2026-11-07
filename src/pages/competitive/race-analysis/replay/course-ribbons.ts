@@ -1,11 +1,6 @@
 import { finalSpurtSection } from '@/lib/race/final-spurt';
-import {
-  numberedSegments,
-  RACE_PHASES,
-  sectionBorders,
-  slopeColor,
-  type Course
-} from './replay-course';
+import { racePhaseBands } from '../race-phase-bands';
+import { numberedSegments, sectionBorders, slopeColor, type Course } from './replay-course';
 import { courseTerrain, slopeText } from './replay-timeline';
 
 // Race positions and the course map share one layout: section and slope ribbons along the outer
@@ -81,17 +76,17 @@ export function phaseMarkers(
   const spurt = finalSpurtSection(raceDistance);
   const markers = [
     {
-      distance: raceDistance * RACE_PHASES[1].start,
-      label: RACE_PHASES[1].label,
-      color: RACE_PHASES[1].color,
+      distance: raceDistance * racePhaseBands[1].start,
+      label: racePhaseBands[1].name,
+      color: racePhaseBands[1].color,
       shown: course
     },
     { distance: (raceDistance * 10) / 24, label: 'Position Keep ends', shown: positionKeep },
     { distance: spurt.start, label: spurt.label, color: spurt.color, shown: course },
     {
-      distance: raceDistance * RACE_PHASES[3].start,
-      label: RACE_PHASES[3].label,
-      color: RACE_PHASES[3].color,
+      distance: raceDistance * racePhaseBands[3].start,
+      label: racePhaseBands[3].name,
+      color: racePhaseBands[3].color,
       shown: course
     }
   ];
