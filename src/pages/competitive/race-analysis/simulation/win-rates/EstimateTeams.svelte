@@ -6,7 +6,13 @@
   import AptitudeGrade from '@/components/game/AptitudeGrade.svelte';
   import Artwork from '@/components/game/Artwork.svelte';
   import StatStrip from '@/components/game/StatStrip.svelte';
-  import { identity, portrait, stats, styleColors } from '@/pages/competitive/analysis-view';
+  import {
+    identity,
+    portrait,
+    skillPointsStat,
+    stats,
+    styleColors
+  } from '@/pages/competitive/analysis-view';
   import { raceAptitudes, type RaceContext } from '@/pages/competitive/runners/race-aptitudes';
   import type { MonteCarloResult } from '@/pages/simulator/simulator-repository';
   import { runnerName, topThreeRate, type OddsGroup, type RunnerOdds } from './estimate-groups';
@@ -40,15 +46,7 @@
   }
 
   function buildStats(runner: RaceRunner) {
-    return [
-      ...stats(runner),
-      {
-        id: 'sp',
-        label: 'Skill points',
-        value: skillPointTotal(catalog, runner.skillIds) ?? '—',
-        icon: '/game-assets/textures/hint.webp'
-      }
-    ];
+    return [...stats(runner), skillPointsStat(skillPointTotal(catalog, runner.skillIds))];
   }
 
   onMount(() => {

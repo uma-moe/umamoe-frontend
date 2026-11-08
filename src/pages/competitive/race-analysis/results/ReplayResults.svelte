@@ -12,7 +12,7 @@
     runningStyleName
   } from '@/lib/race/replay/race-display';
   import { loadSkills, type SkillData } from '@/lib/game-data/skills/skills';
-  import { portrait, stats, styleColors } from '@/pages/competitive/analysis-view';
+  import { portrait, skillPointsStat, stats, styleColors } from '@/pages/competitive/analysis-view';
   import { theme } from '@/stores/theme';
   import DataTable from '@/components/data/DataTable.svelte';
   import Artwork from '@/components/game/Artwork.svelte';
@@ -342,15 +342,7 @@
       {:else if col.key === 'sp'}
         <div class="result-stats">
           <StatStrip
-            items={[
-              ...stats(r),
-              {
-                id: 'sp',
-                label: 'Skill points',
-                value: row.sp ?? '—',
-                icon: '/game-assets/textures/hint.webp'
-              }
-            ]}
+            items={[...stats(r), skillPointsStat(row.sp)]}
             label={r.name + ' build stats'}
             presentation="values"
             compact

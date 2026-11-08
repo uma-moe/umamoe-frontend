@@ -10,7 +10,7 @@
   import AptitudeGrid from '@/components/game/AptitudeGrid.svelte';
   import RaceSkill from './RaceSkill.svelte';
   import AptitudeTile from '@/components/game/AptitudeTile.svelte';
-  import { identity, score, stats } from '../analysis-view';
+  import { identity, score, skillPointsStat, stats } from '../analysis-view';
   import { aptitudeGrades, raceAptitudes } from './race-aptitudes';
 
   let {
@@ -96,17 +96,7 @@
   /** Null until the catalog prices every learned skill. */
   const skillPoints = $derived(skillPointTotal(skillCatalog, runner.skillIds));
   const statItems = $derived(
-    compact
-      ? [
-          ...stats(runner),
-          {
-            id: 'sp',
-            label: 'Skill points',
-            value: skillPoints ?? '—',
-            icon: '/game-assets/textures/hint.webp'
-          }
-        ]
-      : stats(runner)
+    compact ? [...stats(runner), skillPointsStat(skillPoints)] : stats(runner)
   );
 
   const raceAptitudeTiles = $derived(raceContext ? raceAptitudes(runner, raceContext) : []);
