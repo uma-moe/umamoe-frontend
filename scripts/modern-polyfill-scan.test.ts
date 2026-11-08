@@ -21,7 +21,10 @@ function legacyPluginsRecording(options: LegacyOptions) {
 
 function render(plugins: Plugin[], chunk: Rollup.RenderedChunk) {
   const postProcess = plugins.find((plugin) => plugin.name === 'vite:legacy-post-process');
-  const renderChunk = postProcess?.renderChunk as (code: string, chunk: Rollup.RenderedChunk) => unknown;
+  const renderChunk = postProcess?.renderChunk as (
+    code: string,
+    chunk: Rollup.RenderedChunk
+  ) => unknown;
   renderChunk('', chunk);
 }
 
@@ -32,9 +35,13 @@ describe('skipModernPolyfillScan', () => {
     const wrapped = skipModernPolyfillScan(plugins, options, ['mediabunny']);
 
     render(wrapped, chunkOf('C:\\app\\node_modules\\mediabunny\\dist\\modules\\src\\index.js'));
-    render(wrapped, chunkOf('/app/node_modules/mediabunny/dist/index.js', '__vite-browser-external'));
+    render(
+      wrapped,
+      chunkOf('/app/node_modules/mediabunny/dist/index.js', '__vite-browser-external')
+    );
+    render(wrapped, chunkOf('\0commonjsHelpers.js', '/app/node_modules/mediabunny/dist/index.js'));
 
-    expect(scanned).toEqual([false, false]);
+    expect(scanned).toEqual([false, false, false]);
     expect(options.modernPolyfills).toBe(true);
   });
 

@@ -1,5 +1,4 @@
 import type { Options as LegacyOptions } from '@vitejs/plugin-legacy';
-import { isAbsolute } from 'node:path';
 import type { Plugin, Rollup } from 'vite';
 
 type RenderChunk = (
@@ -23,9 +22,10 @@ export function skipModernPolyfillScan(
     throw new Error('@vitejs/plugin-legacy changed; update the modern polyfill scan exclusion.');
 
   const packagePaths = packages.map((name) => `/node_modules/${name}/`);
+  // Virtual modules, such as Vite's empty stand-ins for Node built-ins, have no file path.
+  const isVirtual = (id: string) => id.startsWith('\0') || !/[\\/]/.test(id);
   const fromPackages = (chunk: Rollup.RenderedChunk) => {
-    // Virtual modules, such as Vite's empty stand-ins for Node built-ins, have no file path.
-    const files = chunk.moduleIds.filter((id) => isAbsolute(id));
+    const files = chunk.moduleIds.filter((id) => !isVirtual(id));
 
     return (
       files.length > 0 &&
