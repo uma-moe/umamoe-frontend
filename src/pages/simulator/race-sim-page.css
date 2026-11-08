@@ -19,12 +19,12 @@
 .race-form:focus {
   outline: none;
 }
-/* Sampled races, seed and gates: a row of their own beside or under the course, see RaceBar's `extra`. */
+/* Sampled races, seed, gates and position skills: a row of their own beside or under the course, see RaceBar's `extra`. */
 .run-fields {
   --control-height: var(--setup-control-height);
   display: grid;
-  grid-template-columns: 120px 200px 150px;
-  grid-template-areas: 'samples seed gates';
+  grid-template-columns: 120px 200px 150px auto;
+  grid-template-areas: 'samples seed gates positions';
   gap: 10px 16px;
   align-items: end;
 }
@@ -40,11 +40,40 @@
 .run-field.gates {
   grid-area: gates;
 }
+.run-field.position-skills {
+  grid-area: positions;
+  display: grid;
+  gap: 4px;
+}
 .run-field :global(.field) {
   gap: 4px;
 }
 .run-field :global(input) {
   font-size: 13px;
+}
+/* Labelled like the toggles beside it; the info icon overhangs the line so the label keeps their height. */
+.run-field-label {
+  height: 14px;
+  display: flex;
+  align-items: center;
+  gap: 2px;
+}
+.run-field-label > span {
+  color: var(--text-primary);
+  font-size: 12px;
+  font-weight: 600;
+  line-height: 1.2;
+  white-space: nowrap;
+}
+.position-skills :global(.checkbox.field) {
+  min-height: var(--setup-control-height);
+  gap: 8px;
+}
+.about-text {
+  margin: 0;
+  color: var(--text-secondary);
+  font-size: 12px;
+  line-height: 1.5;
 }
 .seed-setting {
   display: grid;
@@ -77,21 +106,29 @@
 /* A row of their own under the conditions: stretched to the same edge, the seed widest for its number. */
 @container race-fields (min-width:561px) and (max-width:999px) {
   .run-fields {
-    grid-template-columns: minmax(0, 0.8fr) minmax(0, 1.3fr) minmax(0, 1fr);
+    grid-template-columns: minmax(0, 0.8fr) minmax(0, 1.3fr) minmax(0, 1fr) minmax(0, 1fr);
   }
 }
-/* The one-row layout on a 1080p screen: room for a four-digit count and a ten-digit seed, no more. */
-@container race-fields (min-width:1280px) and (max-width:1599px) {
+/* The one-row layout on a 1080p screen: room for a four-digit count and a ten-digit seed, and tighter toggles. */
+@container race-fields (min-width:1330px) and (max-width:1599px) {
   .run-fields {
-    grid-template-columns: 88px 164px auto;
-    gap: 10px;
+    grid-template-columns: 88px 164px auto auto;
+    gap: 8px;
+  }
+  .run-field.gates :global(.segments button) {
+    padding-inline: 4px;
+  }
+  .position-skills :global(.checkbox.field) {
+    gap: 6px;
+    padding-inline: 8px;
   }
 }
-/* A phone: the sample count and gates in the conditions' two columns, the seed and its long number on a row of its own. */
+/* A phone: the sample count and gates in the conditions' two columns, the seed and its long number on a row of its
+   own, then position skills. */
 @container race-form (max-width:560px) {
   .run-fields {
     grid-template-columns: repeat(2, minmax(0, 1fr));
-    grid-template-areas: 'samples gates' 'seed seed';
+    grid-template-areas: 'samples gates' 'seed seed' 'positions positions';
     gap: 8px;
   }
 }
@@ -159,10 +196,6 @@
   margin: 0;
   font-size: 13px;
   color: var(--text-secondary);
-}
-/* The position-skill option, under the field. */
-.position-checks {
-  padding-bottom: 8px;
 }
 .race-main[hidden] {
   display: none;

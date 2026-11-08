@@ -7,10 +7,12 @@
   import ToggleField from './shell/ToggleField.svelte';
   import SimulatorCourseProfile from './courses/SimulatorCourseProfile.svelte';
   import Banner from '@/components/feedback/Banner.svelte';
+  import InfoIcon from '@/components/feedback/InfoIcon.svelte';
   import Button from '@/components/controls/Button.svelte';
   import Checkbox from '@/components/controls/Checkbox.svelte';
   import TextField from '@/components/controls/TextField.svelte';
   import Dialog from '@/components/overlays/Dialog.svelte';
+  import InspectPopover from '@/components/overlays/InspectPopover.svelte';
   import { HttpError } from '@/services/http/http-client';
   import SimulatorShell from './shell/SimulatorShell.svelte';
   import SimulatorUmaField from './setup/runner/SimulatorUmaField.svelte';
@@ -535,6 +537,29 @@
                     bind:value={gateOrder}
                   />
                 </div>
+                <div class="run-field position-skills">
+                  <div class="run-field-label">
+                    <span>Position skills</span>
+                    <InspectPopover
+                      label="About position skills"
+                      align="end"
+                    >
+                      {#snippet trigger()}<InfoIcon />{/snippet}
+                      <p class="about-text">
+                        When on, skills that need a place in the field, like Budding Blossom, can
+                        trigger in any place and any field size. Their other conditions still apply.
+                        When off, the game checks the place.
+                      </p>
+                    </InspectPopover>
+                  </div>
+                  <Checkbox
+                    id="race-position-checks"
+                    label="Ignore place"
+                    ariaLabel="Position skills ignore place and field size"
+                    variant="field"
+                    bind:checked={positionChecksPass}
+                  />
+                </div>
               </div>
             {/snippet}
           </RaceBar>
@@ -591,14 +616,6 @@
             {/if}
           {/snippet}
         </SimulatorUmaField>
-        <div class="position-checks">
-          <Checkbox
-            id="race-position-checks"
-            label="Position skills ignore place and field size"
-            description="Skills that need a place in the field, like Budding Blossom, can trigger in any place and any field size. Their other conditions still apply. The game checks the place."
-            bind:checked={positionChecksPass}
-          />
-        </div>
       </div>
       <!-- Running stays in reach while the form scrolls. -->
       <RunBar

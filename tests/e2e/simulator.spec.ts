@@ -213,8 +213,8 @@ test('Course setup preserves every searchable resource option and its breakdown'
       expect(layout.conditionTops[0]).toBe(layout.conditionTops[1]);
       expect(layout.conditionTops[2]).toBe(layout.conditionTops[3]);
       expect(layout.conditionLefts[0]).toBe(layout.conditionLefts[2]);
-      // The conditions, sampled races, seed and gates.
-      expect(layout.height).toBeLessThan(300);
+      // The conditions, sampled races, seed, gates and position skills.
+      expect(layout.height).toBeLessThan(360);
       expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(
         true
       );
@@ -238,9 +238,11 @@ test('Course setup preserves every searchable resource option and its breakdown'
 
   expect(new Set(heights).size).toBe(1);
   if (info.project.name === 'chromium') {
-    // A wide form keeps the track, course and sampling on one row, the conditions under it.
+    // A wide form keeps the track, course, sampling, gates and position skills on one row.
     const bottoms = await race
-      .locator('#sim-track,#sim-course,#race-samples,#race-seed,#race-gates')
+      .locator(
+        '#sim-track,#sim-course,#race-samples,#race-seed,#race-gates,label[for="race-position-checks"]'
+      )
       .evaluateAll((nodes) => nodes.map((node) => Math.round(node.getBoundingClientRect().bottom)));
 
     expect(new Set(bottoms).size).toBe(1);

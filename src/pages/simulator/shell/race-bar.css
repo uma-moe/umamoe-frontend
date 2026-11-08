@@ -534,7 +534,7 @@
   }
 }
 /* Wide enough for everything on one row: the course takes what the conditions and fields leave. */
-@container race-fields (min-width:1280px) {
+@container race-fields (min-width:1330px) {
   .has-extra .controls {
     grid-template-columns: minmax(250px, 1fr) auto auto;
     grid-template-areas: 'course conditions extra';
@@ -545,7 +545,7 @@
   }
 }
 /* One row on a 1080p screen: tighter segments and gaps, and the pickers without their outlines, as on a phone. */
-@container race-fields (min-width:1280px) and (max-width:1599px) {
+@container race-fields (min-width:1330px) and (max-width:1599px) {
   .has-extra .course-row {
     grid-template-columns: minmax(0, 0.8fr) minmax(0, 1.2fr);
     gap: 10px;
@@ -558,7 +558,7 @@
     display: none;
   }
   .has-extra .conditions {
-    gap: 10px;
+    gap: 8px;
   }
   .has-extra .conditions :global(.segments button) {
     min-width: 28px;
@@ -569,7 +569,7 @@
 }
 /* Once the conditions have a row of their own, they fill it in equal columns, four or two by two, so every row of
    the form ends at the same edge. */
-@container race-fields (min-width:561px) and (max-width:1279px) {
+@container race-fields (min-width:561px) and (max-width:1329px) {
   .has-extra .conditions {
     display: grid;
     grid-template-columns: repeat(4, minmax(0, 1fr));
