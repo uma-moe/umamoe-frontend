@@ -1,12 +1,9 @@
 import { appHttp } from '../http/app-http';
-import { createRequestPacer } from '../http/request-pacer';
 import { applyResimulation, type ParsedRaceCapture } from '@/lib/race/capture/race-capture-parser';
 import { reportReplayMismatch } from './replay-mismatch';
+import { simulatorRequests } from './simulator-requests';
 
 const MAX_REQUEST_BYTES = 8 * 1024 * 1024;
-
-// The API allows each browser 30 writes a minute; pacing a session to 25 leaves the rest of the site room.
-const simulatorRequests = createRequestPacer({ limit: 25, windowMs: 60_000 });
 
 /** Settings a race simulated from a capture can change; anything left out stays as recorded. */
 export interface CaptureRaceSettings {

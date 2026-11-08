@@ -1,6 +1,7 @@
 import { appHttp } from '../http/app-http';
 import type { ParsedRaceCapture } from '@/lib/race/capture/race-capture-parser';
 import { captureRaceRequest, type CaptureRaceSettings } from './race-resimulation';
+import { simulatorRequests } from './simulator-requests';
 
 /** A skill to switch off, by its owner's position in the capture's own runner list. */
 export interface SkillSwitchedOff {
@@ -36,13 +37,17 @@ export async function measureSkillImpact(
 ): Promise<RaceSkillImpact> {
   const body = { capture: captureRaceRequest(capture, courseId, options), skills };
   // Browser verification is required even when the account is signed in.
-  const response = await appHttp.request<unknown>('/api/sim/skill-impact', {
-    method: 'POST',
-    body,
-    signal: options.signal,
-    browserProof: true,
-    headers: { Accept: 'application/json' }
-  });
+  const response = await simulatorRequests.send(
+    () =>
+      appHttp.request<unknown>('/api/sim/skill-impact', {
+        method: 'POST',
+        body,
+        signal: options.signal,
+        browserProof: true,
+        headers: { Accept: 'application/json' }
+      }),
+    options.signal
+  );
 
   return parseSkillImpact(response, skills);
 }
