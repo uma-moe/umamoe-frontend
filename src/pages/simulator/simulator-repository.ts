@@ -28,6 +28,8 @@ export interface MonteCarloResult {
   seeds: number[];
   /** Each run's gates by source input. Under randomized gates they differ from the sent `frame_order`. */
   gates?: number[][];
+  /** Each run's moods by source input. Under `cmMoods` they differ from the sent `motivation`. */
+  moods?: number[][];
   finish_order: number[][];
   finish_times: number[][];
   final_hp?: number[][];
