@@ -1,21 +1,21 @@
 import type { SkillData } from '@/lib/game-data/skills/skills';
 import {
-  loadPotentialSkills,
   STARTING_POTENTIAL_LEVEL,
   unlockedSkills,
   type PotentialSkills
 } from '@/lib/game-data/cards/potential-skills';
 import { aptitudeGrade } from '@/lib/profile/profile-display';
-import { hintedSkills } from '../skill-offers';
-import { BUILD_CODE_VERSION, decodeBuildCode, type BuildCode } from './build-code';
+import { hintedSkills } from '../build/skill-offers';
+import { BUILD_CODE_VERSION, type BuildCode } from '../build/code/build-code';
 
 /**
- * A career's final turn, saved as JSON: her state when the career ends, before she spends her skill points. honse_act
- * writes the turn's `single_mode_load_common`; UmaExporter writes the whole server response, with the same state under
- * `data`. Either way `chara_info` holds her stats, aptitudes, style, mood, skills, skill points, fans and hint levels,
- * which read as a build code: the runner, her skill points, every hinted skill as an offer at its hint level, and the
- * skills her card's potential (talent) level unlocks, on offer without a hint where she has none. The course and its
- * conditions stay as they are. contracts/final-turn.schema.json documents the shape read here.
+ * A career's final turn, saved as JSON: her state when the career ends, before she spends her skill points. umadump
+ * saves every turn of a career as the turn's `single_mode_load_common`; the game API's response keeps the state under
+ * `data`, as that same `single_mode_load_common` (single_mode/load) or on its own (the other career calls). Either
+ * way `chara_info` holds her stats, aptitudes, style, mood, skills, skill points, fans and hint levels, which read as a
+ * build code: the runner, her skill points, every hinted skill as an offer at its hint level, and the skills her card's
+ * potential (talent) level unlocks, on offer without a hint where she has none. The course and its conditions stay as
+ * they are. contracts/final-turn.schema.json documents the shapes read here.
  */
 interface CareerSkill {
   skill_id: number;
@@ -103,11 +103,23 @@ function isCareerHint(value: unknown): value is CareerHint {
   );
 }
 
-/** Her `chara_info` from a final turn of either tool, or undefined when the JSON is not one. */
-export function finalTurnCharaInfo(value: unknown): FinalTurnCharaInfo | undefined {
+/**
+ * Where a career's state can sit: in umadump's turn, in the game API's response (`data`, holding the turn or the state
+ * itself), or on its own.
+ */
+function careerStates(value: unknown): Record<string, unknown>[] {
   const root = record(value);
-  const state = record(root?.single_mode_load_common) ?? record(root?.data) ?? root;
-  const info = record(state?.chara_info);
+  const levels = [root, record(root?.data)];
+  return levels
+    .flatMap((level) => [record(level?.single_mode_load_common), level])
+    .filter((state) => state !== undefined);
+}
+
+/** Her `chara_info` from a career turn, or undefined when the JSON is not one. */
+export function finalTurnCharaInfo(value: unknown): FinalTurnCharaInfo | undefined {
+  const info = careerStates(value)
+    .map((state) => record(state.chara_info))
+    .find((candidate) => candidate !== undefined);
   if (!info) return undefined;
 
   if (!NUMBER_FIELDS.every((field) => isNumber(info[field]))) return undefined;
@@ -181,29 +193,4 @@ export function finalTurnCode(
     chartSkills,
     hintLevels
   };
-}
-
-/**
- * Reads a build code or a career's final turn. JSON with a career `chara_info` is a final turn; anything else is read
- * as a build code, which says what is wrong with it. `potentialSkills` loads the cards' potential skills for a final turn.
- */
-export async function decodeBuildImport(
-  text: string,
-  skillLookup: Map<number, SkillData>,
-  potentialSkills: () => Promise<PotentialSkills> = loadPotentialSkills
-): Promise<BuildCode> {
-  const value = text.trim();
-  if (value.startsWith('{')) {
-    let parsed: unknown;
-    try {
-      parsed = JSON.parse(value);
-    } catch {
-      throw new Error('This JSON is cut off or changed. Export it again.');
-    }
-
-    const info = finalTurnCharaInfo(parsed);
-    if (info) return finalTurnCode(info, skillLookup, await potentialSkills());
-  }
-
-  return decodeBuildCode(value);
 }

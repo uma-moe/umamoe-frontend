@@ -7,6 +7,8 @@
   import RunnerInput from './setup/runner/RunnerInput.svelte';
   import SkillOffers from './setup/build/SkillOffers.svelte';
   import BuildCodeDialog from './setup/build/code/BuildCodeDialog.svelte';
+  import type { BuildCodeImport } from './setup/build/code/build-code-review.svelte';
+  import JsonImportDialog from './setup/json-import/JsonImportDialog.svelte';
   import BuildGoal from './setup/build/BuildGoal.svelte';
   import BuildSearchBar from './setup/build/BuildSearchBar.svelte';
   import { explainBuildError, formNumber } from './setup/build/build-run';
@@ -71,6 +73,7 @@
   let resultPanel = $state<HTMLElement>();
   let codeOpen = $state(false);
   let codeText = $state('');
+  let jsonOpen = $state(false);
 
   // Keep the setup and the runner in this browser as they change.
   $effect(saveBuildSearch);
@@ -214,6 +217,17 @@
   }
 
   /** Loads the whole Build optimizer from a code copied from it. */
+  /** An imported build replaces her, what she can buy and whatever of the goal it carries. */
+  function importBuild({ umas, offers, goal }: BuildCodeImport): void {
+    simulatorRunner.uma = umas[0]!;
+    buildSearch.offers = offers;
+    if (goal.sp !== undefined) buildSearch.budget = String(goal.sp);
+    if (goal.fastLearner !== undefined) buildSearch.fastLearner = goal.fastLearner;
+    if (goal.mode) buildSearch.mode = goal.mode;
+    if (goal.tracks && goal.mode && goal.mode !== 'cm') buildSearch.tracks[goal.mode] = goal.tracks;
+    if (goal.seed !== undefined) buildSearch.seed = String(goal.seed);
+  }
+
   function restoreTab(page: BuildCodePage): string | void {
     if (page.tab !== 'build') return 'This code was copied from another tab.';
 
@@ -347,6 +361,7 @@
         {course}
         note="Her stats at the end of the career"
         oncode={() => (codeOpen = true)}
+        onjson={() => (jsonOpen = true)}
       />
       <BuildGoal
         {teamTrials}
@@ -404,15 +419,12 @@
   target="build"
   current={currentCode}
   onrestore={restoreTab}
-  onimport={({ umas, offers, goal }) => {
-    simulatorRunner.uma = umas[0]!;
-    buildSearch.offers = offers;
-    if (goal.sp !== undefined) buildSearch.budget = String(goal.sp);
-    if (goal.fastLearner !== undefined) buildSearch.fastLearner = goal.fastLearner;
-    if (goal.mode) buildSearch.mode = goal.mode;
-    if (goal.tracks && goal.mode && goal.mode !== 'cm') buildSearch.tracks[goal.mode] = goal.tracks;
-    if (goal.seed !== undefined) buildSearch.seed = String(goal.seed);
-  }}
+  onimport={importBuild}
+/>
+<JsonImportDialog
+  bind:open={jsonOpen}
+  target="build"
+  onimport={importBuild}
 />
 
 <style>

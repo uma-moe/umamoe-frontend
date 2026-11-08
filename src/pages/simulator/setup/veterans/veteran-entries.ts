@@ -2,8 +2,8 @@ import { getAuthToken } from '@/services/auth/auth-token';
 import type { AptitudeGradeValue } from '@/components/game/AptitudeGrade.svelte';
 import type { AptitudeItem } from '@/components/game/AptitudeGrid.svelte';
 import type { VeteranUiRecord } from '@/components/game/veteran-ui-types';
-import { characterImagePath, loadCharacters } from '@/lib/game-data/characters';
-import { loadSkills, skillPointTotal } from '@/lib/game-data/skills/skills';
+import { characterImagePath, loadCharacters, type CharacterData } from '@/lib/game-data/characters';
+import { loadSkills, skillPointTotal, type SkillData } from '@/lib/game-data/skills/skills';
 import { DISTANCE_NAMES, SURFACE_NAMES, type RaceCourse } from '@/lib/game-data/racing/courses';
 import { getRankInfoFromScore } from '@/lib/rank';
 import { encodedSkills } from '@/lib/profile/veterans/profile-veterans';
@@ -64,6 +64,18 @@ export async function loadVeteranEntries(
     )
   );
 
+  return veteranEntries(veterans, { characters, skills });
+}
+
+/**
+ * Veterans with trained stats as picker entries, newest first. Records without stats can't race, so they are counted
+ * apart.
+ */
+export function veteranEntries(
+  veterans: ProfileVeteran[],
+  gameData: { characters: Map<number, CharacterData>; skills: Map<number, SkillData> }
+): { entries: VeteranEntry[]; missing: number } {
+  const { characters, skills } = gameData;
   const entries: VeteranEntry[] = [];
   let missing = 0;
   for (const veteran of veterans) {
@@ -101,7 +113,7 @@ export async function loadVeteranEntries(
       total: stats.reduce<number>((sum, value) => sum + (value ?? 0), 0),
       learnedSkills: learned.length,
       skillPoints: skillPointTotal(skills, learned),
-      created: Date.parse(veteran.creation_time ?? '') || 0
+      created: Date.parse(veteran.creation_time ?? veteran.create_time ?? '') || 0
     });
   }
 

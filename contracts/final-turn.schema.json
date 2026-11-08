@@ -2,17 +2,28 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://uma.moe/contracts/final-turn.schema.json",
   "title": "FinalTurn",
-  "description": "A career's final turn as honse_act or UmaExporter save it: her state when the career ends, before she spends her skill points. The Build code dialog loads it as the runner, her skill points, fans and every hinted skill at its hint level. Only the fields listed here are read; everything else the game sends is kept and ignored.",
+  "description": "A career's final turn as umadump saves it in career_data, or as the game API sends it: her state when the career ends, before she spends her skill points. The simulator's JSON file import loads it as the runner, her skill points, fans and every hinted skill at its hint level. Only the fields listed here are read; everything else the game sends is kept and ignored.",
   "type": "object",
   "additionalProperties": true,
   "anyOf": [
     {
-      "description": "honse_act: the turn's single_mode_load_common.",
+      "description": "umadump: the turn's single_mode_load_common.",
       "required": ["single_mode_load_common"],
       "properties": { "single_mode_load_common": { "$ref": "#/$defs/careerState" } }
     },
     {
-      "description": "UmaExporter: the whole server response, with the career state under data.",
+      "description": "The game API's single_mode/load response: the turn's single_mode_load_common under data.",
+      "required": ["data"],
+      "properties": {
+        "data": {
+          "type": "object",
+          "required": ["single_mode_load_common"],
+          "properties": { "single_mode_load_common": { "$ref": "#/$defs/careerState" } }
+        }
+      }
+    },
+    {
+      "description": "The game API's other career responses, with the career state under data.",
       "required": ["data"],
       "properties": { "data": { "$ref": "#/$defs/careerState" } }
     },
@@ -58,11 +69,32 @@
         "power": { "type": "integer", "minimum": 0 },
         "guts": { "type": "integer", "minimum": 0 },
         "wiz": { "description": "Wit.", "type": "integer", "minimum": 0 },
-        "motivation": { "description": "Mood: 1 awful to 5 great.", "type": "integer", "minimum": 1, "maximum": 5 },
-        "skill_point": { "description": "Skill points left to spend: the Build optimizer's budget.", "type": "integer", "minimum": 0 },
-        "fans": { "description": "Her fan count; skills that grow with fans need it.", "type": "integer", "minimum": 0 },
-        "talent_level": { "description": "Potential level, 1 to 5. Her card's skills unlocked up to it are on offer without a hint; without it, its starting skills.", "type": "integer", "minimum": 1, "maximum": 5 },
-        "race_running_style": { "description": "1 front runner, 2 pace chaser, 3 late surger, 4 end closer.", "enum": [1, 2, 3, 4] },
+        "motivation": {
+          "description": "Mood: 1 awful to 5 great.",
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 5
+        },
+        "skill_point": {
+          "description": "Skill points left to spend: the Build optimizer's budget.",
+          "type": "integer",
+          "minimum": 0
+        },
+        "fans": {
+          "description": "Her fan count; skills that grow with fans need it.",
+          "type": "integer",
+          "minimum": 0
+        },
+        "talent_level": {
+          "description": "Potential level, 1 to 5. Her card's skills unlocked up to it are on offer without a hint; without it, its starting skills.",
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 5
+        },
+        "race_running_style": {
+          "description": "1 front runner, 2 pace chaser, 3 late surger, 4 end closer.",
+          "enum": [1, 2, 3, 4]
+        },
         "proper_distance_short": { "$ref": "#/$defs/aptitude" },
         "proper_distance_mile": { "$ref": "#/$defs/aptitude" },
         "proper_distance_middle": { "$ref": "#/$defs/aptitude" },
@@ -96,7 +128,12 @@
             "properties": {
               "group_id": { "type": "integer", "minimum": 1 },
               "rarity": { "type": "integer", "minimum": 1 },
-              "level": { "description": "Hint level, 1 to 5.", "type": "integer", "minimum": 1, "maximum": 5 }
+              "level": {
+                "description": "Hint level, 1 to 5.",
+                "type": "integer",
+                "minimum": 1,
+                "maximum": 5
+              }
             }
           }
         }

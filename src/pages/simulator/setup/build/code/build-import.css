@@ -1,0 +1,35 @@
+.import {
+  display: grid;
+  gap: 12px;
+  min-width: 0;
+}
+.holds {
+  display: grid;
+  gap: 6px;
+  padding: 12px 14px;
+  border: 1px dashed var(--border-subtle);
+  border-radius: var(--radius-md);
+  font-size: 12px;
+  color: var(--text-secondary);
+}
+.holds strong {
+  font-weight: 650;
+  color: var(--text-primary);
+}
+.holds ul {
+  display: grid;
+  gap: 3px;
+  margin: 0;
+  padding-left: 18px;
+  line-height: 1.5;
+}
+@media (max-width: 767px) {
+  .import {
+    gap: 8px;
+  }
+  .holds {
+    gap: 4px;
+    padding: 8px 10px;
+    font-size: 11px;
+  }
+}

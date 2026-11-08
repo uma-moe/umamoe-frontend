@@ -16,11 +16,13 @@
 
   /**
    * Choose from Veterans: one build for a single runner, or several ticked at once when the page takes more (the race
-   * field). Sorted by how well each one suits the course, with her stats and course aptitudes beside her name.
+   * field). Sorted by how well each one suits the course, with her stats and course aptitudes beside her name. Lists
+   * the collection's Veterans, or those of an exported file.
    */
   let {
     open = $bindable(false),
     course,
+    fromFile,
     onselect,
     onselectMany,
     room = 18,
@@ -28,6 +30,8 @@
   }: {
     open?: boolean;
     course?: RaceCourse;
+    /** Veterans read from an exported file, listed in place of the collection's. */
+    fromFile?: { name: string; entries: VeteranEntry[]; missing: number };
     onselect?: (uma: SimulatorUma) => void;
     /** Takes several at once; the dialog then ticks instead of choosing on click. */
     onselectMany?: (umas: SimulatorUma[]) => void;
@@ -44,7 +48,9 @@
     missing = $state(0),
     selected = $state<string[]>([]);
 
-  let entries = $state.raw<VeteranEntry[]>([]);
+  let collectionEntries = $state.raw<VeteranEntry[]>([]);
+  const entries = $derived(fromFile?.entries ?? collectionEntries);
+  const unraceable = $derived(fromFile?.missing ?? missing);
   const multi = $derived(Boolean(onselectMany));
   const ticked = $derived.by(() => {
     const byKey = new Map(entries.map((entry) => [entry.key, entry]));
@@ -66,7 +72,7 @@
   });
 
   $effect(() => {
-    if (!open || !$authReady) return;
+    if (!open || fromFile || !$authReady) return;
     const id = accountId;
     $authUser;
     let active = true;
@@ -75,7 +81,7 @@
     void loadVeteranEntries(id)
       .then((result) => {
         if (!active) return;
-        entries = result.entries;
+        collectionEntries = result.entries;
         missing = result.missing;
       })
       .catch((reason) => {
@@ -89,6 +95,16 @@
       active = false;
     };
   });
+
+  const fitDescription = $derived(
+    fitCourse
+      ? 'Best suited to ' +
+          trackName(fitCourse.race_track_id) +
+          ' ' +
+          describeCourse(fitCourse) +
+          ' first'
+      : undefined
+  );
 
   /** How many more runners the field takes once the ticked ones are in. */
   const roomLine = $derived.by(() => {
@@ -111,13 +127,7 @@
 <Dialog
   bind:open
   title="Choose from Veterans"
-  description={fitCourse
-    ? 'Best suited to ' +
-      trackName(fitCourse.race_track_id) +
-      ' ' +
-      describeCourse(fitCourse) +
-      ' first'
-    : undefined}
+  description={fromFile ? 'From ' + fromFile.name : fitDescription}
   icon="veterans"
   maxWidth="1040px"
   maxHeight="88dvh"
@@ -129,7 +139,7 @@
   mobileMaxHeight="96dvh"
 >
   {#snippet headerActions()}
-    {#if $workspaces.length > 1}
+    {#if !fromFile && $workspaces.length > 1}
       <div class="collection">
         <SelectFieldSlim
           id="{uid}-account"
@@ -164,9 +174,9 @@
         name="veterans"
         size={28}
       />
-      <strong>{missing ? 'No Veterans can race yet' : 'No Veterans here yet'}</strong>
+      <strong>{unraceable ? 'No Veterans can race yet' : 'No Veterans here yet'}</strong>
       <p>
-        {missing
+        {unraceable
           ? 'None of these Veterans have trained stats, so they can’t race. Records from a game export have them.'
           : 'Upload your game export on the Veterans page, and every trained Uma can race here.'}
       </p>
@@ -190,10 +200,10 @@
         onchoose={choose}
       />
     </div>
-    {#if missing}
+    {#if unraceable}
       <p class="note">
-        {missing}
-        {missing === 1 ? 'record has' : 'records have'} no trained stats and can’t race.
+        {unraceable}
+        {unraceable === 1 ? 'record has' : 'records have'} no trained stats and can’t race.
       </p>
     {/if}
   {/if}
@@ -223,7 +233,7 @@
         <span>Choose one to use her build.</span>
       {/if}
     </DialogStatus>
-    {#if entries.length}
+    {#if entries.length && !fromFile}
       <span class="manage">
         <Button
           href="/veterans"

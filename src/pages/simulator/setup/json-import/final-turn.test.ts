@@ -4,8 +4,8 @@ import Ajv2020 from 'ajv/dist/2020';
 import { describe, expect, it } from 'vitest';
 import type { SkillData } from '@/lib/game-data/skills/skills';
 import type { PotentialSkills } from '@/lib/game-data/cards/potential-skills';
-import { buildCodeGoal, buildCodeOffers, buildCodeUma } from './build-code';
-import { decodeBuildImport, finalTurnCharaInfo } from './final-turn';
+import { buildCodeGoal, buildCodeOffers, buildCodeUma } from '../build/code/build-code';
+import { finalTurnCharaInfo, finalTurnCode } from './final-turn';
 
 const skill = (skill_id: number, name: string, rarity = 1): SkillData => ({
   skill_id,
@@ -32,7 +32,7 @@ const catalog = new Map(
   ].map((entry) => [entry.skill_id, entry])
 );
 
-/** Her state on the final turn as both tools export it, trimmed to what a build reads. */
+/** Her state on the final turn as umadump saves it, trimmed to what a build reads. */
 const charaInfo = {
   card_id: 100601,
   speed: 1588,
@@ -79,8 +79,7 @@ const potentialSkills: PotentialSkills = new Map([
     ]
   ]
 ]);
-const loadPotentialSkills = () => Promise.resolve(potentialSkills);
-const noPotentialSkills = () => Promise.resolve<PotentialSkills>(new Map());
+const noPotentialSkills: PotentialSkills = new Map();
 
 const readContract = (name: string) =>
   JSON.parse(readFileSync(path.join(process.cwd(), 'contracts', name), 'utf8'));
@@ -89,24 +88,37 @@ const ajv = new Ajv2020({ strict: false });
 const validate = ajv.compile(readContract('build-code.schema.json'));
 const validateFinalTurn = ajv.compile(readContract('final-turn.schema.json'));
 
-const honseAct = { single_mode_load_common: { chara_info: charaInfo } };
-const umaExporter = { response_code: 1, data: { chara_info: charaInfo } };
+const umadumpTurn = { single_mode_load_common: { chara_info: charaInfo } };
+const gameResponse = { data_headers: { result_code: 1 }, data: { chara_info: charaInfo } };
+const loadResponse = {
+  data_headers: { result_code: 1 },
+  data: { single_mode_load_common: { chara_info: charaInfo } }
+};
+
+/** A final turn as the code it loads as. */
+function readFinalTurn(turn: unknown, potential = noPotentialSkills) {
+  const info = finalTurnCharaInfo(turn);
+  if (!info) throw new Error('Not a final turn.');
+  return finalTurnCode(info, catalog, potential);
+}
 
 describe('final turns', () => {
-  it('documents both tools’ final turns in the contract', () => {
-    expect(validateFinalTurn(honseAct), JSON.stringify(validateFinalTurn.errors)).toBe(true);
-    expect(validateFinalTurn(umaExporter), JSON.stringify(validateFinalTurn.errors)).toBe(true);
+  it('documents umadump’s turn and the game API’s responses in the contract', () => {
+    expect(validateFinalTurn(umadumpTurn), JSON.stringify(validateFinalTurn.errors)).toBe(true);
+    expect(validateFinalTurn(gameResponse), JSON.stringify(validateFinalTurn.errors)).toBe(true);
+    expect(validateFinalTurn(loadResponse), JSON.stringify(validateFinalTurn.errors)).toBe(true);
     expect(validateFinalTurn({ data: { chara_info: { card_id: 100601 } } })).toBe(false);
   });
 
-  it('finds her career state in a honse_act turn and in an UmaExporter response', () => {
-    expect(finalTurnCharaInfo(honseAct)?.card_id).toBe(100601);
-    expect(finalTurnCharaInfo(umaExporter)?.card_id).toBe(100601);
+  it('finds her career state in an umadump turn and in the game API’s responses', () => {
+    expect(finalTurnCharaInfo(umadumpTurn)?.card_id).toBe(100601);
+    expect(finalTurnCharaInfo(gameResponse)?.card_id).toBe(100601);
+    expect(finalTurnCharaInfo(loadResponse)?.card_id).toBe(100601);
     expect(finalTurnCharaInfo({ data: { chara_info: { card_id: 1 } } })).toBeUndefined();
   });
 
-  it('reads her as the runner with her skill points', async () => {
-    const code = await decodeBuildImport(JSON.stringify(honseAct), catalog, noPotentialSkills);
+  it('reads her as the runner with her skill points', () => {
+    const code = readFinalTurn(umadumpTurn);
 
     const { uma } = buildCodeUma(code.uma1!);
     const goal = buildCodeGoal(code);
@@ -130,8 +142,8 @@ describe('final turns', () => {
     expect(goal.sp).toBe(2984);
   });
 
-  it('offers every hinted skill at its hint level, but none she owns and no negative rank', async () => {
-    const code = await decodeBuildImport(JSON.stringify(umaExporter), catalog, noPotentialSkills);
+  it('offers every hinted skill at its hint level, but none she owns and no negative rank', () => {
+    const code = readFinalTurn(gameResponse);
 
     const offers = buildCodeOffers(code, [100061, 200042]);
 
@@ -144,14 +156,10 @@ describe('final turns', () => {
     ]);
   });
 
-  it('loads a final turn without hints or fans as her build with nothing on offer', async () => {
+  it('loads a final turn without hints or fans as her build with nothing on offer', () => {
     const { fans: _fans, skill_tips_array: _hints, ...bare } = charaInfo;
 
-    const code = await decodeBuildImport(
-      JSON.stringify({ data: { chara_info: bare } }),
-      catalog,
-      noPotentialSkills
-    );
+    const code = readFinalTurn({ data: { chara_info: bare } });
 
     expect(validate(code), JSON.stringify(validate.errors)).toBe(true);
     expect(code.uma1?.fans).toBeUndefined();
@@ -159,10 +167,10 @@ describe('final turns', () => {
     expect(buildCodeOffers(code, [100061, 200042])).toEqual([]);
   });
 
-  it('offers the skills her potential level unlocks, without a hint unless she has one', async () => {
+  it('offers the skills her potential level unlocks, without a hint unless she has one', () => {
     const atLevelTwo = { data: { chara_info: { ...charaInfo, talent_level: 2 } } };
 
-    const code = await decodeBuildImport(JSON.stringify(atLevelTwo), catalog, loadPotentialSkills);
+    const code = readFinalTurn(atLevelTwo, potentialSkills);
     const offers = buildCodeOffers(code, [100061, 200042]);
 
     expect(validateFinalTurn(atLevelTwo), JSON.stringify(validateFinalTurn.errors)).toBe(true);
@@ -172,17 +180,12 @@ describe('final turns', () => {
     expect(offers.map((offer) => offer.skillId)).not.toContain(201351);
   });
 
-  it('offers her card’s starting skills when the turn names no potential level', async () => {
-    const code = await decodeBuildImport(JSON.stringify(umaExporter), catalog, loadPotentialSkills);
+  it('offers her card’s starting skills when the turn names no potential level', () => {
+    const code = readFinalTurn(gameResponse, potentialSkills);
 
     const offered = buildCodeOffers(code, [100061, 200042]).map((offer) => offer.skillId);
 
     expect(offered).toContain(200512);
     expect(offered).not.toContain(200162);
-  });
-
-  it('reads anything else as a build code', async () => {
-    await expect(decodeBuildImport('{"data":{}}', catalog)).rejects.toThrow('no runner');
-    await expect(decodeBuildImport('{"chara_info":', catalog)).rejects.toThrow('cut off');
   });
 });

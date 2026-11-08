@@ -118,7 +118,7 @@
           Course {code.courseId} isn’t in the race data, so the course stays as it is.
         </span>
       {:else}
-        <span>Not in the code, so the course stays as it is.</span>
+        <span>Not included, so the course stays as it is.</span>
       {/if}
     </dd>
   </div>

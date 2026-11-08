@@ -2695,3 +2695,99 @@ test('Build codes load the runner, the course, the goal and what she can buy on 
   await expect(page.locator('#build-budget')).toHaveValue('1450');
   await expect(planner).toHaveCount(3);
 });
+
+test('JSON files load a career’s final turn, and the game API’s trained Uma join the race field', async ({
+  page
+}) => {
+  const careerState = {
+    card_id: 100101,
+    speed: 1588,
+    stamina: 435,
+    power: 1217,
+    wiz: 1259,
+    guts: 682,
+    motivation: 5,
+    fans: 301830,
+    skill_point: 2984,
+    race_running_style: 2,
+    proper_distance_short: 8,
+    proper_distance_mile: 7,
+    proper_distance_middle: 7,
+    proper_distance_long: 6,
+    proper_running_style_nige: 2,
+    proper_running_style_senko: 7,
+    proper_running_style_sashi: 7,
+    proper_running_style_oikomi: 4,
+    proper_ground_turf: 7,
+    proper_ground_dirt: 6,
+    skill_array: [{ skill_id: 200362, level: 1 }],
+    skill_tips_array: []
+  };
+  const trainedUma = (trainedCharaId: number, cardId: number) => ({
+    ...careerState,
+    trained_chara_id: trainedCharaId,
+    card_id: cardId,
+    running_style: 1,
+    rank_score: 15000
+  });
+  const jsonFile = (name: string, value: unknown) => ({
+    name,
+    mimeType: 'application/json',
+    buffer: Buffer.from(JSON.stringify(value))
+  });
+
+  // Build search takes the turn umadump saved as her build, her skill points and fans.
+  await page.goto('/simulator/skills');
+  await page.getByRole('button', { name: 'Import', exact: true }).click();
+  await page.getByRole('menuitem', { name: 'JSON file', exact: true }).click();
+  const dialog = page.getByRole('dialog', { name: 'JSON file', exact: true });
+  await expect(dialog.getByRole('link', { name: 'Get umadump', exact: true })).toHaveAttribute(
+    'href',
+    'https://werseter.github.io/umadump/'
+  );
+  await expect(dialog).not.toContainText('build code');
+  await dialog
+    .locator('input[type=file]')
+    .first()
+    .setInputFiles(
+      jsonFile('turn_078_001.json', { single_mode_load_common: { chara_info: careerState } })
+    );
+  await expect(dialog).toContainText('A career’s final turn');
+  await expect(dialog).toContainText('301,830 fans');
+  await expect(dialog).toContainText('2,984 SP');
+  await dialog.getByRole('button', { name: 'Load', exact: true }).click();
+  await expect(dialog).toBeHidden();
+  await expect(page.locator('#build-budget')).toHaveValue('2984');
+
+  // The race field points race files to Race analysis and lets the game API's trained Uma join it.
+  await page.goto('/simulator/race');
+  await page.getByRole('button', { name: 'Import', exact: true }).click();
+  await page.getByRole('menuitem', { name: 'JSON file', exact: true }).click();
+  await dialog
+    .locator('input[type=file]')
+    .first()
+    .setInputFiles(jsonFile('race_info_replay.json', { raceHorse: [], simDataBase64: '' }));
+  await expect(dialog.getByRole('alert')).toContainText('This is a race file');
+
+  await dialog
+    .locator('input[type=file]')
+    .first()
+    .setInputFiles(
+      jsonFile('trained_chara_load.json', {
+        data_headers: { result_code: 1 },
+        data: { trained_chara_array: [trainedUma(90001, 100101), trainedUma(90002, 100201)] }
+      })
+    );
+  await expect(dialog).toContainText('2 Veterans');
+  await dialog.getByRole('button', { name: 'Choose Veterans', exact: true }).click();
+  const picker = page.getByRole('dialog', { name: 'Choose from Veterans', exact: true });
+  await expect(picker).toContainText('From trained_chara_load.json');
+  await expect(picker.locator('.row')).toHaveCount(2);
+  for (const row of await picker.locator('.row').all()) await row.getByRole('checkbox').check();
+  await picker.getByRole('button', { name: 'Add 2 to the field', exact: true }).click();
+  await expect(picker).toBeHidden();
+  await expect(page.getByText('from a JSON file')).toBeVisible();
+  await expect(
+    page.getByRole('region', { name: 'Race field', exact: true }).locator('.runner')
+  ).toHaveCount(2);
+});

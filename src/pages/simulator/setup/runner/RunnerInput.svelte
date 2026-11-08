@@ -2,7 +2,7 @@
   import SelectField from '@/components/controls/SelectField.svelte';
   import TextField from '@/components/controls/TextField.svelte';
   import type { AptitudeGradeValue } from '@/components/game/AptitudeGrade.svelte';
-  import Menu from '@/components/navigation/Menu.svelte';
+  import Menu, { type MenuItem } from '@/components/navigation/Menu.svelte';
   import type { RaceCourse } from '@/lib/game-data/racing/courses';
   import { moodIcon, runningStyleName } from '@/lib/race/replay/race-display';
   import { getRankInfoFromLabel, getStatRankInfo, rankIconPath } from '@/lib/rank';
@@ -27,7 +27,8 @@
     course,
     note,
     onbuild,
-    oncode
+    oncode,
+    onjson
   }: {
     uma: SimulatorUma;
     /** Green skills by the stat they raise, as the HP calculator counts them; left out, the stats stand alone. */
@@ -37,6 +38,8 @@
     onbuild?: (uma: SimulatorUma) => void;
     /** Opens the page's build code dialog. */
     oncode?: () => void;
+    /** Opens the page's JSON file dialog. */
+    onjson?: () => void;
   } = $props();
 
   let veteransOpen = $state(false),
@@ -112,6 +115,26 @@
     }));
   });
 
+  const importItems = $derived<MenuItem[]>([
+    { id: 'veterans', label: 'Choose from Veterans', icon: 'veterans' },
+    ...(oncode ? [{ id: 'code', label: 'Build code', icon: 'clipboard' as const }] : []),
+    ...(onjson ? [{ id: 'json', label: 'JSON file', icon: 'folder-open' as const }] : [])
+  ]);
+
+  function importRunner(id: string) {
+    switch (id) {
+      case 'veterans':
+        veteransOpen = true;
+        break;
+      case 'code':
+        oncode?.();
+        break;
+      case 'json':
+        onjson?.();
+        break;
+    }
+  }
+
   function load(value: SimulatorUma) {
     uma = value;
     onbuild?.(value);
@@ -128,11 +151,8 @@
       label="Import"
       menuLabel="Import a runner"
       icon="upload"
-      items={[
-        { id: 'veterans', label: 'Choose from Veterans', icon: 'veterans' },
-        ...(oncode ? [{ id: 'code', label: 'Build code', icon: 'clipboard' as const }] : [])
-      ]}
-      onselect={(id) => (id === 'code' ? oncode?.() : (veteransOpen = true))}
+      items={importItems}
+      onselect={importRunner}
     />
   {/snippet}
   <div class="runner-fields">

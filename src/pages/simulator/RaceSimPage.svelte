@@ -17,6 +17,7 @@
   import SimulatorShell from './shell/SimulatorShell.svelte';
   import SimulatorUmaField from './setup/runner/SimulatorUmaField.svelte';
   import BuildCodeDialog from './setup/build/code/BuildCodeDialog.svelte';
+  import JsonImportDialog from './setup/json-import/JsonImportDialog.svelte';
   import {
     BUILD_CODE_VERSION,
     buildCodeRunner,
@@ -91,7 +92,8 @@
     busy = $state(false),
     populating = $state(false),
     replaceOpen = $state(false),
-    codeOpen = $state(false);
+    codeOpen = $state(false),
+    jsonOpen = $state(false);
 
   onMount(() => {
     const address = new URL(location.href);
@@ -293,10 +295,28 @@
       case 'code':
         codeOpen = true;
         break;
+      case 'json':
+        jsonOpen = true;
+        break;
       case 'example':
         loadExample();
         break;
     }
+  }
+
+  /** Imported runners join the field; returns why the field can't take them. */
+  function addImportedRunners(umas: SimulatorUma[], origin: string): string | undefined {
+    try {
+      importSimulatorUmas(umas);
+    } catch (reason) {
+      return reason instanceof Error ? reason.message : 'Could not import these runners.';
+    }
+
+    const added =
+      umas.length <= 2 ? umas.map((uma) => uma.name).join(' and ') : umas.length + ' runners';
+    populateError = '';
+    simulatorSession.importNotice = 'Added ' + added + ' from ' + origin + '.';
+    return undefined;
   }
 
   async function send(single: boolean): Promise<void> {
@@ -579,6 +599,12 @@
               disabled: simulatorRoster.umas.length >= 18
             },
             {
+              id: 'json',
+              label: 'JSON file',
+              icon: 'folder-open',
+              disabled: simulatorRoster.umas.length >= 18
+            },
+            {
               id: 'example',
               label: 'Load example',
               icon: 'refresh',
@@ -725,17 +751,12 @@
       : undefined;
   }}
   onrestore={restoreTab}
-  onimport={({ umas }) => {
-    try {
-      importSimulatorUmas(umas);
-    } catch (reason) {
-      return reason instanceof Error ? reason.message : 'Could not import this build.';
-    }
-    populateError = '';
-    simulatorSession.importNotice =
-      'Added ' + umas.map((uma) => uma.name).join(' and ') + ' from a build code.';
-    return undefined;
-  }}
+  onimport={({ umas }) => addImportedRunners(umas, 'a build code')}
+/>
+<JsonImportDialog
+  bind:open={jsonOpen}
+  target="race"
+  onimport={({ umas }) => addImportedRunners(umas, 'a JSON file')}
 />
 
 <Dialog

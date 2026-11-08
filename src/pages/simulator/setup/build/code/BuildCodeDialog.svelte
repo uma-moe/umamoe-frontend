@@ -3,39 +3,23 @@
   import TextField from '@/components/controls/TextField.svelte';
   import Banner from '@/components/feedback/Banner.svelte';
   import Dialog from '@/components/overlays/Dialog.svelte';
-  import { describeCourse, trackName } from '@/lib/game-data/racing/courses';
   import DialogStatus from '../../../shell/DialogStatus.svelte';
-  import { loadCharacters, type CharacterData } from '@/lib/game-data/characters';
-  import { loadSkills, type SkillData } from '@/lib/game-data/skills/skills';
-  import type { SimulatorUma } from '../../../simulator-uma';
-  import { restoreSimulatorField } from '../../../simulator-roster.svelte';
   import {
-    ensureSimulatorCourses,
-    simulatorCourseData,
-    simulatorSession
-  } from '../../../simulator-session.svelte';
-  import type { SkillOffer } from '../skill-offers';
-  import {
-    buildCodeConditions,
-    buildCodeGoal,
-    buildCodeOffers,
-    buildCodeUma,
-    codePage,
+    decodeBuildCode,
     encodeBuildCode,
     looksLikeBuildCode,
-    sameRunner,
     type BuildCode,
-    type BuildCodePage
+    type BuildCodeTab
   } from './build-code';
+  import { BuildCodeReview, type BuildCodeHandlers } from './build-code-review.svelte';
   import BuildCodePreview from './BuildCodePreview.svelte';
-  import { decodeBuildImport } from './final-turn';
+  import BuildCodeSummary from './BuildCodeSummary.svelte';
 
   /**
    * Build codes in and out. Pasting one loads the runner (stats, style, mood, aptitudes, skills, fans), the course and
    * its conditions, and for Build search her skill points, Fast Learner, the goal and the skills on offer with their
    * hints. Copying writes the whole tab as a code; a code copied from this tab restores all of it here. A code pasted
-   * anywhere on the page opens this with it. A career's final turn, saved as JSON by honse_act or UmaExporter, loads
-   * the same way, as a runner with her fans, skill points and hinted skills.
+   * anywhere on the page opens this with it.
    */
   let {
     open = $bindable(false),
@@ -49,83 +33,39 @@
     /** The code in the field; a page can hand one in, such as a code from its link. */
     text?: string;
     /** What the page takes: the race field takes both runners, Build search also what she can buy. */
-    target: 'race' | 'stamina' | 'build';
+    target: BuildCodeTab;
     /** The page's setup as a code, for copying. */
     current?: () => BuildCode | undefined;
-    /** Applies the runners and the rest; a returned message is shown instead of closing. */
-    onimport: (value: {
-      umas: SimulatorUma[];
-      offers: SkillOffer[];
-      goal: ReturnType<typeof buildCodeGoal>;
-    }) => string | void;
-    /** Restores the whole tab from a code copied from it; a returned message is shown instead of closing. */
-    onrestore?: (page: BuildCodePage) => string | void;
-  } = $props();
+  } & BuildCodeHandlers = $props();
 
   const uid = $props.id();
-  let code = $state.raw<BuildCode>(),
-    error = $state(''),
+  const review = new BuildCodeReview(() => ({ target, restorable: onrestore !== undefined }));
+
+  let error = $state(''),
     applyError = $state(''),
     pasteError = $state(''),
     copied = $state('');
-
-  /** A final turn opened from a file; a code typed or pasted into the field wins over it. */
-  let file = $state.raw<{ name: string; text: string }>();
-  let fileInput = $state<HTMLInputElement>();
-
-  let gameDataError = $state('');
-  let skills = $state.raw(new Map<number, SkillData>()),
-    characters = $state.raw(new Map<number, CharacterData>());
 
   $effect(() => {
     if (!open) return;
     applyError = '';
     copied = '';
-    gameDataError = '';
-    let active = true;
-    void ensureSimulatorCourses();
-    void loadSkills()
-      .then((value) => {
-        if (active) skills = value;
-      })
-      .catch((reason: unknown) => {
-        if (active)
-          gameDataError =
-            reason instanceof Error ? reason.message : 'Skill names could not be loaded.';
-      });
-
-    void loadCharacters()
-      .then((value) => {
-        if (active) characters = value;
-      })
-      .catch((reason: unknown) => {
-        if (active)
-          gameDataError =
-            reason instanceof Error ? reason.message : 'Character names could not be loaded.';
-      });
-
-    return () => {
-      active = false;
-    };
+    return review.loadGameData();
   });
 
-  const source = $derived(text.trim() ? text : (file?.text ?? ''));
-
-  // Read the code as it is typed or pasted; a later edit wins over a slower earlier read. A final turn is read again
-  // once the skills load, since its hints name skill groups.
+  // Read the code as it is typed or pasted; a later edit wins over a slower earlier read.
   let reading = 0;
   $effect(() => {
-    const value = source,
-      skillLookup = skills,
+    const value = text,
       attempt = ++reading;
 
-    code = undefined;
+    review.code = undefined;
     error = '';
     pasteError = '';
     if (!value.trim()) return;
-    decodeBuildImport(value, skillLookup)
+    decodeBuildCode(value)
       .then((result) => {
-        if (attempt === reading) code = result;
+        if (attempt === reading) review.code = result;
       })
       .catch((reason: unknown) => {
         if (attempt === reading)
@@ -133,99 +73,15 @@
       });
   });
 
-  const course = $derived(
-    code?.courseId ? simulatorCourseData.courses.get(Number(code.courseId)) : undefined
-  );
-
-  const conditions = $derived(buildCodeConditions(code?.racedef));
-  /** The whole tab, when the code was copied from this one and the tab can take it back. */
-  const page = $derived(code && onrestore ? codePage(code, target) : undefined);
-  /** The race field a whole race tab holds, or why it can't be read. */
-  const field = $derived.by(() => {
-    if (page?.tab !== 'race') return undefined;
-
-    try {
-      return { umas: restoreSimulatorField(page).umas, error: '' };
-    } catch (reason) {
-      return {
-        umas: [],
-        error: reason instanceof Error ? reason.message : 'The race field can’t be read.'
-      };
-    }
-  });
-  const goal = $derived(code ? buildCodeGoal(code) : {});
-  const known = (id: number) => !skills.size || skills.has(id);
-  const runners = $derived.by(() => {
-    if (!code) return [];
-    if (field) return field.umas.map((uma) => ({ uma, dropped: 0 }));
-
-    const list = [code.uma1, code.uma2].filter((runner) => runner != null);
-    const wanted = target === 'race' && !sameRunner(code.uma1, code.uma2) ? list : list.slice(0, 1);
-    return wanted.map((runner) => {
-      const card = Number(runner.outfitId);
-      return buildCodeUma(runner, {
-        name: characters.get(card)?.name ?? (card ? 'Uma ' + card : 'Imported runner'),
-        course,
-        knownSkill: known
-      });
-    });
-  });
-
-  const offers = $derived(
-    target === 'build' && code && runners[0]
-      ? buildCodeOffers(
-          code,
-          runners[0].uma.skills.map((skill) => skill.skillId),
-          known
-        )
-      : []
-  );
-
   function apply() {
-    if (!code || !runners.length) return;
-    // The course first, so the page counts her skills for it; put back if the page can't take the runners.
-    const before = {
-      courseId: simulatorSession.courseId,
-      ground: simulatorSession.ground,
-      weather: simulatorSession.weather,
-      season: simulatorSession.season,
-      startTime: simulatorSession.startTime
-    };
-
-    if (course) {
-      simulatorSession.courseId = String(course.course_id);
-      if (conditions.ground) simulatorSession.ground = conditions.ground;
-      if (conditions.weather) simulatorSession.weather = conditions.weather;
-      if (conditions.season) simulatorSession.season = conditions.season;
-      if (conditions.startTime) simulatorSession.startTime = conditions.startTime;
-    }
-
-    const message =
-      page && onrestore
-        ? onrestore(page)
-        : onimport({ umas: runners.map((runner) => runner.uma), offers, goal });
+    const message = review.apply({ onimport, onrestore });
     if (message) {
-      Object.assign(simulatorSession, before);
       applyError = message;
       return;
     }
 
     text = '';
-    file = undefined;
     open = false;
-  }
-
-  async function openFile(files: FileList | null) {
-    const chosen = files?.[0];
-    if (!chosen) return;
-
-    pasteError = '';
-    try {
-      file = { name: chosen.name, text: await chosen.text() };
-      text = '';
-    } catch {
-      pasteError = 'This file can’t be read.';
-    }
   }
 
   async function copy() {
@@ -268,7 +124,7 @@
 <Dialog
   bind:open
   title="Build code"
-  description="Load a code or a career’s final turn."
+  description="Load a code, or copy this setup as one."
   icon="clipboard"
   maxWidth="640px"
   maxHeight="88dvh"
@@ -290,13 +146,13 @@
     {/if}
   {/snippet}
   <div class="import">
-    {#if gameDataError}
+    {#if review.gameDataError}
       <div role="alert">
         <Banner
           title="Game data unavailable"
           tone="warning"
         >
-          <p>{gameDataError}</p>
+          <p>{review.gameDataError}</p>
         </Banner>
       </div>
     {/if}
@@ -308,12 +164,8 @@
           placeholder="H4sI…"
           autocomplete="off"
           bind:value={text}
-          error={error || field?.error || pasteError || ''}
-          help={error
-            ? undefined
-            : file && !text.trim()
-              ? 'Loaded from ' + file.name + '.'
-              : 'A code pasted anywhere on the page opens this with it.'}
+          error={error || review.field?.error || pasteError || ''}
+          help={error ? undefined : 'A code pasted anywhere on the page opens this with it.'}
         />
       </div>
       <Button
@@ -323,39 +175,20 @@
       >
         Paste
       </Button>
-      <Button
-        variant="secondary"
-        icon="upload"
-        onclick={() => fileInput?.click()}
-      >
-        Open final turn
-      </Button>
-      <input
-        bind:this={fileInput}
-        class="sr-only"
-        type="file"
-        accept=".json,application/json"
-        tabindex="-1"
-        aria-hidden="true"
-        onchange={(event) => {
-          void openFile(event.currentTarget.files);
-          event.currentTarget.value = '';
-        }}
-      />
     </div>
-    {#if code && runners.length}
+    {#if review.code && review.ready}
       <BuildCodePreview
-        {code}
+        code={review.code}
         {target}
-        {course}
-        {conditions}
-        {runners}
-        {offers}
-        {goal}
-        {skills}
-        whole={page !== undefined}
+        course={review.course}
+        conditions={review.conditions}
+        runners={review.runners}
+        offers={review.offers}
+        goal={review.goal}
+        skills={review.skills}
+        whole={review.page !== undefined}
       />
-    {:else if !source.trim()}
+    {:else if !text.trim()}
       <div class="holds">
         <strong>A code holds</strong>
         <ul>
@@ -365,14 +198,6 @@
             <li>Her skill points, the goal and the skills on offer with their hints</li>
           {/if}
         </ul>
-        <strong>A career’s final turn</strong>
-        <ul>
-          <li>The JSON honse_act or UmaExporter save on the last turn of a career</li>
-          <li>Her stats, style, mood, aptitudes, skills and fans</li>
-          {#if target === 'build'}
-            <li>Her skill points and every hinted skill at its hint level</li>
-          {/if}
-        </ul>
       </div>
     {/if}
   </div>
@@ -380,25 +205,14 @@
     <DialogStatus>
       {#if applyError}
         <span class="bad">{applyError}</span>
-      {:else if code && runners.length}
-        <strong>
-          {page
-            ? 'This whole tab'
-            : runners.length === 1
-              ? '1 runner'
-              : runners.length + ' runners'}
-        </strong>
-        <span>
-          {course
-            ? trackName(course.race_track_id) + ' ' + describeCourse(course)
-            : 'Course unchanged'}
-        </span>
-      {:else if error || field?.error}
+      {:else if review.ready}
+        <BuildCodeSummary {review} />
+      {:else if error || review.field?.error}
         <span class="blocked">This code can’t be loaded.</span>
-      {:else if source.trim()}
+      {:else if text.trim()}
         <span>Reading the code…</span>
       {:else}
-        <span>Paste a code or open a career’s final turn to see what it loads.</span>
+        <span>Paste a code to see what it loads.</span>
       {/if}
     </DialogStatus>
     <Button
@@ -409,7 +223,7 @@
     </Button>
     <Button
       icon="download"
-      disabled={!code || !runners.length}
+      disabled={!review.ready}
       onclick={apply}
     >
       Load
@@ -418,16 +232,13 @@
 </Dialog>
 
 <style>
-  .import {
-    display: grid;
-    gap: 12px;
-    min-width: 0;
-  }
+  @import './build-import.css';
+
   /* The code is data: set it in the monospace face, so a pasted code reads as one. */
   .code-row {
     --control-height: 36px;
     display: grid;
-    grid-template-columns: minmax(0, 1fr) auto auto;
+    grid-template-columns: minmax(0, 1fr) auto;
     align-items: start;
     gap: 8px;
   }
@@ -450,30 +261,7 @@
     flex: none;
     white-space: nowrap;
   }
-  .holds {
-    display: grid;
-    gap: 6px;
-    padding: 12px 14px;
-    border: 1px dashed var(--border-subtle);
-    border-radius: var(--radius-md);
-    font-size: 12px;
-    color: var(--text-secondary);
-  }
-  .holds strong {
-    font-weight: 650;
-    color: var(--text-primary);
-  }
-  .holds ul {
-    display: grid;
-    gap: 3px;
-    margin: 0;
-    padding-left: 18px;
-    line-height: 1.5;
-  }
   @media (max-width: 767px) {
-    .import {
-      gap: 8px;
-    }
     .code-row {
       --control-height: 32px;
       gap: 6px;
@@ -485,11 +273,6 @@
       height: 32px;
       min-height: 32px;
       margin-top: 19px;
-      font-size: 11px;
-    }
-    .holds {
-      gap: 4px;
-      padding: 8px 10px;
       font-size: 11px;
     }
   }

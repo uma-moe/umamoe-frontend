@@ -8,6 +8,8 @@
   import SimulatorShell from './shell/SimulatorShell.svelte';
   import RunnerInput from './setup/runner/RunnerInput.svelte';
   import BuildCodeDialog from './setup/build/code/BuildCodeDialog.svelte';
+  import type { BuildCodeImport } from './setup/build/code/build-code-review.svelte';
+  import JsonImportDialog from './setup/json-import/JsonImportDialog.svelte';
   import {
     BUILD_CODE_VERSION,
     buildCodeRunner,
@@ -131,7 +133,8 @@
 
   const verdict = $derived(spread && run ? hpVerdict(spread, run.forced) : undefined);
   let resultPanel = $state<HTMLElement>();
-  let codeOpen = $state(false);
+  let codeOpen = $state(false),
+    jsonOpen = $state(false);
 
   // Once she has a result, it follows the form a moment after each change.
   $effect(() => {
@@ -229,6 +232,11 @@
     showResult();
   }
 
+  /** The HP calculator takes one runner: the build's first. */
+  function importRunner({ umas: [uma] }: BuildCodeImport): void {
+    if (uma) simulatorRunner.uma = uma;
+  }
+
   /** Loads the whole HP calculator from a code copied from it: her build, the HP plan and its race options. */
   function restoreTab(page: BuildCodePage): string | void {
     if (page.tab !== 'stamina') return 'This code was copied from another tab.';
@@ -255,6 +263,7 @@
         green={hpCalculator.plan.green}
         {course}
         oncode={() => (codeOpen = true)}
+        onjson={() => (jsonOpen = true)}
       />
       <HpRaceSection />
       <HpPlanInput
@@ -318,9 +327,12 @@
     }
   })}
   onrestore={restoreTab}
-  onimport={({ umas }) => {
-    simulatorRunner.uma = umas[0]!;
-  }}
+  onimport={importRunner}
+/>
+<JsonImportDialog
+  bind:open={jsonOpen}
+  target="stamina"
+  onimport={importRunner}
 />
 
 <style>
