@@ -1,10 +1,11 @@
 import { svelte } from '@sveltejs/vite-plugin-svelte';
 import { sentryVitePlugin } from '@sentry/vite-plugin';
-import legacy from '@vitejs/plugin-legacy';
+import legacy, { type Options as LegacyOptions } from '@vitejs/plugin-legacy';
 import { fileURLToPath } from 'node:url';
 import { defineConfig, loadEnv } from 'vite';
 import { demoData } from './scripts/demo-data';
 import { companionStylesheetReload } from './scripts/companion-stylesheet-reload';
+import { skipModernPolyfillScan } from './scripts/modern-polyfill-scan';
 import { seoPagesPlugin } from './scripts/seo-pages';
 import { environment as production } from './src/config/environment.prod';
 import { environment as beta } from './src/config/environment.beta';
@@ -33,6 +34,26 @@ export default defineConfig(async ({ mode, command }) => {
     );
   }
 
+  const legacyOptions: LegacyOptions = {
+    // Last Windows 7 browser generations, plus the existing Safari baseline.
+    modernTargets: [
+      'Chrome >= 109',
+      'Edge >= 109',
+      'Firefox >= 115',
+      'Safari >= 16.4',
+      'iOS >= 16.4'
+    ],
+    modernPolyfills: true,
+    targets: Object.entries(compatibilityBrowsers).map(
+      ([browser, version]) => `${browser} >= ${version}`
+    ),
+    additionalLegacyPolyfills: [
+      fileURLToPath(
+        new URL('./src/services/browser-support/compatibility-polyfills.js', import.meta.url)
+      )
+    ]
+  };
+
   // Keep the local simulator credential in the dev proxy, outside browser assets.
   const simulatorApiKey =
     command === 'serve' && mode === 'development'
@@ -59,25 +80,14 @@ export default defineConfig(async ({ mode, command }) => {
           return { code: code.replace(devImport, 'const DEV = true;'), map: null };
         }
       },
-      legacy({
-        // Last Windows 7 browser generations, plus the existing Safari baseline.
-        modernTargets: [
-          'Chrome >= 109',
-          'Edge >= 109',
-          'Firefox >= 115',
-          'Safari >= 16.4',
-          'iOS >= 16.4'
-        ],
-        modernPolyfills: true,
-        targets: Object.entries(compatibilityBrowsers).map(
-          ([browser, version]) => `${browser} >= ${version}`
-        ),
-        additionalLegacyPolyfills: [
-          fileURLToPath(
-            new URL('./src/services/browser-support/compatibility-polyfills.js', import.meta.url)
-          )
-        ]
-      }),
+      // Both load on demand and feature-check what they would be polyfilled for: mediabunny (clip export)
+      // has its own `using` fallbacks, and the Sentry SDK chunk checks for URL.canParse and well-formed strings.
+      ...skipModernPolyfillScan(legacy(legacyOptions), legacyOptions, [
+        'mediabunny',
+        '@sentry',
+        '@sentry-internal',
+        'web-vitals'
+      ]),
       svelte({
         // Windows dev requests can lose virtual CSS metadata; keep each component's styles with its JS.
         emitCss: !(command === 'serve' && process.platform === 'win32')

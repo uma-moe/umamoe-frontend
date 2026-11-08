@@ -183,7 +183,7 @@ test('Veteran comparison table keeps aptitudes readable, sorts stats and opens d
     'Power',
     'Guts',
     'Wit',
-    'SP',
+    'Skill points',
     'Total Stats'
   ]);
   for (const identity of await table.locator('.veteran-identity').all()) {
@@ -291,11 +291,7 @@ test('Veteran comparison table keeps aptitudes readable, sorts stats and opens d
         width
       );
       await expect(row.locator('[data-stat="sp"] dd')).toHaveText('200');
-      expect(
-        await row
-          .locator('[data-stat="sp"] dt')
-          .evaluate((node) => node.scrollWidth - node.clientWidth)
-      ).toBeLessThanOrEqual(1);
+      await expect(row.locator('[data-stat="sp"] img')).toBeVisible();
       await expect(row.locator('.affinity-parent img')).toHaveCount(2);
       expect(
         await row.locator('.table-affinity').evaluate((node) => node.scrollWidth - node.clientWidth)

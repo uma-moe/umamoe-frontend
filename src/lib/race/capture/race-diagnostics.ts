@@ -424,10 +424,8 @@ export function lastSpurtResult(capture: ParsedRaceCapture, index: number) {
 }
 
 export const raceMetricHelp: Record<string, string> = {
-  Finish: 'Finishing position in this race. A lower number means a better finish.',
   Runner:
     'The runner’s name, starting gate and running style. Select a runner to inspect their race.',
-  'No.': 'Starting gate number.',
   Uma: 'Rank, uma and trainer. Click umas for details.',
   Time: 'The first value is finish time, second value is the distance to the previous finisher at the moment they finish. Note that the finish time uses the real race simulation time, the ingame time is highly inaccurate.',
   Delay:

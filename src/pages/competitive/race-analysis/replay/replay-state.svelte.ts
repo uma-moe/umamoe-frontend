@@ -15,11 +15,12 @@ import {
 } from '@/lib/race/capture/race-diagnostics';
 import type { RaceTrajectory } from '@/lib/race/replay/race-ensemble';
 import type { Course } from './replay-course';
+import { adjacentFrameTime } from './replay-timeline';
+import { teamColors } from './team-colors';
 
 const READOUTS_PER_SECOND = 10;
 
 /** Team ring colors for captures without a team color; fixed so they read on both themes. */
-export const replayTeamColors = ['#69b7ee', '#e69c72', '#c79be7', '#78bba3'];
 
 /** The game's recorded finish time; frames only approximate when a runner crosses the line. */
 export function recordedFinishTime(runner: RaceRunner): number | undefined {
@@ -44,6 +45,10 @@ export class ReplayState {
   time = $state(0);
   playing = $state(false);
   speed = $state('1');
+  /** A clip is being drawn frame by frame from this replay. */
+  recording = $state(false);
+  /** Where playback started by playRange stops, such as a clip's out point. */
+  #stopAt: number | undefined;
 
   #source: ReplaySource;
   #animationFrame: number | undefined;
@@ -66,6 +71,10 @@ export class ReplayState {
   );
 
   frame = $derived(smoothRaceFrameAtTime(this.capture.frames, this.time));
+  /** The recorded frame the playhead sits on or last passed. */
+  frameIndex = $derived(this.frame?.sourceIndex ?? 0);
+  /** Playback and clip recording move the stage every frame, so it keeps sub-pixel positions. */
+  moving = $derived(this.playing || this.recording);
   runner = $derived(
     this.capture.runners.find((r) => r.index === Number(this.#source.selected())) ??
       this.capture.runners[0]
@@ -147,22 +156,9 @@ export class ReplayState {
     return 'Final leg';
   });
 
-  #teamKeys = $derived([
-    ...new Set(
-      this.capture.runners.map((r) =>
-        String(r.raw.trainer_id ?? r.raw.team_id ?? r.trainerName ?? r.index)
-      )
-    )
-  ]);
+  #teamColor = $derived(teamColors(this.capture.runners));
 
-  teamColor = (r: RaceRunner) =>
-    typeof r.raw.team_color === 'string' && /^#[0-9a-f]{6}$/i.test(r.raw.team_color)
-      ? r.raw.team_color
-      : replayTeamColors[
-          this.#teamKeys.indexOf(
-            String(r.raw.trainer_id ?? r.raw.team_id ?? r.trainerName ?? r.index)
-          ) % replayTeamColors.length
-        ]!;
+  teamColor = (r: RaceRunner) => this.#teamColor(r);
 
   finishTimes = $derived(
     new Map(
@@ -282,6 +278,7 @@ export class ReplayState {
     if (this.#animationFrame !== undefined) cancelAnimationFrame(this.#animationFrame);
     this.#animationFrame = undefined;
     this.#lastTick = undefined;
+    this.#stopAt = undefined;
     this.playing = false;
   };
 
@@ -290,15 +287,23 @@ export class ReplayState {
     this.time = Math.min(this.bounds.endTime, Math.max(this.bounds.startTime, value));
   };
 
+  stepFrame = (direction: 1 | -1) => {
+    const time = adjacentFrameTime(this.capture.frames, this.time, direction);
+    if (time !== undefined) this.seek(time);
+    else this.pause();
+  };
+
   #tick = (timestamp: number) => {
     if (!this.playing) return;
+
+    const stop = Math.min(this.bounds.endTime, this.#stopAt ?? Infinity);
     if (this.#lastTick !== undefined)
       this.time = Math.min(
-        this.bounds.endTime,
+        stop,
         this.time + Math.min(0.1, (timestamp - this.#lastTick) / 1000) * Number(this.speed)
       );
     this.#lastTick = timestamp;
-    if (this.time >= this.bounds.endTime) {
+    if (this.time >= stop) {
       this.pause();
       return;
     }
@@ -316,5 +321,12 @@ export class ReplayState {
     this.playing = true;
     this.#lastTick = undefined;
     this.#animationFrame = requestAnimationFrame(this.#tick);
+  };
+
+  /** Plays from start and stops at end. */
+  playRange = (start: number, end: number) => {
+    this.seek(start);
+    this.play();
+    this.#stopAt = end;
   };
 }

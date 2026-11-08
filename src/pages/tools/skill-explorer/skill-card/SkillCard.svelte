@@ -17,6 +17,7 @@
   import PickupImages from '@/components/cards/PickupImages.svelte';
   import SkillPoints from '@/components/game/SkillPoints.svelte';
   import SkillChipList, { type RelatedSkill } from '../SkillChipList.svelte';
+  import ValueHelp from './ValueHelp.svelte';
 
   export interface TerrainSegment {
     start: number;
@@ -76,6 +77,18 @@
   }: Props = $props();
   const sourcesId = $props.id();
 
+  /** What each of the card's values means, behind its label's info button. */
+  const VALUE_HELP = {
+    'In build':
+      'Win rate the skill adds to the reference build when it activates. For a skill already in the build, what removing it costs.',
+    'Set up':
+      'Win rate it adds when up to four cheap skills open its window as early as they can. What those skills add on their own does not count.',
+    Optimal: 'Win rate it adds activating at the best tested point of its window.',
+    Alone: 'Win rate the skill adds to a runner with no other skills, like a solo sim.',
+    Activates:
+      'Share of races the skill activates in for runners of this style, and where it first activates on average.'
+  };
+
   // The race phases in course sections, as in the simulator's course breakdown; the final spurt can begin when late race starts.
   const PHASES = [
     { label: 'Early', from: 0, to: 4 },
@@ -98,6 +111,7 @@
 
   /** A skill that waits on her other skills: forced to fire at points of its gate. */
   const gated = $derived(point.gated);
+  const worthLabel = $derived(gated ? 'Set up' : 'In build');
   /** The forced points the Set up value is (its setup's, or with none its best) and the Optimal value is (its best). */
   const setUpPoint = $derived(gated ? headlinePoint(gated) : undefined);
   const bestPoint = $derived(mostWorth(gated?.points ?? []));
@@ -148,7 +162,12 @@
     class:gated={gated !== undefined}
   >
     <div class:shown={mode === 'value' || (mode === 'forced' && !gated)}>
-      <dt>{gated ? 'Set up' : 'In build'}</dt>
+      <dt>
+        {worthLabel}<ValueHelp
+          label={worthLabel}
+          help={VALUE_HELP[worthLabel]}
+        />
+      </dt>
       {#if gated && neverFires}
         <dd>
           —
@@ -166,7 +185,12 @@
     </div>
     {#if gated}
       <div class:shown={mode === 'forced'}>
-        <dt>Optimal</dt>
+        <dt>
+          Optimal<ValueHelp
+            label="Optimal"
+            help={VALUE_HELP.Optimal}
+          />
+        </dt>
         <dd
           class:positive={gated.forced.win > 0}
           class:negative={gated.forced.win < 0}
@@ -181,7 +205,12 @@
       </div>
     {/if}
     <div class:shown={mode === 'alone'}>
-      <dt>Alone</dt>
+      <dt>
+        Alone<ValueHelp
+          label="Alone"
+          help={VALUE_HELP.Alone}
+        />
+      </dt>
       <dd
         class:positive={point.winAlone > 0}
         class:negative={point.winAlone < 0}
@@ -191,7 +220,12 @@
       </dd>
     </div>
     <div>
-      <dt>Fires</dt>
+      <dt>
+        Activates<ValueHelp
+          label="Activates"
+          help={VALUE_HELP.Activates}
+        />
+      </dt>
       <dd>
         {#if fromGate}
           {point.rate >= 0.995 ? 'Always' : `${Math.round(point.rate * 100)}%`}
@@ -238,9 +272,9 @@
     </p>
   {:else if point.forced > 0}
     <p class="forced">
-      Needs other ground, weather or season{point.courses > 1
+      Needs a different ground, weather or season{point.courses > 1
         ? ` on ${point.forced} of ${point.courses} courses`
-        : ''}, so it's valued as if the day had it.
+        : ''}, so it is valued as if the race day had it.
     </p>
   {/if}
 
@@ -324,10 +358,10 @@
   {#if inBuild || scopeCourses > 1}
     <ul class="notes">
       {#if inBuild}
-        <li>In the build these values are measured in</li>
+        <li>Part of the reference build</li>
       {/if}
       {#if scopeCourses > 1}
-        <li>Fires on {point.courses - point.forced} of {scopeCourses} courses</li>
+        <li>Activates on {point.courses - point.forced} of {scopeCourses} courses</li>
       {/if}
     </ul>
   {/if}
@@ -365,10 +399,10 @@
       <table>
         <tbody class="group">
           <tr>
-            <th scope="colgroup">Firing from</th>
+            <th scope="colgroup">Activating from</th>
             <th scope="col">Win rate</th>
-            <th scope="col">Fires</th>
-            <th scope="col">Mean proc</th>
+            <th scope="col">Activates</th>
+            <th scope="col">Mean activation</th>
           </tr>
         </tbody>
         {#each points as forcedPoint (forcedPoint.at)}
@@ -444,7 +478,7 @@
     <svg
       viewBox={`0 0 ${WIDTH} ${HEIGHT}`}
       role="img"
-      aria-label={`Where ${name} first procs: mean at ${meanLabel}`}
+      aria-label={`Where ${name} first activates: mean at ${meanLabel}`}
     >
       {#each PHASES as phase, index (phase.label)}
         <rect
@@ -516,7 +550,7 @@
       >
         Final spurt from {placeLabel(spurt.start)}
       </span>
-      <span class="key theory">Where it first procs</span>
+      <span class="key theory">Where it first activates</span>
       <span class="ends">
         <span>{placeLabel(0)}</span>
         <span>{course ? `${course.distance} m` : '100%'}</span>

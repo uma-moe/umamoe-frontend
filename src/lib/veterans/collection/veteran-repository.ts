@@ -4,11 +4,10 @@ import {
   normalizeVeteranRecord,
   veteranFingerprint
 } from '../records/veteran-normalizer';
+import { idbRequest, transactionComplete } from '@/lib/indexed-db';
 import {
-  idbRequest,
   openVeteranDatabase,
   recordsInWorkspace,
-  transactionComplete,
   veteranRecordsStore,
   veteranSnapshotsStore,
   type StoredVeteran

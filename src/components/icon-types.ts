@@ -87,6 +87,11 @@ export type IconName =
   | 'play'
   | 'pause'
   | 'skip-back'
+  | 'restart'
+  | 'frame-back'
+  | 'frame-forward'
+  | 'video'
+  | 'crop'
   | 'pin'
   | 'stopwatch'
   | 'analysis';

@@ -40,12 +40,6 @@
 .limit-select {
   display: none;
 }
-.mode-note {
-  margin: 0;
-  color: var(--text-secondary);
-  font-size: 0.78rem;
-  line-height: 1.4;
-}
 .filter-menu {
   margin-left: auto;
   --inspect-popover-width: 460px;

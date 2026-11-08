@@ -29,6 +29,7 @@
     metric = $bindable('combined'),
     compare = $bindable(false),
     chartEvents = $bindable(true),
+    hiddenRunners = $bindable([]),
     expanded = $bindable(false)
   }: {
     replay: ReplayState;
@@ -38,6 +39,7 @@
     metric?: string;
     compare?: boolean;
     chartEvents?: boolean;
+    hiddenRunners?: number[];
     expanded?: boolean;
   } = $props();
 
@@ -170,6 +172,9 @@
         bind:metric
         bind:compare
         bind:chartEvents
+        bind:hiddenRunners
+        runners={replay.finishOrder}
+        followed={replay.runner?.index ?? 0}
         detailed={Boolean(replay.capture.detailed)}
         ensemble={Boolean(replay.ensemble)}
       />

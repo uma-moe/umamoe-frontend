@@ -72,6 +72,23 @@ export function timedSection<T extends { start: number; end: number }>(
       ];
 }
 
+// Seeks land on float times, so a playhead this close to a recorded frame sits on it.
+const ON_FRAME = 1e-4;
+
+/** The recorded frame after or before the playhead; between frames, the next or the one just passed. */
+export function adjacentFrameTime(
+  frames: RaceFrame[],
+  time: number,
+  direction: 1 | -1
+): number | undefined {
+  const frame =
+    direction > 0
+      ? frames.find((candidate) => candidate.time > time + ON_FRAME)
+      : frames.findLast((candidate) => candidate.time < time - ON_FRAME);
+
+  return frame?.time;
+}
+
 export const slopeLabel = (value: number) =>
   value === 0 ? 'Level' : (value > 0 ? 'Uphill +' : 'Downhill ') + (value / 10000).toFixed(1) + '%';
 

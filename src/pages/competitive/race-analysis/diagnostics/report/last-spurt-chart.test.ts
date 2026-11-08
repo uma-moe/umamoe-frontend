@@ -1,7 +1,13 @@
 import { describe, expect, it } from 'vitest';
 import type { ParsedRaceCapture, RaceHorseFrame } from '@/lib/race/capture/race-capture-parser';
 import { makeDemoRaces } from '@/pages/competitive/demo-races';
-import { fullSpurtNeedAt, hpByDistance, timeAtDistance } from './last-spurt-chart';
+import {
+  chartStartDistance,
+  fullSpurtNeedAt,
+  hpByDistance,
+  hpFrom,
+  timeAtDistance
+} from './last-spurt-chart';
 
 const base = makeDemoRaces(1)[0]!;
 
@@ -45,5 +51,24 @@ describe('last-spurt HP chart', () => {
     expect(fullSpurtNeedAt(1200, marks, 2000)).toBe(800);
     expect(fullSpurtNeedAt(1600, marks, 2000)).toBe(400);
     expect(fullSpurtNeedAt(2000, marks, 2000)).toBe(0);
+  });
+
+  it('opens on a round distance shortly before the check', () => {
+    expect(chartStartDistance({ checkDistance: 1200 }, 2000)).toBe(1100);
+    expect(chartStartDistance({ checkDistance: 1960 }, 2000)).toBe(1900);
+    expect(chartStartDistance({ checkDistance: 20 }, 2000)).toBe(0);
+  });
+
+  it('shows the whole race without a check', () => {
+    expect(chartStartDistance({}, 2000)).toBe(0);
+  });
+
+  it('keeps the HP point before the start so the line reaches the edge', () => {
+    const points = [0, 900, 1050, 1150, 2000].map((distance, time) => ({ distance, hp: 0, time }));
+
+    const shown = hpFrom(points, 1100);
+
+    expect(shown.map((point) => point.distance)).toEqual([1050, 1150, 2000]);
+    expect(hpFrom(points, 2500)).toEqual([]);
   });
 });

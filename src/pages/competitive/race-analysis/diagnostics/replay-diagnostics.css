@@ -4,16 +4,6 @@
   grid-template-columns: minmax(0, 1fr);
   gap: 10px;
 }
-.first-check-detail {
-  display: flex;
-  align-items: center;
-  flex-wrap: wrap;
-  gap: 6px;
-  margin: 0 0 10px;
-  color: var(--text-secondary);
-  font-size: 12px;
-  line-height: 1.5;
-}
 .report-grid {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -28,9 +18,8 @@
   min-width: 0;
 }
 /*
- * Beside the behaviour cards, skill procs and position keep share their column's height instead of setting it.
- * Each grows until it shows every row; when both need more than half, they split the height and scroll, and
- * height left over goes to position keep.
+ * Beside the behaviour cards, skill procs keep every row and position keep takes the rest of the column, scrolling
+ * its decisions. Its rows never set the column's height, so the columns end level.
  */
 @media (min-width: 1101px) {
   .report-grid.detailed {
@@ -38,9 +27,11 @@
   }
   .report-grid.detailed .procs-column {
     display: grid;
-    grid-template-rows: minmax(0, max-content) minmax(0, auto);
+    grid-template-rows: max-content minmax(0, 1fr);
+  }
+  .report-grid.detailed .procs-column > :global(.position-decisions) {
     contain: size;
-    min-height: 520px;
+    min-height: 200px;
   }
 }
 .simulation-meta {
@@ -55,10 +46,10 @@
   font-weight: 500;
   color: var(--text-primary);
 }
-/* The engine build is one long hash, so it breaks anywhere on a phone. */
+/* The engine build is one long hash, so on a phone it fills each line rather than breaking at its first hyphen. */
 .simulation-meta > span {
   min-width: 0;
-  overflow-wrap: anywhere;
+  word-break: break-all;
 }
 .diagnostics :global(.ui-button--ghost.ui-button--sm) {
   min-height: 20px;
@@ -88,27 +79,12 @@
   min-height: 22px;
 }
 
-/* The skill table needs its full width before the behaviour column does. */
-@media (max-width: 1500px) {
-  .report-grid {
-    grid-template-columns: minmax(0, 1.3fr) minmax(0, 1fr);
-  }
-}
 @media (max-width: 1100px) {
   .report-grid {
     grid-template-columns: minmax(0, 1fr);
   }
   .procs-column > :global(.position-decisions) {
     max-height: 480px;
-  }
-  /* Below the skills the cards wrap in rows: cards that share a row share its height, and a card left
-     alone in a row takes the full width. */
-  .behaviour-column {
-    flex-direction: row;
-    flex-wrap: wrap;
-  }
-  .behaviour-column > :global(*) {
-    flex: 1 1 340px;
   }
 }
 

@@ -12,7 +12,7 @@
     runningStyleName
   } from '@/lib/race/replay/race-display';
   import { loadSkills, type SkillData } from '@/lib/game-data/skills/skills';
-  import { portrait, stats, styleColors } from '@/pages/competitive/analysis-view';
+  import { portrait, skillPointsStat, stats, styleColors } from '@/pages/competitive/analysis-view';
   import { theme } from '@/stores/theme';
   import DataTable from '@/components/data/DataTable.svelte';
   import Artwork from '@/components/game/Artwork.svelte';
@@ -21,7 +21,7 @@
   import InspectPopover from '@/components/overlays/InspectPopover.svelte';
   import Icon from '@/components/Icon.svelte';
   import LastSpurtResult from './LastSpurtResult.svelte';
-  import { n, raceResultRows } from './replay-results';
+  import { finishGapLabel, n, raceResultRows } from './replay-results';
 
   let {
     capture,
@@ -56,7 +56,7 @@
   function finishGap(row: Record<string, string | number>) {
     if (typeof row.gap !== 'number') return '—';
 
-    return '+' + n(row.gap, 1) + 'm';
+    return finishGapLabel(row.gap);
   }
 
   /** Seconds in a race mode; a mode the runner never entered reads as a plain dash. */
@@ -342,15 +342,7 @@
       {:else if col.key === 'sp'}
         <div class="result-stats">
           <StatStrip
-            items={[
-              ...stats(r),
-              {
-                id: 'sp',
-                label: 'Skill points',
-                value: row.sp ?? '—',
-                icon: '/game-assets/textures/hint.webp'
-              }
-            ]}
+            items={[...stats(r), skillPointsStat(row.sp)]}
             label={r.name + ' build stats'}
             presentation="values"
             compact

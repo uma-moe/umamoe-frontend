@@ -1,24 +1,5 @@
-<script
-  lang="ts"
-  module
->
-  type MarkerPoint = { index: number; x: number; y: number };
-
-  /** Runners whose portraits overlap a neighbour hide their telemetry until selected or hovered. */
-  export function crowdedRunners(points: MarkerPoint[]): Set<number> {
-    const crowded = points.filter((a) =>
-      points.some(
-        (b) => a.index !== b.index && Math.abs(a.x - b.x) < 74 && Math.abs(a.y - b.y) < 58
-      )
-    );
-
-    return new Set(crowded.map((point) => point.index));
-  }
-</script>
-
 <script lang="ts">
   import type { RaceRunner } from '@/lib/race/capture/race-capture-parser';
-  import { hpRemainingColor } from '@/lib/race/replay/race-display';
   import Artwork from '@/components/game/Artwork.svelte';
   import { portrait } from '@/pages/competitive/analysis-view';
   import { theme } from '@/stores/theme';
@@ -27,6 +8,7 @@
   import type { RunnerCallout } from './replay-callouts';
   import ReplayRunnerCallouts from './ReplayRunnerCallouts.svelte';
   import ReplayPacemakerBadge from './ReplayPacemakerBadge.svelte';
+  import { markerReadout } from './runner-marker-state';
 
   let {
     replay,
@@ -51,46 +33,29 @@
     onselect: () => void;
   } = $props();
 
-  const horse = $derived(replay.readoutFrame?.horses[runner.index]);
-  const selected = $derived(replay.runner?.index === runner.index);
-  const blocked = $derived(
-    toggles.blocked && replay.blockingNow.some((pair) => pair.horseIndex === runner.index)
-  );
-
-  const triggered = $derived(
-    toggles.skills && replay.recentSkills.some((event) => event.params[0] === runner.index)
-  );
-
-  const hp = $derived(replay.fieldHp(runner.index, false));
-  const acceleration = $derived(toggles.accel ? replay.acceleration(runner.index) : 0);
-  const description = $derived(
-    horse
-      ? `${runner.name}, gate ${runner.index + 1}, ${(horse.speed / 100).toFixed(2)} m/s, ` +
-          `${horse.distance.toFixed(1)} m, lane ${replay.laneMetres(horse.lanePosition)} m`
-      : runner.name
-  );
+  const readout = $derived(markerReadout({ replay, runner, toggles, dark: $theme === 'dark' }));
 </script>
 
 <button
   class="replay-marker"
   class:crowded
   class:dim
-  class:triggered
-  class:selected
-  class:front-blocked={blocked}
+  class:triggered={readout.triggered}
+  class:selected={readout.selected}
+  class:front-blocked={readout.blocked}
   style:transform={'translate3d(' +
-    stagePixel(x, replay.playing) +
+    stagePixel(x, replay.moving) +
     'px, ' +
-    stagePixel(y, replay.playing) +
+    stagePixel(y, replay.moving) +
     'px, 0)'}
   style:--runner-color={replay.teamColor(runner)}
   data-runner-index={runner.index}
   aria-label={'Inspect ' + runner.name}
-  aria-pressed={selected}
-  title={description}
+  aria-pressed={readout.selected}
+  title={readout.description}
   onclick={onselect}
 >
-  {#if blocked}
+  {#if readout.blocked}
     <span
       class="blocked"
       title="Blocked"
@@ -107,15 +72,15 @@
       loading="eager"
     />
     <b title={'Gate ' + (runner.index + 1)}>{runner.index + 1}</b>
-    {#if toggles.positionKeep && replay.pacemaker === runner.index}
+    {#if readout.pacemaker}
       <ReplayPacemakerBadge marker />
     {/if}
   </span>
-  {#if toggles.hpBars}
+  {#if readout.hp}
     <span class="hp">
       <i
-        style:width={(hp ?? 0) + '%'}
-        style:background={hpRemainingColor(hp, $theme === 'dark')}
+        style:width={(readout.hp.percent ?? 0) + '%'}
+        style:background={readout.hp.color}
       ></i>
     </span>
   {/if}
@@ -128,15 +93,13 @@
       />
     </span>
   {/if}
-  {#if horse && (toggles.speed || toggles.accel)}
+  {#if readout.speed !== undefined || readout.acceleration !== undefined}
     <span class="marker-telemetry">
-      {#if toggles.speed}
-        <span title="Speed (m/s)">{(horse.speed / 100).toFixed(2)}</span>
+      {#if readout.speed !== undefined}
+        <span title="Speed (m/s)">{readout.speed}</span>
       {/if}
-      {#if toggles.accel}
-        <span title="Acceleration (m/s²)">
-          {acceleration > 0 ? '+' : ''}{acceleration.toFixed(2)}
-        </span>
+      {#if readout.acceleration !== undefined}
+        <span title="Acceleration (m/s²)">{readout.acceleration}</span>
       {/if}
     </span>
   {/if}

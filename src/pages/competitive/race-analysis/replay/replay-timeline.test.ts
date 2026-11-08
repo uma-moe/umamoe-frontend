@@ -1,5 +1,27 @@
 import { expect, it } from 'vitest';
-import { courseTerrain, replayTimeTicks } from './replay-timeline';
+import { adjacentFrameTime, courseTerrain, replayTimeTicks } from './replay-timeline';
+
+const recordedFrames = [0, 0.5, 1.5, 2.5].map((time) => ({ time, horses: [] }));
+
+it('steps from a recorded frame to its neighbours', () => {
+  expect(adjacentFrameTime(recordedFrames, 1.5, 1)).toBe(2.5);
+  expect(adjacentFrameTime(recordedFrames, 1.5, -1)).toBe(0.5);
+});
+
+it('steps from between frames to the next frame or the one just passed', () => {
+  expect(adjacentFrameTime(recordedFrames, 1.2, 1)).toBe(1.5);
+  expect(adjacentFrameTime(recordedFrames, 1.2, -1)).toBe(0.5);
+});
+
+it('treats a playhead within float noise of a frame as on it', () => {
+  expect(adjacentFrameTime(recordedFrames, 1.49999, 1)).toBe(2.5);
+  expect(adjacentFrameTime(recordedFrames, 1.50001, -1)).toBe(0.5);
+});
+
+it('has no frame beyond the first or last', () => {
+  expect(adjacentFrameTime(recordedFrames, 0, -1)).toBeUndefined();
+  expect(adjacentFrameTime(recordedFrames, 2.5, 1)).toBeUndefined();
+});
 
 it('keeps level ground and computes elevation in metres across consecutive slopes', () => {
   const terrain = courseTerrain({

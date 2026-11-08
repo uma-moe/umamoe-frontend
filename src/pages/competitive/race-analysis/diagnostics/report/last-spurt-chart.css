@@ -1,0 +1,15 @@
+/* Its keys sit in the facts beside it, so the plot alone fills the height they set. */
+.last-spurt-chart {
+  position: relative;
+  min-width: 0;
+  min-height: 140px;
+}
+.last-spurt-chart > :global(.lazy-surface) {
+  position: absolute;
+  inset: 0;
+}
+.last-spurt-chart :global(figure),
+.last-spurt-chart :global(.chart-host) {
+  height: 100%;
+  min-height: 0;
+}

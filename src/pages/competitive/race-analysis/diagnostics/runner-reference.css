@@ -3,6 +3,7 @@
   align-items: center;
   gap: 4px;
   min-width: 0;
+  max-width: 100%;
   padding: 0;
   border: 0;
   background: none;
@@ -21,4 +22,10 @@
   border: 0;
   background: transparent;
   flex: none;
+}
+.runner-label {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }

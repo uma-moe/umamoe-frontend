@@ -61,13 +61,21 @@ export const replayToggleGroups: { title: string; keys: ReplayToggle[] }[] = [
   { title: 'Course overlays', keys: ['course', 'slopes', 'positionKeep', 'cone', 'minimap'] }
 ];
 
+export interface PixelSnap {
+  moving: boolean;
+  pixelRatio: number;
+}
+
 /**
  * Paused positions snap to whole device pixels, where portraits and text stay sharp. Playback keeps
  * the fractions so motion stays even instead of stepping a pixel at a time.
  */
-export function stagePixel(value: number, moving: boolean): number {
+export function snapPixel(value: number, { moving, pixelRatio }: PixelSnap): number {
   if (moving) return value;
 
-  const ratio = globalThis.devicePixelRatio || 1;
-  return Math.round(value * ratio) / ratio;
+  return Math.round(value * pixelRatio) / pixelRatio;
+}
+
+export function stagePixel(value: number, moving: boolean): number {
+  return snapPixel(value, { moving, pixelRatio: globalThis.devicePixelRatio || 1 });
 }

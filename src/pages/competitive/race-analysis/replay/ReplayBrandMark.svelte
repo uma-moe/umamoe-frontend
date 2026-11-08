@@ -1,9 +1,17 @@
+<script
+  module
+  lang="ts"
+>
+  /** The mark's place in both replay views, measured from the bottom-left corner. */
+  export const BRAND_INSET = { left: 12, bottom: 8 };
+</script>
+
 <script lang="ts">
   import LogoMark from '@/components/LogoMark.svelte';
 
   let {
-    bottom = 8,
-    left = 12,
+    bottom = BRAND_INSET.bottom,
+    left = BRAND_INSET.left,
     width = $bindable(0),
     height = $bindable(0)
   }: {

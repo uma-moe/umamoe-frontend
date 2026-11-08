@@ -24,11 +24,12 @@
   import type { ReplayToggles } from '../replay-display';
   import type { RunnerCallout } from '../replay-callouts';
   import { finishFocus } from '../replay-finish-camera';
-  import ReplayRunnerMarker, { crowdedRunners } from '../ReplayRunnerMarker.svelte';
-  import ReplayBrandMark from '../ReplayBrandMark.svelte';
+  import ReplayRunnerMarker from '../ReplayRunnerMarker.svelte';
+  import { crowdedRunners } from '../runner-crowding';
+  import ReplayBrandMark, { BRAND_INSET } from '../ReplayBrandMark.svelte';
   import { CourseMapCamera } from './course-map-camera.svelte';
   import { screenPoints } from './screen-projection';
-  import ReplayMapToolbar from './ReplayMapToolbar.svelte';
+  import ReplayMapCamera from './ReplayMapCamera.svelte';
   import ReplayMapCourse from './ReplayMapCourse.svelte';
   import ReplayMapLandmarks from './ReplayMapLandmarks.svelte';
   import ReplayCourseMinimap from './ReplayCourseMinimap.svelte';
@@ -48,11 +49,11 @@
     laneMax,
     visibility,
     fieldInset = 0,
+    doubledLanes = true,
     selected = $bindable('0'),
     onseekdistance,
     onselectcourse,
-    toolbarStart,
-    toolbarEnd
+    overlay
   }: {
     replay: ReplayState;
     toggles: ReplayToggles;
@@ -70,11 +71,13 @@
     visibility: Record<number, number>;
     /** Width covered by the race field overlay at the right edge, kept clear of runners. */
     fieldInset?: number;
+    /** Spreads lanes to twice their width so a packed field stays readable. */
+    doubledLanes?: boolean;
     selected?: string;
     onseekdistance: (distance: number) => void;
     onselectcourse: () => void;
-    toolbarStart?: Snippet;
-    toolbarEnd?: Snippet;
+    /** Drawn over the stage and left out of clips, such as the clip's crop window. */
+    overlay?: Snippet;
   } = $props();
 
   const BLOCK_STOP_OFFSET = 26;
@@ -91,9 +94,9 @@
   const LABEL_HALF_WIDTH = 36;
   const LABEL_ASCENT = 9;
   const LABEL_DESCENT = 3;
-  const BRAND_INSET = { left: 12, bottom: 8 };
+  // The camera controls' column in the top-left corner (ReplayMapCamera).
+  const CAMERA_CONTROLS = { right: 40, bottom: 112 };
 
-  let laneDetail = $state(true);
   let brandWidth = $state(0),
     brandHeight = $state(0);
 
@@ -110,7 +113,7 @@
   const frames = $derived(replay.capture.frames);
   const runners = $derived(replay.capture.runners);
   const laneWidth = $derived(replay.laneWidth);
-  const lateralScale = $derived(laneDetail ? 2 : 1);
+  const lateralScale = $derived(doubledLanes ? 2 : 1);
 
   const RUN_OUT_METRES = 80;
   // The camera centres the start like race positions, so track continues behind the gate.
@@ -318,11 +321,11 @@
       Math.hypot(target.x - current.x, target.y - current.y) * target.scale >
       Math.min(view.width, view.height) / 2;
 
-    void view.motion
-      .set(target, {
-        instant: prefersReducedMotion.current || !view.following || jumped || seeking
-      })
-      .catch(() => {});
+    // A clip steps the race faster or slower than real time, which a spring would lag behind.
+    const instant =
+      prefersReducedMotion.current || replay.recording || !view.following || jumped || seeking;
+
+    void view.motion.set(target, { instant }).catch(() => {});
   });
 
   onDestroy(() => {
@@ -374,6 +377,9 @@
   const inLabelArea = (p: { x: number; y: number }) => {
     if (p.x < LABEL_EDGE || p.x > view.width - LABEL_EDGE) return false;
     if (p.y < LABEL_EDGE || p.y > view.height - LABEL_BOTTOM_EDGE) return false;
+
+    const belowCamera = p.y - LABEL_ASCENT > CAMERA_CONTROLS.bottom;
+    if (p.x <= CAMERA_CONTROLS.right + LABEL_HALF_WIDTH && !belowCamera) return false;
 
     const besideBrand = p.y + LABEL_DESCENT < brandBox.top || p.y - LABEL_ASCENT > brandBox.bottom;
     return p.x > brandBox.right + LABEL_HALF_WIDTH || besideBrand;
@@ -477,20 +483,9 @@
     Select a runner to follow them. Drag to pan. Hold Ctrl or Command and scroll to zoom. Open
     Replay guide for more.
   </span>
-  <ReplayMapToolbar
-    hasTrack={!!points.length}
-    following={view.following}
-    bind:laneDetail
-    zoomOutDisabled={view.zoomOutDisabled}
-    zoomInDisabled={view.zoomInDisabled}
-    onfollow={view.follow}
-    onfullcourse={view.release}
-    onzoom={(factor) => view.zoom(factor)}
-    {toolbarStart}
-    {toolbarEnd}
-  />
   <div
     class="map-scene fullscreen-target"
+    data-clip-layer="stage"
     bind:clientWidth={view.width}
     bind:clientHeight={view.height}
     onwheel={view.wheel}
@@ -637,8 +632,6 @@
       />
     {/if}
     <ReplayBrandMark
-      left={BRAND_INSET.left}
-      bottom={BRAND_INSET.bottom}
       bind:width={brandWidth}
       bind:height={brandHeight}
     />
@@ -654,6 +647,17 @@
         top={minimapTop}
       />
     {/if}
+    {#if points.length}
+      <ReplayMapCamera
+        following={view.following}
+        zoomOutDisabled={view.zoomOutDisabled}
+        zoomInDisabled={view.zoomInDisabled}
+        onfollow={view.follow}
+        onfullcourse={view.release}
+        onzoom={(factor) => view.zoom(factor)}
+      />
+    {/if}
+    {@render overlay?.()}
   </div>
 </section>
 

@@ -16,8 +16,8 @@ type SampleContext = {
 };
 
 /**
- * The field seated as sampled race `index` ran. Under randomized gates each run has its own gates, so a rerun at the
- * sent `frame_order` would race a different field.
+ * The field seated as sampled race `index` ran. Under randomized gates each run has its own gates, and under CM moods
+ * its own moods, so a rerun at the sent `frame_order` and `motivation` would race a different field.
  */
 function seatedInput(
   input: MonteCarloInput,
@@ -25,13 +25,15 @@ function seatedInput(
   index: number
 ): MonteCarloInput {
   const gates = result.gates?.[index];
-  if (gates === undefined) return input;
+  const moods = result.moods?.[index];
+  if (gates === undefined && moods === undefined) return input;
 
   return {
     ...input,
     runners: input.runners.map((runner) => ({
       ...runner,
-      frame_order: gates[runner.source_input_index] ?? runner.frame_order
+      frame_order: gates?.[runner.source_input_index] ?? runner.frame_order,
+      motivation: moods?.[runner.source_input_index] ?? runner.motivation
     }))
   };
 }

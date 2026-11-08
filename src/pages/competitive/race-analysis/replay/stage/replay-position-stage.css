@@ -7,6 +7,10 @@
   border-radius: var(--radius-lg);
   background: var(--track-surface);
 }
+/* Holds the clip's crop window over the whole stage. */
+.positions-target {
+  position: relative;
+}
 .race-stage {
   position: relative;
   height: clamp(320px, 38dvh, 410px);
@@ -16,161 +20,43 @@
   height: 100%;
   overflow: hidden;
 }
-/* Playback only moves this layer, so the compositor slides the drawn course without repainting it. */
-.course-layer {
+.stage-canvas {
   position: absolute;
   top: 0;
   left: 0;
-  height: 100%;
-  pointer-events: none;
-  will-change: transform;
-}
-.course-background {
-  position: absolute;
-  inset: 0;
   display: block;
 }
-.infield {
-  fill: var(--track-infield);
-}
-.mowing-stripe {
-  fill: var(--track-stripe);
-}
-.lane-guide {
-  stroke: var(--track-marking);
-  stroke-width: 1;
-  opacity: 0.45;
-}
-.keep-zone {
-  fill-opacity: 0.16;
-}
-.section-band,
-.slope-band {
-  opacity: 0.9;
-}
-.start-line {
-  stroke: var(--track-ink);
-  stroke-width: 2.5;
-  stroke-dasharray: 0 7;
-  stroke-linecap: round;
-  opacity: 0.85;
-}
-/* Course colours are pale on the light theme's grass. */
-:global([data-theme='light']) .start-line {
-  filter: brightness(0.62);
-  opacity: 1;
-}
-.race-boundary {
-  stroke: var(--track-rail);
-  stroke-width: 2;
-  opacity: 0.6;
-}
-.rail-post {
-  stroke: var(--track-rail);
-  stroke-width: 1;
-  opacity: 0.7;
-}
-.rail-pole {
-  stroke: var(--track-pole);
-  stroke-width: 3;
-}
-.inner-rail {
-  stroke: var(--track-rail);
-  stroke-width: 3;
-}
-.finish-line {
-  position: absolute;
-  top: 0;
-  width: 10px;
-  background: repeating-conic-gradient(#f5f5f5 0 25%, #151515 0 50%) 0 0 / 10px 10px;
-  transform: translateX(-50%);
-}
-.sticky-names {
-  position: absolute;
-  inset: 0;
-  overflow: hidden;
-  pointer-events: none;
-}
-.section-name,
-.slope-name {
-  position: absolute;
-  top: 0;
-  left: 0;
-  color: #10161d;
-  font-size: 9px;
-  font-weight: 700;
-  line-height: 14px;
-  white-space: nowrap;
-}
-.slope-name {
-  top: 14px;
-  line-height: 12px;
-}
-.course-label,
-.keep-label {
-  position: absolute;
-  color: var(--track-ink);
-  font-size: 10px;
-  line-height: 12px;
-  white-space: nowrap;
-  text-shadow: 0 1px 2px rgb(0 0 0 / 0.45);
-}
-.course-label {
-  transform: translateX(4px);
-}
-.course-label.boundary {
-  color: var(--track-rail);
-  font-weight: 600;
-}
-.course-label.section {
-  padding-left: 4px;
-  border-left: 2px solid var(--label-color);
-  font-weight: 600;
-  transform: none;
-}
-.keep-label {
-  padding: 0 4px;
-  border-radius: 3px;
-  color: #10161d;
-  font-size: 9px;
-  font-weight: 700;
-  text-shadow: none;
-  transform: translateX(2px);
-}
-.lane-axis {
-  position: absolute;
-  left: 6px;
-  color: var(--track-ink);
-  font-size: 9px;
-  font-variant-numeric: tabular-nums;
-  text-shadow: 0 1px 2px rgb(0 0 0 / 0.45);
-  pointer-events: none;
-}
-.lane-axis span {
-  position: absolute;
-  left: 0;
-  margin-bottom: 1px;
-  white-space: nowrap;
-  opacity: 0.8;
-}
-.distance-axis {
-  position: absolute;
-  inset-inline: 0;
-  height: 12px;
-  color: var(--track-ink);
-  font-size: 10px;
-  font-variant-numeric: tabular-nums;
-  line-height: 12px;
-}
-.distance-axis span {
-  position: absolute;
-  white-space: nowrap;
-  transform: translateX(-50%);
-}
-.marker-layer {
+.marker-buttons {
   position: absolute;
   inset: 0;
   pointer-events: none;
+}
+/* Invisible hit targets over the drawn portraits; the canvas draws their hover and selection. */
+.marker-button {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 40px;
+  height: 40px;
+  margin: -20px 0 0 -20px;
+  padding: 0;
+  border: 0;
+  border-radius: 50%;
+  background: none;
+  cursor: pointer;
+  pointer-events: auto;
+}
+/* Hit targets stack as the canvas draws the runners: selected and focused above, hovered on top. */
+.marker-button.selected,
+.marker-button:focus-visible {
+  z-index: 1;
+}
+.marker-button:hover {
+  z-index: 2;
+}
+.marker-button:focus-visible {
+  outline: 2px solid var(--accent-primary);
+  outline-offset: 5px;
 }
 @media (min-width: 951px) {
   .fullscreen-target {
@@ -193,8 +79,4 @@
   .race-stage {
     height: 330px;
   }
-}
-:global([data-theme='light']) .course-label,
-:global([data-theme='light']) .lane-axis {
-  text-shadow: 0 1px 1px rgb(255 255 255 / 0.5);
 }

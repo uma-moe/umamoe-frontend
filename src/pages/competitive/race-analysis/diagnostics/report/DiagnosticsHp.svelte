@@ -1,30 +1,63 @@
 <script lang="ts">
   import type { ParsedRaceCapture } from '@/lib/race/capture/race-capture-parser';
   import DataTable from '@/components/data/DataTable.svelte';
+  import Disclosure from '@/components/overlays/Disclosure.svelte';
   import SeekTimeButton from '../SeekTimeButton.svelte';
   import RaceSkill from '@/pages/competitive/runners/RaceSkill.svelte';
-  import { number, signed } from '../diagnostics-format';
-  import { hpReport } from './hp-report';
+  import { fixed, number, signed } from '../diagnostics-format';
+  import { delayedSpurt, hpReport, spurtOutcome, spurtSelection } from './hp-report';
+  import { hpColor, needColor } from './last-spurt-chart';
+  import LastSpurtChart from './LastSpurtChart.svelte';
+  import SpurtCalculation from './SpurtCalculation.svelte';
 
   let {
     capture,
     index,
+    distance,
     skillNames,
-    onseek,
-    onspurt
+    onseek
   }: {
     capture: ParsedRaceCapture;
     index: number;
+    /** The race distance, where the HP chart ends. */
+    distance: number;
     skillNames: Map<number, string>;
     onseek: (time: number) => void;
-    onspurt?: () => void;
   } = $props();
+
+  const calculationId = $props.id();
 
   let effectsWidth = $state(0);
   let sortKey = $state('');
   let sortDirection = $state<'ascending' | 'descending'>('ascending');
 
   const report = $derived(hpReport(capture, index));
+  const spurt = $derived(report.spurt);
+  const outcome = $derived(spurtOutcome(spurt));
+  const spurtDelayed = $derived(delayedSpurt(spurt));
+  const speedReduced = $derived((spurt.reduction ?? 0) >= 0.005);
+  const finishHp = $derived(report.hp.finish);
+  const selection = $derived(
+    report.finalDecision === undefined ? undefined : spurtSelection(report.finalDecision)
+  );
+
+  // The chart marks the first check, which the facts beside it describe.
+  const chartMarks = $derived({
+    checkDistance: report.checkDistance,
+    checkHp: report.checkHp,
+    needHp: report.requiredHp,
+    delayedStart: spurtDelayed ? spurt.start : undefined
+  });
+
+  const lossTiming = $derived.by(() => {
+    const { totalLoss, lossBeforeCheck } = report;
+    if (totalLoss === undefined || totalLoss <= 0) return undefined;
+    if (lossBeforeCheck === undefined) return 'timing not recorded';
+    if (lossBeforeCheck === totalLoss) return 'all before check';
+
+    return number(lossBeforeCheck, 2) + ' before check';
+  });
+
   const effectColumns = $derived.by(() => {
     const key = sortKey;
     const ordered =
@@ -46,99 +79,166 @@
   class="report-block report-card hp-report"
   aria-label="Runner HP"
 >
-  <header class="section-heading"><h3>HP &amp; spurt</h3></header>
-  <dl class="hp-summary">
-    <div>
-      <dt>HP at finish</dt>
-      <dd
-        class:negative={report.hp.finish !== undefined && report.hp.finish <= 0}
-        class:positive={report.hp.finish !== undefined && report.hp.finish > 0}
-      >
-        {number(report.hp.finish)} HP
-        {#if typeof report.exhaustedDistance === 'number'}
-          <span>- exhausted at {number(report.exhaustedDistance)} m</span>
-        {/if}
-      </dd>
-    </div>
-    <div>
-      <dt>Spurt check</dt>
-      <dd>
-        {#if report.balance === undefined}
-          Not recorded
-        {:else}
-          <span>{number(report.checkHp)} HP / {number(report.requiredHp)} required</span>
-          <span
+  <header class="section-heading">
+    <h3>
+      HP &amp; spurt
+      {#if outcome}
+        <small
+          class:good={outcome.clean}
+          class:bad={!outcome.clean}
+        >
+          {outcome.label}
+        </small>
+      {/if}
+    </h3>
+    {#if report.checkTime !== undefined}
+      <span class="check-time">
+        Spurt check
+        <SeekTimeButton
+          time={report.checkTime}
+          {onseek}
+        />
+      </span>
+    {/if}
+  </header>
+  <div class="hp-overview">
+    <dl
+      class="report-facts hp-facts"
+      style:--hp-line={hpColor}
+      style:--need-line={needColor}
+    >
+      <div>
+        <dt>
+          <i
+            class="line-key hp-key"
+            aria-hidden="true"
+          ></i>
+          HP at check
+        </dt>
+        <dd>
+          {number(report.checkHp)}
+          <small>HP</small>
+        </dd>
+      </div>
+      <div>
+        <dt>
+          <i
+            class="line-key need-key"
+            aria-hidden="true"
+          ></i>
+          Needed for full spurt
+        </dt>
+        <dd>
+          {number(report.requiredHp)}
+          <small>HP</small>
+        </dd>
+      </div>
+      {#if report.balance !== undefined}
+        <div>
+          <dt>{report.balance < 0 ? 'HP short' : 'HP spare'}</dt>
+          <dd
             class:negative={report.balance < 0}
             class:positive={report.balance > 0}
           >
-            ({signed(report.balance, 0)})
-          </span>
-        {/if}
-      </dd>
-    </div>
-    <div>
-      <dt>Spurt</dt>
-      <dd>
-        <span
-          class:negative={report.spurt.noSpurt || (report.spurt.delay ?? 0) >= 0.05}
-          class:positive={!report.spurt.noSpurt &&
-            report.spurt.delay !== undefined &&
-            report.spurt.delay < 0.05}
+            {signed(report.balance, 0)}
+            <small>HP</small>
+          </dd>
+        </div>
+      {/if}
+      <div>
+        <dt>
+          {#if spurtDelayed}
+            <i
+              class="line-key delay-key"
+              aria-hidden="true"
+            ></i>
+          {/if}Spurt delay
+        </dt>
+        <dd
+          class:negative={spurtDelayed}
+          class:positive={spurt.delay !== undefined && !spurtDelayed}
         >
-          {report.spurt.noSpurt ? 'No spurt' : number(report.spurt.delay, 1) + ' m delay'}
-        </span>
-        {#if report.spurt.speed !== undefined}
-          <span>
-            - <span
-              class:negative={report.spurt.speedPenalty}
-              class:positive={!report.spurt.speedPenalty}
-            >
-              {number(report.spurt.speed, 2)} m/s{#if (report.spurt.reduction ?? 0) >= 0.005}
-                {' '}(-{number(report.spurt.reduction, 2)}){/if}
-            </span>
-          </span>
-        {/if}
-        {#if onspurt}
-          <button
-            type="button"
-            class="breakdown"
-            onclick={onspurt}
-            aria-haspopup="dialog"
-            aria-label="Open last-spurt breakdown"
-          >
-            Details
-          </button>
-        {/if}
-      </dd>
-    </div>
-    <div>
-      <dt>HP lost to skills</dt>
-      <dd>
-        {#if report.totalLoss === undefined}
-          Not recorded
-        {:else}
-          <span>
-            <span class:negative={report.totalLoss > 0}>{number(report.totalLoss, 2)} HP</span>
-            total
-          </span>
-          {#if report.totalLoss > 0}
-            {#if report.lossBeforeCheck === undefined}
-              <span>- timing not recorded</span>
-            {:else if report.lossBeforeCheck === report.totalLoss}
-              <span>- all before spurt check</span>
-            {:else}
-              <span>
-                - <span class:negative={report.lossBeforeCheck > 0}>
-                  {number(report.lossBeforeCheck, 2)} HP
-                </span>
-                before spurt check
-              </span>
-            {/if}
+          {number(spurt.delay, 1)}
+          <small>m</small>
+        </dd>
+      </div>
+      <div>
+        <dt>
+          Spurt speed
+          {#if speedReduced}
+            <small>{fixed(spurt.reduction, 2)} under full</small>
           {/if}
-        {/if}
-      </dd>
+        </dt>
+        <dd
+          class:negative={spurt.speedPenalty}
+          class:positive={spurt.speed !== undefined && !spurt.speedPenalty}
+        >
+          {fixed(spurt.speed, 2)}
+          <small>m/s</small>
+        </dd>
+      </div>
+      <div>
+        <dt>
+          HP at finish
+          {#if typeof report.exhaustedDistance === 'number'}
+            <small>ran out at {number(report.exhaustedDistance)} m</small>
+          {/if}
+        </dt>
+        <dd
+          class:negative={finishHp !== undefined && finishHp <= 0}
+          class:positive={finishHp !== undefined && finishHp > 0}
+        >
+          {number(finishHp)}
+          <small>HP</small>
+        </dd>
+      </div>
+      <div>
+        <dt>
+          HP lost to skills
+          {#if lossTiming}
+            <small>{lossTiming}</small>
+          {/if}
+        </dt>
+        <dd class:negative={(report.totalLoss ?? 0) > 0}>
+          {number(report.totalLoss, 2)}
+          <small>HP</small>
+        </dd>
+      </div>
+    </dl>
+    <LastSpurtChart
+      {capture}
+      {index}
+      {distance}
+      marks={chartMarks}
+      {onseek}
+    />
+  </div>
+  {#if report.finalDecision}
+    <div class="spurt-calculation">
+      <Disclosure
+        id={calculationId}
+        title="Spurt calculation"
+        compact
+      >
+        {#snippet heading()}
+          <strong>Spurt calculation</strong>
+          {#if selection}
+            <small
+              class="calculation-result"
+              class:positive={selection.clean}
+              class:negative={!selection.clean}
+            >
+              {selection.label}
+            </small>
+          {/if}
+        {/snippet}
+        <SpurtCalculation
+          calculations={report.calculations}
+          {onseek}
+        />
+      </Disclosure>
     </div>
-  </dl>
+  {/if}
   {#if report.effects.length}
     <div
       class="effect-columns"
@@ -185,7 +285,7 @@
                   : undefined}
               >
                 {signed(Number(row.change))} HP{#if typeof row.percent === 'number'}
-                  <span>({signed(row.percent, 1)}%)</span>{/if}
+                  <span class="hp-share">({signed(row.percent, 1)}%)</span>{/if}
               </span>
             {/if}
           {/snippet}
@@ -196,8 +296,10 @@
 </section>
 
 <style>
+  @import '../diagnostics-section.css';
   @import '../report-card.css';
   @import './report-section.css';
+  @import './report-facts.css';
   @import '../../../runners/skill-chip-cell.css';
   @import './diagnostics-hp.css';
 </style>

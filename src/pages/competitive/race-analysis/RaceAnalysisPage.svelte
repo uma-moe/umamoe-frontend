@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { onDestroy, onMount, tick } from 'svelte';
+  import { onDestroy, onMount, tick, untrack } from 'svelte';
   import AppPage from '@/layouts/AppPage.svelte';
   import Button from '@/components/controls/Button.svelte';
   import Banner from '@/components/feedback/Banner.svelte';
@@ -21,6 +21,12 @@
   import { downloadDetailedReplay, raceChoices } from './race-session';
   import { missingSimulationInput, type DetailedSimulation } from './detailed-simulation';
   import { loadReplayCourses, resolveReplayCourses, type CourseData } from './replay/replay-course';
+  import { RaceSimulation } from './simulation/race-simulation.svelte';
+  import { provideSkillImpacts, RaceSkillImpacts } from './simulation/skill-impact.svelte';
+  import { recordedImpactRace, type SkillImpactRace } from './simulation/skill-impact';
+  import { runnerAtSource } from './simulation/race-simulation';
+  import RaceSimulationMenu from './simulation/RaceSimulationMenu.svelte';
+  import RaceWinRates from './simulation/win-rates/RaceWinRates.svelte';
 
   let courses = $state<CourseData>();
 
@@ -50,7 +56,15 @@
 
   let sessionController: AbortController | undefined;
 
-  onDestroy(() => sessionController?.abort());
+  const simulation = new RaceSimulation();
+  const skillImpacts = new RaceSkillImpacts();
+  provideSkillImpacts(skillImpacts);
+
+  onDestroy(() => {
+    sessionController?.abort();
+    simulation.reset();
+    skillImpacts.reset();
+  });
 
   let skillNames = $state.raw(new Map<number, string>());
 
@@ -75,7 +89,14 @@
   );
 
   const active = $derived(captures[Number(selected)]);
+  const activeCourse = $derived(active ? courses?.courses[active.courseId ?? ''] : undefined);
   const choices = $derived(raceChoices(captures));
+
+  const simulable = $derived(!demo && Boolean(active?.original) && Boolean(active?.courseId));
+  const shownRerun = $derived(ofActive(simulation.rerun));
+  const pendingRerun = $derived(ofActive(simulation.pendingRerun));
+  const shownEstimate = $derived(ofActive(simulation.estimate));
+  const shown = $derived(shownRerun?.capture ?? active);
 
   const resimulable = $derived(captures.filter((capture) => capture.original));
   const sessionProgress = $derived.by(() => {
@@ -87,6 +108,15 @@
   });
 
   const activeSimulation = $derived.by((): DetailedSimulation => {
+    if (shownRerun)
+      return {
+        status: 'ready',
+        rerun: {
+          seed: shownRerun.seed,
+          newGates: shownRerun.gates !== undefined,
+          newMoods: shownRerun.moods !== undefined
+        }
+      };
     if (!active || active.detailed) return { status: 'ready' };
 
     if (demo)
@@ -103,7 +133,33 @@
     return { status: simulating === active.original ? 'running' : 'queued' };
   });
 
+  /** The race on screen once its simulation is ready, as the simulator raced it. */
+  const impactRace = $derived.by((): SkillImpactRace | undefined => {
+    if (!simulable || !active || activeSimulation.status !== 'ready') return undefined;
+
+    if (shownRerun) {
+      const settings = { seed: shownRerun.seed, gates: shownRerun.gates, moods: shownRerun.moods };
+      return { shown: shownRerun.capture, recorded: active, settings };
+    }
+
+    return recordedImpactRace(active);
+  });
+
+  $effect(() => {
+    const race = impactRace;
+    if (race) untrack(() => skillImpacts.prepare(race));
+  });
+
+  /** A race simulated from the active capture; one simulated from another race stays hidden until it is back. */
+  function ofActive<T extends { source: ParsedRaceCapture['original'] }>(value: T | undefined) {
+    if (value === undefined || active?.original === undefined) return undefined;
+
+    return value.source === active.original ? value : undefined;
+  }
+
   async function examples(count: number) {
+    simulation.reset();
+    skillImpacts.reset();
     uploadsOpen = false;
     captures = makeDemoRaces(count);
     demo = true;
@@ -146,6 +202,8 @@
       demo = false;
       group = 'all';
       if (replace) {
+        simulation.reset();
+        skillImpacts.reset();
         simulationErrors = [];
         simulationFailures = new Map();
         selected = '0';
@@ -160,6 +218,8 @@
 
   function clear() {
     sessionController?.abort();
+    simulation.reset();
+    skillImpacts.reset();
     captures = [];
     errors = [];
     simulationErrors = [];
@@ -172,6 +232,7 @@
   }
 
   function remove() {
+    simulation.reset();
     replayFocus = undefined;
     const index = Number(selected);
     captures = captures.filter((_, i) => i !== index);
@@ -206,8 +267,30 @@
   }
 
   function download() {
-    if (!active?.detailed) return;
-    downloadDetailedReplay(active);
+    if (!shown?.detailed) return;
+    downloadDetailedReplay(shown);
+  }
+
+  function openInSimulator() {
+    if (!active) return;
+
+    simulation.openInSimulator(active, active.fileName + ' from race analysis');
+  }
+
+  /** Shows one of the estimate's races with the winner, given by capture position, selected. */
+  async function watchEstimatedRace(run: number, source: number) {
+    if (!active) return;
+
+    const showing = await simulation.watchEstimatedRace(active, run);
+    const winner = shownRerun ? runnerAtSource(shownRerun.capture, source) : undefined;
+    if (!showing || !winner) return;
+
+    replayFocus = undefined;
+    await tick();
+    replayFocus = { runner: winner.index };
+
+    await tick();
+    scrollReport('replay');
   }
 
   function awaitsSimulation(capture: ParsedRaceCapture) {
@@ -287,7 +370,7 @@
     {#snippet actions()}
       {#if captures.length}
         <div class="file-actions">
-          {#if active?.detailed}
+          {#if shown?.detailed}
             <Button
               variant="secondary"
               size="sm"
@@ -368,12 +451,13 @@
           bind:this={reportTarget}
         >
           <RaceReplay
-            capture={active}
+            capture={shown ?? active}
             skillNames={demo ? demoSkills : skillNames}
             hasSession={captures.length > 1}
             focus={replayFocus}
             simulation={activeSimulation}
             onretrysimulation={retrySimulation}
+            onrecorded={() => simulation.backToRecording()}
           >
             {#snippet headerActions()}
               <RaceSourceBar
@@ -391,6 +475,53 @@
                 }}
                 onremove={remove}
               />
+            {/snippet}
+            {#snippet raceTools()}
+              {#if simulable}
+                <RaceSimulationMenu
+                  randomGates={simulation.randomGates}
+                  rerunning={pendingRerun !== undefined}
+                  estimating={shownEstimate?.status === 'running'}
+                  estimateReady={shownEstimate?.status === 'ready'}
+                  rerunShown={shownRerun !== undefined}
+                  ongates={() => simulation.setRandomGates(!simulation.randomGates)}
+                  onestimate={() => simulation.estimateWinRates(active)}
+                  onrerun={() => simulation.rerunOnNewSeed(active)}
+                  onopen={openInSimulator}
+                  onrecorded={() => simulation.backToRecording()}
+                />
+              {/if}
+            {/snippet}
+            {#snippet simulationReport()}
+              {#if simulation.failure || shownEstimate}
+                <div class="race-simulation">
+                  {#if simulation.failure}
+                    <Banner
+                      title={simulation.failure.title}
+                      tone="warning"
+                      reportable={false}
+                      dismissible
+                      ondismiss={() => simulation.dismissFailure()}
+                    >
+                      {simulation.failure.message}
+                    </Banner>
+                  {/if}
+                  {#if shownEstimate}
+                    <RaceWinRates
+                      capture={active}
+                      raceContext={{
+                        surface: activeCourse?.surface,
+                        distance: activeCourse?.distance ?? active.raceDistance
+                      }}
+                      estimate={shownEstimate}
+                      watchingSeed={pendingRerun?.seed}
+                      onwatch={watchEstimatedRace}
+                      onopen={openInSimulator}
+                      onclose={() => simulation.closeEstimate()}
+                    />
+                  {/if}
+                </div>
+              {/if}
             {/snippet}
             {#snippet sessionReport()}
               {#if captures.length > 1}

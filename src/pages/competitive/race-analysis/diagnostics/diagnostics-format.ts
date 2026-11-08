@@ -244,26 +244,92 @@ export function modeSpans(
   return horse?.spans.filter((span) => (span.mask & flag) !== 0) ?? [];
 }
 
-export function modeRows(
+export type ModePeriod = {
+  id: string;
+  key: string;
+  mode: string;
+  time: number;
+  duration: number;
+  /** A race phase index, or `'—'` when the mode's spans do not record one. */
+  phase: number | '—';
+  /** The runner in front during a blocked period, or -1. */
+  blockerHorseIndex: number;
+};
+
+/**
+ * Every period the runner spent in a race mode, in race order. Flag spans split whenever any flag
+ * changes, so touching spans of one mode join into a single period.
+ */
+export function modePeriods(
   capture: ParsedRaceCapture,
   horse: HorseDiagnostics | undefined,
   index = horse?.horseIndex
-) {
+): ModePeriod[] {
   const keys = [...Object.keys(capture.detailed?.annotations.flags ?? {}), 'rushing', 'blocked'];
-  return keys.flatMap((key) => {
-    const spans = modeSpans(capture, horse, key, index);
-    const firstSpan = spans[0];
-    if (!firstSpan) return [];
-    return [
-      {
-        id: key,
-        mode: diagnosticLabel(key),
-        duration: spans.reduce((total, span) => total + span.endTime - span.startTime, 0),
-        periods: spans.length,
-        time: firstSpan.startTime
+  const periods = keys.flatMap((key) => {
+    const mode = diagnosticLabel(key);
+    const keyPeriods: ModePeriod[] = [];
+    let end = -Infinity;
+
+    for (const span of modeSpans(capture, horse, key, index)) {
+      const previous = keyPeriods.at(-1);
+      const continues = 'mask' in span && previous !== undefined && span.startTime - end <= 1e-5;
+      end = span.endTime;
+
+      if (continues) {
+        previous.duration = end - previous.time;
+        continue;
       }
-    ];
+
+      keyPeriods.push({
+        id: key + '-' + keyPeriods.length,
+        key,
+        mode,
+        time: span.startTime,
+        duration: end - span.startTime,
+        phase: 'phase' in span && typeof span.phase === 'number' ? span.phase : '—',
+        blockerHorseIndex: typeof span.blockerHorseIndex === 'number' ? span.blockerHorseIndex : -1
+      });
+    }
+
+    return keyPeriods;
   });
+
+  return periods.sort((a, b) => a.time - b.time);
+}
+
+export type ModeRow = {
+  id: string;
+  mode: string;
+  /** Total time in the mode across its periods. */
+  duration: number;
+  periods: number;
+  /** When the mode first started. */
+  time: number;
+};
+
+/** One row per mode, in the order the modes first started. */
+export function modeRows(periods: ModePeriod[]): ModeRow[] {
+  const rows = new Map<string, ModeRow>();
+
+  for (const period of periods) {
+    const row = rows.get(period.key);
+    if (row === undefined) {
+      rows.set(period.key, {
+        id: period.key,
+        mode: period.mode,
+        duration: period.duration,
+        periods: 1,
+        time: period.time
+      });
+      continue;
+    }
+
+    row.duration += period.duration;
+    row.periods += 1;
+  }
+
+  return [...rows.values()];
 }
 
 export function sectionRows(

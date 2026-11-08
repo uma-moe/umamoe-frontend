@@ -1,25 +1,21 @@
 <script lang="ts">
   import type { Snippet } from 'svelte';
-  import ReplayTimelineGuide from './ReplayTimelineGuide.svelte';
 
   let {
-    tools,
-    ensemble
+    tools
   }: {
     /** The telemetry chart's own controls, such as its metric, display options and expand button. */
     tools?: Snippet;
-    ensemble: boolean;
   } = $props();
 </script>
 
-<!-- A desktop toolbar's chart view: the chart's controls followed by the guide to reading the timeline. -->
+<!-- A desktop toolbar's chart view. -->
 <div
   class="chart-tools"
   role="group"
   aria-label="Telemetry view"
 >
   {@render tools?.()}
-  <ReplayTimelineGuide {ensemble} />
 </div>
 
 <style>

@@ -5,7 +5,8 @@ import { simulatorSession } from '../../../simulator-session.svelte';
 import { buildMonteCarloRequest } from '../../../requests/race-sim-request';
 import type { RaceSetupInput } from '../../../requests/stamina-request';
 import type { SimulatorUma } from '../../../simulator-uma';
-import { veteranTeams, pairingFrameOrders } from './veteran-pairings';
+import { seededGates } from '@/lib/race/seating/game-seating';
+import { veteranTeams } from './veteran-pairings';
 import { rankTeams, resultsMatchJobs, type TeamResult } from './team-results';
 
 export type TeamSearchPlan = {
@@ -116,7 +117,8 @@ export class TeamSearch {
             sample = 0;
           }
 
-          const gates = pairingFrameOrders(seeds[sample]!, 9);
+          // Every candidate races each seed in the gates the game would seat its field in.
+          const gates = seededGates(seeds[sample]!, 9);
           const race = buildMonteCarloRequest({
             courseId: target.course_id,
             seed: seeds[sample]!,

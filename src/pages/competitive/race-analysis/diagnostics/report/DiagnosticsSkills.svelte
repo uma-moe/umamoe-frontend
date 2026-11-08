@@ -1,13 +1,24 @@
 <script lang="ts">
   import type { ParsedRaceCapture } from '@/lib/race/capture/race-capture-parser';
   import { raceMetricHelp, type HorseDiagnostics } from '@/lib/race/capture/race-diagnostics';
-  import DataTable from '@/components/data/DataTable.svelte';
+  import { ordinalPlace } from '@/lib/race/replay/race-display';
+  import DataTable, { type TableColumn } from '@/components/data/DataTable.svelte';
+  import IconButton from '@/components/controls/IconButton.svelte';
   import InfoIcon from '@/components/feedback/InfoIcon.svelte';
+  import Spinner from '@/components/feedback/Spinner.svelte';
   import Icon from '@/components/Icon.svelte';
   import InspectPopover from '@/components/overlays/InspectPopover.svelte';
   import type { IconName } from '@/components/icon-types';
   import RaceSkill from '@/pages/competitive/runners/RaceSkill.svelte';
+  import { signedLengths, signedSeconds } from '@/pages/simulator/reports/simulation-comparison';
   import { isSkillOutcome, skillRows, type SkillOutcome } from '../diagnostics-format';
+  import {
+    runnerSkillGains,
+    skillGainHelp,
+    skillGainSwings,
+    type SkillGain
+  } from '../../simulation/skill-impact';
+  import { skillImpactsInContext } from '../../simulation/skill-impact.svelte';
 
   type OutcomeTone = 'activated' | 'caution' | 'failed' | 'idle';
 
@@ -25,22 +36,34 @@
     onseek: (time: number) => void;
   } = $props();
 
+  const skillImpacts = skillImpactsInContext();
+  const columnHelp = { ...raceMetricHelp, Gain: skillGainHelp };
+
   let skillsWidth = $state(0);
   let sortKey = $state('');
   let sortDirection = $state<'ascending' | 'descending'>('ascending');
 
   const runner = $derived(capture.runners.find((r) => r.index === index));
-  const rows = $derived(skillRows(capture, index, horse, runner));
+  const impact = $derived(skillImpacts?.of(capture));
+  const gains = $derived(
+    impact?.status === 'ready' ? runnerSkillGains(capture, impact.impact, index) : undefined
+  );
+  const rows = $derived.by(() => {
+    const outcomes = skillRows(capture, index, horse, runner);
+    if (!gains) return outcomes;
+
+    return outcomes.map((row) => ({ ...row, gain: shownGain(row)?.lengths ?? '—' }));
+  });
+  const columns = $derived.by(() => {
+    const shown: TableColumn[] = [
+      { key: 'id', label: 'Skill' },
+      { key: 'status', label: 'Outcome' }
+    ];
+
+    return impact ? [...shown, { key: 'gain', label: 'Gain', numeric: true }] : shown;
+  });
   const skillColumns = $derived.by(() => {
-    const ordered = sortKey
-      ? [...rows].sort((a, b) => {
-          const comparison =
-            sortKey === 'id'
-              ? Number(a.id) - Number(b.id)
-              : String(a.status).localeCompare(String(b.status));
-          return sortDirection === 'ascending' ? comparison : -comparison;
-        })
-      : rows;
+    const ordered = sortKey ? [...rows].sort(compareRows) : rows;
 
     if (skillsWidth < 680 || ordered.length < 2) return [ordered];
 
@@ -76,6 +99,46 @@
     idle: 'minus'
   };
 
+  /** Skills that never took effect gained exactly nothing, so they show no gain at all. */
+  function shownGain(row: Record<string, string | number>): SkillGain | undefined {
+    const gain = gains?.get(Number(row.id));
+    if (gain === undefined) return undefined;
+
+    const changedNothing = gain.lengths === 0 && gain.seconds === 0;
+    return changedNothing && row.status !== 'Activated' ? undefined : gain;
+  }
+
+  function compareRows(a: Record<string, string | number>, b: Record<string, string | number>) {
+    if (sortKey === 'gain') {
+      // Unmeasured skills stay below measured ones in either direction, as DataTable keeps them.
+      if (typeof a.gain !== 'number') return typeof b.gain === 'number' ? 1 : 0;
+      if (typeof b.gain !== 'number') return -1;
+    }
+
+    let comparison: number;
+    if (sortKey === 'id') comparison = Number(a.id) - Number(b.id);
+    else if (sortKey === 'gain') comparison = Number(a.gain) - Number(b.gain);
+    else comparison = String(a.status).localeCompare(String(b.status));
+
+    return sortDirection === 'ascending' ? comparison : -comparison;
+  }
+
+  function gainTone(lengths: number) {
+    const rounded = Number(lengths.toFixed(1));
+    if (rounded > 0) return 'gained';
+    if (rounded < 0) return 'lost';
+
+    return 'even';
+  }
+
+  function gainDescription(gain: SkillGain) {
+    if (gain.place === gain.placeWithout)
+      return 'Same place without this skill. ' + skillGainSwings;
+
+    const places = ordinalPlace(gain.place) + ', ' + ordinalPlace(gain.placeWithout);
+    return 'Finished ' + places + ' without this skill. ' + skillGainSwings;
+  }
+
   function outcomeTone(status: unknown): OutcomeTone {
     return isSkillOutcome(status) ? outcomeTones[status] : 'idle';
   }
@@ -98,6 +161,28 @@
     <h3>
       Skill procs <small>{activatedSkills}/{rows.length} activated</small>
     </h3>
+    {#if impact?.status === 'running'}
+      <span class="impact-status">
+        <Spinner
+          size={14}
+          label="Measuring skill gains"
+        />
+        Measuring gains
+      </span>
+    {:else if impact?.status === 'failed'}
+      <span
+        class="impact-status failed"
+        title={impact.reason}
+      >
+        Gains unavailable
+        <IconButton
+          icon="refresh"
+          label="Measure skill gains again"
+          size="sm"
+          onclick={() => skillImpacts?.retry(capture)}
+        />
+      </span>
+    {/if}
   </header>
   <div
     class="skill-columns"
@@ -105,7 +190,7 @@
   >
     {#each skillColumns as columnRows, columnIndex}
       <DataTable
-        columnHelp={raceMetricHelp}
+        {columnHelp}
         plain
         compact
         caption={skillColumns.length === 1
@@ -115,10 +200,7 @@
         bind:sortKey
         bind:sortDirection
         emptyMessage="No skill data recorded for this runner."
-        columns={[
-          { key: 'id', label: 'Skill' },
-          { key: 'status', label: 'Outcome' }
-        ]}
+        {columns}
       >
         {#snippet cell(row, column)}
           {#if column.key === 'id'}
@@ -197,6 +279,26 @@
                 </InspectPopover>
               </span>
             {/if}
+          {:else if column.key === 'gain'}
+            {@const gain = shownGain(row)}
+            {#if gain}
+              <span
+                class="skill-gain {gainTone(gain.lengths)}"
+                title={gainDescription(gain)}
+              >
+                <span class="gain-lengths">{signedLengths(gain.lengths)}</span>
+                <span class="gain-seconds">{signedSeconds(-gain.seconds)}</span>
+              </span>
+            {:else if impact?.status === 'running'}
+              <span
+                class="gain-missing"
+                aria-label="Measuring"
+              >
+                …
+              </span>
+            {:else}
+              <span class="gain-missing">—</span>
+            {/if}
           {/if}
         {/snippet}
       </DataTable>
@@ -227,14 +329,20 @@
   .skills-report :global(th:first-child) {
     width: 50%;
   }
+  /* A wide single table lets long skill names use its room, up to 260px. */
   .skill-chip-cell {
+    --skill-chip-width: max(176px, min(100%, 260px));
     display: inline-flex;
+    width: 100%;
     vertical-align: middle;
   }
-  /* A phone keeps one line per skill, with the pinned chip narrow enough to leave most of the width to scroll. */
+  /* A phone's chip fills its half of the table; outcomes wrap to a gain's two lines so the gain stays in view. */
   @media (max-width: 767px) {
     .skills-report :global(.skill-chip-cell) {
-      --skill-chip-width: 8rem;
+      --skill-chip-width: min(100%, 260px);
+    }
+    .skill-status {
+      white-space: normal;
     }
   }
   /* The icon carries the outcome at a glance; its colour repeats it for readers who scan by tone. */
@@ -291,6 +399,41 @@
   }
   .skill-status.caution {
     --status-color: var(--accent-warning);
+  }
+  .impact-status {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    color: var(--text-secondary);
+    font-size: 11px;
+  }
+  .impact-status.failed {
+    color: var(--accent-warning);
+  }
+  .skill-gain {
+    display: inline-flex;
+    flex-direction: column;
+    align-items: flex-end;
+    line-height: 1.15;
+    font-variant-numeric: tabular-nums;
+    white-space: nowrap;
+  }
+  .gain-lengths {
+    font-weight: 600;
+  }
+  .gain-seconds {
+    color: var(--text-secondary);
+    font-size: 10px;
+  }
+  .skill-gain.gained .gain-lengths {
+    color: var(--accent-success);
+  }
+  .skill-gain.lost .gain-lengths {
+    color: var(--accent-error);
+  }
+  .skill-gain.even .gain-lengths,
+  .gain-missing {
+    color: var(--text-secondary);
   }
   .impossible-help {
     display: inline-flex;

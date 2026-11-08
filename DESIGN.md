@@ -7,6 +7,14 @@ are the authority for those until `/impeccable document` adds them.
 tinted border to mark its series, style or status. A series shows its colour through its own swatch: the tinted
 checkbox, a dot or the line itself.
 
+**Never put a coloured border on anything rounded.** No rounded card, group, chip, tag, tile, portrait or button
+gets a coloured outline, ring, underline or inset-shadow edge, whether it marks a team, a series, a style or a
+selection. Colour lives in a dot, a swatch or a fill; borders on rounded shapes stay the neutral border tokens.
+
+**Never asymmetric, never padded out.** Layouts are balanced: paired controls, columns and groups mirror each other
+in size and spacing, and a control set never trails off with one odd item on its own row or side. Leave no empty
+space that carries nothing and no padding beyond what the content needs to read; dense and even beats airy.
+
 ## Overview
 
 uma.moe is a dense analysis tool for Uma Musume players. Every screen, from a 320px phone to a 1080p desktop,
@@ -50,12 +58,18 @@ controls.
 - **One control height per row.** Controls side by side share the control height: 32px on phones, and the
   `--control-height` token elsewhere. An Expand or menu button is never taller or shorter than the switch beside
   it.
+- **Controls look the same size.** In a toolbar, an icon button is a square of the control height, filled or
+  outlined, and an outlined control's border is visible enough that its box reads as large as a filled one.
+- **Settings popovers are even grids.** A popover of settings lays its fields out in equal columns with equal gaps,
+  every field the same width, with no lone field or stray padding.
 
 ## Do's and Don'ts
 
 - Don't ever use coloured-border cards: no coloured left edge, stripe or tinted outline on any card, tile or legend.
+- Don't put a coloured border, ring, underline or inset-shadow edge on any rounded shape; colour a dot or a fill.
 - Don't hand-draw a button, toggle, chip or checkbox; use the library component.
 - Do remove a control that cannot change anything useful for the data shown.
 - Do keep explanations behind the info button; don't add hints, subtexts or footnotes under titles.
+- Don't build asymmetric layouts, leave empty space or add excessive padding.
 - Don't use text-styled actions; every action is a button.
 - Don't let a number, name or control label wrap onto a second line.

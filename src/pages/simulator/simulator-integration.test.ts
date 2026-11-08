@@ -43,8 +43,7 @@ import {
   veteranTeamCount,
   veteranTeams,
   pairingSeeds,
-  benchmarkFields,
-  pairingFrameOrders
+  benchmarkFields
 } from './setup/veterans/team-search/veteran-pairings';
 import { cmPreset } from './courses/cm-presets';
 import { buildMonteCarloRequest } from './requests/race-sim-request';
@@ -680,11 +679,6 @@ describe('simulator source integration', () => {
     expect(fields.every((field) => field.map((uma) => uma.teamId).join() === '2,2,2,3,3,3')).toBe(
       true
     );
-    expect(pairingFrameOrders(42, 9)).toEqual(pairingFrameOrders(42, 9));
-    expect([...pairingFrameOrders(42, 9)].sort((a, b) => a - b)).toEqual([
-      1, 2, 3, 4, 5, 6, 7, 8, 9
-    ]);
-    expect(pairingFrameOrders(43, 9)).not.toEqual(pairingFrameOrders(42, 9));
   });
 
   it('requires production browser verification on all simulator endpoints', async () => {

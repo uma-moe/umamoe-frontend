@@ -113,14 +113,6 @@ tbody tr:last-child > * {
   letter-spacing: 0;
   text-transform: none;
 }
-.table-stats :global([data-stat='sp'] dt) {
-  order: -1;
-  width: 13px;
-  flex: none;
-  color: var(--color-text-muted);
-  font-size: 9px;
-  font-weight: 600;
-}
 .query-row td {
   padding: 8px 12px;
 }
@@ -202,10 +194,6 @@ button:focus-visible {
   }
   .table-stats :global([data-stat='total'] dt) {
     font-size: 9px;
-  }
-  .table-stats :global([data-stat='sp'] dt) {
-    width: auto;
-    overflow: visible;
   }
   .table-factors :global(.spark-filter) {
     min-height: 34px;

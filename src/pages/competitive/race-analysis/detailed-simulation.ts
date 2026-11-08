@@ -2,7 +2,11 @@ import type { ParsedRaceCapture } from '@/lib/race/capture/race-capture-parser';
 
 /** Where a replay's detailed simulation stands; views show recorded data until it is ready. */
 export type DetailedSimulation =
-  | { status: 'ready' }
+  | {
+      status: 'ready';
+      /** Set when the replay is a rerun on another seed instead of the recorded race. */
+      rerun?: { seed: number; newGates: boolean; newMoods: boolean };
+    }
   | { status: 'queued' }
   | { status: 'running' }
   | { status: 'failed'; reason: string }

@@ -22,6 +22,9 @@
   } = $props();
 
   const decisions = $derived(positionKeepDecisionRows(capture, horse));
+  const started = $derived(
+    (horse.positionKeepDecisions ?? []).filter((decision) => decision.outcome === 'Started').length
+  );
 </script>
 
 <section
@@ -30,20 +33,27 @@
 >
   <header class="section-heading">
     <h3>
-      Position keep decisions <small>
-        {count(horse.positionKeepDecisions?.length ?? 0, 'decision')}
-      </small>
+      Position keep decisions
+      {#if decisions.length}
+        <small>{started} of {count(decisions.length, 'attempt')} started</small>
+      {/if}
     </h3>
   </header>
   <DiagnosticsEventTable
     value={decisions}
     title="Position keep decisions"
     columns={[
-      { key: 'time', label: 'Time', helpKey: 'Time (s)', numeric: true },
-      { key: 'duration', label: 'Duration', helpKey: 'Duration (s)', numeric: true },
-      { key: 'attemptedMode', label: 'Mode' },
-      { key: 'outcome', label: 'Result' },
-      { key: 'pacemakerHorseIndex', label: 'Current pacemaker' }
+      { key: 'time', label: 'Time', numeric: true, sortable: false },
+      { key: 'attemptedMode', label: 'Mode', sortable: false },
+      { key: 'outcome', label: 'Result', sortable: false },
+      {
+        key: 'duration',
+        label: 'Duration',
+        numeric: true,
+        sortable: false,
+        priority: 'secondary'
+      },
+      { key: 'pacemakerHorseIndex', label: 'Pacemaker', sortable: false }
     ]}
     {capture}
     {index}
@@ -63,5 +73,23 @@
     display: flex;
     flex-direction: column;
     min-height: 0;
+  }
+  /* The time column matches the report's other event tables, so their seek buttons line up. */
+  .position-decisions :global(th:first-child) {
+    width: 72px;
+  }
+  /* A phone drops the duration, which race behaviour also lists, and shortens the pacemaker's name to fit. */
+  @media (max-width: 520px) {
+    .position-decisions :global(table) {
+      table-layout: fixed;
+    }
+    .position-decisions :global(th:nth-child(2)),
+    .position-decisions :global(th:nth-child(3)) {
+      width: 70px;
+    }
+    .position-decisions :global(th:last-child) {
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
   }
 </style>

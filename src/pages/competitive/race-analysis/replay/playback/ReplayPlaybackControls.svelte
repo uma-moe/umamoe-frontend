@@ -4,124 +4,111 @@
   import SelectField from '@/components/controls/SelectField.svelte';
   import { formatRaceTime } from '@/lib/race/replay/race-display';
   import type { ReplayBounds } from '@/lib/race/replay/race-replay';
-  import { slopeLabel } from '../replay-timeline';
 
   let {
     bounds,
-    endTime,
     time,
     speed = $bindable('1'),
     playing,
     disabled,
-    phase,
-    currentSegment,
-    slope,
-    leader,
+    frameIndex,
+    frameCount,
     minimal,
+    clipping = false,
     onplay,
     onseek,
-    tools,
-    guide
+    onstepframe,
+    tools
   }: {
     bounds: ReplayBounds;
-    /** End of the displayed timeline, which may stop at the selected runner's finish. */
-    endTime: number;
     time: number;
     speed?: string;
     playing: boolean;
     disabled: boolean;
-    phase: string;
-    currentSegment?: string;
-    slope: number;
-    leader: number;
+    frameIndex: number;
+    frameCount: number;
     minimal: boolean;
+    /** A clip is being cut: its tools fill the chart tools' place in the row. */
+    clipping?: boolean;
     onplay: () => void;
     onseek: (time: number) => void;
+    onstepframe: (direction: 1 | -1) => void;
     /** The chart view: its controls at the end of a desktop row, or a menu beside the speed. */
     tools?: Snippet;
-    /** The guide to reading the timeline, ending the clock's line when the chart view is a menu. */
-    guide?: Snippet;
   } = $props();
-
-  const trackState = $derived([
-    phase,
-    ...(currentSegment ? [currentSegment] : []),
-    ...(slope ? [slopeLabel(slope)] : [])
-  ]);
-
-  const leaderLabel = $derived(
-    Math.round(Math.min(leader, bounds.distanceMax)).toLocaleString() +
-      ' / ' +
-      Math.round(bounds.distanceMax).toLocaleString() +
-      ' m'
-  );
 
   /** formatRaceTime reads 0 as a missing time; the clock starts at zero. */
   const clockLabel = (value: number) => (value > 0 ? formatRaceTime(value, 2) : '0:00.00');
 
-  const remainingLabel = $derived(
-    Math.round(Math.max(0, bounds.distanceMax - leader)).toLocaleString() + ' m left'
-  );
+  const lastFrame = $derived(Math.max(0, frameCount - 1));
 </script>
 
-<!-- Playback (transport and speed), the chart view, and where the replay is (clock and race state). -->
+<!-- Transport and speed, where the replay is, then the chart view. -->
 <div
-  class="playback-controls"
-  class:minimal
+  class="playback-controls replay-toolbar"
+  class:clipping
   role="toolbar"
   aria-label="Playback and telemetry controls"
 >
-  <div class="transport">
-    <Button
-      size="sm"
-      icon={playing ? 'pause' : 'play'}
-      ariaLabel={playing ? 'Pause' : 'Play'}
-      onclick={onplay}
-      {disabled}
-    >
-      <span class="button-text">{playing ? 'Pause' : 'Play'}</span>
-    </Button>
+  <div
+    class="transport"
+    role="group"
+    aria-label="Playback"
+  >
+    {#if !minimal}
+      <span class="restart">
+        <Button
+          variant="secondary"
+          size="sm"
+          icon="restart"
+          ariaLabel="Restart"
+          title="Restart"
+          onclick={() => onseek(bounds.startTime)}
+          {disabled}
+        />
+      </span>
+    {/if}
+    <span class="play">
+      <Button
+        size="sm"
+        icon={playing ? 'pause' : 'play'}
+        ariaLabel={playing ? 'Pause' : 'Play'}
+        title={(playing ? 'Pause' : clipping ? 'Play to the out point' : 'Play') + ' (Space)'}
+        onclick={onplay}
+        {disabled}
+      />
+    </span>
     {#if !minimal}
       <div
-        class="steps"
+        class="frame-stepper"
         role="group"
-        aria-label="Seek"
+        aria-label="Frame"
       >
         <Button
           variant="secondary"
           size="sm"
-          icon="skip-back"
-          ariaLabel="Restart"
-          onclick={() => onseek(bounds.startTime)}
+          icon="frame-back"
+          ariaLabel="Previous frame"
+          title="Previous frame (,)"
+          onclick={() => onstepframe(-1)}
+          {disabled}
+        />
+        <output
+          aria-live="off"
+          style:--frame-digits={String(lastFrame).length}
         >
-          <span class="button-text optional-text">Restart</span>
-        </Button>
+          {frameIndex}
+          <span class="frame-last">/ {lastFrame}</span>
+        </output>
         <Button
           variant="secondary"
           size="sm"
-          ariaLabel="Back 1 second"
-          onclick={() => onseek(time - 1)}
-        >
-          −1s
-        </Button>
-        <Button
-          variant="secondary"
-          size="sm"
-          ariaLabel="Forward 1 second"
-          onclick={() => onseek(time + 1)}
-        >
-          +1s
-        </Button>
-        <Button
-          variant="secondary"
-          size="sm"
-          icon="flag"
-          ariaLabel="Jump to finish"
-          title="Jump to finish"
-          onclick={() => onseek(endTime)}
-        >
-          <span class="button-text optional-text">Finish</span>
-        </Button>
+          icon="frame-forward"
+          ariaLabel="Next frame"
+          title="Next frame (.)"
+          onclick={() => onstepframe(1)}
+          {disabled}
+        />
       </div>
     {/if}
   </div>
@@ -134,32 +121,16 @@
       bind:value={speed}
     />
   </span>
-  <div class="position">
-    <span class="playback-clock">
-      <strong>{clockLabel(time)}</strong>
-      <span class="clock-total">
-        / {formatRaceTime(bounds.endTime, 2)}
-      </span>
-    </span>
-    <p
-      class="playback-state"
-      title={trackState.join(', ') + ', leader ' + leaderLabel}
-    >
-      <strong class="race-phase">{phase}</strong>
-      {#each trackState.slice(1) as part}
-        <span>{part}</span>
-      {/each}
-      <span class="remaining">{remainingLabel}</span>
-    </p>
-  </div>
+  <p class="clock">
+    <strong>{clockLabel(time)}</strong>
+    <span class="clock-total">/ {formatRaceTime(bounds.endTime, 2)}</span>
+  </p>
   {#if tools}
     <div class="playback-tools">{@render tools()}</div>
-  {/if}
-  {#if guide}
-    <div class="playback-guide">{@render guide()}</div>
   {/if}
 </div>
 
 <style>
+  @import '../replay-toolbar.css';
   @import './replay-playback-controls.css';
 </style>

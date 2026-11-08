@@ -90,6 +90,10 @@
 .profile-parents {
   grid-area: parents;
 }
+/* The parents zone can be wider than the tree; the tree sits in its middle. */
+.profile-parents :global(.lineage) {
+  justify-content: center;
+}
 h3 {
   margin: 0;
   font-size: 12px;
@@ -198,7 +202,7 @@ h3 {
   font-size: 11px;
 }
 /* Who the runner is beside the result, the build beside the parents, then the deck across the card. */
-@container runner-profile (min-width: 520px) and (max-width: 699px) {
+@container runner-profile (min-width: 520px) and (max-width: 819px) {
   .profile-zones {
     grid-template-columns: minmax(290px, max-content) minmax(0, 1fr);
     grid-template-areas:
@@ -206,21 +210,14 @@ h3 {
       'build parents'
       'deck deck';
   }
-  .profile-parents :global(.lineage) {
-    justify-content: center;
-  }
 }
 /*
  * Two rows: who the runner is, how the race went and their parents, then the build beside the deck. The build column
- * runs through both rows, so the dividers line up.
+ * runs through both rows, so the dividers line up. Below 820px the result and parents no longer fit beside it.
  */
-@container runner-profile (min-width: 700px) {
+@container runner-profile (min-width: 820px) {
   .profile-deck :global(.support-deck) {
     grid-template-columns: repeat(3, minmax(0, 1fr));
-  }
-  /* The parents zone can be wider than the tree here; the tree sits in its middle. */
-  .profile-parents :global(.lineage) {
-    justify-content: center;
   }
   .profile-zones {
     grid-template-columns: 280px max-content minmax(max-content, 1fr);

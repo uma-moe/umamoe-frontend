@@ -10,7 +10,12 @@ import {
   tracksWithCourses,
   type RaceCourse
 } from '@/lib/game-data/racing/courses';
-import { importSimulatorUmas, simulatorRoster } from './simulator-roster.svelte';
+import {
+  importSimulatorUmas,
+  replaceSimulatorField,
+  simulatorRoster
+} from './simulator-roster.svelte';
+import type { SimulatorHandoff } from './simulator-handoff';
 import type { SimulatorUma } from './simulator-uma';
 import { resourceCache } from '@/services/resources/resource-cache';
 import type { Trainee } from './setup/trainee';
@@ -151,6 +156,41 @@ export async function openSimulatorField(
   simulatorSession.umaId = umas[0]?.id ?? '';
   const { router } = await import('@/routes/router');
   await router.navigate('/simulator/race');
+}
+
+/** A condition another page sent, when one of the simulator's options holds it. */
+function conditionChoice(options: ConditionOption[], value: string | undefined) {
+  return options.some((option) => option.value === value) ? value : undefined;
+}
+
+/** Puts a field another tab handed over on the race simulator, with its course and conditions; returns the course. */
+export async function receiveSimulatorHandoff(
+  handoff: SimulatorHandoff
+): Promise<RaceCourse | undefined> {
+  await ensureSimulatorCourses();
+  const course = simulatorCourseData.courses.get(handoff.courseId);
+  const courseId = course ? String(course.course_id) : '';
+  const ground = conditionChoice(GROUND_OPTIONS, handoff.conditions.ground),
+    weather = conditionChoice(WEATHER_OPTIONS, handoff.conditions.weather),
+    season = conditionChoice(SEASON_OPTIONS, handoff.conditions.season);
+  const loaded = 'Loaded the ' + handoff.umas.length + ' runners of ' + handoff.origin + '.';
+
+  replaceSimulatorField(handoff.umas, {});
+  Object.assign(simulatorSession, {
+    courseId,
+    sourceCourseId: courseId,
+    raceInstanceId: handoff.raceInstanceId ?? 0,
+    seed: String(handoff.seed),
+    umaId: handoff.umas[0]?.id ?? '',
+    ...(ground && { ground }),
+    ...(weather && { weather }),
+    ...(season && { season }),
+    importNotice: course
+      ? loaded + ' Review the race conditions before running.'
+      : loaded + ' Select their course and review the race conditions before running.'
+  });
+
+  return course;
 }
 
 export function selectedRaceInstanceId(): number {

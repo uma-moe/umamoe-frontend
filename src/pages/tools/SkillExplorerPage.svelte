@@ -1,7 +1,6 @@
 <script lang="ts">
   import { onMount } from 'svelte';
   import AppPage from '@/layouts/AppPage.svelte';
-  import Disclosure from '@/components/overlays/Disclosure.svelte';
   import Banner from '@/components/feedback/Banner.svelte';
   import EmptyState from '@/components/feedback/EmptyState.svelte';
   import Spinner from '@/components/feedback/Spinner.svelte';
@@ -60,6 +59,7 @@
     type UnvaluedSkills
   } from './skill-explorer/umas/uma-skills';
   import BuildPanel from './skill-explorer/build/BuildPanel.svelte';
+  import ExplorerGuide from './skill-explorer/ExplorerGuide.svelte';
   import SkillExplorerFilters from './skill-explorer/SkillExplorerFilters.svelte';
   import SkillScatter from './skill-explorer/scatter/SkillScatter.svelte';
   import SkillCard, { type TerrainSegment } from './skill-explorer/skill-card/SkillCard.svelte';
@@ -286,7 +286,7 @@
       ? 'Est. win rate gained on its own'
       : 'Est. win rate added to the reference build' +
         (yMode === 'forced' ? ', waiting skills forced' : '')) +
-      (procScaled ? ', over all races' : ', when it procs')
+      (procScaled ? ', over all races' : ', when it activates')
   );
   /** What the plot's axes mean: when it changes, the zoom starts again from the whole plot. */
   const viewKey = $derived(
@@ -569,7 +569,7 @@
   <title>Skill Explorer - uma.moe</title>
   <meta
     name="description"
-    content="Every Uma Musume skill's value and proc point on every course, by running style, surface and length."
+    content="Compare what every Uma Musume skill is worth and where it activates on every course, by running style, surface and length."
   />
 </svelte:head>
 
@@ -578,7 +578,7 @@
   routeId="skill-explorer"
   title="Skill Explorer"
   badge="Beta"
-  description="What each skill is worth and where it procs, on every course."
+  description="Compare what each skill is worth and where it activates, on every course."
   width="wide"
 >
   {#if pageError}
@@ -624,7 +624,14 @@
       />
 
       <div class="scope-line">
-        <h2>{scopeTitle()}</h2>
+        <div class="scope-title">
+          <h2>{scopeTitle()}</h2>
+          <ExplorerGuide
+            model={modelName(index.model.variant)}
+            checkpoint={index.model.checkpoint}
+            {margin}
+          />
+        </div>
         {#if scopeData}
           <span>
             {scopeData.courses}
@@ -667,7 +674,7 @@
         <EmptyState
           icon="search"
           title="No skills to show"
-          description="Nothing this style can fire matches these filters here."
+          description="No skill this running style can activate here matches these filters."
         />
       {:else if view}
         <SkillScatter
@@ -689,130 +696,6 @@
           details={skillDetails}
         />
       {/if}
-
-      <Disclosure
-        id="skill-explorer-method"
-        title="How skill values are calculated"
-        compact
-      >
-        <div class="method">
-          <p>
-            <strong>What the numbers mean.</strong>
-            Each skill's value is how much it raises the win rate in a Champions Meeting room: +2% means
-            the runner wins about 2 more races in 100 with it.
-          </p>
-          <p>
-            <strong>Why not just sim each skill on its own?</strong>
-            A solo sim gives one skill to a bare runner racing alone and counts the lengths she gains.
-            Real races differ in three ways, and the explorer covers each:
-          </p>
-          <ol>
-            <li>
-              <strong>Who is around her decides when skills fire.</strong>
-              Position, overtake and blocked skills fire differently in a full room. So for each running
-              style, a typical runner (no particular uma, with the stats you would expect for that course)
-              races thousands of times in real Champions Meeting rooms on the course: the CM's own recorded
-              rooms, or rooms from the nearest CM when the course has none. Those races show where and
-              how often each skill fires.
-            </li>
-            <li>
-              <strong>Lengths are not wins.</strong>
-              Time saved in the final spurt wins far more races than the same time at the start. The model
-              our optimizer builds with ({modelName(index.model.variant)}, checkpoint
-              {index.model.checkpoint}) turns the time a skill saves at that spot into win rate.
-            </li>
-            <li>
-              <strong>Skills overlap.</strong>
-              A second acceleration skill in the same spot, or a speed skill that runs her out of HP,
-              is worth less in a build than on its own. So skills are valued inside a build.
-            </li>
-          </ol>
-          <p>
-            <strong>The build.</strong>
-            Pick a course and a running style, and the Reference build button beside the course name shows
-            it: what our optimizer buys that runner there with as much SP as the latest CM's runners'
-            skills cost on average, before hints. Skills that need a certain season, weather or ground
-            are left out of it. It changes with the course and the style. Long courses need more recoveries,
-            sprints more acceleration, so the same skill can rank high in one CM and low in the next.
-          </p>
-          <ul>
-            <li>
-              <strong>In build</strong>
-              is what the skill adds to that build. A gold or ◎ takes the place of its weaker version
-              in it. For a skill already in the build, it is what removing it costs. Both are scaled alike,
-              so a build that already wins often does not make removing a skill look bigger than adding
-              one. Skills that wait on other skills firing first, like Groundwork, count set up: the cheap
-              skills players buy to trigger them (four at most) open their window as early as they can,
-              and the skill is valued firing from there. What those cheap skills add on their own does
-              not count.
-            </li>
-            <li>
-              <strong>Optimal</strong>
-              is the same, except that skills like Groundwork fire at the best of the points tested across
-              their window: the most they add when timed well, whether or not a setup gets them there.
-              A skill's card lists every point, its setup and what it costs.
-            </li>
-            <li>
-              <strong>Alone</strong>
-              is what it adds to a runner with no other skills, the closest to a solo sim.
-            </li>
-            <li>
-              <strong>Scale by proc rate</strong>
-              multiplies the value by how often the skill fires: a skill worth +10% that procs in half
-              the races shows +5%.
-            </li>
-            <li>
-              <strong>Works best with</strong>
-              lists the skills that raise its value most when owned together, for the reference build.
-              Win rate gains shrink as a build gets stronger anyway, so that alone does not count as a
-              combo.
-            </li>
-          </ul>
-          <p>
-            <strong>Strong and weaker are relative.</strong>
-            The plot splits at the middle skill shown. If you show the top 25 and a skill lands under
-            weaker, it is not a bad skill: it is worth less than the other skills on screen, which are
-            the best on this course anyway.
-          </p>
-          <p>
-            <strong>How accurate is it?</strong>
-            The values are best for comparing skills with each other. The exact numbers are estimates,
-            scaled per running style to match full race simulations of its most valuable skills.
-            {#if margin !== undefined}
-              Checked against full race simulations, 8 in 10 skills landed within {Math.round(
-                margin * 100
-              )}% of their own value: a skill shown at +10% measured between +{Math.round(
-                10 * (1 - margin)
-              )}% and +{Math.round(10 * (1 + margin))}%.
-            {/if}
-          </p>
-          <p>
-            <strong>Courses.</strong>
-            A CM shows its own course. A wider view such as Turf shows the middle (median) course of the
-            group, so it is what a skill is worth on a typical turf course; each course keeps its own
-            build. Activation spots average the races where it fired. All styles averages only the styles
-            that can activate the skill.
-          </p>
-          <p>
-            <strong>Special cases.</strong>
-            A skill that needs the runner's own activations first, such as a count of skills used or recoveries,
-            is valued set up (see In build above); one that four cheap skills cannot trigger shows its
-            optimal timing, marked Optimal. A ground, weather, season or night skill whose condition the
-            day lacks is valued as if it held and marked Forced. Scale by proc rate then uses how often
-            it procs when the condition holds. On a CM, these skills show only when the race day matches.
-            Elsewhere, you can hide them under Skill filters. Other skills that never activate for the
-            runner, and negative skills, are left out. So are skills in the game data that no player can
-            get, such as those only rivals in training carry.
-          </p>
-          <p>
-            <strong>Picking an uma</strong>
-            highlights her unique (as an inherited skill) and the skills she starts with or unlocks with
-            potential levels: from Global game data for umas already on Global, and from Japanese data
-            for umas not on Global yet. Skills from training events are not highlighted. The chart shows
-            only skills on the Global skill list.
-          </p>
-        </div>
-      </Disclosure>
     </div>
   {/if}
 </AppPage>

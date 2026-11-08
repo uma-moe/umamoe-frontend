@@ -14,17 +14,10 @@
   import {
     accelerationWindows,
     distanceAtTime,
-    sampleAt,
     speedSamples,
     timeAtDistance
   } from './acceleration-activations';
-  import {
-    plottedSamples,
-    speedAccelerationChart,
-    speedLineReading,
-    speedLines,
-    type SpeedLineId
-  } from './speed-acceleration-chart';
+  import { speedAccelerationChart, speedLines, type SpeedLineId } from './speed-acceleration-chart';
 
   let {
     capture,
@@ -45,15 +38,9 @@
   let mechanics = $state.raw(new Map<number, SkillEffectAlternative[]>());
   let status = $state<'loading' | 'ready' | 'error'>('loading');
   let hidden = $state<SpeedLineId[]>([]);
-  let hoveredDistance = $state<number>();
 
   const samples = $derived(speedSamples(capture, index, distance));
   const windows = $derived(accelerationWindows(capture, index, mechanics));
-  const hoveredSample = $derived(
-    hoveredDistance === undefined
-      ? undefined
-      : sampleAt(plottedSamples(samples), hoveredDistance, 'distance')
-  );
   const chart = $derived(
     speedAccelerationChart({
       samples,
@@ -120,7 +107,6 @@
           <Checkbox
             id={legendId + '-' + line.id}
             label={line.label}
-            description={speedLineReading(hoveredSample, line)}
             checked={!hidden.includes(line.id)}
             onchange={(shown) => toggleLine(line.id, shown)}
           />
@@ -135,7 +121,6 @@
       label="Current and target speed with acceleration skill windows"
       zoomable
       onaxisclick={seek}
-      onaxishover={(value) => (hoveredDistance = value)}
     />
   {:else}
     <p class="status">No speed samples recorded.</p>
@@ -154,8 +139,6 @@
         Retry
       </Button>
     </p>
-  {:else if !windows.length}
-    <p class="status">No acceleration skills activated.</p>
   {/if}
 </section>
 

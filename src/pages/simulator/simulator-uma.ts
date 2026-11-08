@@ -1,6 +1,10 @@
 import type { ProfileVeteran } from '@/pages/profile/profile-repository';
 import type { Build, Summary } from '@/pages/competitive/hakuraku-types';
-import type { RaceRunner } from '@/lib/race/capture/race-capture-parser';
+import {
+  runnersInCaptureOrder,
+  type ParsedRaceCapture,
+  type RaceRunner
+} from '@/lib/race/capture/race-capture-parser';
 import type { RaceCourse } from '@/lib/game-data/racing/courses';
 import { aptitudeGrade } from '@/lib/profile/profile-display';
 import {
@@ -211,6 +215,125 @@ export function simulatorUmaFromCm(
     capturedAptitudes: [...build.aptitudes],
     skills: build.skills.map(([skillId, level]) => ({ skillId, level }))
   };
+}
+
+/**
+ * A captured race's field as simulator runners. Teams, skills and aptitudes follow the simulator's own capture
+ * normalization, so the field races as it does when the capture itself is simulated.
+ */
+export function simulatorUmasFromCapture(
+  capture: Pick<ParsedRaceCapture, 'runners'>
+): SimulatorUma[] {
+  // Captures can carry account-sized team ids; only which runners share one matters.
+  const teamIds = [
+    ...new Set(capture.runners.map((runner) => capturedNumber(runner.raw, 'team_id')))
+  ]
+    .filter((id): id is number => id !== undefined && id !== 0)
+    .sort((a, b) => a - b);
+
+  // The simulator reports results by the capture's own order, so a finished run lines up with this field.
+  return runnersInCaptureOrder(capture.runners).map((runner) =>
+    simulatorUmaFromRaceRunner(runner, teamIds)
+  );
+}
+
+function simulatorUmaFromRaceRunner(runner: RaceRunner, teamIds: number[]): SimulatorUma {
+  const raw = runner.raw;
+  const stats = [
+    runner.stats.speed,
+    runner.stats.stamina,
+    runner.stats.power,
+    runner.stats.guts,
+    runner.stats.wit
+  ];
+
+  if (stats.some((value) => value === undefined))
+    throw new Error(runner.name + ' has no recorded stats, so the field cannot be simulated.');
+
+  const [speed, stamina, power, guts, wisdom] = stats.map(String);
+  const style = capturedNumber(raw, 'running_style') ?? 1;
+  const teamIndex = teamIds.indexOf(capturedNumber(raw, 'team_id') ?? 0);
+  const aptitudes = (keys: string[], compactGrade?: number) =>
+    keys.map((key) => aptitudeGrade(capturedNumber(raw, key) ?? compactGrade));
+
+  return {
+    ...createSimulatorUma(runner.name),
+    cardId: runner.cardId,
+    teamId: teamIndex >= 0 ? teamIndex + 1 : undefined,
+    frameOrder: capturedNumber(raw, 'frame_order'),
+    fanCount: capturedNumber(raw, 'fan_count'),
+    source: runner.trainerName ?? 'Race analysis',
+    skills: capturedSkills(raw, runner.cardId),
+    trainee: createTrainee({
+      speed,
+      stamina,
+      power,
+      guts,
+      wisdom,
+      runningStyle: RUNNING_STYLES[style - 1] ?? 'Nige',
+      motivation: String(capturedNumber(raw, 'motivation') ?? 3),
+      // Archived captures keep one grade per group for the raced course; it stands in for the whole group.
+      distanceAptitudes: aptitudes(
+        [
+          'proper_distance_short',
+          'proper_distance_mile',
+          'proper_distance_middle',
+          'proper_distance_long'
+        ],
+        runner.aptitudes.distance
+      ),
+      styleAptitudes: aptitudes(
+        [
+          'proper_running_style_nige',
+          'proper_running_style_senko',
+          'proper_running_style_sashi',
+          'proper_running_style_oikomi'
+        ],
+        runner.aptitudes.style
+      ),
+      groundAptitudes: aptitudes(
+        ['proper_ground_turf', 'proper_ground_dirt'],
+        runner.aptitudes.surface
+      )
+    })
+  };
+}
+
+/**
+ * Captures list an inherited unique skill under the original's id; the simulator numbers the inherited copy 800000
+ * higher. A card's own unique keeps its id, and so does every skill of a mob or of a card past variant 10, whose
+ * captured ids are already the native ones.
+ */
+function capturedSkills(raw: Record<string, unknown>, cardId?: number): MonteCarloSkillInput[] {
+  const entries = Array.isArray(raw.skill_array) ? raw.skill_array : [];
+  const npcType = capturedNumber(raw, 'npc_type');
+  const mobId = capturedNumber(raw, 'mob_id');
+  const isMob = npcType === 0 || npcType === 3 || (mobId !== undefined && mobId !== 0);
+  const ownUnique =
+    cardId !== undefined && cardId >= 100000 && cardId < 200000 && cardId % 100 > 0
+      ? 100000 + 10000 * ((cardId % 100) - 1) + (Math.floor(cardId / 100) % 1000) * 10 + 1
+      : undefined;
+
+  const renumbersInherited =
+    !isMob && cardId !== undefined && (ownUnique === undefined || ownUnique < 200000);
+
+  return entries.flatMap((entry) => {
+    const skillId = typeof entry === 'number' ? entry : capturedNumber(entry, 'skill_id');
+    if (skillId === undefined || skillId <= 0) return [];
+
+    const level = typeof entry === 'number' ? 1 : (capturedNumber(entry, 'level') ?? 1);
+    const inheritedUnique =
+      renumbersInherited && skillId >= 100000 && skillId < 200000 && skillId !== ownUnique;
+
+    return [{ skillId: inheritedUnique ? skillId + 800000 : skillId, level }];
+  });
+}
+
+function capturedNumber(value: unknown, key: string): number | undefined {
+  if (!isSavedRecord(value)) return undefined;
+
+  const field = value[key];
+  return typeof field === 'number' && Number.isFinite(field) ? field : undefined;
 }
 
 export function simulatorUmaSummary(uma: SimulatorUma, index = 0, course?: RaceCourse): RaceRunner {

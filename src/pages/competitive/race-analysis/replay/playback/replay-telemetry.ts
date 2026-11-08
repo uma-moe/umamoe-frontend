@@ -8,6 +8,7 @@ import type {
 import { raceTimeAtDistance } from '@/lib/race/replay/race-replay';
 import { hpRemainingColor } from '@/lib/race/replay/race-display';
 import { diagnosticHorse } from '@/lib/race/capture/race-diagnostics';
+import { chartTooltipStyle } from '@/components/charts/chart-tooltip';
 import { finalSpurtSection } from '@/lib/race/final-spurt';
 import { phaseBandArea, racePhaseBands, type PhaseMarkArea } from '../../race-phase-bands';
 import {
@@ -285,11 +286,9 @@ export function telemetryOption(chart: TelemetryChart, expanded: boolean): EChar
     animation: false,
     textStyle: { color },
     tooltip: {
+      ...chartTooltipStyle(dark),
       trigger: 'axis',
       order: 'seriesAsc',
-      backgroundColor: dark ? '#202226' : '#fff',
-      borderColor: dark ? '#42464c' : '#d2d5da',
-      textStyle: { color: dark ? '#e8edf4' : '#202226' },
       axisPointer: { type: 'line', lineStyle: { color, opacity: 0.45 } }
     },
     // Axis labels use the reserved side columns, keeping the plot aligned with the timeline.

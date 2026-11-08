@@ -45,10 +45,6 @@ h2 {
   flex: 1;
   min-width: 0;
 }
-.session-report,
-[data-report-section] {
-  scroll-margin-top: calc(var(--replay-header-height, 64px) + 16px);
-}
 .session-report {
   min-width: 0;
   padding-top: 12px;

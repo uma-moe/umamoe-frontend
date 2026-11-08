@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { tick } from 'svelte';
+  import { onMount, tick } from 'svelte';
   import RaceBar from './shell/RaceBar.svelte';
   import CourseButtons from './shell/CourseButtons.svelte';
   import RunBar from './shell/RunBar.svelte';
@@ -37,11 +37,13 @@
     WEATHER_OPTIONS,
     SEASON_OPTIONS,
     optionLabel,
+    receiveSimulatorHandoff,
     selectedRaceInstanceId,
     selectedCourse,
     simulatorCourseData,
     simulatorSession
   } from './simulator-session.svelte';
+  import { SIMULATOR_HANDOFF_PARAMETER, takeSimulatorHandoff } from './simulator-handoff';
   import {
     simulatorRoster,
     importSimulatorUmas,
@@ -73,7 +75,8 @@
   let reportHeading = $state<HTMLElement>();
   let run = $state.raw<
     | (SimulatorRun<MonteCarloResult> & {
-        input: MonteCarloInput;
+        /** Missing for a run another page finished from its own race data. */
+        input?: MonteCarloInput;
         umas: SimulatorUma[];
         course: RaceCourse;
         track: ParsedRaceCapture['track'];
@@ -87,6 +90,62 @@
     populating = $state(false),
     replaceOpen = $state(false),
     codeOpen = $state(false);
+
+  onMount(() => {
+    const address = new URL(location.href);
+    const token = address.searchParams.get(SIMULATOR_HANDOFF_PARAMETER);
+    if (token === null) return;
+
+    // The field is read once, so a reload or a shared address must not ask for it again.
+    address.searchParams.delete(SIMULATOR_HANDOFF_PARAMETER);
+    history.replaceState(history.state, '', address.pathname + address.search + address.hash);
+    void openHandoff(token);
+  });
+
+  /** Opens a field another page handed to this tab, with the run it finished when there is one. */
+  async function openHandoff(token: string) {
+    let handoff: Awaited<ReturnType<typeof takeSimulatorHandoff>>;
+    try {
+      handoff = await takeSimulatorHandoff(token);
+    } catch {
+      error = 'The race field could not be read from this browser’s storage. Open it again.';
+      return;
+    }
+
+    if (!handoff) {
+      error = 'This race field was already opened or has expired. Open it again from its page.';
+      return;
+    }
+
+    const target = await receiveSimulatorHandoff(handoff);
+    gateOrder = handoff.gateOrder;
+    positionChecksPass = false;
+    populateError = '';
+    error = '';
+    run = null;
+    step = 'setup';
+    if (!handoff.run || !target) return;
+
+    const umas = structuredClone($state.snapshot(simulatorRoster.umas)).map((uma) => ({
+      ...uma,
+      teamColor: simulatorTeamColor(uma.teamId)
+    }));
+
+    runs = String(handoff.run.runs);
+    run = {
+      result: handoff.run,
+      raw: '',
+      umas,
+      course: target,
+      track: {
+        condition: optionLabel(GROUND_OPTIONS, simulatorSession.ground),
+        weather: optionLabel(WEATHER_OPTIONS, simulatorSession.weather),
+        season: optionLabel(SEASON_OPTIONS, simulatorSession.season)
+      }
+    };
+
+    await showStep('report');
+  }
 
   async function showStep(value: 'setup' | 'report') {
     step = value;

@@ -12,6 +12,13 @@ import { skillPointTotal, type SkillData } from '@/lib/game-data/skills/skills';
 export const n = (v: unknown, digits = 2) =>
   typeof v === 'number' && Number.isFinite(v) ? v.toFixed(digits) : '—';
 
+/** A gap under a metre keeps millimetres, so a close finish never reads as +0.0m. */
+export function finishGapLabel(gap: number) {
+  const digits = gap < 1 ? 3 : 1;
+
+  return '+' + gap.toFixed(digits) + 'm';
+}
+
 export function raceResultRows(capture: ParsedRaceCapture, catalog: Map<number, SkillData>) {
   return [...capture.runners]
     .sort((a, b) => (a.result?.finishOrder ?? 99) - (b.result?.finishOrder ?? 99))

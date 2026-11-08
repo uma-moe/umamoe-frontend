@@ -17,7 +17,7 @@
   import Artwork from '@/components/game/Artwork.svelte';
   import RankBadge from '@/components/game/RankBadge.svelte';
   import StatStrip from '@/components/game/StatStrip.svelte';
-  import { identity, score, stats, styleColors } from '../../../analysis-view';
+  import { identity, score, skillPointsStat, stats, styleColors } from '../../../analysis-view';
   import { raceAptitudes, type RaceContext } from '../../../runners/race-aptitudes';
   import RunnerLineage from '../../../runners/RunnerLineage.svelte';
   import RunnerSupportDeck from '../../../runners/RunnerSupportDeck.svelte';
@@ -54,15 +54,7 @@
 
   /** Null until the catalog prices every learned skill. */
   const skillPoints = $derived(skillPointTotal(skillCatalog, runner.skillIds));
-  const statItems = $derived([
-    ...stats(runner),
-    {
-      id: 'sp',
-      label: 'Skill points',
-      value: skillPoints ?? '—',
-      icon: '/game-assets/textures/hint.webp'
-    }
-  ]);
+  const statItems = $derived([...stats(runner), skillPointsStat(skillPoints)]);
   const aptitudes = $derived(raceAptitudes(runner, raceContext));
   const start = $derived(horse ? startOutcome(horse, runner.result) : undefined);
   const result = $derived(runner.result);

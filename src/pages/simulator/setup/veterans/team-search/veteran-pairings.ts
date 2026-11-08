@@ -51,15 +51,3 @@ export function benchmarkFields(teams: SimulatorUma[][]): SimulatorUma[][] {
     )
   );
 }
-
-/** Every candidate sees the same shuffled gates for a given seed. */
-export function pairingFrameOrders(seed: number, count: number): number[] {
-  const orders = Array.from({ length: count }, (_, index) => index + 1);
-  for (let index = count - 1; index > 0; index--) {
-    seed = (Math.imul(seed, 1664525) + 1013904223) >>> 0;
-    const other = Math.floor((seed / 4294967296) * (index + 1));
-    [orders[index], orders[other]] = [orders[other]!, orders[index]!];
-  }
-
-  return orders;
-}
