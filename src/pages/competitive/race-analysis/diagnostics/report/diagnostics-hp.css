@@ -1,48 +1,78 @@
-.hp-summary {
+/* The facts read out the chart beside them, and the chart takes their height. */
+.hp-report {
+  container: hp-report / inline-size;
+}
+.hp-overview {
   display: grid;
-  gap: 6px;
-  margin: 10px 0;
+  grid-template-columns: minmax(0, 300px) minmax(0, 1fr);
+  gap: 10px 24px;
+  margin: 8px 0 10px;
   padding-bottom: 10px;
   border-bottom: 1px solid var(--border-subtle);
-  font-size: 12px;
-  line-height: 1.5;
 }
-.hp-summary > div {
-  display: grid;
-  grid-template-columns: 116px minmax(0, 1fr);
-  align-items: baseline;
-  gap: 10px;
+/* The rule only separates the summary from a table below it. */
+.hp-overview:last-child {
+  margin-bottom: 0;
+  padding-bottom: 0;
+  border-bottom: 0;
 }
-dt {
+.hp-facts {
+  align-content: start;
+}
+/* Every label leaves room for a line key, so labels with and without one start together. */
+.hp-facts dt {
+  position: relative;
+  padding-left: 18px;
+}
+.hp-facts dt > small {
+  margin-left: 4px;
+  color: var(--text-muted);
+  font-size: 10px;
+}
+.line-key {
+  position: absolute;
+  top: 50%;
+  left: 0;
+  width: 12px;
+  transform: translateY(-50%);
+}
+.hp-key {
+  height: 2px;
+  background: var(--hp-line);
+}
+.need-key {
+  height: 0;
+  border-top: 2px dashed var(--need-line);
+}
+.delay-key {
+  height: 8px;
+  background: color-mix(in srgb, var(--need-line) 30%, transparent);
+}
+.check-time {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 11px;
   color: var(--text-secondary);
 }
-dd {
-  display: flex;
-  align-items: baseline;
-  flex-wrap: wrap;
-  gap: 0 4px;
-  margin: 0;
-  color: var(--text-primary);
-  font-variant-numeric: tabular-nums;
+/* Collapsed by default: the calculation is there for whoever wants the working. */
+.spurt-calculation {
+  --disclosure-compact-summary-height: 28px;
+  --disclosure-compact-summary-padding: 0;
+  margin-top: -4px;
 }
-.breakdown {
-  border: 0;
-  padding: 0;
-  margin-left: 4px;
-  border-radius: 2px;
-  background: none;
-  color: var(--accent-primary);
-  font: inherit;
-  text-decoration: underline;
-  text-underline-offset: 2px;
-  cursor: pointer;
+.spurt-calculation:not(:last-child) {
+  margin-bottom: 10px;
+  padding-bottom: 6px;
+  border-bottom: 1px solid var(--border-subtle);
 }
-.breakdown:hover {
-  text-decoration-thickness: 2px;
+.spurt-calculation :global(summary strong) {
+  font-size: 12px;
+  font-weight: 600;
 }
-.breakdown:focus-visible {
-  outline: 2px solid var(--accent-primary);
-  outline-offset: 3px;
+.calculation-result {
+  font-size: 10px;
+  font-weight: 600;
 }
 .hp-change {
   display: inline-flex;
@@ -64,13 +94,13 @@ dd {
   min-width: 0;
   vertical-align: middle;
 }
-.hp-report :global(table) {
+.effect-columns :global(table) {
   table-layout: fixed;
 }
-.hp-report :global(th:first-child) {
+.effect-columns :global(th:first-child) {
   width: 72px;
 }
-.hp-report :global(th:last-child) {
+.effect-columns :global(th:last-child) {
   width: 116px;
 }
 .effect-columns {
@@ -78,9 +108,17 @@ dd {
   grid-template-columns: repeat(auto-fit, minmax(min(100%, 340px), 1fr));
   gap: 0 20px;
 }
-@media (max-width: 600px) {
-  .hp-summary > div {
-    grid-template-columns: 104px minmax(0, 1fr);
-    gap: 8px;
+@container hp-report (max-width: 560px) {
+  .hp-overview {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+/* A phone leaves the skill names the width; the share of maximum HP is the first figure to go. */
+@container hp-report (max-width: 380px) {
+  .effect-columns :global(th:last-child) {
+    width: 84px;
+  }
+  .hp-share {
+    display: none;
   }
 }

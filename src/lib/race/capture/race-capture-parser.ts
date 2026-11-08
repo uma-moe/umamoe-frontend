@@ -35,7 +35,10 @@ export interface RaceEvent {
 }
 
 export interface RaceRunner {
+  /** Position in gate order: the recorded replay lists runners by gate. */
   index: number;
+  /** Position in the capture's own runner list, which the simulator indexes its results by; index when missing. */
+  sourceIndex?: number;
   cardId?: number;
   charaId?: number;
   trainedCharaId?: number;
@@ -47,6 +50,11 @@ export interface RaceRunner {
   skillIds: number[];
   result?: RaceHorseResult;
   raw: Record<string, unknown>;
+}
+
+/** Runners in the capture's own order, as the simulator's results and gate lists index them. */
+export function runnersInCaptureOrder(runners: RaceRunner[]): RaceRunner[] {
+  return [...runners].sort((a, b) => (a.sourceIndex ?? a.index) - (b.sourceIndex ?? b.index));
 }
 
 export interface ParsedRaceCapture {
@@ -690,6 +698,7 @@ export function parseRaceCapture(value: unknown, fileName = 'capture.json'): Par
       ? [...array(apiHorses)]
       : array(actMembers).map(horseActRunner).filter(Boolean);
 
+  const captureOrder = new Map(rawRunners.map((runner, index) => [runner, index]));
   const gates = rawRunners.map((r) => numeric(record(r), 'frame_order', 'frameOrder'));
   if (
     gates.every(
@@ -721,9 +730,15 @@ export function parseRaceCapture(value: unknown, fileName = 'capture.json'): Par
   );
 
   const trainedCharas = array(first(input, 'trained_chara_array', 'trainedCharaArray'));
-  const runners = rawRunners.map((runner, index) =>
-    normalizeRunner(withTrainedChara(runner, trainedCharas), index, players, decoded.results[index])
-  );
+  const runners = rawRunners.map((runner, index) => ({
+    ...normalizeRunner(
+      withTrainedChara(runner, trainedCharas),
+      index,
+      players,
+      decoded.results[index]
+    ),
+    sourceIndex: captureOrder.get(runner)
+  }));
 
   return {
     source,

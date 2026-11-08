@@ -89,14 +89,18 @@
   .race-source :global(.ui-button) {
     flex: none;
   }
+  /* Breaking anywhere lets the name shrink to a few letters, so it gives way before the course title. */
   .file-name {
+    display: -webkit-box;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 1;
+    line-clamp: 1;
     min-width: 0;
     max-width: 240px;
     overflow: hidden;
     color: var(--text-secondary);
     font-size: 12px;
-    white-space: nowrap;
-    text-overflow: ellipsis;
+    word-break: break-all;
   }
   /* A phone keeps the remove action as its icon and leaves the file name to the race picker. */
   @media (max-width: 767px) {

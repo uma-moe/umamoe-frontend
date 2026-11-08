@@ -1,0 +1,140 @@
+.race-history-card {
+  min-width: 0;
+  padding: 2px 12px 8px;
+  border-radius: var(--radius-lg);
+  background: var(--surface-1);
+}
+.race-history {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  column-gap: 24px;
+  max-height: 300px;
+  margin: 0;
+  padding: 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  scrollbar-width: thin;
+  scrollbar-color: var(--border-secondary) transparent;
+  list-style: none;
+}
+/* As many races to a line as fit whole, from one on a phone to four on a wide screen. */
+@container win-rates (min-width: 620px) {
+  .race-history {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+@container win-rates (min-width: 1200px) {
+  .race-history {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+@container win-rates (min-width: 1560px) {
+  .race-history {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+}
+/* Races part with a hairline, as the team cards' members do; the scroll box clips the first line's rule. */
+.race-row {
+  container: race-row / inline-size;
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+  margin-top: -1px;
+  padding: 4px;
+  border-top: 1px solid var(--border-subtle);
+}
+.race-row :global(.ui-button) {
+  aspect-ratio: 1;
+  padding: 0;
+  justify-content: center;
+}
+.race-row.watching {
+  background: var(--color-accent-soft);
+}
+.race-number {
+  min-width: 3.5ch;
+  color: var(--text-secondary);
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
+}
+/* The teams spread over the row, so each race reads as three even groups. */
+.race-groups {
+  display: flex;
+  justify-content: space-between;
+  gap: 4px;
+  min-width: 0;
+}
+/* Only the winning team's runners sit on a fill of its colour. */
+.race-group {
+  display: flex;
+  gap: 2px;
+  padding: 2px;
+  border-radius: var(--radius-sm);
+}
+.race-group.won {
+  background: color-mix(in srgb, var(--team, var(--accent-warning)) 42%, transparent);
+}
+.race-runner {
+  position: relative;
+  display: flex;
+}
+/* Runners off the podium recede, so each race reads as its podium and the team that won. */
+.race-runner:not(.podium) :global(.art) {
+  opacity: 0.5;
+  filter: grayscale(1);
+}
+.race-runner :global(.art) {
+  width: 28px;
+  height: 28px;
+  border: 0;
+  background: transparent;
+}
+.race-place {
+  position: absolute;
+  bottom: -3px;
+  left: 50%;
+  padding: 0 3px;
+  border-radius: 3px;
+  background: var(--surface-0);
+  font-size: 9px;
+  font-weight: 700;
+  line-height: 12px;
+  white-space: nowrap;
+  transform: translateX(-50%);
+}
+.race-place-1 {
+  color: var(--accent-warning);
+}
+.race-place-2,
+.race-place-3 {
+  color: var(--accent-primary);
+}
+/* A narrow race keeps its three teams whole with smaller portraits. */
+@container race-row (max-width: 380px) {
+  .race-group {
+    gap: 1px;
+  }
+  .race-runner :global(.art) {
+    width: 24px;
+    height: 24px;
+  }
+}
+@container race-row (max-width: 330px) {
+  .race-groups {
+    gap: 3px;
+  }
+  .race-runner :global(.art) {
+    width: 22px;
+    height: 22px;
+  }
+}
+@media (max-width: 767px) {
+  .race-history-card {
+    padding-inline: 8px;
+  }
+  .race-row {
+    gap: 6px;
+  }
+}

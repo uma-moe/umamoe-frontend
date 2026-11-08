@@ -1,9 +1,12 @@
 <script lang="ts">
+  import { untrack } from 'svelte';
   import type { RaceRunner } from '@/lib/race/capture/race-capture-parser';
   import Disclosure from '@/components/overlays/Disclosure.svelte';
   import Button from '@/components/controls/Button.svelte';
   import RunnerBuildDetails from '../../runners/RunnerBuildDetails.svelte';
   import ReplayDiagnostics from '@/pages/competitive/race-analysis/diagnostics/ReplayDiagnostics.svelte';
+  import { recordedImpactRace } from '@/pages/competitive/race-analysis/simulation/skill-impact';
+  import { skillImpactsInContext } from '@/pages/competitive/race-analysis/simulation/skill-impact.svelte';
   import { styleColors } from '../../analysis-view';
   import type { DiagnosticEntry } from './session-diagnostics';
 
@@ -26,6 +29,13 @@
     onbuild,
     onrunner
   }: Props = $props();
+
+  const skillImpacts = skillImpactsInContext();
+
+  $effect(() => {
+    const race = recordedImpactRace(selected.capture);
+    if (race && skillImpacts) untrack(() => skillImpacts.prepare(race));
+  });
 </script>
 
 <Disclosure

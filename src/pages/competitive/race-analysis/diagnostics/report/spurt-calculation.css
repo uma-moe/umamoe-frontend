@@ -1,0 +1,10 @@
+/* The time column matches the HP change tables below, so their seek buttons line up. */
+.spurt-calculations :global(th:first-child) {
+  width: 72px;
+}
+.negative {
+  color: var(--accent-error);
+}
+.positive {
+  color: var(--accent-success);
+}

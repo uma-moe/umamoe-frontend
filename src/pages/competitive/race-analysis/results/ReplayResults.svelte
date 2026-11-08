@@ -21,7 +21,7 @@
   import InspectPopover from '@/components/overlays/InspectPopover.svelte';
   import Icon from '@/components/Icon.svelte';
   import LastSpurtResult from './LastSpurtResult.svelte';
-  import { n, raceResultRows } from './replay-results';
+  import { finishGapLabel, n, raceResultRows } from './replay-results';
 
   let {
     capture,
@@ -56,7 +56,7 @@
   function finishGap(row: Record<string, string | number>) {
     if (typeof row.gap !== 'number') return '—';
 
-    return '+' + n(row.gap, 1) + 'm';
+    return finishGapLabel(row.gap);
   }
 
   /** Seconds in a race mode; a mode the runner never entered reads as a plain dash. */

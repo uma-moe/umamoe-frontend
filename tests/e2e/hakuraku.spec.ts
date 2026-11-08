@@ -3997,41 +3997,33 @@ test('automatic resimulation falls back on failure and exposes simulator decisio
     0
   );
 
-  await details.getByRole('button', { name: 'Show Downhill periods', exact: true }).click();
-  const downhillPeriods = details.getByRole('list', { name: 'Downhill periods', exact: true });
-  await expect(downhillPeriods).toContainText('1.000');
-  await expect(downhillPeriods).toContainText('2.000');
-  await downhillPeriods.getByRole('button', { name: '1.000 s', exact: true }).click();
+  const downhillPeriods = details.getByRole('group', { name: 'Downhill periods', exact: true });
+  await expect(downhillPeriods.getByRole('button')).toHaveCount(1);
+  await downhillPeriods.getByRole('button').click();
   await expect(scrubber).toHaveValue('1');
   await openRaceSection(page, 'Runner analysis');
-  await details.getByRole('button', { name: 'Show Downhill periods', exact: true }).click();
-  const spurtCalculation = details.getByRole('button', {
-    name: 'Last-spurt calculation',
-    exact: true
-  });
-
-  const spurtReport = details.getByRole('region', { name: 'Last-spurt decision', exact: true });
-  await expect(spurtReport).toContainText('Delayed and slower');
-  await expect(spurtReport.locator('.spurt-chart')).toBeVisible();
-
-  await spurtCalculation.click();
+  const hpAndSpurt = details.getByRole('region', { name: 'Runner HP', exact: true });
+  await expect(hpAndSpurt.locator('.last-spurt-chart')).toBeVisible();
+  await expect(hpAndSpurt.locator('.section-heading')).toContainText('Delayed and slower');
+  await expect(hpAndSpurt).toContainText('1.00 under full');
   await expect(
-    details.getByRole('table', { name: 'Full and selected spurt', exact: true })
-  ).toContainText('1,620');
-
-  await expect(details.locator('.hp-equation')).toContainText('-50.00');
-  await expect(details.locator('.spurt-result')).toContainText('20 m delay');
-  await expect(details.locator('.spurt-result')).toContainText('1 m/s slower');
-  await expect(details.locator('.spurt-result')).toContainText('3 calculations');
-  await expect(
-    details.getByRole('button', { name: 'Last-spurt decision details', exact: true })
+    details.getByRole('button', { name: 'Open last-spurt breakdown', exact: true })
   ).toHaveCount(0);
 
-  await details
-    .locator('.spurt-report')
-    .screenshot({ path: info.outputPath('last-spurt-calculation.png') });
+  const calculation = hpAndSpurt.getByRole('button', { name: 'Spurt calculation', exact: true });
+  await expect(calculation).toHaveAttribute('aria-expanded', 'false');
+  await expect(hpAndSpurt.locator('.calculation-result')).toHaveText('Reduced spurt selected');
+  await calculation.click();
 
-  await spurtCalculation.click();
+  const calculations = hpAndSpurt.getByRole('table', {
+    name: 'Last-spurt calculations',
+    exact: true
+  });
+  await expect(calculations).toContainText('-50.00 HP');
+  await expect(calculations).toContainText('Delayed and slower');
+  await hpAndSpurt.screenshot({ path: info.outputPath('hp-and-spurt.png') });
+  await calculation.click();
+
   if (info.project.name === 'chromium')
     expect((await details.locator('.report-grid').boundingBox())!.height).toBeLessThan(650);
   await analysis.screenshot({ path: info.outputPath('runner-analysis-overview.png') });

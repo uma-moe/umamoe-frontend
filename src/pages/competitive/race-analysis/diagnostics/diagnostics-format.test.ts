@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import type { ParsedRaceCapture, RaceRunner } from '@/lib/race/capture/race-capture-parser';
 import type { DiagnosticRow, HorseDiagnostics } from '@/lib/race/capture/race-diagnostics';
 import {
+  modePeriods,
   modeRows,
   modeSpans,
   modeTone,
@@ -20,7 +21,7 @@ describe('rushing as a race behaviour', () => {
     events: []
   };
 
-  it('summarizes all rushing periods and exposes their replay timestamps', () => {
+  it('lists each rushing period with its replay timestamp', () => {
     const horse: HorseDiagnostics = {
       horseIndex: 0,
       spans: [],
@@ -30,8 +31,11 @@ describe('rushing as a race behaviour', () => {
       ]
     };
 
-    expect(modeRows(capture, horse)).toEqual([
-      { id: 'rushing', mode: 'Rushed', duration: 5, periods: 2, time: 10 }
+    const periods = modePeriods(capture, horse);
+
+    expect(periods.map(({ mode, time, duration }) => ({ mode, time, duration }))).toEqual([
+      { mode: 'Rushed', time: 10, duration: 2 },
+      { mode: 'Rushed', time: 12, duration: 3 }
     ]);
     expect(modeSpans(capture, horse, 'rushing')).toEqual(horse.temptationSpans);
   });
@@ -44,10 +48,10 @@ describe('rushing as a race behaviour', () => {
       temptationSpans: []
     };
 
-    expect(modeRows(capture, horse)).toEqual([]);
+    expect(modePeriods(capture, horse)).toEqual([]);
   });
 
-  it('summarizes blocking while retaining who blocked each period', () => {
+  it('keeps who blocked each period', () => {
     const horse: HorseDiagnostics = {
       horseIndex: 0,
       spans: [],
@@ -57,10 +61,63 @@ describe('rushing as a race behaviour', () => {
       ]
     };
 
-    expect(modeRows(capture, horse)).toEqual([
-      { id: 'blocked', mode: 'Blocked', duration: 5, periods: 2, time: 4 }
+    const periods = modePeriods(capture, horse);
+
+    expect(
+      periods.map(({ time, duration, blockerHorseIndex }) => [time, duration, blockerHorseIndex])
+    ).toEqual([
+      [4, 2, 1],
+      [9, 3, 2]
     ]);
     expect(modeSpans(capture, horse, 'blocked')).toEqual(horse.frontBlockSpans);
+  });
+
+  it('joins touching flag spans of one mode and orders every mode by time', () => {
+    const flagged: ParsedRaceCapture = {
+      ...capture,
+      detailed: {
+        engineBuild: 'test',
+        seed: 1,
+        replay: { data: '' },
+        annotations: { schemaVersion: 7, flags: { positionKeepPaceUp: 1, downhill: 2 }, horses: [] }
+      }
+    };
+    const horse: HorseDiagnostics = {
+      horseIndex: 0,
+      spans: [
+        { startTime: 2, endTime: 4, mask: 1, phase: 0 },
+        { startTime: 4, endTime: 5, mask: 3, phase: 1 },
+        { startTime: 5, endTime: 6, mask: 2, phase: 1 },
+        { startTime: 8, endTime: 9, mask: 1, phase: 1 }
+      ]
+    };
+
+    const periods = modePeriods(flagged, horse);
+
+    expect(periods.map(({ key, time, duration, phase }) => [key, time, duration, phase])).toEqual([
+      ['positionKeepPaceUp', 2, 3, 0],
+      ['downhill', 4, 2, 1],
+      ['positionKeepPaceUp', 8, 1, 1]
+    ]);
+  });
+
+  it('sums each mode into one row in the order the modes first started', () => {
+    const horse: HorseDiagnostics = {
+      horseIndex: 0,
+      spans: [],
+      temptationSpans: [
+        { startTime: 10, endTime: 12, mode: 1 },
+        { startTime: 20, endTime: 23, mode: 1 }
+      ],
+      frontBlockSpans: [{ startTime: 4, endTime: 6, blockerHorseIndex: 1 }]
+    };
+
+    const rows = modeRows(modePeriods(capture, horse));
+
+    expect(rows).toEqual([
+      { id: 'blocked', mode: 'Blocked', duration: 2, periods: 1, time: 4 },
+      { id: 'rushing', mode: 'Rushed', duration: 5, periods: 2, time: 10 }
+    ]);
   });
 });
 

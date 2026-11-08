@@ -146,21 +146,28 @@ describe('speed and acceleration chart', () => {
     expect(height).toBeLessThan(chart().height);
   });
 
-  it('reads out every line and the active skills at the hovered distance, escaping skill names', () => {
+  it('reads out the shown lines and the active skills at the hovered distance, escaping skill names', () => {
     const tooltip = chart({
       windowList: [...windows, { id: '2', skillId: 2, start: 1, end: 2 }],
       names: new Map([
         [1, '<skill>'],
         [2, 'Groundwork']
-      ])
+      ]),
+      hidden: ['target']
     }).option.tooltip as { formatter: (value: unknown) => string };
-    const atFirstSecond = tooltip.formatter([{ axisValue: 20 }]);
 
-    expect(atFirstSecond).toContain('0:01.000 - 20.0 m');
-    expect(atFirstSecond).toContain('Acceleration: 0.50 m/s²');
-    expect(atFirstSecond).toContain('Active acceleration skills: <br>&lt;skill&gt;<br>Groundwork');
+    const atFirstSecond = tooltip.formatter([{ axisValue: 20 }]);
+    const afterTheSkills = tooltip.formatter([{ axisValue: 40 }]);
+
+    expect(atFirstSecond).toContain('0:01.000 · 20.0 m');
+    expect(atFirstSecond).toContain(
+      'Acceleration</span><span style="float:right;margin-left:20px;font-weight:900">0.50 m/s²'
+    );
+    expect(atFirstSecond).not.toContain('Target speed');
+    expect(atFirstSecond).toContain('&lt;skill&gt;');
+    expect(atFirstSecond).toContain('Groundwork');
     expect(atFirstSecond).not.toContain('<skill>');
-    expect(tooltip.formatter([{ axisValue: 40 }])).toContain('Active acceleration skills: None');
+    expect(afterTheSkills).not.toContain('Groundwork');
   });
 });
 

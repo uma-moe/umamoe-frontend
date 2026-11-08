@@ -30,8 +30,11 @@
       src={portrait(capture.runners.find((r) => r.index === value)?.cardId)}
       alt=""
       size="xs"
-    />{!showTrainer && value === index ? 'Self' : runnerName(capture, value)}
-    {#if showTrainer}<span>[{runner?.trainerName?.trim() || 'Gate ' + (value + 1)}]</span>{/if}
+    />
+    <span class="runner-label">
+      {!showTrainer && value === index ? 'Self' : runnerName(capture, value)}
+      {#if showTrainer}<span>[{runner?.trainerName?.trim() || 'Gate ' + (value + 1)}]</span>{/if}
+    </span>
   </button>
 {:else}
   <span class="muted">None</span>

@@ -1,4 +1,9 @@
 import type { EChartsCoreOption } from 'echarts/core';
+import {
+  chartTooltipContent,
+  chartTooltipStyle,
+  type TooltipRow
+} from '@/components/charts/chart-tooltip';
 import { insideZoom } from '@/components/charts/echarts-zoom';
 import { phaseBandArea, racePhaseBands } from '../../race-phase-bands';
 import { seekTimeLabel } from '../diagnostics-format';
@@ -14,6 +19,7 @@ export interface SpeedLine {
 }
 
 const accelerationColor = '#87ceab';
+const activationColor = '#b49bdd';
 
 export const speedLines: SpeedLine[] = [
   { id: 'speed', label: 'Current speed', unit: 'm/s', color: '#69b7ee' },
@@ -31,19 +37,11 @@ const laneHeight = 20;
 const axisLabelsHeight = 22;
 const sliderHeight = 24;
 
-const escape = (value: string) =>
-  value.replace(
-    /[&<>"']/g,
-    (character) =>
-      ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[character] ??
-      character
-  );
-
 export function plottedSamples(samples: SpeedSample[]): SpeedSample[] {
   return samples.filter((sample) => sample.time >= plottedFromSeconds);
 }
 
-/** A line's value at one sample with its unit, for the legend readout and the tooltip. */
+/** A line's value at one sample with its unit, for the tooltip. */
 export function speedLineReading(sample: SpeedSample | undefined, line: SpeedLine): string {
   const value = sample?.[line.id];
   if (value === null || value === undefined) return '—';
@@ -84,23 +82,36 @@ export function speedAccelerationChart({
       phaseBandArea({ phase, start: max * phase.start, end: max * phase.end, dark, labelled })
     );
 
+  const readings = (sample: SpeedSample | undefined): TooltipRow[] =>
+    shownLines.map((line) => ({
+      label: line.label,
+      value: speedLineReading(sample, line),
+      color: line.color
+    }));
+
   const tooltip = (value: number) => {
     const sample = sampleAt(samples, value, 'distance');
     if (!sample) return '';
 
-    const active = windows.filter(
-      (window) => sample.time >= window.start && sample.time < window.end
-    );
-    const readings = speedLines.map((line) => `${line.label}: ${speedLineReading(sample, line)}`);
-    const skills = active.length
-      ? '<br>' + active.map((window) => escape(label(window.skillId))).join('<br>')
-      : 'None';
+    const activeSkills = windows
+      .filter((window) => sample.time >= window.start && sample.time < window.end)
+      .map((window) => ({ label: label(window.skillId), color: activationColor }));
 
-    return [
-      `${seekTimeLabel(sample.time)} - ${sample.distance.toFixed(1)} m`,
-      ...readings,
-      `Active acceleration skills: ${skills}`
-    ].join('<br>');
+    return chartTooltipContent(`${seekTimeLabel(sample.time)} · ${sample.distance.toFixed(1)} m`, [
+      ...readings(sample),
+      ...activeSkills
+    ]);
+  };
+
+  const activationTooltip = (window: AccelerationWindow) => {
+    const start = toDistance(window.start),
+      end = toDistance(window.end);
+
+    return chartTooltipContent(label(window.skillId), [
+      { label: 'Active', value: `${seekTimeLabel(window.start)} – ${seekTimeLabel(window.end)}` },
+      { label: 'Distance', value: `${start.toFixed(1)} – ${end.toFixed(1)} m` },
+      ...readings(sampleAt(samples, start, 'distance'))
+    ]);
   };
 
   const lineSeries = (line: SpeedLine) => ({
@@ -226,11 +237,9 @@ export function speedAccelerationChart({
       ],
       axisPointer: { link: [{ xAxisIndex: 'all' }] },
       tooltip: {
+        ...chartTooltipStyle(dark),
         trigger: 'axis',
         confine: true,
-        backgroundColor: dark ? '#1a1f28' : '#fff',
-        borderColor: grid,
-        textStyle: { fontSize: 12, color: text },
         axisPointer: { type: 'line' },
         formatter: (params: unknown) => {
           const first = Array.isArray(params) ? params[0] : params;
@@ -282,7 +291,7 @@ export function speedAccelerationChart({
                 stack: 'skills',
                 barWidth: 10,
                 barMinHeight: 3,
-                itemStyle: { color: '#b49bdd', borderRadius: 2 },
+                itemStyle: { color: activationColor, borderRadius: 2 },
                 data: windows.map(activationBar),
                 tooltip: {
                   trigger: 'item',
@@ -290,14 +299,7 @@ export function speedAccelerationChart({
                     if (!params || typeof params !== 'object' || !('dataIndex' in params))
                       return '';
                     const window = windows[Number(params.dataIndex)];
-                    if (!window) return '';
-
-                    return [
-                      escape(label(window.skillId)),
-                      `${seekTimeLabel(window.start)} - ${seekTimeLabel(window.end)}`,
-                      `${toDistance(window.start).toFixed(1)} m - ${toDistance(window.end).toFixed(1)} m`,
-                      tooltip(toDistance(window.start))
-                    ].join('<br>');
+                    return window ? activationTooltip(window) : '';
                   }
                 }
               }

@@ -1,0 +1,91 @@
+/* Laid out like the session analysis, which also reports many races of one field: a heading line, then the cards. */
+.win-rates {
+  container: win-rates / inline-size;
+  --control-height: 30px;
+  display: grid;
+  gap: 8px;
+  min-width: 0;
+}
+.win-rates-head {
+  display: grid;
+  grid-template-areas: 'title facts actions';
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 4px 12px;
+  min-width: 0;
+}
+.win-rates-title {
+  grid-area: title;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+h2 {
+  margin: 0;
+  font-size: 17px;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  white-space: nowrap;
+}
+.facts {
+  grid-area: facts;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  min-width: 0;
+  margin: 0;
+  color: var(--text-secondary);
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
+}
+.facts > span {
+  white-space: nowrap;
+}
+.facts > span + span::before {
+  content: '·';
+  margin-inline: 6px;
+  color: var(--text-muted);
+}
+.pending {
+  display: inline-flex;
+  align-items: center;
+}
+.pending :global(.caption) {
+  color: var(--text-secondary);
+  font-size: 12px;
+}
+.actions {
+  grid-area: actions;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.label-short {
+  display: none;
+}
+/* The facts take their own line under the title and actions, which keep one row. */
+@container win-rates (max-width: 760px) {
+  .win-rates-head {
+    grid-template-areas:
+      'title actions'
+      'facts facts';
+    grid-template-columns: minmax(0, 1fr) auto;
+  }
+}
+/* A phone keeps the facts to one line; the seed only matters to the simulator, which opens with it. */
+@container win-rates (max-width: 420px) {
+  .seed {
+    display: none;
+  }
+  .label-long {
+    display: none;
+  }
+  .label-short {
+    display: inline;
+  }
+}
+@media (max-width: 700px) {
+  h2 {
+    font-size: 14px;
+  }
+}

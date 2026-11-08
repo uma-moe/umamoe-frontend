@@ -13,7 +13,8 @@
   import { portrait } from '@/pages/competitive/analysis-view';
   import { makeDemoRaces } from '@/pages/competitive/demo-races';
   import { loadReplayGeometry, type CourseData, type CourseShape } from '../replay/replay-course';
-  import { recordedFinishTime, replayTeamColors } from '../replay/replay-state.svelte';
+  import { recordedFinishTime } from '../replay/replay-state.svelte';
+  import { replayTeamColors } from '../replay/team-colors';
   import { trackDisplayLayout } from './track-display-layout';
 
   let {

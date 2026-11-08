@@ -1,7 +1,7 @@
 import { expect, it } from 'vitest';
 import type { ParsedRaceCapture } from '@/lib/race/capture/race-capture-parser';
 import type { HorseDiagnostics, DiagnosticRow } from '@/lib/race/capture/race-diagnostics';
-import { hpReport } from './hp-report';
+import { calculationOutcome, hpReport, spurtOutcome, spurtSelection } from './hp-report';
 
 function capture(horse: Partial<HorseDiagnostics>): ParsedRaceCapture {
   return {
@@ -66,6 +66,28 @@ it('keeps the first-check shortfall when a later recovery produces a surplus', (
   expect(report.checkTime).toBe(40);
 });
 
+it('places the chart check at the first decision and keeps every decision for the history', () => {
+  const firstCheck = { ...first, checkDistance: 1500 };
+  const later = { ...first, time: 45, checkDistance: 1800, calculationCount: 2 };
+
+  const report = hpReport(
+    capture({ lastSpurtDecisions: [firstCheck, later], lastSpurtDecision: later }),
+    0
+  );
+
+  expect(report.checkDistance).toBe(1500);
+  expect(report.calculations).toEqual([firstCheck, later]);
+});
+
+it('lists the final calculation alone when a capture kept no history', () => {
+  const final = { ...first, calculationCount: 3 };
+
+  const report = hpReport(capture({ lastSpurtDecision: final }), 0);
+
+  expect(report.calculations).toEqual([final]);
+  expect(hpReport(capture({}), 0).calculations).toEqual([]);
+});
+
 it('totals actual negative effects, including self-cost, without netting recovery or post-finish effects', () => {
   const report = hpReport(
     capture({
@@ -105,4 +127,73 @@ it('does not call a later recalculation the first check when history is missing'
     hpReport(capture({ lastSpurtDecision: { ...first, calculationCount: 2 } }), 0)
   ).toMatchObject({ balance: undefined, checkTime: undefined });
   expect(hpReport(capture({ lastSpurtDecision: { ...first, checkHp: 460 } }), 0).balance).toBe(10);
+});
+
+it('heads the spurt with whether it started late or ran below full speed', () => {
+  const spurt = {
+    start: 1500,
+    delay: 0,
+    speed: 24,
+    reduction: 0,
+    noSpurt: false,
+    speedPenalty: false
+  };
+
+  expect(spurtOutcome(spurt)).toEqual({ label: 'Full spurt', clean: true });
+  expect(spurtOutcome({ ...spurt, delay: 0.04 })?.label).toBe('Full spurt');
+  expect(spurtOutcome({ ...spurt, delay: 20 })?.label).toBe('Delayed spurt');
+  expect(spurtOutcome({ ...spurt, speedPenalty: true })?.label).toBe('Slower spurt');
+  expect(spurtOutcome({ ...spurt, delay: 20, speedPenalty: true })?.label).toBe(
+    'Delayed and slower'
+  );
+  expect(spurtOutcome({ ...spurt, noSpurt: true })).toEqual({ label: 'No spurt', clean: false });
+});
+
+it('leaves the spurt unheaded when nothing about it was measured', () => {
+  const unmeasured = {
+    start: undefined,
+    delay: undefined,
+    speed: undefined,
+    reduction: undefined,
+    noSpurt: false,
+    speedPenalty: false
+  };
+
+  expect(spurtOutcome(unmeasured)).toBeUndefined();
+});
+
+it('names what each calculation chose', () => {
+  const full = {
+    result: 'True',
+    fullSpurtTargetSpeed: 24,
+    selectedTargetSpeed: 24,
+    delayPenalty: false,
+    speedPenalty: false
+  };
+
+  expect(calculationOutcome(full)).toEqual({ label: 'Full spurt', clean: true, selected: true });
+  expect(calculationOutcome({ ...full, selectedTargetSpeed: 23 }).label).toBe('Slower spurt');
+  expect(calculationOutcome({ ...full, delayPenalty: true }).label).toBe('Delayed spurt');
+  expect(calculationOutcome({ ...full, delayPenalty: true, speedPenalty: true }).label).toBe(
+    'Delayed and slower'
+  );
+  expect(calculationOutcome({ ...full, result: 'False' }).label).toBe('No spurt');
+  expect(calculationOutcome({ ...full, result: 'FalseBelowNeedMinimumHp' }).label).toBe(
+    'Insufficient HP'
+  );
+});
+
+it('heads the calculation with a full, reduced or missing spurt', () => {
+  const full = {
+    result: 'TrueExceedNeedMaximumHp',
+    fullSpurtTargetSpeed: 24,
+    selectedTargetSpeed: 24
+  };
+
+  expect(spurtSelection(full)).toEqual({ label: 'Full spurt selected', clean: true });
+  expect(spurtSelection({ ...full, result: 'True', speedPenalty: true })).toEqual({
+    label: 'Reduced spurt selected',
+    clean: false
+  });
+  expect(spurtSelection({ ...full, result: 'False' })).toEqual({ label: 'No spurt', clean: false });
 });

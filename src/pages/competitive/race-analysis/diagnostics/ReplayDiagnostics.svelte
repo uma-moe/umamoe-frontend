@@ -1,20 +1,16 @@
 <script lang="ts">
-  import type { Snippet } from 'svelte';
+  import { untrack, type Snippet } from 'svelte';
   import RunnerSupportDeck from '../../runners/RunnerSupportDeck.svelte';
   import { veteranSupportCards } from '@/lib/veterans/records/veteran-profile';
   import type { ParsedRaceCapture } from '@/lib/race/capture/race-capture-parser';
   import { diagnosticHorse } from '@/lib/race/capture/race-diagnostics';
-  import Dialog from '@/components/overlays/Dialog.svelte';
+  import { skillImpactsInContext } from '../simulation/skill-impact.svelte';
   import DiagnosticsOutcomeSummary from './DiagnosticsOutcomeSummary.svelte';
   import DiagnosticsSkills from './report/DiagnosticsSkills.svelte';
   import DiagnosticsModes from './report/DiagnosticsModes.svelte';
   import DiagnosticsHp from './report/DiagnosticsHp.svelte';
-  import DiagnosticsSpurt from './report/DiagnosticsSpurt.svelte';
   import DiagnosticsTraces from './measurements/DiagnosticsTraces.svelte';
   import DiagnosticsAcceleration from './measurements/DiagnosticsAcceleration.svelte';
-  import { hpReport } from './report/hp-report';
-  import SeekTimeButton from './SeekTimeButton.svelte';
-  import { number } from './diagnostics-format';
 
   let {
     capture,
@@ -37,23 +33,12 @@
     onselect: (index: number) => void;
   } = $props();
 
-  const instanceId = $props.id();
+  const skillImpacts = skillImpactsInContext();
 
-  let expandedMode = $state<string>();
-  let spurtOpen = $state(false);
-  let breakdownOpen = $state(false);
-
-  $effect(() => {
-    capture;
-    index;
-    breakdownOpen = false;
-    spurtOpen = false;
-  });
+  let inView = $state(false);
 
   const horse = $derived(diagnosticHorse(capture, index));
   const runner = $derived(capture.runners.find((r) => r.index === index));
-  const spurt = $derived(horse?.lastSpurtDecision ?? horse?.lastSpurtDecisions?.at(-1));
-  const hp = $derived(hpReport(capture, index));
   const deck = $derived(
     veteranSupportCards(runner?.raw ?? {}).map((card) => ({
       id: card.support_card_id,
@@ -61,15 +46,32 @@
     }))
   );
 
-  function openSpurtBreakdown() {
-    spurtOpen = false;
-    breakdownOpen = true;
+  /** Skill gains are measured once a reader opens this runner analysis, not when the race loads. */
+  function watchView(analysis: HTMLElement) {
+    if (typeof IntersectionObserver === 'undefined') {
+      inView = true;
+      return;
+    }
+
+    const observer = new IntersectionObserver((entries) => {
+      inView = entries.some((entry) => entry.isIntersecting);
+    });
+    observer.observe(analysis);
+    return () => observer.disconnect();
   }
+
+  $effect(() => {
+    if (!inView || !skillImpacts) return;
+
+    const race = skillImpacts.measurableRace(capture);
+    if (race) untrack(() => void skillImpacts.measure(race));
+  });
 </script>
 
 <section
   class="diagnostics"
   aria-label={(runner?.name ?? 'Runner') + ' detailed diagnostics'}
+  {@attach watchView}
 >
   {#if overview}
     <div class="runner-overview">
@@ -122,34 +124,30 @@
         <DiagnosticsHp
           {capture}
           {index}
+          {distance}
           {skillNames}
           {onseek}
-          onspurt={spurt ? openSpurtBreakdown : undefined}
         />
       {/if}
       <DiagnosticsModes
         {index}
         {capture}
         {horse}
+        {distance}
         {onseek}
-        bind:expandedMode
+        {onselect}
       />
-      {#if horse}
-        <DiagnosticsAcceleration
-          {capture}
-          {index}
-          {distance}
-          {skillNames}
-          {onseek}
-        />
-      {/if}
     </div>
   </div>
   {#if horse}
+    <DiagnosticsAcceleration
+      {capture}
+      {index}
+      {distance}
+      {skillNames}
+      {onseek}
+    />
     <footer class="simulation-meta report-card">
-      <span>
-        Engine <strong>{capture.detailed?.engineBuild}</strong>
-      </span>
       <span>
         Seed <strong>{capture.detailed?.seed}</strong>
       </span>
@@ -161,50 +159,12 @@
           Popularity <strong>{horse.popularity}</strong>
         </span>
       {/if}
+      <span>
+        Engine <strong>{capture.detailed?.engineBuild}</strong>
+      </span>
     </footer>
   {/if}
 </section>
-
-<Dialog
-  bind:open={breakdownOpen}
-  title="Last-spurt breakdown"
-  description={runner?.name}
-  maxWidth="760px"
->
-  {#if breakdownOpen && horse && spurt}
-    <p class="first-check-detail">
-      Starting HP: {number(hp.hp.start)}.
-      {#if hp.checkTime !== undefined}
-        Spurt check
-        <SeekTimeButton
-          time={hp.checkTime}
-          onseek={(time) => {
-            breakdownOpen = false;
-            onseek(time);
-          }}
-        />
-      {/if}
-    </p>
-    <DiagnosticsSpurt
-      bind:spurtOpen
-      id={instanceId}
-      {spurt}
-      {capture}
-      {index}
-      {horse}
-      {distance}
-      {skillNames}
-      onseek={(time) => {
-        breakdownOpen = false;
-        onseek(time);
-      }}
-      onselect={(runnerIndex) => {
-        breakdownOpen = false;
-        onselect(runnerIndex);
-      }}
-    />
-  {/if}
-</Dialog>
 
 <style>
   @import './report-card.css';

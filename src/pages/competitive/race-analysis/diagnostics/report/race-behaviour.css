@@ -1,0 +1,198 @@
+.race-behaviour {
+  container: race-behaviour / inline-size;
+}
+/* The first three columns keep to their content, so the chart column takes the rest. */
+.behaviour-chart :global(table) {
+  table-layout: fixed;
+}
+.behaviour-chart :global(th:nth-child(1)) {
+  width: 72px;
+}
+.behaviour-chart :global(th:nth-child(2)) {
+  width: 132px;
+}
+.behaviour-chart :global(th:nth-child(3)) {
+  width: 92px;
+}
+/* The chart column's header is its time axis; the column name stays for assistive technology only. */
+.behaviour-chart :global(th:nth-child(4)) {
+  font-size: 0;
+}
+/* Set on the plot itself: the table's scroller between it and the chart would otherwise keep the horizontal swipe. */
+.axis,
+.lane {
+  touch-action: pan-y;
+}
+.behaviour-chart:focus-visible {
+  outline: 2px solid var(--accent-primary);
+  outline-offset: 2px;
+  border-radius: var(--radius-sm);
+}
+.behaviour-chart.zoomed .lane {
+  cursor: grab;
+}
+.behaviour-chart.zoomed .lane:active {
+  cursor: grabbing;
+}
+/* The axis and lanes reach the cell edges, so the chart column reads as one plot down rows of any height. */
+.axis {
+  position: relative;
+  height: 26px;
+  margin: 0 -6px;
+  font-size: 10px;
+  font-weight: 400;
+  color: var(--text-secondary);
+}
+.phase-label {
+  position: absolute;
+  top: 0;
+  padding-left: 4px;
+  overflow: hidden;
+  white-space: nowrap;
+}
+.tick-label {
+  position: absolute;
+  bottom: 0;
+  transform: translateX(-50%);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+/* Labels at the plot's edges align inward so they stay inside the chart column. */
+.tick-label.at-start {
+  padding-left: 4px;
+  transform: none;
+}
+.tick-label.at-end {
+  padding-right: 4px;
+  transform: translateX(-100%);
+}
+.behaviour-chart :global(td:nth-child(4)) {
+  position: relative;
+}
+/* Covers the row's bottom border too, so the phase bands run unbroken between rows. */
+.lane {
+  position: absolute;
+  inset: 0 0 -1px;
+  overflow: hidden;
+  user-select: none;
+}
+.behaviour-chart :global(tbody tr:last-child .lane) {
+  bottom: 0;
+}
+.phase-band {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  background: color-mix(in srgb, var(--phase-color) 10%, transparent);
+}
+.grid-line {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 1px;
+  background: var(--border-subtle);
+}
+.period {
+  position: absolute;
+  top: 50%;
+  height: 14px;
+  min-width: 4px;
+  padding: 0;
+  border: 0;
+  border-radius: 3px;
+  background: var(--period-color);
+  transform: translateY(-50%);
+  cursor: pointer;
+}
+/* A wider invisible target than the bar, so short periods are easy to hover. */
+.period::before {
+  content: '';
+  position: absolute;
+  inset: -8px -4px;
+}
+.period:hover,
+.period:focus-visible {
+  outline: 2px solid var(--text-primary);
+  outline-offset: 1px;
+  z-index: 1;
+}
+.mode {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+}
+.mode-name {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.occurrence-toggle {
+  display: inline-flex;
+  flex: none;
+}
+/* Sized like the seek time buttons, over the race page's small-button size, so the row keeps the lane height. */
+.behaviour-chart .occurrence-toggle :global(.ui-button.ui-button--sm) {
+  flex-direction: row-reverse;
+  gap: 2px;
+  min-height: 22px;
+  padding: 0 4px 0 6px;
+  border-radius: 5px;
+  font-size: 11px;
+}
+.occurrence-toggle :global(svg) {
+  width: 12px;
+  height: 12px;
+  transition: transform 0.15s ease;
+}
+.occurrence-toggle.open :global(svg) {
+  transform: rotate(180deg);
+}
+/* An occurrence row sits under its mode, indented and quieter. */
+.occurrence {
+  display: flex;
+  align-items: center;
+  min-width: 0;
+  padding-left: 12px;
+  overflow: hidden;
+  color: var(--text-secondary);
+  font-size: 11px;
+  white-space: nowrap;
+}
+.duration {
+  font-variant-numeric: tabular-nums;
+}
+.occurrence-duration {
+  font-size: 11px;
+}
+.good {
+  color: var(--accent-success);
+}
+.bad {
+  color: var(--accent-error);
+}
+/* Laid out like the ECharts tooltips on the report's other charts. */
+.period-tooltip {
+  position: fixed;
+  z-index: var(--z-overlay);
+  padding: 10px;
+  border: 1px solid;
+  border-radius: 4px;
+  box-shadow: 1px 2px 10px rgb(0 0 0 / 20%);
+  width: max-content;
+  font-size: 14px;
+  white-space: nowrap;
+  pointer-events: none;
+  transform: translate(-12px, calc(-100% - 8px));
+}
+.period-tooltip.flip {
+  transform: translate(calc(-100% + 12px), calc(-100% - 8px));
+}
+@container race-behaviour (max-width: 480px) {
+  .behaviour-chart :global(th:nth-child(2)) {
+    width: 104px;
+  }
+  .behaviour-chart :global(th:nth-child(3)) {
+    width: 64px;
+  }
+}

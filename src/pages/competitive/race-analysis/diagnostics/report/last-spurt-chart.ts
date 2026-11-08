@@ -1,5 +1,6 @@
 import type { EChartsCoreOption } from 'echarts/core';
 import type { ParsedRaceCapture } from '@/lib/race/capture/race-capture-parser';
+import { chartTooltipContent, chartTooltipStyle } from '@/components/charts/chart-tooltip';
 import { number } from '../diagnostics-format';
 
 export interface HpPoint {
@@ -18,6 +19,11 @@ export interface LastSpurtMarks {
 
 export const hpColor = '#7cc6a0';
 export const needColor = '#e3b35f';
+
+const leadInShare = 0.1;
+const minimumLeadIn = 30;
+// A round start keeps the axis from opening on an odd distance.
+const startStep = 50;
 
 /** The runner's HP by distance from the replay frames, ending at the finish line. */
 export function hpByDistance(
@@ -48,6 +54,26 @@ export function timeAtDistance(points: HpPoint[], distance: number): number | un
 }
 
 /**
+ * Where the chart opens: shortly before the check, so the HP running into it stays visible. Without a
+ * check the whole race is shown.
+ */
+export function chartStartDistance(marks: LastSpurtMarks, raceDistance: number): number {
+  const { checkDistance } = marks;
+  if (checkDistance === undefined || checkDistance >= raceDistance) return 0;
+
+  const leadIn = Math.max(minimumLeadIn, (raceDistance - checkDistance) * leadInShare);
+  return Math.max(0, Math.floor((checkDistance - leadIn) / startStep) * startStep);
+}
+
+/** The HP from a distance on, keeping the point before it so the line reaches the plot's edge. */
+export function hpFrom(points: HpPoint[], distance: number): HpPoint[] {
+  const firstShown = points.findIndex((point) => point.distance >= distance);
+  if (firstShown < 0) return [];
+
+  return points.slice(Math.max(0, firstShown - 1));
+}
+
+/**
  * What a full spurt still needs at a distance past the check. The simulator only reports the need at
  * the check, so it is spread evenly over the distance left; a spurt at constant speed uses HP at a
  * roughly constant rate per metre.
@@ -65,8 +91,8 @@ export function fullSpurtNeedAt(
 }
 
 /**
- * HP over the race beside what a full spurt needed from the check on. HP that stays above the need
- * line had enough for a full spurt.
+ * HP from the check to the finish beside what a full spurt needed. HP that stays above the need line
+ * had enough for a full spurt.
  */
 export function lastSpurtChartOption({
   points,
@@ -83,6 +109,7 @@ export function lastSpurtChartOption({
   const grid = dark ? '#ffffff12' : '#00000012';
   const { checkDistance, checkHp, needHp, delayedStart } = marks;
   const hasCheck = checkDistance !== undefined;
+  const startDistance = chartStartDistance(marks, raceDistance);
 
   // A delayed spurt shades the distance between the check and the selected start.
   const spurtDelay =
@@ -106,8 +133,8 @@ export function lastSpurtChartOption({
       }
     ],
     tooltip: {
+      ...chartTooltipStyle(dark),
       trigger: 'axis',
-      textStyle: { fontSize: 11 },
       formatter: (params: unknown) => {
         const series = (Array.isArray(params) ? params : [params]) as {
           seriesName: string;
@@ -118,16 +145,17 @@ export function lastSpurtChartOption({
 
         const [distance, remaining] = hp;
         const need = fullSpurtNeedAt(distance, marks, raceDistance);
-        return [
-          `<strong>${number(distance)} m</strong>`,
-          `HP: ${number(remaining)}`,
-          ...(need === undefined ? [] : [`Full-spurt need: ${number(need)}`])
-        ].join('<br>');
+        return chartTooltipContent(`${number(distance)} m`, [
+          { label: 'HP', value: number(remaining), color: hpColor },
+          ...(need === undefined
+            ? []
+            : [{ label: 'Full-spurt need', value: number(need), color: needColor }])
+        ]);
       }
     },
     xAxis: {
       type: 'value',
-      min: 0,
+      min: startDistance,
       max: raceDistance,
       // The finish is rarely a round distance; its label would crowd the last round one.
       axisLabel: {
@@ -155,7 +183,7 @@ export function lastSpurtChartOption({
         lineStyle: { width: 2, color: hpColor },
         itemStyle: { color: hpColor },
         areaStyle: { color: hpColor, opacity: 0.1 },
-        data: points.map((point) => [point.distance, point.hp]),
+        data: hpFrom(points, startDistance).map((point) => [point.distance, point.hp]),
         markLine: {
           silent: true,
           symbol: 'none',

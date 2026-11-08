@@ -1,0 +1,226 @@
+.odds-groups {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 8px;
+}
+@container win-rates (min-width: 860px) {
+  .odds-groups:not(.field) {
+    grid-template-columns: repeat(var(--group-count), minmax(0, 1fr));
+  }
+}
+/* Each team sits on a fill of its own colour, its runners on darker tiles inside it. */
+.odds-group {
+  container: odds-group / inline-size;
+  min-width: 0;
+  padding: 6px 8px 8px;
+  border-radius: var(--radius-lg);
+  background: color-mix(in srgb, var(--team, transparent) 14%, var(--surface-1));
+}
+.field .odds-group {
+  background: var(--surface-2);
+}
+.group-head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 34px;
+  padding: 0 4px 2px;
+}
+.team-dot {
+  flex: none;
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  background: var(--team);
+}
+h3 {
+  min-width: 0;
+  margin: 0;
+  overflow: hidden;
+  font-size: 14px;
+  font-weight: 650;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.own-team {
+  flex: none;
+  padding: 1px 6px;
+  border-radius: var(--radius-sm);
+  background: var(--color-accent-soft);
+  color: var(--accent-primary);
+  font-size: 10px;
+  font-weight: 650;
+}
+.group-head strong {
+  margin-left: auto;
+  font-size: 18px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+.odds-runners {
+  display: grid;
+  gap: 4px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.field .odds-runners {
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 420px), 1fr));
+}
+/* A tile reads portrait, name and style over the build and the race's aptitudes, then the odds and the watch action. */
+.odds-runner {
+  display: grid;
+  grid-template-areas:
+    'portrait name name odds watch'
+    'portrait stats aptitudes odds watch';
+  grid-template-columns: auto max-content minmax(0, 1fr) auto auto;
+  align-items: center;
+  gap: 4px 10px;
+  min-width: 0;
+  padding: 6px 8px;
+  border-radius: var(--radius-md);
+  background: color-mix(in srgb, var(--surface-1) 55%, transparent);
+}
+.portrait {
+  grid-area: portrait;
+  display: flex;
+}
+.runner-name {
+  grid-area: name;
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+  min-width: 0;
+  white-space: nowrap;
+}
+.runner-name strong {
+  min-width: 0;
+  overflow: hidden;
+  font-size: 13px;
+  font-weight: 650;
+  text-overflow: ellipsis;
+}
+/* Mixing in the text colour keeps the style's hue readable on both the dark and the light theme. */
+.runner-name small {
+  flex: none;
+  color: color-mix(in srgb, var(--style) 72%, var(--text-primary));
+  font-size: 11px;
+  font-weight: 600;
+}
+/* Race results' stat block: three stats a line, so each value keeps its column from runner to runner. */
+.runner-stats {
+  grid-area: stats;
+  display: grid;
+  grid-template-columns: repeat(3, max-content);
+  align-items: center;
+  gap: 2px 10px;
+}
+.runner-stats :global(.stats-container),
+.runner-stats :global(.stats) {
+  display: contents;
+}
+.runner-stats :global(.values dd) {
+  min-width: 4ch;
+  font-size: 12px;
+}
+.runner-stats :global(img) {
+  width: 14px;
+  height: 14px;
+}
+.aptitudes {
+  grid-area: aptitudes;
+  justify-self: end;
+  display: grid;
+  grid-auto-flow: column;
+  gap: 8px;
+}
+.aptitude {
+  display: grid;
+  justify-items: center;
+  gap: 2px;
+}
+.aptitude small {
+  color: var(--text-secondary);
+  font-size: 10px;
+  white-space: nowrap;
+}
+.no-grade {
+  color: var(--text-muted);
+  font-size: 11px;
+  line-height: 18px;
+}
+.runner-odds {
+  grid-area: odds;
+  display: grid;
+  justify-items: end;
+  min-width: 58px;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+.runner-odds strong {
+  font-size: 15px;
+  font-weight: 700;
+}
+.runner-odds small {
+  color: var(--text-secondary);
+  font-size: 10px;
+}
+.watch {
+  grid-area: watch;
+  display: flex;
+}
+.watch :global(.ui-button) {
+  aspect-ratio: 1;
+  padding: 0;
+  justify-content: center;
+}
+/* A full-screen team column lays tiles out like the team cards' members: name and aptitudes, then the whole build. */
+@container odds-group (500px <= width < 600px) {
+  .odds-runner {
+    grid-template-areas:
+      'portrait name aptitudes odds watch'
+      'portrait stats stats odds watch';
+    grid-template-columns: auto minmax(0, 1fr) auto auto auto;
+  }
+  .runner-stats {
+    grid-template-columns: repeat(6, max-content);
+    justify-content: space-between;
+  }
+  .aptitudes {
+    gap: 12px;
+  }
+  .aptitude {
+    grid-auto-flow: column;
+    align-items: center;
+    gap: 4px;
+  }
+}
+/* A wide tile keeps everything on one line: name, build, aptitudes, odds and action. */
+@container odds-group (min-width: 600px) {
+  .odds-runner {
+    grid-template-areas: 'portrait name stats aptitudes odds watch';
+    grid-template-columns: auto minmax(0, 1fr) max-content auto auto auto;
+    column-gap: 14px;
+  }
+  .runner-name {
+    flex-direction: column;
+    gap: 0;
+  }
+}
+/* A narrow team gives the build and aptitudes the tile's full width under the name. */
+@container odds-group (max-width: 360px) {
+  .odds-runner {
+    grid-template-areas:
+      'portrait name name odds watch'
+      'stats stats aptitudes aptitudes aptitudes';
+    grid-template-columns: auto minmax(0, 1fr) auto auto auto;
+    gap: 6px 8px;
+  }
+  .runner-name {
+    flex-direction: column;
+    gap: 0;
+  }
+  .runner-stats {
+    gap: 2px 6px;
+  }
+}
