@@ -3,9 +3,18 @@ import type { Page } from '@playwright/test';
 import { gunzipSync, gzipSync } from 'node:zlib';
 import { readFileSync } from 'node:fs';
 import { mockDatabase, mockAffinity, mockVeteranProfile, veteran } from './fixtures/api';
+import { resourceFixtures } from '../fixtures/resource-data';
 const resources = JSON.parse(
   gunzipSync(readFileSync('tests/e2e/fixtures/replay-courses.json.gz')).toString()
 );
+
+// The Build optimizer offers only skills the simulator can race: here, every fixture skill.
+const simulatorSkills = {
+  skills: (resourceFixtures.skills as { skill_id: number }[]).map(({ skill_id }) => ({
+    skill_id,
+    alternatives: []
+  }))
+};
 
 const cm = JSON.parse(
   gunzipSync(readFileSync('tests/e2e/fixtures/hakuraku-cm.json.gz')).toString()
@@ -117,6 +126,9 @@ test.beforeEach(async ({ page }) => {
     await page.route('**/resources/*/' + name + '.json*', (route) => route.fulfill({ json }));
   await page.route('**/resources/*/room_match_races.json*', (route) =>
     route.fulfill({ json: { races: [{ race_instance_id: 800023, course_set_id: 10506 }] } })
+  );
+  await page.route('**/resources/*/simulator_skills.json*', (route) =>
+    route.fulfill({ json: simulatorSkills })
   );
   await page.route('**/api/sim/field', (route) => route.fulfill({ json: generatedField() }));
 });
@@ -2190,7 +2202,7 @@ test('Build search prices the skills on offer by hint and answers with the skill
   const toBuy = result.getByRole('list', { name: 'Skills to buy', exact: true });
   await expect(toBuy.getByRole('listitem')).toHaveCount(1);
   const maestro = toBuy.getByRole('listitem').first();
-  await expect(maestro).toContainText(/Swinging Maestro\s*with Corner Recovery ○\s*272 SP/);
+  await expect(maestro).toContainText(/Swinging Maestro\s*with Corner Recovery ○\s*272\s*SP/);
   // What it and Corner Recovery ○ add to the build, in lengths, with where and how often it fires and what values it.
   await expect(maestro.locator('.value')).toContainText('+1.60');
   await expect(maestro.locator('.value')).toHaveAttribute(
@@ -2319,6 +2331,164 @@ test('Build search prices the skills on offer by hint and answers with the skill
 
   await page.setViewportSize({ width: 390, height: 844 });
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+});
+
+test('Build options sort every build’s skills by the shop, SP or gain at once', async ({
+  page
+}) => {
+  const estimate = (mean: number) => ({ samples: 256, mean, standard_error: 0.01 });
+  const evaluation = (time: number) => ({
+    fitness: estimate(-time),
+    scenarios: [
+      {
+        name: 'x',
+        fitness: estimate(-time),
+        win_rate: estimate(1),
+        team_win_rate: estimate(0),
+        finish_time_seconds: estimate(time),
+        skill_activations: estimate(2)
+      }
+    ]
+  });
+
+  const finalist = (purchases: number[], gain: number) => ({
+    build: { purchases, stats: [] },
+    sp_cost: 400,
+    search: evaluation(150 - gain),
+    validation: evaluation(150 - gain),
+    gain: estimate(gain),
+    validation_gain: estimate(gain),
+    contributions: purchases.map((purchase) => ({
+      purchases: [purchase],
+      gain: estimate(gain / purchases.length)
+    }))
+  });
+
+  const fire = { rate: 1, mean_m: 1030 };
+  const worth = (skills: [purchase: number, lengths: number][]) => ({
+    purchases: skills.map(([purchase]) => purchase),
+    lengths: skills.reduce((total, [, lengths]) => total + lengths, 0),
+    hp_left: 120,
+    skills: skills.map(([purchase, lengths]) => ({ purchase, lengths, fire }))
+  });
+
+  // Purchases 0, 1 and 2 are Corner Recovery ○, Straightaway Adept and Focus, as they are added below.
+  const alone = [0.5, 1.4, 0.9];
+  await page.route('**/api/sim/optimize', (route) =>
+    route.fulfill({
+      json: {
+        schema_version: 8,
+        mode: 'cm',
+        theory: {
+          unit: 'lengths',
+          search_draws: 64,
+          report_draws: 256,
+          builds_valued: 9,
+          lengths_per_second: 8,
+          runners_per_length: 0.3,
+          phase_bounds: [0, 400, 1600, 2000, 2400],
+          field: {
+            position_fight_seconds: 0,
+            rushed_chance: 0.12,
+            drain_mean: 0.054,
+            drain_spread: 0.034,
+            base_hp_left: 100
+          },
+          finalists: [
+            worth([
+              [0, 0.5],
+              [1, 1.4],
+              [2, 0.9]
+            ]),
+            worth([
+              [1, 0.3],
+              [2, 1.1]
+            ])
+          ],
+          offers: alone.map((lengths, purchase) => ({
+            purchase,
+            lengths,
+            fire,
+            source: 'physics',
+            effect: 'speed',
+            count_gated: false
+          }))
+        },
+        runs_per_variation_per_scenario: 256,
+        validation_runs_per_finalist_per_scenario: 64,
+        report: {
+          schema_version: 5,
+          backend: 'cpu',
+          candidates_evaluated: 9,
+          fully_evaluated_candidates: 2,
+          simulations: 2304,
+          exhaustive: false,
+          search_seeds: [1, 2],
+          validation_seeds: [1000],
+          finalists: [finalist([0, 1, 2], 2.8), finalist([1, 2], 1.4)],
+          baseline: evaluation(150),
+          impacts: alone.map((lengths, purchase) => ({
+            purchase,
+            alone: estimate(lengths / 8),
+            together: estimate(lengths / 8)
+          }))
+        }
+      }
+    })
+  );
+
+  await page.goto('/simulator/skills');
+  await expectBuildBlocked(page, 'Add the skills she can buy first.');
+  const search = page.getByRole('combobox', { name: 'Add a skill on offer' });
+  for (const name of ['Corner Recovery', 'Straightaway Adept', 'Focus']) {
+    await search.fill(name);
+    await page
+      .getByRole('option', { name: new RegExp('^' + name) })
+      .first()
+      .click();
+  }
+
+  await page.getByRole('button', { name: 'Plan skills', exact: true }).click();
+
+  const builds = page
+    .getByRole('region', { name: 'Result', exact: true })
+    .getByRole('region', { name: 'Build options', exact: true });
+  const pick = builds.getByRole('article', { name: '1st', exact: true });
+  const runnerUp = builds.getByRole('article', { name: '2nd', exact: true });
+  const pickSkills = pick.getByRole('listitem').locator('.name strong');
+  const runnerUpSkills = runnerUp.getByRole('listitem').locator('.name strong');
+
+  // The skill shop's order first, so a plan can be bought in one pass.
+  await expect(pickSkills).toHaveText(['Corner Recovery ○', 'Straightaway Adept', 'Focus']);
+  await expect(runnerUpSkills).toHaveText(['Straightaway Adept', 'Focus']);
+
+  await pick.getByRole('button', { name: /^Gain/ }).click();
+
+  await expect(pickSkills).toHaveText(['Straightaway Adept', 'Focus', 'Corner Recovery ○']);
+  await expect(runnerUpSkills).toHaveText(['Focus', 'Straightaway Adept']);
+  await expect(runnerUp.getByRole('button', { name: /^Gain/ })).toContainText('sorted descending');
+  await builds.screenshot({ path: test.info().outputPath('build-options-by-gain.png') });
+
+  await runnerUp.getByRole('button', { name: /^Gain/ }).click();
+
+  await expect(pickSkills).toHaveText(['Corner Recovery ○', 'Focus', 'Straightaway Adept']);
+
+  // Corner Recovery ○ and Straightaway Adept both cost 170 SP, so they keep the shop's order between them.
+  await pick.getByRole('button', { name: /^SP/ }).click();
+
+  await expect(pickSkills).toHaveText(['Corner Recovery ○', 'Straightaway Adept', 'Focus']);
+
+  await pick.getByRole('button', { name: /^SP/ }).click();
+
+  await expect(pickSkills).toHaveText(['Focus', 'Corner Recovery ○', 'Straightaway Adept']);
+
+  await pick.getByRole('button', { name: /^Skill/ }).click();
+
+  await expect(pickSkills).toHaveText(['Corner Recovery ○', 'Straightaway Adept', 'Focus']);
+
+  await page.setViewportSize({ width: 390, height: 844 });
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+  await pick.screenshot({ path: test.info().outputPath('build-option-phone.png') });
 });
 
 test('Build codes load the runner, the course, the goal and what she can buy on every tab', async ({

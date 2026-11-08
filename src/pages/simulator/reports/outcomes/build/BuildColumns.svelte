@@ -3,7 +3,6 @@
   import Button from '@/components/controls/Button.svelte';
   import BuildColumnHead from './BuildColumnHead.svelte';
   import BuildSkillRow from './BuildSkillRow.svelte';
-  import { sortByGameOrder } from '@/lib/game-data/skills/skill-order';
   import {
     checkText,
     contributionScale,
@@ -11,6 +10,13 @@
     type SkillUnit,
     type TheorizedBuild
   } from './build-result';
+  import {
+    nextSkillSort,
+    SHOP_ORDER,
+    sortSkills,
+    type SkillSort,
+    type SkillSortKey
+  } from './skill-sort';
 
   /** Equivalent build cards, kept visible in the server's original order. */
   interface Props {
@@ -49,7 +55,15 @@
     score: 'Skill score',
     seconds: 'Seconds saved'
   };
+  const UNIT_HEADING: Record<SkillUnit, string> = {
+    lengths: 'Gain',
+    score: 'Score',
+    seconds: 'Saved'
+  };
   const ordinal = (rank: number) => rank + (['st', 'nd', 'rd'][rank - 1] ?? 'th');
+
+  /** One order for every build, so their lists compare line by line. */
+  let skillSort = $state<SkillSort>(SHOP_ORDER);
 
   /** How far a build trails the pick in the optimizer's comparison races. */
   function racedBehind(build: TheorizedBuild) {
@@ -57,13 +71,43 @@
     if (pickRaced === undefined || build.raced === undefined) return undefined;
     return racedGap(pickRaced, build.raced);
   }
+
+  function sortArrow(key: SkillSortKey): string {
+    if (skillSort.key !== key) return '↕';
+    return skillSort.direction === 'ascending' ? '↑' : '↓';
+  }
 </script>
+
+{#snippet sortButton(key: SkillSortKey, label: string, description: string)}
+  <button
+    type="button"
+    class="sort {key}"
+    class:active={skillSort.key === key}
+    title={'Sort ' + description}
+    onclick={() => (skillSort = nextSkillSort(skillSort, key))}
+  >
+    {label}
+    <span
+      class="sort-arrow"
+      aria-hidden="true"
+    >
+      {sortArrow(key)}
+    </span>
+    {#if skillSort.key === key}
+      <span class="sr-only">, sorted {skillSort.direction}</span>
+    {/if}
+  </button>
+{/snippet}
 
 {#snippet buildCard(build: TheorizedBuild, index: number)}
   {@const title = ordinal(index + 1)}
   {@const scale = contributionScale(build.cells)}
-  <!-- The shop's order, so the plan can be bought in one pass; `build.cells` keeps the worth order. -->
-  {@const inShopOrder = sortByGameOrder(build.cells, (cell) => cell.skill.offer.skill)}
+  <!-- A sorted copy: `build.cells` keeps the optimizer's order, which its purchase indices refer to. -->
+  {@const sortedCells = sortSkills(build.cells, skillSort, (cell) => ({
+    skill: cell.skill.offer.skill,
+    cost: cell.skill.cost,
+    value: cell.value
+  }))}
   <article
     class="column"
     class:pick={index === 0}
@@ -83,11 +127,26 @@
       racedBehind={index > 0 ? racedBehind(build) : undefined}
       check={checkText(build.finalist, field, checkRaces)}
     />
+    {#if build.cells.length > 1}
+      <div
+        class="sort-header"
+        role="group"
+        aria-label="Sort skills"
+      >
+        {@render sortButton('shop', 'Skill', 'in the skill shop’s order')}
+        {@render sortButton('cost', 'SP', 'by SP cost')}
+        {@render sortButton(
+          'value',
+          UNIT_HEADING[skillUnit],
+          'by ' + UNIT_TITLE[skillUnit].toLowerCase()
+        )}
+      </div>
+    {/if}
     <ul
       class="cells"
       aria-label={index === 0 ? 'Skills to buy' : 'Skills in the ' + title + ' build'}
     >
-      {#each inShopOrder as cell (cell.skill.key)}
+      {#each sortedCells as cell (cell.skill.key)}
         <li>
           <BuildSkillRow
             offer={cell.skill.offer}
