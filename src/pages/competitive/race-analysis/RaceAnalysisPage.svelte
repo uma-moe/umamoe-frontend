@@ -282,6 +282,7 @@
     title="Race Analysis"
     description={captures.length ? undefined : 'Replay and analyse your races.'}
     width="wide"
+    compactHeading={captures.length > 0}
   >
     {#snippet actions()}
       {#if captures.length}

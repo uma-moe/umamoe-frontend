@@ -33,10 +33,6 @@
     disabled={loading || busy}
     {onfiles}
   />
-  <p class="upload-help">
-    Uploads are resimulated on the uma.moe simulator, and several races add a session report.
-    Mismatched replays are reported to Sentry.
-  </p>
   <div class="demo-actions">
     <span>Try it with demo data</span>
     <Button
@@ -70,17 +66,12 @@
 </Dialog>
 
 <style>
-  .upload-help {
-    font-size: 12px;
-    color: var(--text-secondary);
-    line-height: 1.6;
-    margin: 12px 0;
-  }
   .demo-actions {
     display: flex;
     align-items: center;
     gap: 8px;
     flex-wrap: wrap;
+    margin-top: 12px;
   }
   .demo-actions > span {
     font-size: 11px;
@@ -89,12 +80,6 @@
   }
   .capture-help {
     margin-top: 12px;
-  }
-  p {
-    font-size: 12px;
-    margin: 4px 0 0;
-    color: var(--text-secondary);
-    line-height: 1.6;
   }
   @media (max-width: 767px) {
     .demo-actions > span {

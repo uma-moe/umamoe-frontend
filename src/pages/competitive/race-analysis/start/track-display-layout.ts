@@ -1,4 +1,4 @@
-import { courseSegments, type Course, type CourseShape } from '../replay/replay-course';
+import type { Course, CourseShape } from '../replay/replay-course';
 import {
   replayTrack,
   trackBasis,
@@ -9,6 +9,8 @@ import {
 
 /** Lanes are drawn wider than scale so a full field stays readable on a whole course. */
 export const LANE_SPREAD = 2;
+/** The replay's mowing stripes when the whole course is in view. */
+export const STRIPE_METRES = 50;
 
 export interface PlacedPoint {
   x: number;
@@ -25,7 +27,7 @@ export interface TrackDisplayLayout {
   outerRail: string;
   road: string;
   roadWidth: number;
-  sections: { label: string; color: string; path: string }[];
+  stripes: string[];
   place: (distance: number, lane: number) => PlacedPoint;
   section: (start: number, end: number) => string;
 }
@@ -82,21 +84,19 @@ export function trackDisplayLayout(input: LayoutInput): TrackDisplayLayout | und
     distance: point.distance
   }));
 
-  // The home stretch carries the decisive moves, so only it is tinted.
-  const homeStretch = courseSegments(course).filter(
-    (segment) => segment.label === 'Final corner' || segment.label === 'Final straight'
-  );
+  const courseLength = points.at(-1)!.distance;
+  const stripes: string[] = [];
+
+  for (let start = 0; start < courseLength; start += STRIPE_METRES * 2) {
+    stripes.push(trackSection(roadPoints, start, Math.min(courseLength, start + STRIPE_METRES)));
+  }
 
   return {
     innerRail: polyline(points.map(project)),
     outerRail: polyline(outerUnits.map(project)),
     road: polyline(roadPoints),
     roadWidth: laneWidth * unitsPerMetre * scale,
-    sections: homeStretch.map((segment) => ({
-      label: segment.label,
-      color: segment.color,
-      path: trackSection(roadPoints, segment.start, segment.end)
-    })),
+    stripes,
     place: (distance, lane) => {
       const point = offset(distance, lane);
 

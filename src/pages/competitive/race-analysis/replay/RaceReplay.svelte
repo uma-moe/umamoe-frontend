@@ -398,7 +398,7 @@
   onfullscreenchange={() => (fullscreen = !!document.fullscreenElement)}
 />
 <section
-  class="replay"
+  class="replay track-palette"
   class:overview={overviewOnly}
   class:ensemble-view={!!ensemble}
   data-surface={course?.surface === 2 ? 'dirt' : 'turf'}
@@ -660,5 +660,6 @@
 </section>
 
 <style>
+  @import './track-palette.css';
   @import './race-replay.css';
 </style>

@@ -1,6 +1,6 @@
 import { expect, it } from 'vitest';
 import type { Course, CourseShape } from '../replay/replay-course';
-import { trackDisplayLayout } from './track-display-layout';
+import { STRIPE_METRES, trackDisplayLayout } from './track-display-layout';
 
 const LANE_WIDTH = 11.25;
 
@@ -59,13 +59,10 @@ it('places the outside lane one drawn road width away from the inner rail', () =
   expect(spread).toBeCloseTo(layout.roadWidth, 5);
 });
 
-it('tints only the home stretch', () => {
+it('mows a stripe into every other stretch of the course', () => {
   const layout = trackDisplayLayout(display)!;
 
-  expect(layout.sections.map((section) => section.label)).toEqual([
-    'Final corner',
-    'Final straight'
-  ]);
+  expect(layout.stripes).toHaveLength(course.distance / (STRIPE_METRES * 2));
 });
 
 it('has no layout when the display is smaller than its margins', () => {

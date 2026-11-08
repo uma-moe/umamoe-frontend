@@ -1,0 +1,28 @@
+/* The race track's colours, shared by the replay and the landing's demo race. */
+.track-palette {
+  --track-surface: #2f5137;
+  --track-stripe: #355a3d;
+  --track-ground: #1b2a21;
+  --track-infield: #253f2c;
+  --track-rail: #e8ecf0;
+  --track-pole: #e8463a;
+  --track-marking: rgb(255 255 255 / 0.22);
+  --track-ink: #c5d0c7;
+}
+.track-palette[data-surface='dirt'] {
+  --track-surface: #5e4734;
+  --track-stripe: #664e39;
+}
+:global([data-theme='light']) .track-palette {
+  --track-surface: #86b77c;
+  --track-stripe: #91c187;
+  --track-ground: #c6d9c0;
+  --track-infield: #74a76b;
+  --track-rail: #ffffff;
+  --track-marking: rgb(255 255 255 / 0.55);
+  --track-ink: #2c3b2f;
+}
+:global([data-theme='light']) .track-palette[data-surface='dirt'] {
+  --track-surface: #c09a6c;
+  --track-stripe: #c8a374;
+}

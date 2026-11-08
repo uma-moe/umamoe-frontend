@@ -4,15 +4,23 @@
   import Button from '@/components/controls/Button.svelte';
   import Slider from '@/components/controls/Slider.svelte';
   import Artwork from '@/components/game/Artwork.svelte';
+  import type { RaceRunner } from '@/lib/race/capture/race-capture-parser';
   import {
     raceFrameAtTime,
     raceTimeAtDistance,
     replayLaneMetres
   } from '@/lib/race/replay/race-replay';
-  import { formatRaceTime } from '@/lib/race/replay/race-display';
-  import { portrait } from '@/pages/competitive/analysis-view';
+  import { formatRaceTime, runningStyleName } from '@/lib/race/replay/race-display';
+  import { portrait, styleColors } from '@/pages/competitive/analysis-view';
   import { makeDemoRaces } from '@/pages/competitive/demo-races';
-  import { loadReplayGeometry, type CourseData, type CourseShape } from '../replay/replay-course';
+  import ReplayBrandMark from '../replay/ReplayBrandMark.svelte';
+  import ReplayTrackStatus from '../replay/map/ReplayTrackStatus.svelte';
+  import {
+    loadReplayGeometry,
+    trackStatusAt,
+    type CourseData,
+    type CourseShape
+  } from '../replay/replay-course';
   import { recordedFinishTime, replayTeamColors } from '../replay/replay-state.svelte';
   import { trackDisplayLayout } from './track-display-layout';
 
@@ -21,7 +29,6 @@
     actions
   }: {
     courses?: CourseData;
-    /** Controls placed after the playback controls, such as opening the full demo. */
     actions?: Snippet;
   } = $props();
 
@@ -30,7 +37,8 @@
   // Without motion the display rests on the final leg, where the field is still contesting.
   const RESTING_TIME = 105;
   const POLE_SPACING = 400;
-  const MAP_MARGIN = 30;
+  // Room around the course for the portrait markers, which are drawn at a fixed size.
+  const MAP_MARGIN = 34;
   const LABELLED_MAP_WIDTH = 560;
   const DEFAULT_LANE_WIDTH = 11.25;
 
@@ -54,7 +62,7 @@
     course ? (courses?.names[course.raceTrackId] ?? 'Demo course') : 'Tokyo'
   );
 
-  const surface = $derived(course?.surface === 2 ? 'Dirt' : 'Turf');
+  const dirt = $derived(course?.surface === 2);
   const raceDistance = $derived(course?.distance ?? sample.raceDistance ?? 2400);
   const laneWidth = $derived(
     course?.laneMax === undefined ? DEFAULT_LANE_WIDTH : course.laneMax / 1000
@@ -99,6 +107,7 @@
           distance,
           finishTime: finished ? finishTime : undefined,
           lane: replayLaneMetres(horse.lanePosition, laneWidth),
+          // The demo field runs as three teams of three, in gate order.
           color: replayTeamColors[Math.floor(runner.index / 3) % replayTeamColors.length]!
         };
       })
@@ -106,7 +115,9 @@
   );
 
   const leader = $derived(order[0]!);
-  const phase = $derived(racePhase(leader.distance));
+  const status = $derived(
+    trackStatusAt(course, raceDistance, Math.min(leader.distance, raceDistance))
+  );
   const showLabels = $derived(mapWidth >= LABELLED_MAP_WIDTH);
 
   const poles = $derived.by(() => {
@@ -139,16 +150,6 @@
       : []
   );
 
-  function racePhase(distance: number) {
-    if (time >= duration) return 'Finished';
-    if (distance >= raceDistance) return 'Finishing';
-    if (distance < raceDistance / 6) return 'Early race';
-    if (distance < (raceDistance * 2) / 3) return 'Mid race';
-    if (distance < (raceDistance * 5) / 6) return 'Late race';
-
-    return 'Final leg';
-  }
-
   function compareRunningOrder(
     a: { distance: number; finishTime?: number },
     b: { distance: number; finishTime?: number }
@@ -166,7 +167,11 @@
 
     const gap = leader.distance - entry.distance;
 
-    return gap < 0.05 ? 'Lead' : '+' + gap.toFixed(1) + ' m';
+    return gap < 0.05 ? 'Lead' : gap.toFixed(1) + ' m';
+  }
+
+  function runningStyle(runner: RaceRunner) {
+    return runner.result?.runningStyle ?? Number(runner.raw.runningStyle);
   }
 
   function play() {
@@ -238,10 +243,22 @@
   });
 </script>
 
-<div
-  class="track-display"
+<section
+  class="track-display track-palette"
+  data-surface={dirt ? 'dirt' : 'turf'}
+  aria-labelledby="{uid}-title"
   bind:this={display}
 >
+  <header>
+    <div class="display-title">
+      <h2 id="{uid}-title">Demo race</h2>
+      <span>{courseName}, {dirt ? 'Dirt' : 'Turf'} {raceDistance.toLocaleString()} m</span>
+    </div>
+    {#if actions}
+      <div class="display-actions">{@render actions()}</div>
+    {/if}
+  </header>
+
   <div class="display-stage">
     <div
       class="course-map"
@@ -273,32 +290,31 @@
             </pattern>
           </defs>
           <polyline
-            class="road"
+            class="track-surface"
             points={layout.road}
             stroke-width={layout.roadWidth}
           />
-          {#each layout.sections as section (section.label)}
+          {#each layout.stripes as stripe}
             <polyline
-              class="home-stretch"
-              points={section.path}
-              stroke={section.color}
+              class="mowing-stripe"
+              points={stripe}
               stroke-width={layout.roadWidth}
             />
           {/each}
           {#if packPath}
             <polyline
-              class="pack"
+              class="pack-range"
               points={packPath}
               stroke-width={layout.roadWidth}
             />
           {/if}
           <polyline
-            class="rail rail--inner"
-            points={layout.innerRail}
+            class="track-rail outer"
+            points={layout.outerRail}
           />
           <polyline
-            class="rail rail--outer"
-            points={layout.outerRail}
+            class="track-rail inner"
+            points={layout.innerRail}
           />
           {#each poles as pole (pole.distance)}
             <line
@@ -338,18 +354,33 @@
               </text>
             {/if}
           {/if}
+        </svg>
+        <div
+          class="map-markers"
+          aria-hidden="true"
+        >
           {#each markers as marker (marker.runner.index)}
-            <g
-              class="runner"
-              transform="translate({marker.point.x} {marker.point.y})"
+            <span
+              class="map-marker"
+              style:transform="translate3d({marker.point.x}px, {marker.point.y}px, 0)"
               style:--runner-color={marker.color}
             >
-              <title>{marker.runner.name}</title>
-              <circle r="9" />
-              <text>{marker.runner.index + 1}</text>
-            </g>
+              <Artwork
+                src={portrait(marker.runner.cardId)}
+                alt=""
+                size="sm"
+                shape="circle"
+                loading="eager"
+              />
+              <b>{marker.runner.index + 1}</b>
+            </span>
           {/each}
-        </svg>
+        </div>
+        <ReplayTrackStatus
+          {status}
+          showCourse
+          showSlopes
+        />
       {:else}
         <p
           class="map-status"
@@ -358,39 +389,40 @@
           {geometryFailed ? 'The course map could not be loaded.' : 'Loading the course…'}
         </p>
       {/if}
-      <div class="infield">
-        <span class="infield-course">
-          Demo race at {courseName}, {surface}
-          {raceDistance.toLocaleString()} m
-        </span>
-        <time>{formatRaceTime(time, 1)}</time>
-        <span class="infield-phase">{phase}</span>
-      </div>
+      <ReplayBrandMark />
     </div>
 
     <section
       class="running-order"
       aria-label="Running order"
     >
-      <h3>Running order</h3>
       <ol>
         {#each order as entry, position (entry.runner.index)}
           <li
             class:finished={entry.finishTime !== undefined}
             style:--runner-color={entry.color}
           >
-            <span class="place">{position + 1}</span>
-            <span class="portrait">
-              <Artwork
-                src={portrait(entry.runner.cardId)}
-                alt=""
-                size="xs"
-                shape="circle"
-                loading="eager"
-              />
-              <b>{entry.runner.index + 1}</b>
+            <span
+              class="place"
+              class:podium={position < 3}
+            >
+              {position + 1}
             </span>
-            <span class="runner-name">{entry.runner.name}</span>
+            <Artwork
+              src={portrait(entry.runner.cardId)}
+              alt=""
+              size="xs"
+              loading="eager"
+            />
+            <span class="runner-name">
+              <strong>{entry.runner.name}</strong>
+              <small>
+                <span>Gate {entry.runner.index + 1}</span>
+                <span style:color={styleColors[runningStyle(entry.runner)]}>
+                  {runningStyleName(runningStyle(entry.runner))}
+                </span>
+              </small>
+            </span>
             <span class="gap">{standingLabel(entry)}</span>
           </li>
         {/each}
@@ -402,10 +434,15 @@
     <Button
       variant={playing ? 'secondary' : 'primary'}
       size="sm"
+      icon={playing ? 'pause' : 'play'}
       onclick={togglePlayback}
     >
       {playing ? 'Pause' : time >= duration ? 'Replay' : 'Play'}
     </Button>
+    <span class="clock">
+      <b>{formatRaceTime(time, 2)}</b>
+      / {formatRaceTime(duration, 2)}
+    </span>
     <Slider
       id="demo-race-time"
       label="Race time"
@@ -418,13 +455,10 @@
       showOutput={false}
       onchange={pause}
     />
-    <span class="duration">{formatRaceTime(duration, 1)}</span>
-    {#if actions}
-      <div class="display-actions">{@render actions()}</div>
-    {/if}
   </div>
-</div>
+</section>
 
 <style>
+  @import '../replay/track-palette.css';
   @import './race-track-display.css';
 </style>

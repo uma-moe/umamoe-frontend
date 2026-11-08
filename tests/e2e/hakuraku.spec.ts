@@ -1834,9 +1834,7 @@ test('race uploads keep replay and session sections together, retaining valid fi
     page.viewportSize()!.width
   );
   await page.getByRole('button', { name: 'Remove race', exact: true }).click();
-  await expect(
-    page.getByRole('region', { name: 'Start with your races', exact: true })
-  ).toBeVisible();
+  await expect(page.getByRole('region', { name: 'Import races', exact: true })).toBeVisible();
 
   await expect(page.getByRole('button', { name: 'Try one demo race', exact: true })).toBeVisible();
   await page
