@@ -69,20 +69,17 @@ test('status details, build notification, and changelog work on desktop and mobi
   await page.getByRole('button', { name: 'What’s new', exact: true }).click();
   const updates = page.getByRole('dialog', { name: 'What’s new', exact: true });
   await expect(
-    updates.getByRole('heading', { name: 'Race Analysis & Simulator update', exact: true })
+    updates.getByRole('heading', { name: 'Race replay & Skill Explorer update', exact: true })
   ).toBeVisible();
 
-  await expect(updates.locator('.release-summary')).toContainText(
-    'Race Analysis shows what every skill was worth'
-  );
+  await expect(updates.locator('.release-summary')).toContainText('Mostly usability improvements');
   const sections = [
-    'Race Analysis',
     'Race replay',
-    'Race Simulator',
     'Skill Explorer',
-    'Build Optimizer',
-    'Across the site',
-    'Fixes'
+    'Race Simulator',
+    'Smaller changes',
+    'Fixes',
+    'Coming next'
   ];
 
   for (const name of sections) {
@@ -129,7 +126,7 @@ test('status details, build notification, and changelog work on desktop and mobi
   await expect(updates.locator('details[open]')).toHaveCount(1);
   await updates.getByRole('button', { name: 'Latest release', exact: true }).click();
   await expect(
-    updates.getByRole('heading', { name: 'Race Analysis & Simulator update', exact: true })
+    updates.getByRole('heading', { name: 'Race replay & Skill Explorer update', exact: true })
   ).toBeVisible();
 
   await updates.getByRole('button', { name: 'Got it', exact: true }).click();
@@ -177,7 +174,7 @@ test('the latest update is announced once to returning visitors and stays availa
   await page.reload();
   const updates = page.getByRole('dialog', { name: 'What’s new', exact: true });
   await expect(
-    updates.getByRole('heading', { name: 'Race Analysis & Simulator update', exact: true })
+    updates.getByRole('heading', { name: 'Race replay & Skill Explorer update', exact: true })
   ).toBeVisible();
 
   await page.keyboard.press('Escape');
@@ -194,7 +191,7 @@ test('update links open the matching feature and remember dismissal', async ({ p
   await page.getByRole('button', { name: 'What’s new', exact: true }).click();
   const updates = page.getByRole('dialog', { name: 'What’s new', exact: true });
 
-  await updates.getByRole('link', { name: /A new start page/ }).click();
+  await updates.getByRole('link', { name: /Single race replays/ }).click();
 
   await expect(page).toHaveURL(/\/competitive\/race-analysis$/);
   await expect(updates).toBeHidden();

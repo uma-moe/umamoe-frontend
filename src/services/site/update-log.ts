@@ -30,93 +30,82 @@ export interface UpdateEntry {
 // Define your updates here - newest first
 export const UPDATE_LOG: UpdateEntry[] = [
   {
-    title: 'Race Analysis & Simulator update',
+    title: 'Race replay & Skill Explorer update',
     date: '2026-11-08',
-    summary:
-      'Race Analysis shows what every skill was worth, the race simulator can fill its field with real CM teams, and the Skill Explorer shows the build behind its values.',
+    summary: 'Mostly usability improvements and making things generally better.',
     categories: [
       {
         category: 'major',
-        label: 'Race Analysis',
-        icon: 'analysis',
-        items: [
-          {
-            text: 'A new start page: import your races, or watch the demo race.',
-            link: '/competitive/race-analysis'
-          },
-          {
-            text: 'Skill gains: what each skill won in lengths and seconds, against the race without it.'
-          },
-          { text: 'Last spurt calculation, HP and acceleration cards, and race behaviour lanes.' },
-          { text: 'Win-rate estimates, broken down by team and race history.' }
-        ]
-      },
-      {
-        category: 'improvement',
         label: 'Race replay',
         icon: 'play',
         items: [
           {
-            text: 'Sharper race positions and course map at any zoom, with section and slope bands.'
+            text: 'Single race replays now have everything Hakuraku’s replay had, plus a few new things like skill gains, the last spurt calculation and clip export.',
+            link: '/competitive/race-analysis'
           },
-          { text: 'Export a stretch of the replay as a video clip.' },
-          { text: 'One profile card per runner: result, build, deck and parents.' },
-          { text: 'The pacemaker is marked, and your replay settings are remembered.' }
+          { text: 'The view is cut down so it feels more familiar and is easier to use.' }
         ]
       },
       {
         category: 'major',
-        label: 'Race Simulator',
-        icon: 'stopwatch',
-        items: [
-          {
-            text: 'Populate the field for your race settings, or add three real CM teams.',
-            link: '/simulator/race'
-          },
-          { text: 'See why a skill never activated, down to the condition it missed.' },
-          { text: 'Let position skills ignore place and field size, right beside Gates.' }
-        ]
-      },
-      {
-        category: 'improvement',
         label: 'Skill Explorer',
         icon: 'search',
         items: [
           {
-            text: 'See the reference build each skill value is measured in.',
+            text: 'Big overhaul. I got a lot of feedback and criticism on the old version, so I pushed it a lot further.',
             link: '/tools/skill-explorer'
           },
-          { text: 'Gated skills show their setup and their value at each point of the gate.' },
-          { text: 'Your course is remembered, and explanations sit behind info buttons.' }
+          {
+            text: 'Shows the generated reference build every skill is compared in. It’s not meant to be a perfect build.'
+          },
+          {
+            text: 'Proc rates are a lot closer to real CM data, outside of a few outliers, and scoring should be much better on all tracks.'
+          },
+          {
+            text: 'Added the optimal proc point, and for skills you can force through prerequisites (like the trigger-5 skills) what they’re worth at each proc point.'
+          }
         ]
       },
       {
         category: 'improvement',
-        label: 'Build Optimizer',
-        icon: 'tune',
+        label: 'Race Simulator',
+        icon: 'stopwatch',
         items: [
           {
-            text: 'Builds list their skills in the skill shop’s order, so a plan is quick to buy.',
-            link: '/simulator/skills'
-          },
-          {
-            text: 'Sort the builds’ skills by SP or by what each one gains from the list headings.'
+            text: 'You can now fill the field with 9 random real CM runners.',
+            link: '/simulator/race'
           }
         ]
       },
       {
         category: 'minor',
-        label: 'Across the site',
+        label: 'Smaller changes',
         icon: 'star',
-        items: [{ text: 'Skill points show the game’s hint icon in place of “SP”.' }]
+        items: [
+          { text: 'Race sim shows why a skill never activated.' },
+          { text: 'Option to let position skills ignore place and field size.' },
+          { text: 'Build Optimizer lists skills in shop order, and you can sort them.' },
+          { text: 'Skill points use the game’s hint icon.' }
+        ]
       },
       {
         category: 'bugfix',
         label: 'Fixes',
         icon: 'check',
         items: [
-          { text: 'Uploading many races at once no longer runs into the rate limit.' },
-          { text: 'Saved partners from older lookups load in the parent picker again.' }
+          { text: 'Uploading a lot of races at once no longer hits the rate limit.' },
+          { text: 'Fixed saved partners not loading in the parent picker.' }
+        ]
+      },
+      {
+        category: 'minor',
+        label: 'Coming next',
+        icon: 'timeline',
+        items: [
+          { text: 'Multi race analysis.' },
+          {
+            text: 'Making the simulator results easier to understand, like we did with the race replay.'
+          }
         ]
       }
     ]
