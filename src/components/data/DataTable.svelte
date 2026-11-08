@@ -375,6 +375,7 @@
     font-size: 11px;
     font-weight: 400;
     line-height: 1.6;
+    text-align: left;
     white-space: normal;
   }
   .table-wrap {

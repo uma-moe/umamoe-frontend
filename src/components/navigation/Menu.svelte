@@ -7,12 +7,15 @@
   export interface MenuItem {
     id: string;
     label: string;
+    /** A second, quieter line under the label. */
+    description?: string;
     href?: string;
     icon?: IconName;
     danger?: boolean;
     disabled?: boolean;
     checked?: boolean;
-    /** Independent on/off item: announced as a checkbox and marked with a tick. */ toggle?: boolean;
+    /** Independent on/off item: announced as a checkbox, drawn as a switch, and keeps the menu open. */
+    toggle?: boolean;
     separator?: boolean;
   }
 
@@ -89,9 +92,11 @@
     control.focus({ preventScroll: true });
   }
 
-  function select(id: string) {
-    close();
-    onselect?.(id);
+  function select(item: MenuItem) {
+    // A switch keeps the menu open, so the reader sees what it changed.
+    if (!item.toggle) close();
+
+    onselect?.(item.id);
   }
 
   function toggle(event: ToggleEvent) {
@@ -217,18 +222,27 @@
         <hr />
       {/if}
       {#snippet content()}
-        {#if item.icon}
+        {#if item.toggle}
+          <i
+            class="switch"
+            class:on={item.checked}
+            aria-hidden="true"
+          >
+            <b></b>
+          </i>
+        {:else if item.icon}
           <Icon
             name={item.icon}
             size={17}
           />
         {/if}
-        <span>{item.label}</span>
-        {#if item.toggle && item.checked}
-          <Icon
-            name="check"
-            size={15}
-          />
+        {#if item.description}
+          <span class="item-text">
+            <span>{item.label}</span>
+            <small>{item.description}</small>
+          </span>
+        {:else}
+          <span>{item.label}</span>
         {/if}
       {/snippet}
       {#if item.href && !item.disabled}
@@ -236,7 +250,7 @@
           class="menu-item"
           href={item.href}
           role="menuitem"
-          onclick={() => select(item.id)}
+          onclick={() => select(item)}
         >
           {@render content()}
         </a>
@@ -253,7 +267,7 @@
           class:active={item.checked}
           class:danger={item.danger}
           disabled={item.disabled}
-          onclick={() => select(item.id)}
+          onclick={() => select(item)}
         >
           {@render content()}
         </button>
@@ -347,11 +361,49 @@
   .menu-item[role='menuitemcheckbox'] > span {
     flex: 1;
   }
+  .item-text {
+    display: grid;
+    gap: 1px;
+    padding-block: 3px;
+  }
+  .item-text small {
+    font-size: 11px;
+    color: var(--text-secondary);
+  }
+  .switch {
+    position: relative;
+    flex: none;
+    width: 25px;
+    height: 14px;
+    border: 1px solid rgb(var(--on-surface-rgb) / 0.18);
+    border-radius: 8px;
+    background: rgb(var(--on-surface-rgb) / 0.09);
+  }
+  .switch b {
+    position: absolute;
+    top: 2px;
+    left: 2px;
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: var(--text-muted);
+    transition:
+      transform var(--duration-fast),
+      background-color var(--duration-fast);
+  }
+  .switch.on {
+    border-color: rgb(var(--accent-primary-rgb) / 0.48);
+    background: rgb(var(--accent-primary-rgb) / 0.23);
+  }
+  .switch.on b {
+    background: var(--accent-primary);
+    transform: translateX(11px);
+  }
   .menu-item:hover:not(:disabled),
   .menu-item:focus-visible {
     background: var(--factor-option-hover);
   }
-  .menu-panel button.active {
+  .menu-panel button.active:not([role='menuitemcheckbox']) {
     color: var(--accent-primary);
     background: var(--factor-option-hover);
   }
