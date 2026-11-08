@@ -5,6 +5,8 @@ export const REPLAY_SETTINGS_KEY = 'replay_settings';
 export interface ReplaySettings {
   layout: 'positions' | 'map';
   laneScaleMode: 'automatic' | 'fixed';
+  /** The course map spreads lanes to twice their width unless drawn to scale. */
+  mapLaneSpacing: 'doubled' | 'actual';
   windowMeters: number;
   playbackSpeed: string;
   toggles: ReplayToggles;
@@ -27,6 +29,7 @@ function normalizeSettings(value: unknown): ReplaySettings {
   return {
     layout: saved.layout === 'map' ? 'map' : 'positions',
     laneScaleMode: saved.laneScaleMode === 'automatic' ? 'automatic' : 'fixed',
+    mapLaneSpacing: saved.mapLaneSpacing === 'actual' ? 'actual' : 'doubled',
     windowMeters:
       typeof saved.windowMeters === 'number' && Number.isFinite(saved.windowMeters)
         ? Math.max(20, Math.min(400, saved.windowMeters))

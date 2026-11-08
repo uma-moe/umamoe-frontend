@@ -8,7 +8,8 @@
   import ReplayPlaybackControls from './ReplayPlaybackControls.svelte';
   import ReplayChartTools from './ReplayChartTools.svelte';
   import ReplayCourseTracks from './ReplayCourseTracks.svelte';
-  import ReplayTimelineGuide from './ReplayTimelineGuide.svelte';
+  import ReplayClipBand from '../clip/ReplayClipBand.svelte';
+  import type { ClipEdge, ClipRange } from '../clip/clip-plan';
 
   let {
     frames,
@@ -20,13 +21,19 @@
     playing,
     phase,
     leader,
+    frameIndex,
     minimal = false,
     onplay,
     onseek,
+    onstepframe,
     children,
     telemetry,
     actions,
-    menu
+    menu,
+    clipRange,
+    clipLocked = false,
+    ontrim,
+    clipTools
   }: {
     frames: ParsedRaceCapture['frames'];
     bounds: ReplayBounds;
@@ -37,16 +44,25 @@
     playing: boolean;
     phase: string;
     leader: number;
+    frameIndex: number;
     /** Play and the time slider only: no restart, step or finish buttons. */
     minimal?: boolean;
     onplay: () => void;
     onseek: (time: number) => void;
+    onstepframe: (direction: 1 | -1) => void;
     children?: Snippet<[number[]]>;
     telemetry?: Snippet;
     /** The chart's controls, shown in a desktop toolbar row. */
     actions?: Snippet;
     /** The same controls behind one button, for a narrower toolbar. */
     menu?: Snippet;
+    /** The clip being cut, drawn as a band with trim handles over the timeline. */
+    clipRange?: ClipRange;
+    /** A clip is recording: the timeline stays as it is until it finishes. */
+    clipLocked?: boolean;
+    ontrim?: (edge: ClipEdge, time: number) => void;
+    /** While cutting a clip, its in and out points and export take the chart tools' place. */
+    clipTools?: Snippet;
   } = $props();
 
   let width = $state(0),
@@ -145,20 +161,10 @@
   );
 
   const currentSegment = $derived(segments.find((s) => leader >= s.start && leader < s.end)?.label);
-  const slope = $derived(
-    course?.slopes.find((s) => leader >= s.start && leader < s.start + s.length)?.slope ?? 0
-  );
 </script>
 
 {#snippet chartTools()}
-  <ReplayChartTools
-    tools={actions}
-    ensemble={minimal}
-  />
-{/snippet}
-
-{#snippet guide()}
-  <ReplayTimelineGuide ensemble={minimal} />
+  <ReplayChartTools tools={actions} />
 {/snippet}
 
 <section
@@ -170,20 +176,18 @@
 >
   <ReplayPlaybackControls
     {bounds}
-    endTime={displayBounds.endTime}
     {time}
     bind:speed
     {playing}
-    disabled={!frames.length}
-    {phase}
-    {currentSegment}
-    {slope}
-    {leader}
+    disabled={!frames.length || clipLocked}
+    {frameIndex}
+    frameCount={frames.length}
     {minimal}
     {onplay}
     {onseek}
-    tools={chartToolsInRow ? chartTools : menu}
-    guide={chartToolsInRow ? undefined : guide}
+    {onstepframe}
+    clipping={clipTools !== undefined}
+    tools={clipTools ?? (chartToolsInRow ? chartTools : menu)}
   />
   <!-- svelte-ignore a11y_no_noninteractive_tabindex (The shared horizontal timeline must be reachable with the keyboard.) -->
   <div
@@ -194,8 +198,17 @@
     role="region"
     aria-label="Course and skills"
     tabindex="0"
+    inert={clipLocked}
   >
     <div class="timeline-content">
+      {#if clipRange && ontrim}
+        <ReplayClipBand
+          range={clipRange}
+          bounds={displayBounds}
+          disabled={clipLocked}
+          {ontrim}
+        />
+      {/if}
       <div class="time-scrubber">
         <div
           bind:clientWidth={plotWidth}

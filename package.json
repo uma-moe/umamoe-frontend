@@ -60,6 +60,7 @@
     "katex": "^0.18.7",
     "marked": "^16.4.2",
     "marked-katex-extension": "^5.1.13",
+    "mediabunny": "1.62.1",
     "pako": "^3.0.1",
     "sql.js": "^1.14.2",
     "sv-router": "^0.17.0",

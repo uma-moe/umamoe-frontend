@@ -25,7 +25,9 @@
     trackOverride = $bindable(''),
     windowMeters = $bindable(80),
     laneScaleMode = $bindable('fixed'),
-    toggles = $bindable(defaultReplayToggles())
+    mapLaneSpacing = $bindable('doubled'),
+    toggles = $bindable(defaultReplayToggles()),
+    hiddenOptions = []
   }: {
     capture: ParsedRaceCapture;
     courses?: CourseData;
@@ -36,7 +38,10 @@
     trackOverride?: string;
     windowMeters?: number;
     laneScaleMode?: string;
+    mapLaneSpacing?: string;
     toggles?: ReplayToggles;
+    /** Overlays this screen never draws, left out of the dialog. */
+    hiddenOptions?: ReplayToggle[];
   } = $props();
 
   /** An emptied number field is still being edited, so it changes nothing yet. */
@@ -131,11 +136,11 @@
         oninput={seekFrame}
       />
     </section>
-    <section>
-      <h3>Race positions</h3>
+    <section class="lane-controls">
+      <h3>Lanes</h3>
       <SelectField
         id="replay-lane-scale"
-        label="Lane scale"
+        label="Race positions"
         bind:value={laneScaleMode}
         options={[
           { value: 'automatic', label: 'Automatic', description: 'Fits the current field spread.' },
@@ -146,12 +151,25 @@
           }
         ]}
       />
+      <SelectField
+        id="replay-map-lanes"
+        label="Course map"
+        bind:value={mapLaneSpacing}
+        options={[
+          {
+            value: 'doubled',
+            label: 'Lanes ×2',
+            description: 'Spreads lanes to twice their width.'
+          },
+          { value: 'actual', label: 'To scale', description: 'Draws lanes at their real width.' }
+        ]}
+      />
     </section>
     {#each replayToggleGroups as group}
       <section>
         <h3>{group.title}</h3>
         <div class="options">
-          {#each group.keys as option}
+          {#each group.keys.filter((option) => !hiddenOptions.includes(option)) as option}
             <div
               class="option"
               title={replayToggleHelp[option]}
@@ -183,6 +201,7 @@
         toggles = defaultReplayToggles();
         windowMeters = 80;
         laneScaleMode = 'fixed';
+        mapLaneSpacing = 'doubled';
       }}
     >
       Reset display
@@ -213,9 +232,17 @@
     gap: 8px;
     min-width: 0;
   }
-  .course-controls > h3 {
+  .course-controls > h3,
+  .lane-controls > h3 {
     grid-column: 1/-1;
     margin: 0;
+  }
+  .lane-controls {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    align-items: end;
+    gap: 8px;
+    min-width: 0;
   }
   .options {
     display: grid;

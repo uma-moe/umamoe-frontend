@@ -1,0 +1,104 @@
+.clip-tools {
+  --inspect-popover-width: 320px;
+  /* The title's line box centres on the popover's close button; its letters sit 12px in like the sides. */
+  --inspect-popover-padding: 7px 12px 12px;
+
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 6px;
+  min-width: 0;
+}
+/* The in and out points read as one range, like an editor's timecode pair. */
+.clip-points {
+  display: flex;
+}
+/* Outranks the race page's own small-button corners and gaps. */
+.clip-tools .clip-points :global(.ui-button.ui-button--sm) {
+  gap: 5px;
+  font-variant-numeric: tabular-nums;
+}
+.clip-tools .clip-points :global(.ui-button.ui-button--sm:first-child) {
+  border-radius: 6px 0 0 6px;
+}
+.clip-tools .clip-points :global(.ui-button.ui-button--sm:last-child) {
+  margin-left: -1px;
+  border-radius: 0 6px 6px 0;
+}
+.point-label {
+  color: var(--text-secondary);
+  font-weight: 500;
+}
+.clip-readout,
+.clip-progress {
+  font-size: 12px;
+  color: var(--text-secondary);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+.clip-progress {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+progress {
+  width: 96px;
+  height: 6px;
+  accent-color: var(--accent-warning);
+}
+.clip-error {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  min-width: 0;
+  max-width: 220px;
+  font-size: 12px;
+  color: var(--accent-warning);
+}
+.clip-error span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+/* Drawn like the toolbar's buttons beside it. */
+.settings-trigger {
+  display: grid;
+  place-items: center;
+  box-sizing: border-box;
+  width: 32px;
+  height: 32px;
+  border: 1px solid var(--toolbar-control-border, var(--factor-field-border));
+  border-radius: 6px;
+  background: var(--factor-field-bg);
+  color: var(--color-text);
+}
+.settings-trigger:hover {
+  border-color: var(--border-secondary);
+}
+/* The aspect choice matches the toolbar's control height. */
+.clip-tools :global(.segments) {
+  height: 32px;
+}
+
+@container playback (max-width: 899px) {
+  .tool-label,
+  .clip-error span {
+    display: none;
+  }
+}
+@container playback (max-width: 559px) {
+  .clip-length,
+  .clip-readout {
+    display: none;
+  }
+}
+@container playback (max-width: 419px) {
+  .clip-tools {
+    gap: 4px;
+  }
+}
+@container playback (max-width: 339px) {
+  .clip-tools .clip-points :global(.ui-button.ui-button--sm) {
+    padding-inline: 6px;
+  }
+}

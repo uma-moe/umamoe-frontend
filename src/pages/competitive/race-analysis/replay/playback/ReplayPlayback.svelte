@@ -26,6 +26,8 @@
   import Button from '@/components/controls/Button.svelte';
   import SkillActivityTimeline from '../../results/SkillActivityTimeline.svelte';
   import type { ReplayState } from '../replay-state.svelte';
+  import type { ReplayClip } from '../clip/replay-clip.svelte';
+  import ReplayClipTools from '../clip/ReplayClipTools.svelte';
   import ReplayTimeline from './ReplayTimeline.svelte';
   import ReplayTelemetry from './ReplayTelemetry.svelte';
   import ReplayTelemetryActions from './ReplayTelemetryActions.svelte';
@@ -38,8 +40,10 @@
     showSkills,
     visibility,
     ensembleTimeline,
+    clip,
     selected = $bindable('0'),
-    expanded = $bindable(false)
+    expanded = $bindable(false),
+    hiddenRunners = $bindable([])
   }: {
     replay: ReplayState;
     course?: Course;
@@ -47,17 +51,26 @@
     showSkills: boolean;
     visibility: Record<number, number>;
     ensembleTimeline?: EnsembleTimeline;
+    /** Cutting a clip, with its in and out points shown on the timeline. */
+    clip?: ReplayClip;
     selected?: string;
     expanded?: boolean;
+    /** Runner indices left off the comparison. */
+    hiddenRunners?: number[];
   } = $props();
 
   let metric = $state('combined'),
     chartEvents = $state(true),
     compare = $state(false);
 
-  const chartRunners = $derived(
-    compare ? replay.capture.runners : replay.runner ? [replay.runner] : []
-  );
+  const followed = $derived(replay.runner?.index ?? 0);
+  const chartRunners = $derived.by(() => {
+    if (!compare) return replay.runner ? [replay.runner] : [];
+
+    return replay.capture.runners.filter(
+      (runner) => runner.index === followed || !hiddenRunners.includes(runner.index)
+    );
+  });
 
   const selectedFinish = $derived(replay.finishTimes.get(replay.runner?.index ?? 0));
   const telemetryEnd = $derived(
@@ -88,6 +101,12 @@
   });
 </script>
 
+{#snippet clipTools()}
+  {#if clip}
+    <ReplayClipTools {clip} />
+  {/if}
+{/snippet}
+
 <div class="replay-timeline">
   <ReplayTimeline
     frames={replay.capture.frames}
@@ -100,8 +119,14 @@
     minimal={!!replay.ensemble}
     phase={replay.phase}
     leader={replay.leader}
-    onplay={replay.play}
+    frameIndex={replay.frameIndex}
+    onplay={clip?.editing ? clip.play : replay.play}
     onseek={replay.seek}
+    onstepframe={replay.stepFrame}
+    clipRange={clip?.editing ? clip.range : undefined}
+    clipLocked={clip?.recording}
+    ontrim={clip?.trim}
+    clipTools={clip?.editing ? clipTools : undefined}
   >
     {#snippet actions()}
       {#if !expanded}
@@ -110,6 +135,9 @@
             bind:metric
             bind:compare
             bind:chartEvents
+            bind:hiddenRunners
+            runners={replay.finishOrder}
+            {followed}
             detailed={!!replay.capture.detailed}
             ensemble={!!replay.ensemble}
           />
@@ -121,10 +149,9 @@
               size="sm"
               icon="expand"
               ariaLabel="Expand Race telemetry"
+              title="Expand Race telemetry"
               onclick={() => (expanded = true)}
-            >
-              <span class="expand-text">Expand</span>
-            </Button>
+            />
           </span>
         {/if}
       {/if}
@@ -138,6 +165,9 @@
             bind:metric
             bind:compare
             bind:chartEvents
+            bind:hiddenRunners
+            runners={replay.finishOrder}
+            {followed}
             detailed={!!replay.capture.detailed}
             ensemble={!!replay.ensemble}
             onexpand={replay.ensemble ? undefined : () => (expanded = true)}
@@ -154,6 +184,7 @@
         bind:metric
         bind:compare
         bind:chartEvents
+        bind:hiddenRunners
         bind:expanded
       />
     {/snippet}
@@ -227,11 +258,6 @@
   }
   .playback-actions-options {
     display: contents;
-  }
-  @container playback (max-width: 1400px) {
-    .expand-text {
-      display: none;
-    }
   }
   :global(.ensemble-view) .replay-timeline {
     margin-top: 8px;

@@ -1,11 +1,9 @@
-/* The course and the race file share the top row; the section tabs run along a subrow of their own. */
+/* The course and the race file share the top row; the section tabs and race tools run along a subrow of their own. */
 .replay-header {
   --header-inset: 14px;
-  position: sticky;
-  top: var(--utility-height);
-  z-index: calc(var(--z-header) - 2);
   display: grid;
-  grid-template-columns: minmax(0, 1fr) auto;
+  /* The course title keeps its full width first; the race file gets the rest. */
+  grid-template-columns: minmax(0, max-content) minmax(min-content, 1fr);
   grid-template-areas:
     'title actions'
     'tabs tabs';
@@ -63,36 +61,80 @@ h2 {
   padding-inline: 8px;
   white-space: nowrap;
 }
+/*
+ * Every fact leads with its separator, and the list starts one separator further left with that strip clipped, so a
+ * line never starts or ends on a dot when the facts wrap.
+ */
 .race-facts {
-  margin: 2px 0 0;
+  --fact-separator-width: 15px;
+  margin: 2px 0 0 calc(var(--fact-separator-width) * -1);
   overflow: hidden;
+  clip-path: inset(0 0 0 var(--fact-separator-width));
   color: var(--text-secondary);
   font-size: 12px;
   line-height: 16px;
   white-space: nowrap;
   text-overflow: ellipsis;
 }
+/* As inline blocks the facts can wrap between each other without whitespace beside the separators. */
 .race-facts span {
+  display: inline-block;
   white-space: nowrap;
 }
-/* The separator trails its fact, so a wrapped line ends on a dot rather than starting with one. */
-.race-facts span:not(:last-child)::after {
+.race-facts span::before {
   content: '·';
-  margin: 0 6px;
+  display: inline-block;
+  width: var(--fact-separator-width);
+  text-align: center;
   opacity: 0.7;
 }
 .header-actions {
   grid-area: actions;
   justify-self: end;
+  display: flex;
+  align-items: center;
+  gap: 8px;
   min-width: 0;
 }
-.report-navigation {
+.header-actions > :global(.ui-button) {
+  flex: none;
+  white-space: nowrap;
+}
+.header-source {
+  flex: 1;
+}
+.label-short {
+  display: none;
+}
+@media (max-width: 950px) {
+  .label-long {
+    display: none;
+  }
+  .label-short {
+    display: inline;
+  }
+  /* The way back to the original race takes the room the race file name would shrink into. */
+  .header-actions:has(> :global(.ui-button)) :global(.file-name) {
+    display: none;
+  }
+}
+.report-bar {
   grid-area: tabs;
   display: flex;
+  align-items: center;
+  gap: 8px;
   min-width: 0;
   margin-inline: calc(var(--header-inset) * -1);
   padding: 8px var(--header-inset) 0;
   border-top: 1px solid var(--border-subtle);
+}
+.report-navigation {
+  display: flex;
+  min-width: 0;
+}
+.race-tools {
+  display: flex;
+  flex: none;
 }
 /* One tab group: the section in view reads as the selected tab. */
 .report-links {
@@ -138,8 +180,10 @@ h2 {
   display: none;
 }
 @media (max-width: 767px) {
+  /* The actions shrink to icons, so the course title takes every pixel they leave. */
   .replay-header {
     --header-inset: 12px;
+    grid-template-columns: minmax(0, 1fr) auto;
     gap: 8px 10px;
   }
   /* A race picker needs the width, so it takes its own row. */
@@ -152,6 +196,9 @@ h2 {
   .replay-header:has(.header-actions :global(.field)) .header-actions {
     justify-self: stretch;
   }
+  .replay-header:has(.header-actions :global(.field)) .header-source {
+    min-width: 0;
+  }
   .replay-icon {
     display: none;
   }
@@ -162,9 +209,13 @@ h2 {
     font-size: 15px;
   }
   .race-facts {
-    display: flex;
-    flex-wrap: wrap;
     font-size: 11px;
+    white-space: normal;
+    text-wrap: balance;
+  }
+  .report-bar {
+    flex-direction: column;
+    align-items: stretch;
   }
   .report-links {
     flex: 1;
@@ -179,5 +230,8 @@ h2 {
   }
   .tab-short {
     display: inline;
+  }
+  .recorded-label {
+    display: none;
   }
 }

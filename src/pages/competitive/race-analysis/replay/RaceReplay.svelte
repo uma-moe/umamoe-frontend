@@ -33,6 +33,9 @@
   import ReplayEnsembleViews from './ensemble/ReplayEnsembleViews.svelte';
   import ReplayRunnerAnalysis from './runner/ReplayRunnerAnalysis.svelte';
   import ReplayBuildDialog from './runner/ReplayBuildDialog.svelte';
+  import ReplayClipDialog from './clip/ReplayClipDialog.svelte';
+  import ReplayClipCrop from './clip/ReplayClipCrop.svelte';
+  import { ReplayClip } from './clip/replay-clip.svelte';
   import type { RaceTrajectory } from '@/lib/race/replay/race-ensemble';
   import { recordedSimulation, type DetailedSimulation } from '../detailed-simulation';
 
@@ -42,6 +45,8 @@
     selected = $bindable('0'),
     skillNames = new Map<number, string>(),
     headerActions,
+    raceTools,
+    simulationReport,
     sessionReport,
     hasSession = false,
     focus,
@@ -49,7 +54,8 @@
     suspended = false,
     ensembleTimeline,
     simulation,
-    onretrysimulation
+    onretrysimulation,
+    onrecorded
   }: {
     capture: ParsedRaceCapture;
     ensemble?: RaceTrajectory[];
@@ -58,6 +64,10 @@
     selected?: string;
     skillNames?: Map<number, string>;
     headerActions?: Snippet;
+    /** Controls for the whole race, after its section tabs. */
+    raceTools?: Snippet;
+    /** Races simulated from this one, shown between the header and the results. */
+    simulationReport?: Snippet;
     sessionReport?: Snippet;
     hasSession?: boolean;
     focus?: { runner: number; time?: number };
@@ -66,6 +76,8 @@
     /** Defaults to what the capture itself carries, for viewers that never load a simulation. */
     simulation?: DetailedSimulation;
     onretrysimulation?: () => void;
+    /** Shows the recorded race again in place of a rerun. */
+    onrecorded?: () => void;
   } = $props();
 
   const savedSettings = loadReplaySettings();
@@ -73,13 +85,13 @@
   let telemetryExpanded = $state(false);
   let windowMeters = $state(savedSettings.windowMeters),
     trackOverride = $state(''),
-    laneScaleMode = $state<string>(savedSettings.laneScaleMode);
+    laneScaleMode = $state<string>(savedSettings.laneScaleMode),
+    mapLaneSpacing = $state<string>(savedSettings.mapLaneSpacing);
 
   let report = $state<HTMLElement>(),
     analysisTarget = $state<HTMLElement>();
 
   let currentSection = $state('results');
-  let headerHeight = $state(0);
 
   // The tallest the runner analysis has been for this race at this width: a shorter runner never shrinks the page under the reader.
   let analysisHeight = $state(0),
@@ -112,6 +124,7 @@
   let courses = $state.raw<CourseData>(),
     courseError = $state(''),
     visibility = $state<Record<number, number>>({}),
+    comparedHidden = $state<number[]>([]),
     fullscreenTarget = $state<HTMLDivElement>(),
     fullscreen = $state(false);
 
@@ -123,8 +136,10 @@
 
   const mapPrimary = $derived(focusView === 'map');
 
-  // Narrow screens list the field below the stage; wider ones float it over the stage corner.
+  // Phones leave the field out, tablets list it below the stage, and wider screens float it over the stage corner.
+  const phone = new MediaQuery('max-width: 767px');
   const wideStage = new MediaQuery('min-width: 951px');
+  const showField = $derived(toggles.field && !phone.current);
   let fieldWidth = $state(0);
   const fieldOverlay = $derived(wideStage.current && toggles.field);
   const fieldInset = $derived(fieldOverlay ? fieldWidth + 20 : 0);
@@ -139,10 +154,24 @@
   });
   replay.speed = savedSettings.playbackSpeed;
 
+  let positionStage = $state<ReturnType<typeof ReplayPositionStage>>(),
+    fieldPanel = $state<ReturnType<typeof ReplayRoster>>();
+
+  // The race positions view and the race field over it draw their own clip frames; the map is copied.
+  const clip = new ReplayClip({
+    replay,
+    container: () => fullscreenTarget,
+    canvasLayers: () =>
+      positionStage && !mapPrimary
+        ? [positionStage, ...(fieldPanel && fieldOverlay ? [fieldPanel] : [])]
+        : undefined
+  });
+
   $effect(() => {
     saveReplaySettings({
       layout: focusView,
       laneScaleMode,
+      mapLaneSpacing,
       windowMeters,
       playbackSpeed: replay.speed,
       toggles
@@ -181,7 +210,8 @@
   let laneScaleCapture: ParsedRaceCapture | undefined;
 
   $effect(() => {
-    const instant = laneScaleMode === 'fixed' || laneScaleCapture !== capture;
+    const instant = laneScaleMode === 'fixed' || replay.recording || laneScaleCapture !== capture;
+
     laneScaleCapture = capture;
     void laneScale.set(laneTarget, { instant }).catch(() => {});
   });
@@ -190,7 +220,10 @@
     void laneScale.set(laneScale.current, { instant: true });
   });
 
-  const displayedLaneMax = $derived(laneScaleMode === 'fixed' ? laneTarget : laneScale.current);
+  // A recording reads each frame's lane scale directly, as it draws frames without running effects.
+  const displayedLaneMax = $derived(
+    laneScaleMode === 'fixed' || replay.recording ? laneTarget : laneScale.current
+  );
   // The follow camera of both views, for a stretch of course of any length: it keeps the leader
   // forward while racing and turns to rest on the finish.
   function cameraWindow(length: number) {
@@ -289,20 +322,32 @@
     }
   }
 
+  function shortcut(event: KeyboardEvent): (() => void) | undefined {
+    const seekStep = event.shiftKey ? 1 : 0.1;
+
+    if (event.code === 'Space') return clip.editing ? clip.play : replay.play;
+    if (event.key === 'ArrowRight') return () => replay.seek(replay.time + seekStep);
+    if (event.key === 'ArrowLeft') return () => replay.seek(replay.time - seekStep);
+    if (event.key === '.') return () => replay.stepFrame(1);
+    if (event.key === ',') return () => replay.stepFrame(-1);
+    if (clip.editing && event.key.toLowerCase() === 'i') return () => clip.mark('start');
+    if (clip.editing && event.key.toLowerCase() === 'o') return () => clip.mark('end');
+    return undefined;
+  }
+
   function keydown(event: KeyboardEvent) {
-    if (settingsOpen || buildOpen || event.target !== document.body || !analysisTarget) return;
+    if (settingsOpen || buildOpen || replay.recording) return;
+    if (event.ctrlKey || event.metaKey || event.altKey) return;
+    if (event.target !== document.body || !analysisTarget) return;
+
     const box = analysisTarget.getBoundingClientRect();
     if (box.bottom < 120 || box.top > innerHeight) return;
-    if (event.code === 'Space') {
-      event.preventDefault();
-      replay.play();
-    } else if (event.key === 'ArrowRight') {
-      event.preventDefault();
-      replay.seek(replay.time + 0.1);
-    } else if (event.key === 'ArrowLeft') {
-      event.preventDefault();
-      replay.seek(replay.time - 0.1);
-    }
+
+    const action = shortcut(event);
+    if (!action) return;
+
+    event.preventDefault();
+    action();
   }
 
   /** A resimulation keeps the recorded input, or for simulator samples the name and seed, of the race it replaces. */
@@ -321,6 +366,8 @@
       if (!ensemble) selected = String(capture.runners[0]?.index ?? 0);
       trackOverride = '';
       visibility = {};
+      comparedHidden = [];
+      clip.close();
     });
   });
 
@@ -380,7 +427,10 @@
     };
   });
 
-  onDestroy(replay.pause);
+  onDestroy(() => {
+    replay.pause();
+    clip.close();
+  });
 
   $effect(() => {
     if (telemetryExpanded || suspended) replay.pause();
@@ -392,6 +442,10 @@
     if (document.hidden) replay.pause();
   }}
 />
+{#snippet clipCrop()}
+  <ReplayClipCrop {clip} />
+{/snippet}
+
 <svelte:window
   onkeydown={keydown}
   onscroll={overviewOnly ? undefined : trackSection}
@@ -402,7 +456,6 @@
   class:overview={overviewOnly}
   class:ensemble-view={!!ensemble}
   data-surface={course?.surface === 2 ? 'dirt' : 'turf'}
-  style:--replay-header-height={headerHeight + 'px'}
   bind:this={report}
 >
   {#if !overviewOnly}
@@ -416,10 +469,12 @@
       simulation={replaySimulation}
       {hasSession}
       current={currentSection}
-      bind:height={headerHeight}
       {headerActions}
+      {raceTools}
       onjump={scrollToSection}
+      {onrecorded}
     />
+    {@render simulationReport?.()}
   {/if}
   <ReplayDisplayOptions
     {capture}
@@ -431,7 +486,9 @@
     bind:trackOverride
     bind:windowMeters
     bind:laneScaleMode
+    bind:mapLaneSpacing
     bind:toggles
+    hiddenOptions={phone.current ? ['field'] : []}
   />
   {#if courseError}
     <div class="notice">
@@ -465,27 +522,6 @@
         class="replay-layout"
         bind:this={fullscreenTarget}
       >
-        {#snippet replayTitle()}
-          <div class="replay-view">
-            <h2>{ensemble ? 'Mean race replay' : 'Race replay'}</h2>
-            <SegmentedControl
-              compact
-              label="Primary replay view"
-              options={[
-                { value: 'positions', label: 'Race positions' },
-                { value: 'map', label: 'Course map' }
-              ]}
-              bind:value={focusView}
-            />
-          </div>
-        {/snippet}
-        {#snippet replayTools()}
-          <ReplayStageTools
-            {fullscreen}
-            onsettings={() => (settingsOpen = true)}
-            onfullscreen={toggleFullscreen}
-          />
-        {/snippet}
         {#if ensemble}
           <ReplayEnsembleViews
             {replay}
@@ -495,14 +531,31 @@
             bind:selected
           />
         {:else}
-          {#if !mapPrimary || !shapes}
-            <div class="stage-heading">
-              {@render replayTitle()}{@render replayTools()}
+          <div class="stage-heading">
+            <div class="replay-view">
+              <h2>Race replay</h2>
+              <SegmentedControl
+                compact
+                label="Primary replay view"
+                options={[
+                  { value: 'positions', label: 'Race positions' },
+                  { value: 'map', label: 'Course map' }
+                ]}
+                bind:value={focusView}
+              />
             </div>
-          {/if}
+            <ReplayStageTools
+              {fullscreen}
+              clipping={clip.editing}
+              onclip={clip.editing ? clip.close : clip.edit}
+              onsettings={() => (settingsOpen = true)}
+              onfullscreen={toggleFullscreen}
+            />
+          </div>
           <!-- Only the chosen view is mounted: a hidden one would still redraw every playback frame. -->
           {#if !mapPrimary}
             <ReplayPositionStage
+              bind:this={positionStage}
               {replay}
               {course}
               {toggles}
@@ -515,6 +568,7 @@
               {visibility}
               {fieldInset}
               bind:selected
+              overlay={clip.editing ? clipCrop : undefined}
             />
           {:else if shapes}
             <ReplayCourseMap
@@ -529,11 +583,11 @@
               laneMax={displayedLaneMax}
               {visibility}
               {fieldInset}
+              doubledLanes={mapLaneSpacing === 'doubled'}
               bind:selected
               onseekdistance={seekDistance}
               onselectcourse={() => (settingsOpen = true)}
-              toolbarStart={replayTitle}
-              toolbarEnd={replayTools}
+              overlay={clip.editing ? clipCrop : undefined}
             />
           {:else}
             <div class="map-loading fullscreen-target">
@@ -565,8 +619,9 @@
               {/if}
             </div>
           {/if}
-          {#if toggles.field}
+          {#if showField}
             <ReplayRoster
+              bind:this={fieldPanel}
               {replay}
               overlay={fieldOverlay}
               showBlocked={toggles.blocked}
@@ -585,6 +640,8 @@
           {ensembleTimeline}
           bind:selected
           bind:expanded={telemetryExpanded}
+          bind:hiddenRunners={comparedHidden}
+          clip={ensemble ? undefined : clip}
         />
       </div>
     </section>
@@ -657,6 +714,7 @@
     {skillNames}
     bind:open={buildOpen}
   />
+  <ReplayClipDialog {clip} />
 </section>
 
 <style>

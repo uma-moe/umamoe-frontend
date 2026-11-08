@@ -1,24 +1,41 @@
 <script lang="ts">
   import Button from '@/components/controls/Button.svelte';
-  import Icon from '@/components/Icon.svelte';
-  import InspectPopover from '@/components/overlays/InspectPopover.svelte';
 
   let {
     fullscreen,
+    clipping = false,
+    onclip,
     onsettings,
     onfullscreen
   }: {
     fullscreen: boolean;
+    /** The clip editor is open on the timeline. */
+    clipping?: boolean;
+    /** Absent where the replay cannot be recorded, such as a mean race. */
+    onclip?: () => void;
     onsettings: () => void;
     onfullscreen: () => void;
   } = $props();
 </script>
 
 <div
-  class="stage-tools"
+  class="stage-tools replay-toolbar"
   role="group"
   aria-label="Replay actions"
 >
+  {#if onclip}
+    <Button
+      variant="secondary"
+      size="sm"
+      icon="video"
+      ariaLabel="Create clip"
+      ariaPressed={clipping}
+      title="Cut a video clip of the replay"
+      onclick={onclip}
+    >
+      <span class="tool-label">Clip</span>
+    </Button>
+  {/if}
   <Button
     variant="secondary"
     size="sm"
@@ -26,53 +43,19 @@
     ariaLabel="Display options"
     onclick={onsettings}
   >
-    <span class="tool-label">Display options</span>
+    <span class="tool-label">Display</span>
   </Button>
-  <span class="replay-guide">
-    <InspectPopover
-      label="Replay guide"
-      align="end"
-    >
-      {#snippet trigger()}
-        <span class="guide-trigger">
-          <Icon
-            name="info"
-            size={15}
-          />
-          <span class="tool-label">Guide</span>
-        </span>
-      {/snippet}
-      <div class="course-legend">
-        <strong>Reading the replay</strong>
-        <small>
-          Drag to pan. Ctrl / ⌘ + scroll to zoom. Follow window keeps the racing pack in view. Lanes
-          ×2 expands lane spacing. Each portrait sits on the runner's exact position and shows their
-          starting gate.
-        </small>
-        <small>
-          Select a runner to follow their speed, HP and skills. Use the timeline to jump to any
-          moment. Select or hover a runner to see crowded labels.
-        </small>
-        {#each [{ label: 'Straight', color: '#64918c' }, { label: 'Final straight', color: '#419168' }, { label: 'Corner', color: '#7b7ea8' }, { label: 'Final corner', color: '#bb9148' }] as item}
-          <span>
-            <i style:background={item.color}></i>
-            {item.label}
-          </span>
-        {/each}
-      </div>
-    </InspectPopover>
-  </span>
   <Button
     variant="secondary"
     size="sm"
     icon="expand"
     ariaLabel={fullscreen ? 'Exit fullscreen' : 'Fullscreen'}
+    title={fullscreen ? 'Exit fullscreen' : 'Fullscreen'}
     onclick={onfullscreen}
-  >
-    <span class="tool-label">{fullscreen ? 'Exit fullscreen' : 'Fullscreen'}</span>
-  </Button>
+  />
 </div>
 
 <style>
+  @import '../replay-toolbar.css';
   @import './replay-stage-tools.css';
 </style>

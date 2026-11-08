@@ -37,12 +37,13 @@
   .track-status {
     position: absolute;
     top: 8px;
-    left: 8px;
+    /* Beside the camera controls in the map's top-left corner. */
+    left: 48px;
     z-index: 3;
     display: flex;
     flex-wrap: wrap;
     gap: 4px;
-    max-width: calc(100% - 16px);
+    max-width: calc(100% - 56px);
     margin: 0;
     padding: 0;
     list-style: none;

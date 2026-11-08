@@ -6,6 +6,7 @@ it('restores all replay preferences from the shared storage key', () => {
   const saved = {
     layout: 'map',
     laneScaleMode: 'automatic',
+    mapLaneSpacing: 'actual',
     windowMeters: 160,
     playbackSpeed: '4',
     toggles: { ...defaultReplayToggles(), hpBars: true, skills: false }
@@ -21,6 +22,7 @@ it('keeps defaults for absent, malformed or invalid fields without losing valid 
   expect(defaults).toMatchObject({
     layout: 'positions',
     laneScaleMode: 'fixed',
+    mapLaneSpacing: 'doubled',
     windowMeters: 80,
     toggles: { hpBars: false, skillTimers: true, cone: false }
   });
@@ -33,6 +35,7 @@ it('keeps defaults for absent, malformed or invalid fields without losing valid 
         JSON.stringify({
           layout: 'unknown',
           laneScaleMode: 'unknown',
+          mapLaneSpacing: 'unknown',
           windowMeters: '80',
           playbackSpeed: '99',
           toggles: { skills: false, hpBars: 'true', unknown: true }

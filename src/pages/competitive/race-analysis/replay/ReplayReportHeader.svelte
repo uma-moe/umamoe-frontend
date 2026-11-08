@@ -3,6 +3,7 @@
   import type { ParsedRaceCapture } from '@/lib/race/capture/race-capture-parser';
   import { formatRaceTime, trackDetailName } from '@/lib/race/replay/race-display';
   import Badge from '@/components/Badge.svelte';
+  import Button from '@/components/controls/Button.svelte';
   import Icon from '@/components/Icon.svelte';
   import type { IconName } from '@/components/icon-types';
   import type { DetailedSimulation } from '../detailed-simulation';
@@ -18,9 +19,10 @@
     simulation,
     hasSession,
     current,
-    height = $bindable(0),
     headerActions,
-    onjump
+    raceTools,
+    onjump,
+    onrecorded
   }: {
     capture: ParsedRaceCapture;
     course?: Course;
@@ -32,9 +34,12 @@
     hasSession: boolean;
     /** The section in view, which its tab marks. */
     current: string;
-    height?: number;
     headerActions?: Snippet;
+    /** Controls for the whole race, after its section tabs. */
+    raceTools?: Snippet;
     onjump: (section: string) => void;
+    /** Shows the recorded race again in place of a rerun. */
+    onrecorded?: () => void;
   } = $props();
 
   type BadgeTone = ComponentProps<typeof Badge>['tone'];
@@ -81,6 +86,12 @@
 
     return 'Choose the course in Display options';
   });
+  const rerun = $derived(simulation.status === 'ready' ? simulation.rerun : undefined);
+  const rerunSeating = $derived.by(() => {
+    if (!rerun?.newGates) return undefined;
+
+    return rerun.newMoods ? 'New gates and moods' : 'New gates';
+  });
   const raceFacts = $derived(
     [
       capture.track.condition
@@ -91,17 +102,18 @@
       course ? (turnNames[course.turn] ?? 'Straight') : undefined,
       capture.runners.length + ' runners',
       formatRaceTime(endTime),
+      rerun ? 'Seed ' + rerun.seed : undefined,
+      rerunSeating,
       courseNote
     ].filter((fact) => fact !== undefined)
   );
-  const simulationBadge = $derived(simulationBadges[simulation.status]);
+  const simulationBadge = $derived(
+    rerun ? { tone: 'accent' as const, label: 'Rerun' } : simulationBadges[simulation.status]
+  );
   const sections = $derived(hasSession ? [...raceSections, sessionSection] : raceSections);
 </script>
 
-<header
-  class="replay-header"
-  bind:clientHeight={height}
->
+<header class="replay-header">
   <div class="replay-title">
     <span class="replay-icon">
       <Icon
@@ -129,31 +141,55 @@
       </p>
     </div>
   </div>
-  <nav
-    class="report-navigation"
-    aria-label="Jump to analysis section"
-  >
-    <div class="report-links">
-      {#each sections as section}
-        <button
-          type="button"
-          class="section-tab"
-          aria-label={section.label}
-          aria-current={current === section.id ? 'location' : undefined}
-          onclick={() => onjump(section.id)}
+  <div class="report-bar">
+    <nav
+      class="report-navigation"
+      aria-label="Jump to analysis section"
+    >
+      <div class="report-links">
+        {#each sections as section}
+          <button
+            type="button"
+            class="section-tab"
+            aria-label={section.label}
+            aria-current={current === section.id ? 'location' : undefined}
+            onclick={() => onjump(section.id)}
+          >
+            <Icon
+              name={section.icon}
+              size={15}
+            />
+            <span class="tab-long">{section.label}</span>
+            <span class="tab-short">{section.short}</span>
+          </button>
+        {/each}
+      </div>
+    </nav>
+    {#if raceTools}
+      <div class="race-tools">{@render raceTools()}</div>
+    {/if}
+  </div>
+  {#if headerActions || (rerun && onrecorded)}
+    <div class="header-actions">
+      {#if rerun && onrecorded}
+        <Button
+          variant="secondary"
+          size="sm"
+          icon="restart"
+          ariaLabel="Return to original race"
+          title="Return to original race"
+          onclick={onrecorded}
         >
-          <Icon
-            name={section.icon}
-            size={15}
-          />
-          <span class="tab-long">{section.label}</span>
-          <span class="tab-short">{section.short}</span>
-        </button>
-      {/each}
+          <span class="recorded-label">
+            <span class="label-long">Return to original race</span>
+            <span class="label-short">Original race</span>
+          </span>
+        </Button>
+      {/if}
+      {#if headerActions}
+        <div class="header-source">{@render headerActions()}</div>
+      {/if}
     </div>
-  </nav>
-  {#if headerActions}
-    <div class="header-actions">{@render headerActions()}</div>
   {/if}
 </header>
 

@@ -129,7 +129,7 @@
 @media (max-width: 700px) {
   /* Phones fit the whole race in view: short track names leave the plot most of the width. */
   .playback {
-    --timeline-label-width: 40px;
+    --timeline-label-width: 52px;
     --timeline-value-width: 24px;
     --timeline-column-gap: 4px;
   }
@@ -158,6 +158,7 @@
   scrollbar-width: thin;
 }
 .timeline-content {
+  position: relative;
   min-width: 0;
 }
 .timeline-scroll:focus-visible {
@@ -198,9 +199,10 @@
 }
 /* The smallest screens give the plot the whole width: track names, side values and axis scales give way. */
 @media (max-width: 480px) {
+  /* The side columns keep only the slider thumb's overhang, so the thumb is not cut off at either end. */
   .playback {
-    --timeline-label-width: 0px;
-    --timeline-value-width: 0px;
+    --timeline-label-width: 7px;
+    --timeline-value-width: 7px;
     --timeline-column-gap: 0px;
   }
   .playback :global(:is(.timeline-label, .timeline-labels, .timeline-values, .strip-count)) {

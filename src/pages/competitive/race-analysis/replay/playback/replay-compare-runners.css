@@ -1,0 +1,102 @@
+.compare-runners {
+  display: grid;
+  min-width: min(200px, 100%);
+}
+/* Clear of the popover's close button, with its line box centred on it. */
+h3 {
+  margin: 0 0 2px;
+  padding-right: 32px;
+  font-size: 13px;
+  font-weight: 600;
+  line-height: 24px;
+}
+/* Rows bleed into the popover's padding so their hover fill has room while boxes line up with the title.
+   The list bleeds rather than its rows, which would overflow its scroll box sideways. */
+.all-runners,
+ul {
+  margin-inline: -5px;
+}
+.all-runners,
+li {
+  padding-inline: 5px;
+  border-radius: 5px;
+}
+.all-runners {
+  margin-bottom: 2px;
+  padding-bottom: 2px;
+  border-bottom: 1px solid var(--color-border);
+  border-radius: 0;
+}
+.all-runners :global(.checkbox) {
+  min-height: 26px;
+}
+.all-runners :global(.checkbox strong) {
+  font-size: 12px;
+  font-weight: 600;
+}
+ul {
+  display: grid;
+  max-height: min(360px, 50dvh);
+  margin-block: 0;
+  padding: 0;
+  overflow-y: auto;
+  list-style: none;
+}
+li {
+  display: grid;
+  grid-template-columns: 14px minmax(0, 1fr);
+  align-items: center;
+  gap: 8px;
+  min-height: 26px;
+}
+li:not(.followed):hover {
+  background: var(--factor-option-hover);
+}
+.followed .runner {
+  cursor: default;
+}
+.compare-runners :global(.checkbox) {
+  grid-template-columns: 14px minmax(0, 1fr);
+  gap: 8px;
+}
+.compare-runners :global(.checkbox.box-only) {
+  grid-template-columns: 14px;
+  min-height: 0;
+}
+.compare-runners :global(.box) {
+  width: 14px;
+  height: 14px;
+}
+.compare-runners :global(.box svg) {
+  width: 11px;
+  height: 11px;
+}
+.runner {
+  display: grid;
+  grid-template-columns: 20px 12px minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 6px;
+  min-height: 26px;
+  cursor: pointer;
+}
+.runner :global(.art) {
+  width: 20px;
+  height: 20px;
+}
+.place {
+  color: var(--text-secondary);
+  font-size: 11px;
+  font-variant-numeric: tabular-nums;
+  text-align: right;
+}
+.name {
+  overflow: hidden;
+  font-size: 12px;
+  font-weight: 600;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+small {
+  color: var(--text-secondary);
+  font-size: 10px;
+}
