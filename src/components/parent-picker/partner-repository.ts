@@ -25,8 +25,28 @@ interface LookupResponse {
 
 export type PartnerPhase = 'queued' | 'pending' | 'processing';
 
+const OPTIONAL_NUMBER_FIELDS = [
+  'id',
+  'main_blue_factors',
+  'main_pink_factors',
+  'main_green_factors',
+  'left_blue_factors',
+  'left_pink_factors',
+  'left_green_factors',
+  'right_blue_factors',
+  'right_pink_factors',
+  'right_green_factors',
+  'win_count',
+  'white_count',
+  'affinity_score'
+];
+
 function isRecord(value: unknown): value is Record<string, unknown> {
   return value !== null && typeof value === 'object' && !Array.isArray(value);
+}
+
+function isFiniteNumber(value: unknown): value is number {
+  return typeof value === 'number' && Number.isFinite(value);
 }
 
 function isPartnerRecord(value: unknown): value is PartnerRecord {
@@ -40,38 +60,12 @@ function isPartnerRecord(value: unknown): value is PartnerRecord {
     'parent_rarity'
   ];
 
+  if (!requiredNumbers.every((key) => isFiniteNumber(value[key]))) return false;
   if (
-    !requiredNumbers.every((key) => typeof value[key] === 'number' && Number.isFinite(value[key]))
+    !OPTIONAL_NUMBER_FIELDS.every((key) => value[key] === undefined || isFiniteNumber(value[key]))
   )
     return false;
-  const optionalNumbers = [
-    'id',
-    'main_blue_factors',
-    'main_pink_factors',
-    'main_green_factors',
-    'left_blue_factors',
-    'left_pink_factors',
-    'left_green_factors',
-    'right_blue_factors',
-    'right_pink_factors',
-    'right_green_factors',
-    'win_count',
-    'white_count',
-    'affinity_score'
-  ];
-
-  if (
-    !optionalNumbers.every(
-      (key) =>
-        value[key] === undefined || (typeof value[key] === 'number' && Number.isFinite(value[key]))
-    )
-  )
-    return false;
-  if (
-    value.scenario_id != null &&
-    (typeof value.scenario_id !== 'number' || !Number.isFinite(value.scenario_id))
-  )
-    return false;
+  if (value.scenario_id != null && !isFiniteNumber(value.scenario_id)) return false;
   return ['trainer_name', 'label'].every(
     (key) => value[key] == null || typeof value[key] === 'string'
   );
@@ -79,7 +73,15 @@ function isPartnerRecord(value: unknown): value is PartnerRecord {
 
 function parsePartnerRecord(value: unknown): PartnerRecord {
   if (!isRecord(value)) throw new Error('Partner lookup returned invalid inheritance data.');
-  const normalized = { ...value, inheritance_id: value.inheritance_id ?? value.id ?? 0 };
+  const normalized: Record<string, unknown> = {
+    ...value,
+    inheritance_id: value.inheritance_id ?? value.id ?? 0
+  };
+
+  // Saved partners send null for columns older lookups never filled, such as affinity_score.
+  for (const key of OPTIONAL_NUMBER_FIELDS) {
+    if (normalized[key] === null) delete normalized[key];
+  }
 
   if (!isPartnerRecord(normalized))
     throw new Error('Partner lookup returned invalid inheritance data.');

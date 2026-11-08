@@ -95,6 +95,32 @@ it('normalizes the saved-partner identifier from completed events', async () => 
   });
 });
 
+it('loads saved partners whose affinity score was never recorded', async () => {
+  const savedRow = {
+    id: 7,
+    account_id: '123456789012',
+    main_parent_id: 100101,
+    scenario_id: 1,
+    parent_left_id: 100201,
+    parent_right_id: 100301,
+    parent_rank: 1000,
+    parent_rarity: 3,
+    affinity_score: null,
+    trainer_name: 'Trainer',
+    label: null
+  };
+  vi.spyOn(appHttp, 'request').mockResolvedValue([savedRow]);
+
+  const partners = await partnerRepository.saved();
+
+  expect(partners).toHaveLength(1);
+  expect(partners[0]).toMatchObject({
+    pickerId: 'partner:123456789012:7',
+    share_inheritance_id: 7,
+    trainer_id: '123456789012'
+  });
+});
+
 it('validates lookup metadata before opening its event stream', async () => {
   const request = vi
     .spyOn(appHttp, 'request')
