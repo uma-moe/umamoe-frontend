@@ -69,46 +69,26 @@ test('status details, build notification, and changelog work on desktop and mobi
   await page.getByRole('button', { name: 'What’s new', exact: true }).click();
   const updates = page.getByRole('dialog', { name: 'What’s new', exact: true });
   await expect(
-    updates.getByRole('heading', { name: 'Hakuraku comes to uma.moe', exact: true })
+    updates.getByRole('heading', { name: 'Race Analysis & Simulator update', exact: true })
   ).toBeVisible();
 
-  await expect(updates.locator('.release-summary')).toContainText('A new home for racing');
-  const highlights = updates.getByRole('navigation', { name: 'Update highlights', exact: true });
-  const names = [
-    'Race Simulator',
+  await expect(updates.locator('.release-summary')).toContainText(
+    'Race Analysis shows what every skill was worth'
+  );
+  const sections = [
     'Race Analysis',
-    'Champions Meeting Data',
+    'Race replay',
+    'Race Simulator',
     'Skill Explorer',
-    'HP Calculator',
     'Build Optimizer',
-    'Research Library',
-    'Master Data'
+    'Across the site',
+    'Fixes'
   ];
 
-  for (const name of names) {
-    await highlights.getByRole('button', { name, exact: true }).click();
+  for (const name of sections) {
     await expect(updates.getByRole('heading', { name, exact: true })).toBeVisible();
-    await expect
-      .poll(() =>
-        updates
-          .locator('.feature-image img')
-          .evaluate((image) => (image as HTMLImageElement).naturalWidth)
-      )
-      .toBeGreaterThan(0);
-    expect(await updates.evaluate((element) => element.scrollWidth <= element.clientWidth)).toBe(
-      true
-    );
   }
 
-  await expect(updates.getByRole('button', { name: 'Next highlight', exact: true })).toBeDisabled();
-  await updates.getByRole('button', { name: 'Previous highlight', exact: true }).click();
-  await expect(
-    updates.getByRole('heading', { name: 'Research Library', exact: true })
-  ).toBeVisible();
-  await highlights.getByRole('button', { name: 'Race Simulator', exact: true }).click();
-  await expect(
-    updates.getByRole('button', { name: 'Previous highlight', exact: true })
-  ).toBeDisabled();
   for (const width of [originalViewport.width, 320]) {
     await page.setViewportSize({ width, height: originalViewport.height });
     for (const theme of ['dark', 'light']) {
@@ -149,7 +129,7 @@ test('status details, build notification, and changelog work on desktop and mobi
   await expect(updates.locator('details[open]')).toHaveCount(1);
   await updates.getByRole('button', { name: 'Latest release', exact: true }).click();
   await expect(
-    updates.getByRole('heading', { name: 'Hakuraku comes to uma.moe', exact: true })
+    updates.getByRole('heading', { name: 'Race Analysis & Simulator update', exact: true })
   ).toBeVisible();
 
   await updates.getByRole('button', { name: 'Got it', exact: true }).click();
@@ -160,7 +140,7 @@ test('status details, build notification, and changelog work on desktop and mobi
   await updates.getByRole('button', { name: 'Got it', exact: true }).click();
   await expect(updates).toBeHidden();
   await expect(page).toHaveURL(currentUrl);
-  expect(await page.evaluate(() => localStorage.getItem('lastSeenUpdateVersion'))).toBe('19');
+  expect(await page.evaluate(() => localStorage.getItem('lastSeenUpdateVersion'))).toBe('20');
   expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBe(
     page.viewportSize()!.width
   );
@@ -189,19 +169,19 @@ test('route changes refresh canonical, social, and structured metadata without p
   await expect(page.locator('#page-structured-data')).toHaveCount(0);
 });
 
-test('Hakuraku update is announced once to returning visitors and stays available from the footer', async ({
+test('the latest update is announced once to returning visitors and stays available from the footer', async ({
   page
 }) => {
   await page.goto('/tools');
-  await page.evaluate(() => localStorage.setItem('lastSeenUpdateVersion', '18'));
+  await page.evaluate(() => localStorage.setItem('lastSeenUpdateVersion', '19'));
   await page.reload();
   const updates = page.getByRole('dialog', { name: 'What’s new', exact: true });
   await expect(
-    updates.getByRole('heading', { name: 'Hakuraku comes to uma.moe', exact: true })
+    updates.getByRole('heading', { name: 'Race Analysis & Simulator update', exact: true })
   ).toBeVisible();
 
   await page.keyboard.press('Escape');
-  expect(await page.evaluate(() => localStorage.getItem('lastSeenUpdateVersion'))).toBe('19');
+  expect(await page.evaluate(() => localStorage.getItem('lastSeenUpdateVersion'))).toBe('20');
   await page.reload();
   await page.waitForTimeout(1800); // The automatic announcement checks after 1.5 seconds.
   await expect(updates).not.toBeVisible();
@@ -209,18 +189,14 @@ test('Hakuraku update is announced once to returning visitors and stays availabl
   await expect(updates).toBeVisible();
 });
 
-test('update highlights open the matching feature and remember dismissal', async ({ page }) => {
+test('update links open the matching feature and remember dismissal', async ({ page }) => {
   await page.goto('/tools');
   await page.getByRole('button', { name: 'What’s new', exact: true }).click();
   const updates = page.getByRole('dialog', { name: 'What’s new', exact: true });
 
-  await updates
-    .getByRole('navigation', { name: 'Update highlights' })
-    .getByRole('button', { name: 'Research Library', exact: true })
-    .click();
-  await updates.getByRole('link', { name: 'Read the research', exact: true }).click();
+  await updates.getByRole('link', { name: /A new start page/ }).click();
 
-  await expect(page).toHaveURL(/\/research$/);
+  await expect(page).toHaveURL(/\/competitive\/race-analysis$/);
   await expect(updates).toBeHidden();
-  expect(await page.evaluate(() => localStorage.getItem('lastSeenUpdateVersion'))).toBe('19');
+  expect(await page.evaluate(() => localStorage.getItem('lastSeenUpdateVersion'))).toBe('20');
 });

@@ -30,6 +30,98 @@ export interface UpdateEntry {
 // Define your updates here - newest first
 export const UPDATE_LOG: UpdateEntry[] = [
   {
+    title: 'Race Analysis & Simulator update',
+    date: '2026-11-08',
+    summary:
+      'Race Analysis shows what every skill was worth, the race simulator can fill its field with real CM teams, and the Skill Explorer shows the build behind its values.',
+    categories: [
+      {
+        category: 'major',
+        label: 'Race Analysis',
+        icon: 'analysis',
+        items: [
+          {
+            text: 'A new start page: import your races, or watch the demo race.',
+            link: '/competitive/race-analysis'
+          },
+          {
+            text: 'Skill gains: what each skill won in lengths and seconds, against the race without it.'
+          },
+          { text: 'Last spurt calculation, HP and acceleration cards, and race behaviour lanes.' },
+          { text: 'Win-rate estimates, broken down by team and race history.' }
+        ]
+      },
+      {
+        category: 'improvement',
+        label: 'Race replay',
+        icon: 'play',
+        items: [
+          {
+            text: 'Sharper race positions and course map at any zoom, with section and slope bands.'
+          },
+          { text: 'Export a stretch of the replay as a video clip.' },
+          { text: 'One profile card per runner: result, build, deck and parents.' },
+          { text: 'The pacemaker is marked, and your replay settings are remembered.' }
+        ]
+      },
+      {
+        category: 'major',
+        label: 'Race Simulator',
+        icon: 'stopwatch',
+        items: [
+          {
+            text: 'Populate the field for your race settings, or add three real CM teams.',
+            link: '/simulator/race'
+          },
+          { text: 'See why a skill never activated, down to the condition it missed.' },
+          { text: 'Let position skills ignore place and field size, right beside Gates.' }
+        ]
+      },
+      {
+        category: 'improvement',
+        label: 'Skill Explorer',
+        icon: 'search',
+        items: [
+          {
+            text: 'See the reference build each skill value is measured in.',
+            link: '/tools/skill-explorer'
+          },
+          { text: 'Gated skills show their setup and their value at each point of the gate.' },
+          { text: 'Your course is remembered, and explanations sit behind info buttons.' }
+        ]
+      },
+      {
+        category: 'improvement',
+        label: 'Build Optimizer',
+        icon: 'tune',
+        items: [
+          {
+            text: 'Builds list their skills in the skill shop’s order, so a plan is quick to buy.',
+            link: '/simulator/skills'
+          },
+          {
+            text: 'Sort the builds’ skills by SP or by what each one gains from the list headings.'
+          }
+        ]
+      },
+      {
+        category: 'minor',
+        label: 'Across the site',
+        icon: 'star',
+        items: [{ text: 'Skill points show the game’s hint icon in place of “SP”.' }]
+      },
+      {
+        category: 'bugfix',
+        label: 'Fixes',
+        icon: 'check',
+        items: [
+          { text: 'Uploading many races at once no longer runs into the rate limit.' },
+          { text: 'Saved partners from older lookups load in the parent picker again.' }
+        ]
+      }
+    ]
+  },
+  {
     title: 'Hakuraku comes to uma.moe',
     version: '2.2',
     date: '2026-11-01',

@@ -185,7 +185,7 @@ test('cached factors remain usable through failed refreshes and replace live in 
   await mockResources(context);
   await context.addInitScript(() => {
     localStorage.setItem('page-introduction-audience-v1', 'existing');
-    localStorage.setItem('lastSeenUpdateVersion', '19');
+    localStorage.setItem('lastSeenUpdateVersion', '20');
   });
 
   const page = await context.newPage(),
