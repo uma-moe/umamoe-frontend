@@ -94,6 +94,8 @@ scripts/*
 !scripts/seo-pages.test.ts
 !scripts/check-seo.mjs
 !scripts/companion-stylesheet-reload.ts
+!scripts/modern-polyfill-scan.ts
+!scripts/modern-polyfill-scan.test.ts
 !scripts/build-skill-explorer-umas.ts
 !scripts/build-potential-skills.ts
 !scripts/fit-cm-statlines.ts
