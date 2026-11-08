@@ -223,7 +223,7 @@ function describeTerm(term: Term, trackName: (id: number) => string): string | u
     case 'accumulatetime':
       return `After ${value}s of racing`;
     case 'is_activate_any_skill':
-      return 'Right after another of her skills fires';
+      return 'Right after another of her skills activates';
     case 'temptation_count':
       return value === 0 ? 'Not rushed yet' : `Rushed ${value}+ times`;
     case 'is_temptation':

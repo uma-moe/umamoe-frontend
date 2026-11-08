@@ -40,14 +40,6 @@ export const FINAL_SPURT_MARK: PlotMark = {
   color: SPURT.color
 };
 
-/** What each value mode means, in a line under the toggle. */
-export const Y_MODE_NOTES: Record<YMode, string> = {
-  value:
-    'Added to the reference build. Skills like Groundwork count set up: firing where a few cheap skills trigger them.',
-  forced: 'Same build, with skills like Groundwork firing at their best spot.',
-  alone: 'Added to a runner with no other skills, like a solo sim.'
-};
-
 /** White skills, gold skills, inherited uniques, and the uniques runners have as their own. */
 export type SkillRarity = 'white' | 'gold' | 'inherited' | 'personal';
 
@@ -351,8 +343,8 @@ export function plotView(options: PlotOptions): PlotView {
           : { scale: courseDistance, suffix: ' m' },
       xTitle:
         courseDistance === undefined
-          ? 'Mean first proc (share of the race)'
-          : 'Mean first proc (metres)',
+          ? 'Mean first activation (share of the race)'
+          : 'Mean first activation (metres)',
       xSplit: 0.5,
       ySplit,
       quadrants: {
