@@ -129,7 +129,7 @@ async function errorCode(response: Response): Promise<string | undefined> {
   return typeof candidate === 'string' ? candidate : undefined;
 }
 
-function retryAfterSeconds(response: Response): number {
+export function retryAfterSeconds(response: Response): number {
   const value = response.headers.get('retry-after');
   if (!value) return 60;
   const seconds = Number.parseInt(value, 10);

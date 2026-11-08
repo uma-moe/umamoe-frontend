@@ -1,6 +1,10 @@
 import { appHttp } from '../http/app-http';
+import { createRequestPacer } from '../http/request-pacer';
 import { applyResimulation, type ParsedRaceCapture } from '@/lib/race/capture/race-capture-parser';
 import { reportReplayMismatch } from './replay-mismatch';
+
+// The API allows each browser 30 writes a minute; pacing a session to 25 leaves the rest of the site room.
+const simulatorRequests = createRequestPacer({ limit: 25, windowMs: 60_000 });
 
 export async function resimulateRace(
   capture: ParsedRaceCapture,
@@ -31,13 +35,17 @@ export async function resimulateRace(
   if (new TextEncoder().encode(JSON.stringify(body)).length > 8 * 1024 * 1024)
     throw Error('This capture exceeds the simulator’s 8 MB request limit.');
   // Browser verification is required even when the account is signed in.
-  const response = await appHttp.request<unknown>('/api/sim/race', {
-    method: 'POST',
-    body,
-    signal: options.signal,
-    browserProof: true,
-    headers: { Accept: 'application/json' }
-  });
+  const response = await simulatorRequests.send(
+    () =>
+      appHttp.request<unknown>('/api/sim/race', {
+        method: 'POST',
+        body,
+        signal: options.signal,
+        browserProof: true,
+        headers: { Accept: 'application/json' }
+      }),
+    options.signal
+  );
 
   // Keep mismatch evidence even if the returned replay cannot be decoded for display.
   if (!options.signal?.aborted) void reportReplayMismatch({ ...capture, courseId }, response);
