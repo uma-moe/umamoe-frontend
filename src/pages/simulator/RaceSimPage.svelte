@@ -18,6 +18,7 @@
   import SimulatorUmaField from './setup/runner/SimulatorUmaField.svelte';
   import BuildCodeDialog from './setup/build/code/BuildCodeDialog.svelte';
   import JsonImportDialog from './setup/json-import/JsonImportDialog.svelte';
+  import ScreenshotImportDialog from './setup/screenshot-import/ScreenshotImportDialog.svelte';
   import {
     BUILD_CODE_VERSION,
     buildCodeRunner,
@@ -93,7 +94,8 @@
     populating = $state(false),
     replaceOpen = $state(false),
     codeOpen = $state(false),
-    jsonOpen = $state(false);
+    jsonOpen = $state(false),
+    screenshotOpen = $state(false);
 
   onMount(() => {
     const address = new URL(location.href);
@@ -297,6 +299,9 @@
         break;
       case 'json':
         jsonOpen = true;
+        break;
+      case 'screenshot':
+        screenshotOpen = true;
         break;
       case 'example':
         loadExample();
@@ -605,6 +610,12 @@
               disabled: simulatorRoster.umas.length >= 18
             },
             {
+              id: 'screenshot',
+              label: 'Screenshot',
+              icon: 'image',
+              disabled: simulatorRoster.umas.length >= 18
+            },
+            {
               id: 'example',
               label: 'Load example',
               icon: 'refresh',
@@ -757,6 +768,11 @@
   bind:open={jsonOpen}
   target="race"
   onimport={({ umas }) => addImportedRunners(umas, 'a JSON file')}
+/>
+<ScreenshotImportDialog
+  bind:open={screenshotOpen}
+  target="race"
+  onimport={({ umas }) => addImportedRunners(umas, 'a screenshot')}
 />
 
 <Dialog

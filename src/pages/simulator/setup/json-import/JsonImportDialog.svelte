@@ -324,53 +324,10 @@
 
 <style>
   @import '../build/code/build-import.css';
+  @import '../import-file.css';
 
-  .file-row {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    min-width: 0;
-    padding: 8px 8px 8px 12px;
-    border: 1px solid var(--border-subtle);
-    border-radius: var(--radius-md);
-    color: var(--text-secondary);
-  }
-  .file {
-    display: flex;
-    flex: 1;
-    flex-wrap: wrap;
-    align-items: baseline;
-    gap: 0 8px;
-    min-width: 0;
-    font-size: 12px;
-  }
-  .file strong {
-    overflow: hidden;
-    font-weight: 650;
-    color: var(--text-primary);
-    text-overflow: ellipsis;
-    white-space: nowrap;
-  }
-  .file-row > :global(.ui-button) {
-    flex: none;
-  }
-  .file-error {
-    margin: 0;
-    font-size: 12px;
-    line-height: 1.5;
-    color: var(--accent-error);
-  }
   .tool {
     display: flex;
     margin-top: 4px;
-  }
-  @media (max-width: 767px) {
-    .file-row {
-      padding: 6px 6px 6px 10px;
-    }
-    .file,
-    .file-error {
-      font-size: 11px;
-    }
   }
 </style>

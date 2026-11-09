@@ -115,7 +115,7 @@ export default defineConfig(async ({ mode, command }) => {
     ],
     optimizeDeps: {
       noDiscovery: true,
-      include: ['exceljs', 'sql.js'],
+      include: ['exceljs', 'sql.js', 'tesseract.js'],
       exclude: ['svelte', 'svelte/store', 'sv-router']
     },
     define: {
@@ -150,7 +150,12 @@ export default defineConfig(async ({ mode, command }) => {
           manualChunks: (id) =>
             /[\\/]node_modules[\\/]@sentry(-internal[\\/]|[\\/](core|browser)[\\/])/.test(id)
               ? 'sentry-sdk'
-              : undefined
+              : undefined,
+          // Tesseract asks for its model by a fixed file name, so the content hash goes in the folder instead.
+          assetFileNames: (asset) =>
+            asset.names.includes('eng.traineddata.gz')
+              ? 'app/tesseract-[hash]/[name][extname]'
+              : 'app/[name]-[hash][extname]'
         }
       }
     },

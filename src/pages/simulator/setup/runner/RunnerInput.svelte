@@ -28,7 +28,8 @@
     note,
     onbuild,
     oncode,
-    onjson
+    onjson,
+    onscreenshot
   }: {
     uma: SimulatorUma;
     /** Green skills by the stat they raise, as the HP calculator counts them; left out, the stats stand alone. */
@@ -40,6 +41,8 @@
     oncode?: () => void;
     /** Opens the page's JSON file dialog. */
     onjson?: () => void;
+    /** Opens the page's screenshot dialog. */
+    onscreenshot?: () => void;
   } = $props();
 
   let veteransOpen = $state(false),
@@ -118,7 +121,8 @@
   const importItems = $derived<MenuItem[]>([
     { id: 'veterans', label: 'Choose from Veterans', icon: 'veterans' },
     ...(oncode ? [{ id: 'code', label: 'Build code', icon: 'clipboard' as const }] : []),
-    ...(onjson ? [{ id: 'json', label: 'JSON file', icon: 'folder-open' as const }] : [])
+    ...(onjson ? [{ id: 'json', label: 'JSON file', icon: 'folder-open' as const }] : []),
+    ...(onscreenshot ? [{ id: 'screenshot', label: 'Screenshot', icon: 'image' as const }] : [])
   ]);
 
   function importRunner(id: string) {
@@ -131,6 +135,9 @@
         break;
       case 'json':
         onjson?.();
+        break;
+      case 'screenshot':
+        onscreenshot?.();
         break;
     }
   }

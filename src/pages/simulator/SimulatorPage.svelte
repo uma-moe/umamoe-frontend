@@ -10,6 +10,7 @@
   import BuildCodeDialog from './setup/build/code/BuildCodeDialog.svelte';
   import type { BuildCodeImport } from './setup/build/code/build-code-review.svelte';
   import JsonImportDialog from './setup/json-import/JsonImportDialog.svelte';
+  import ScreenshotImportDialog from './setup/screenshot-import/ScreenshotImportDialog.svelte';
   import {
     BUILD_CODE_VERSION,
     buildCodeRunner,
@@ -134,7 +135,8 @@
   const verdict = $derived(spread && run ? hpVerdict(spread, run.forced) : undefined);
   let resultPanel = $state<HTMLElement>();
   let codeOpen = $state(false),
-    jsonOpen = $state(false);
+    jsonOpen = $state(false),
+    screenshotOpen = $state(false);
 
   // Once she has a result, it follows the form a moment after each change.
   $effect(() => {
@@ -264,6 +266,7 @@
         {course}
         oncode={() => (codeOpen = true)}
         onjson={() => (jsonOpen = true)}
+        onscreenshot={() => (screenshotOpen = true)}
       />
       <HpRaceSection />
       <HpPlanInput
@@ -331,6 +334,11 @@
 />
 <JsonImportDialog
   bind:open={jsonOpen}
+  target="stamina"
+  onimport={importRunner}
+/>
+<ScreenshotImportDialog
+  bind:open={screenshotOpen}
   target="stamina"
   onimport={importRunner}
 />

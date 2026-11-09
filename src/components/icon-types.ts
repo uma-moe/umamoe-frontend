@@ -91,6 +91,7 @@ export type IconName =
   | 'frame-back'
   | 'frame-forward'
   | 'video'
+  | 'image'
   | 'crop'
   | 'pin'
   | 'stopwatch'

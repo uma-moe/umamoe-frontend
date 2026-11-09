@@ -10,6 +10,7 @@ export const iconPaths: Record<IconName, string[]> = {
   'frame-back': ['M14 6.5 6.5 12l7.5 5.5v-11Z', 'M17.5 6.5v11'],
   'frame-forward': ['M10 6.5 17.5 12 10 17.5v-11Z', 'M6.5 6.5v11'],
   video: ['M3 7h12v10H3z', 'm15 10.5 6-3.5v10l-6-3.5'],
+  image: ['M3 4h18v16H3z', 'm3 16 5-5 5 5 3-3 5 5', 'M15 8.5a1.5 1.5 0 1 0 3 0a1.5 1.5 0 1 0-3 0'],
   crop: ['M6 2v14a2 2 0 0 0 2 2h14', 'M18 22V8a2 2 0 0 0-2-2H2'],
   pin: ['M9 3h6', 'M10 3v5.5L7 12v2h10v-2l-3-3.5V3', 'M12 14v7'],
   // The race simulator: a stopwatch running against speed lines.

@@ -9,6 +9,7 @@
   import BuildCodeDialog from './setup/build/code/BuildCodeDialog.svelte';
   import type { BuildCodeImport } from './setup/build/code/build-code-review.svelte';
   import JsonImportDialog from './setup/json-import/JsonImportDialog.svelte';
+  import ScreenshotImportDialog from './setup/screenshot-import/ScreenshotImportDialog.svelte';
   import BuildGoal from './setup/build/BuildGoal.svelte';
   import BuildSearchBar from './setup/build/BuildSearchBar.svelte';
   import { explainBuildError, formNumber } from './setup/build/build-run';
@@ -74,6 +75,7 @@
   let codeOpen = $state(false);
   let codeText = $state('');
   let jsonOpen = $state(false);
+  let screenshotOpen = $state(false);
 
   // Keep the setup and the runner in this browser as they change.
   $effect(saveBuildSearch);
@@ -362,6 +364,7 @@
         note="Her stats at the end of the career"
         oncode={() => (codeOpen = true)}
         onjson={() => (jsonOpen = true)}
+        onscreenshot={() => (screenshotOpen = true)}
       />
       <BuildGoal
         {teamTrials}
@@ -423,6 +426,11 @@
 />
 <JsonImportDialog
   bind:open={jsonOpen}
+  target="build"
+  onimport={importBuild}
+/>
+<ScreenshotImportDialog
+  bind:open={screenshotOpen}
   target="build"
   onimport={importBuild}
 />
