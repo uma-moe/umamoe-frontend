@@ -57,7 +57,10 @@
     open = false;
 
     const [picked] = ids;
-    cardId = picked === undefined ? undefined : Number(picked);
+    const pickedCardId = picked === undefined ? undefined : Number(picked);
+
+    // The highlight is optional, so picking the highlighted uma again turns it off.
+    cardId = pickedCardId === cardId ? undefined : pickedCardId;
   }
 </script>
 
