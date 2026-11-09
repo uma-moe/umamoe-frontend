@@ -170,6 +170,37 @@ describe('Angular Planner search and pull-plan presentation', () => {
     expect(sanitizePlan(plan)!.targets[0]!.pickupGoals).toHaveLength(1);
   });
 
+  it('offers lower-rarity featured trainees alongside the top-rarity rate-up', () => {
+    const mrCb = { pickup_id: 105701, rate: 0.0075 };
+    const twinTurbo = { pickup_id: 106601, rate: 0.0225 };
+    const gacha: PlannerGachaEntry = {
+      event_id: 'banner',
+      gacha_id: 30150,
+      banner_kind: 'character',
+      start_date: '2026-12-01',
+      end_date: '2026-12-09',
+      pickups: [mrCb],
+      featured_pickups: [mrCb, twinTurbo]
+    };
+
+    const banner = event('banner', 'Mr. C.B. + 1 more', '2026-12-01', {
+      pickupCardIds: [105701, 106601],
+      relatedCharacters: ['Mr. C.B.', 'Twin Turbo']
+    });
+
+    const options = plannerPickupOptions(
+      target('banner', '2026-12-01', '2026-12-09'),
+      gacha,
+      [banner],
+      { characters: {}, supports: new Map() }
+    );
+
+    expect(options.map((option) => [option.name, option.rate])).toEqual([
+      ['Mr. C.B.', 0.0075],
+      ['Twin Turbo', 0.0225]
+    ]);
+  });
+
   it('refreshes resource-owned metadata, including disabled targets, without changing user choices or timestamps', () => {
     const plan = createPlan();
     plan.targets = [

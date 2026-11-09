@@ -188,6 +188,7 @@ export interface PlannerGachaEntry {
   free_pulls?: number;
   free_pulls_source_url?: string;
   ticket_currency?: Extract<PlannerCurrency, 'uma_ticket' | 'support_ticket'>;
+  /** Top-rarity rate-ups only; lower-rarity featured cards appear only in `featured_pickups`. */
   pickups?: PlannerPickupRate[];
   featured_pickups?: PlannerPickupRate[];
   rarity_rates?: PlannerRarityRate[];
@@ -1401,6 +1402,19 @@ function consumeCrystals(
   current[shardKey] = Math.max(0, current[shardKey] - (requested - fullUsed) * 20);
 }
 
+/** Every card a banner features: top-rarity rates first, then lower-rarity featured cards. */
+export function plannerTargetablePickups(
+  gacha: PlannerGachaEntry | undefined
+): PlannerPickupRate[] {
+  const topRarity = gacha?.pickups ?? [];
+  const topRarityIds = new Set(topRarity.map((pickup) => pickup.pickup_id));
+  const lowerRarity = (gacha?.featured_pickups ?? []).filter(
+    (pickup) => !topRarityIds.has(pickup.pickup_id)
+  );
+
+  return [...topRarity, ...lowerRarity];
+}
+
 export function plannerPickupGoals(
   target: PlannerTarget,
   fallbackPickupId?: number
@@ -1600,7 +1614,7 @@ export function projectPlan(
         rainbowCrystalsUsed += crystalCopies;
       }
 
-      const pickup = (gacha?.pickups ?? gacha?.featured_pickups)?.find(
+      const pickup = plannerTargetablePickups(gacha).find(
         (item) => item.pickup_id === goal.pickupId
       );
 

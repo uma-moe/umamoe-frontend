@@ -5,6 +5,7 @@ import {
   enabledPlannerTargets,
   findPlannerEvent,
   plannerPickupGoals,
+  plannerTargetablePickups,
   resolvePlannerPullDate,
   type CaratPlan,
   type PlannerGachaEntry,
@@ -22,7 +23,7 @@ export function plannerPickupOptions(
   catalog: TimelinePickupCatalog
 ) {
   const event = findPlannerEvent(target.eventId, events);
-  const published = gacha?.pickups ?? gacha?.featured_pickups ?? [];
+  const published = plannerTargetablePickups(gacha);
   const ids = [
     ...new Set([
       ...(published.length
