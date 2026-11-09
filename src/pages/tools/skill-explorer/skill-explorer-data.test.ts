@@ -1,7 +1,8 @@
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import { dayAllows } from './cm/race-day';
 import {
   averageStyles,
+  explorerFileUrl,
   parseScope,
   scopePath,
   SECTIONS,
@@ -42,6 +43,30 @@ const courseFile = {
 };
 
 describe('Skill Explorer data', () => {
+  it('revalidates the index and versions the other files by its ETag', async () => {
+    const index = {
+      buildSize: 20,
+      model: { variant: 'v5', checkpoint: 'f50e' },
+      skills: {},
+      courses: []
+    };
+    const fetchMock = vi.fn(
+      async () => new Response(JSON.stringify(index), { headers: { etag: 'W/"99aa1c99d7485599"' } })
+    );
+    vi.stubGlobal('fetch', fetchMock);
+    try {
+      expect(await explorerFileUrl('turf/medium/10504.json.gz')).toBe(
+        '/api/sim/skill-explorer/turf/medium/10504.json.gz?v=99aa1c99d7485599'
+      );
+      expect(fetchMock).toHaveBeenCalledWith(
+        '/api/sim/skill-explorer/index.json.gz',
+        expect.objectContaining({ cache: 'no-cache' })
+      );
+    } finally {
+      vi.unstubAllGlobals();
+    }
+  });
+
   it('reads scope rows and adds every style averaged', () => {
     const scope = parseScope(courseFile);
 

@@ -1,4 +1,4 @@
-import { fetchJsonResource } from '@/services/resources/json-response';
+import { fetchJsonResource, readJsonResponse } from '@/services/resources/json-response';
 import { finiteNumber, isRecord } from './json-guards';
 
 /** The simulator serves the explorer's files, built from the model it runs. */
@@ -491,15 +491,30 @@ export function scopePath(scope: ExplorerScope): string {
   }
 }
 
-let indexPromise: Promise<ExplorerIndex> | undefined;
+interface VersionedIndex {
+  index: ExplorerIndex;
+  /** The simulator's bundle version, from the index's ETag; empty when none came through. */
+  version: string;
+}
 
-export function loadExplorerIndex(): Promise<ExplorerIndex> {
-  indexPromise ??= fetchJsonResource<unknown>(
-    `${EXPLORER_FILES_URL}/index.json.gz`,
-    {},
-    'Skill values'
-  )
-    .then(parseIndex)
+let indexPromise: Promise<VersionedIndex> | undefined;
+
+/** The bundle version in an ETag such as `"99aa1c99d7485599"` or `W/"99aa1c99d7485599"`. */
+export function etagVersion(etag: string | null): string {
+  return etag?.replace(/^W\//, '').replace(/"/g, '') ?? '';
+}
+
+// The browser keeps the index but asks again on every load (no-cache), getting a 304 while the bundle is unchanged, so
+// a new bundle shows once the CDN has it instead of after the hours a browser may otherwise keep its copy.
+function loadVersionedIndex(): Promise<VersionedIndex> {
+  indexPromise ??= fetch(`${EXPLORER_FILES_URL}/index.json.gz`, {
+    credentials: 'omit',
+    cache: 'no-cache'
+  })
+    .then(async (response) => ({
+      index: parseIndex(await readJsonResponse<unknown>(response, 'Skill values')),
+      version: etagVersion(response.headers.get('etag'))
+    }))
     .catch((error: unknown) => {
       indexPromise = undefined;
       throw error;
@@ -508,10 +523,24 @@ export function loadExplorerIndex(): Promise<ExplorerIndex> {
   return indexPromise;
 }
 
+export async function loadExplorerIndex(): Promise<ExplorerIndex> {
+  return (await loadVersionedIndex()).index;
+}
+
+/**
+ * A simulator explorer file under the bundle version, like `…/turf/medium/10808.json.gz?v=99aa1c99d7485599`. Browsers
+ * and the CDN may keep it as long as they like: a new bundle changes every URL.
+ */
+export async function explorerFileUrl(path: string): Promise<string> {
+  const { version } = await loadVersionedIndex();
+  const url = `${EXPLORER_FILES_URL}/${path}`;
+  return version ? `${url}?v=${encodeURIComponent(version)}` : url;
+}
+
 export async function loadScope(scope: ExplorerScope, signal?: AbortSignal): Promise<ScopeData> {
   return parseScope(
     await fetchJsonResource<unknown>(
-      `${EXPLORER_FILES_URL}/${scopePath(scope)}`,
+      await explorerFileUrl(scopePath(scope)),
       { signal },
       'Skill values for this selection'
     )

@@ -1,5 +1,5 @@
 import { fetchJsonResource } from '@/services/resources/json-response';
-import { EXPLORER_FILES_URL } from '../skill-explorer-data';
+import { explorerFileUrl } from '../skill-explorer-data';
 import { finiteNumber, isRecord, numberList } from '../json-guards';
 import {
   RUNNING_STYLES,
@@ -89,11 +89,8 @@ export function parseStatlines(value: unknown): StatlinesData {
 let statlinesPromise: Promise<StatlinesData> | undefined;
 
 export function loadStatlines(): Promise<StatlinesData> {
-  statlinesPromise ??= fetchJsonResource<unknown>(
-    `${EXPLORER_FILES_URL}/statlines.json.gz`,
-    {},
-    'Stat lines'
-  )
+  statlinesPromise ??= explorerFileUrl('statlines.json.gz')
+    .then((url) => fetchJsonResource<unknown>(url, {}, 'Stat lines'))
     .then(parseStatlines)
     .catch((error: unknown) => {
       statlinesPromise = undefined;
