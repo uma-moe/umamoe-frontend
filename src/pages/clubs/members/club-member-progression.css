@@ -93,6 +93,33 @@ h2 {
   text-overflow: ellipsis;
   white-space: nowrap;
 }
+.line-key {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 16px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  color: var(--text-muted);
+  font-size: 0.8rem;
+}
+.line-key li {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.line-sample {
+  width: 24px;
+  height: 4px;
+  stroke: currentColor;
+  stroke-width: 2;
+}
+.line-sample.prior {
+  stroke-dasharray: 6 4;
+}
+.line-sample.untracked {
+  stroke-dasharray: 2 4;
+}
 .calendar-shell {
   overflow-x: auto;
 }

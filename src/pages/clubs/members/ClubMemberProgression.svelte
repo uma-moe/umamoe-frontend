@@ -4,7 +4,8 @@
     buildMemberProgression,
     formatClubGain,
     type ClubCalendarDay,
-    type ClubChartMode
+    type ClubChartMode,
+    type ClubChartSegment
   } from '@/lib/clubs/club-progression';
   import type { ClubMemberSnapshot } from '@/lib/clubs/member-metrics';
   import IconButton from '@/components/controls/IconButton.svelte';
@@ -15,6 +16,11 @@
   import { theme } from '@/stores/theme';
 
   const legendHelpId = $props.id();
+  const lineKeyOrder = ['prior', 'untracked'] as const satisfies ClubChartSegment[];
+  const lineKeyLabels: Record<(typeof lineKeyOrder)[number], string> = {
+    prior: 'Prior club',
+    untracked: 'Not tracked, gain spread evenly'
+  };
   let {
     snapshots,
     year,
@@ -44,6 +50,12 @@
 
   const progression = $derived(
     buildMemberProgression(snapshots, year, month, includePrior, mode, search)
+  );
+
+  const lineKeys = $derived(
+    lineKeyOrder.filter((segment) =>
+      progression.members.some((member) => member.segments.includes(segment))
+    )
   );
 
   const weeks = $derived(buildClubCalendar(snapshots, year, month, search));
@@ -209,6 +221,30 @@
           </button>
         {/each}
       </div>
+      {#if lineKeys.length}
+        <ul
+          class="line-key"
+          aria-label="Line styles"
+        >
+          {#each lineKeys as segment}
+            <li>
+              <svg
+                class={`line-sample ${segment}`}
+                viewBox="0 0 24 4"
+                aria-hidden="true"
+              >
+                <line
+                  x1="1"
+                  y1="2"
+                  x2="23"
+                  y2="2"
+                />
+              </svg>
+              {lineKeyLabels[segment]}
+            </li>
+          {/each}
+        </ul>
+      {/if}
     </div>
   {:else}
     <div

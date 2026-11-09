@@ -1,8 +1,18 @@
 import type { EChartsCoreOption } from 'echarts/core';
-import type { ClubChartMember, ClubChartMode } from '@/lib/clubs/club-progression';
+import type {
+  ClubChartMember,
+  ClubChartMode,
+  ClubChartSegment
+} from '@/lib/clubs/club-progression';
 import type { Theme } from '@/stores/theme';
 import './club-chart.css';
 import { insideZoom } from '@/components/charts/echarts-zoom';
+
+const segmentDash: Record<ClubChartSegment, 'solid' | number[]> = {
+  club: 'solid',
+  prior: [6, 4],
+  untracked: [2, 4]
+};
 
 function tooltip(labels: string[], members: ClubChartMember[], mode?: ClubChartMode) {
   return (params: unknown) => {
@@ -32,6 +42,18 @@ function tooltip(labels: string[], members: ClubChartMember[], mode?: ClubChartM
         marker,
         `${member.name}: ${mode === 'delta' && value > 0 ? '+' : ''}${value.toLocaleString()}${mode === 'cumulative' && delta ? ` (${delta > 0 ? '+' : ''}${delta.toLocaleString()})` : ''}`
       );
+
+      const untrackedDays = member.untrackedDays[index] ?? 0;
+      if (untrackedDays > 0) {
+        const note = document.createElement('span');
+        note.style.cssText = 'color:rgba(255,255,255,.55)';
+        note.textContent =
+          mode === 'delta'
+            ? ` avg of ${untrackedDays} untracked days`
+            : ` estimated, ${untrackedDays} untracked days`;
+        line.append(note);
+      }
+
       body.append(line);
     }
 
@@ -108,7 +130,8 @@ export function clubProgressionOption(
     color: '#64b5f6',
     values: history.map((point) => point.fan_count),
     carriedForward: [],
-    priorClub: []
+    segments: [],
+    untrackedDays: []
   };
 
   const option = axes(labels, theme);
@@ -139,8 +162,8 @@ export function memberProgressionOption(
 ): EChartsCoreOption {
   const series: Record<string, unknown>[] = [];
   for (const member of members) {
-    // One data series preserves tooltip values; contiguous runs render Angular's
-    // dashed prior-club segments and invisible trailing carries with ECharts.
+    // One data series preserves tooltip values; contiguous runs draw prior-club and
+    // untracked segments in their own dash and leave trailing carries invisible.
     series.push({
       id: `member-${member.viewerId}`,
       name: member.name,
@@ -154,7 +177,7 @@ export function memberProgressionOption(
     });
 
     let run: Array<number | null> = [],
-      dashed: boolean | undefined;
+      segment: ClubChartSegment | undefined;
 
     const flush = () => {
       if (run.length)
@@ -176,12 +199,12 @@ export function memberProgressionOption(
                 : theme === 'light'
                   ? 'rgba(15,23,42,.2)'
                   : 'rgba(255,255,255,.15)',
-            type: dashed ? [6, 4] : 'solid'
+            type: segmentDash[segment ?? 'club']
           },
           emphasis: { disabled: true }
         });
       run = [];
-      dashed = undefined;
+      segment = undefined;
     };
 
     for (let i = 1; i < member.values.length; i++) {
@@ -190,10 +213,10 @@ export function memberProgressionOption(
         continue;
       }
 
-      const prior = member.priorClub[i - 1] || member.priorClub[i];
-      if (dashed !== prior) {
+      const style = member.segments[i] ?? 'club';
+      if (segment !== style) {
         flush();
-        dashed = prior;
+        segment = style;
         run = Array(i - 1).fill(null);
         run.push(member.values[i - 1]!);
       }
