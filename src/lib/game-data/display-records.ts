@@ -1,4 +1,5 @@
 import { get } from 'svelte/store';
+import { gameAssetUrl } from '@/lib/assets/game-assets';
 import { loadSupportCards } from '@/lib/game-data/support-cards/support-cards';
 import { characterImagePath, loadCharacters } from '@/lib/game-data/characters';
 import { loadSkills, skillImage } from '@/lib/game-data/skills/skills';
@@ -73,7 +74,7 @@ async function supports(): Promise<GameDataEntry[]> {
       ],
       rarity: entry.rarity,
       releaseDate: entry.release_date,
-      image: `/game-assets/umamusume_cards/tex_support_card_${entry.id}.webp`
+      image: gameAssetUrl(`umamusume_cards/tex_support_card_${entry.id}.webp`)
     })
   );
 }

@@ -10,6 +10,7 @@
   import LimitBreak from '@/components/game/LimitBreak.svelte';
   import Artwork from '@/components/game/Artwork.svelte';
   import type { ProfileVeteran } from '../../profile-repository';
+  import { gameAssetUrl } from '@/lib/assets/game-assets';
 
   let { veteran }: { veteran: ProfileVeteran } = $props();
 
@@ -79,7 +80,7 @@
               {@const rarity = card.rarity === 3 ? 'SSR' : card.rarity === 2 ? 'SR' : 'R'}
               <img
                 class="support-rarity"
-                src={'/game-assets/support-rarity/' + rarity.toLowerCase() + '.png'}
+                src={gameAssetUrl('support-rarity/' + rarity.toLowerCase() + '.png')}
                 alt={rarity}
                 width="18"
                 height="18"

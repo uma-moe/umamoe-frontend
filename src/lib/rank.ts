@@ -1,3 +1,5 @@
+import { gameAssetUrl } from '@/lib/assets/game-assets';
+
 export interface RankInfo {
   label: string;
   iconIndex: number;
@@ -24,10 +26,8 @@ function token(tier: RankInfo['tier']) {
 }
 
 export function rankIconPath(iconIndex: number): string {
-  return (
-    '/game-assets/textures/uma_ranks/utx_ico_statusrank_' +
-    String(iconIndex).padStart(2, '0') +
-    '.webp'
+  return gameAssetUrl(
+    'textures/uma_ranks/utx_ico_statusrank_' + String(iconIndex).padStart(2, '0') + '.webp'
   );
 }
 

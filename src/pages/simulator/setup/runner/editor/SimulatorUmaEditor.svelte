@@ -4,6 +4,7 @@
   import Icon from '@/components/Icon.svelte';
   import { runningStyleName } from '@/lib/race/replay/race-display';
   import { getRankInfoFromLabel, getStatRankInfo, rankIconPath } from '@/lib/rank';
+  import { gameAssetUrl } from '@/lib/assets/game-assets';
   import { loadSkills } from '@/lib/game-data/skills/skills';
   import Artwork from '@/components/game/Artwork.svelte';
   import SelectField from '@/components/controls/SelectField.svelte';
@@ -64,7 +65,7 @@
   const MOOD_OPTIONS = ['Great', 'Good', 'Normal', 'Bad', 'Awful'].map((label, index) => ({
     value: String(5 - index),
     label,
-    image: '/game-assets/textures/' + label.toLowerCase() + '.webp'
+    image: gameAssetUrl('textures/' + label.toLowerCase() + '.webp')
   }));
 
   const GRADE_OPTIONS = APTITUDE_GRADES.map((grade) => ({

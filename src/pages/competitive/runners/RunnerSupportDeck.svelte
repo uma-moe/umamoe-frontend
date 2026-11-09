@@ -12,6 +12,7 @@
     supportCardDisplay,
     supportTypeName
   } from '@/lib/game-data/support-cards/support-card-details';
+  import { gameAssetUrl } from '@/lib/assets/game-assets';
 
   let {
     deck = [],
@@ -77,7 +78,7 @@
                 {@const rarity = resource.rarity === 3 ? 'SSR' : resource.rarity === 2 ? 'SR' : 'R'}
                 <img
                   class="support-rarity"
-                  src={'/game-assets/support-rarity/' + rarity.toLowerCase() + '.png'}
+                  src={gameAssetUrl('support-rarity/' + rarity.toLowerCase() + '.png')}
                   alt={rarity}
                   width="22"
                   height="22"

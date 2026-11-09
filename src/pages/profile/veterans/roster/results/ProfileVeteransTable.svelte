@@ -1,7 +1,7 @@
 <script lang="ts">
   import { virtualScroll } from '@/lib/virtual-scroll';
   import type { CharacterData } from '@/lib/game-data/characters';
-  import { SKILL_POINTS_ICON } from '@/lib/game-assets/skill-points-icon';
+  import { skillPointsIcon } from '@/lib/game-assets/skill-points-icon';
   import {
     veteranFactorTotals,
     type VeteranDisplayRecord
@@ -150,7 +150,7 @@
                   id: 'sp',
                   label: 'Skill points',
                   value: spByVeteran.get(item.veteran)?.toLocaleString() ?? '-',
-                  icon: SKILL_POINTS_ICON
+                  icon: skillPointsIcon()
                 },
                 { id: 'total', label: 'Total Stats', value: item.total.toLocaleString() }
               ]}

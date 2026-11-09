@@ -42,7 +42,7 @@ ARG APP_BUILD_TIME=
 
 COPY --from=build /app/dist/ ./
 RUN set -eu; \
-	rm -rf assets; \
+	rm -rf assets game-assets; \
 	build_time="${APP_BUILD_TIME:-$(date -u +%Y-%m-%dT%H:%M:%SZ)}"; \
 	printf '{\n  "version": "%s",\n  "commit": "%s",\n  "environment": "%s",\n  "builtAt": "%s"\n}\n' \
 		"$APP_BUILD_VERSION" \

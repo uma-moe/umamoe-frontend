@@ -8,8 +8,7 @@
 </script>
 
 <script lang="ts">
-  import { SKILL_POINTS_ICON } from '@/lib/game-assets/skill-points-icon';
-
+  import { skillPointsIcon } from '@/lib/game-assets/skill-points-icon';
   interface Props {
     /** The SP amount; missing when it cannot be priced. */
     value: number | null | undefined;
@@ -36,7 +35,7 @@
   {title}
 >
   <img
-    src={SKILL_POINTS_ICON}
+    src={skillPointsIcon()}
     alt=""
     decoding="async"
   />
