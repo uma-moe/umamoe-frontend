@@ -440,3 +440,16 @@ export function readStatValue(text: string): number | undefined {
 
   return undefined;
 }
+
+/**
+ * The stat from several readings of its cell. Tesseract drops a digit far more often than it adds one, and a badge
+ * read as an extra digit is already stripped by `readStatValue`, so the reading with the most digits wins.
+ */
+export function mostDigits(readings: (number | undefined)[]): number | undefined {
+  return readings.reduce<number | undefined>((best, reading) => {
+    if (reading === undefined) return best;
+    if (best === undefined) return reading;
+
+    return String(reading).length > String(best).length ? reading : best;
+  }, undefined);
+}

@@ -22,6 +22,14 @@ const MAX_PIXELS = 40_000_000;
 /** The game's brown text stays below this in every channel; its cards and highlights rise above it. */
 const DARK_TEXT = 170;
 
+/** Turns RGBA pixels, in place, into the page's dark text: black where the game's text is, white elsewhere. */
+export function keepDarkText(data: Uint8ClampedArray): void {
+  for (let offset = 0; offset < data.length; offset += 4) {
+    const brightest = Math.max(data[offset]!, data[offset + 1]!, data[offset + 2]!);
+    data.fill(brightest < DARK_TEXT ? 0 : 255, offset, offset + 3);
+  }
+}
+
 export function workingScale(width: number): number {
   return Math.min(MAX_ENLARGEMENT, WORKING_WIDTH / width);
 }
@@ -53,14 +61,7 @@ export async function prepareScreenshotImage(file: Blob): Promise<PreparedScreen
     const colour = context.getImageData(0, 0, width, height);
 
     const text = new ImageData(new Uint8ClampedArray(colour.data), width, height);
-    for (let offset = 0; offset < text.data.length; offset += 4) {
-      const brightest = Math.max(
-        colour.data[offset]!,
-        colour.data[offset + 1]!,
-        colour.data[offset + 2]!
-      );
-      text.data.fill(brightest < DARK_TEXT ? 0 : 255, offset, offset + 3);
-    }
+    keepDarkText(text.data);
 
     context.putImageData(text, 0, 0);
     const page = await canvas.convertToBlob({ type: 'image/png' });

@@ -6,7 +6,7 @@ import simdCoreUrl from 'tesseract.js-core/tesseract-core-simd-lstm.wasm.js?url'
 import { relaxedSimd, simd } from 'wasm-feature-detect';
 import type { OcrLine } from './screenshot-layout';
 import englishModelUrl from './model/eng.traineddata.gz?url';
-import { boxHeight, boxWidth, type Box, type Pixels } from './screenshot-pixels';
+import type { Box, Pixels } from './screenshot-pixels';
 
 /** Tesseract's own page segmentation modes, by the values its API takes. */
 const PAGE_MODE = {
@@ -35,10 +35,9 @@ function englishModelFolder(): string {
   return absolute(englishModelUrl).replace(/\/[^/]*$/, '');
 }
 
-function pixelsCanvas(pixels: Pixels): HTMLCanvasElement {
-  const canvas = document.createElement('canvas');
-  canvas.width = pixels.width;
-  canvas.height = pixels.height;
+/** A crop of the screenshot as an image Tesseract can read. */
+export async function pixelsImage(pixels: Pixels): Promise<Blob> {
+  const canvas = new OffscreenCanvas(pixels.width, pixels.height);
   canvas
     .getContext('2d')
     ?.putImageData(
@@ -46,7 +45,18 @@ function pixelsCanvas(pixels: Pixels): HTMLCanvasElement {
       0,
       0
     );
-  return canvas;
+  return canvas.convertToBlob({ type: 'image/png' });
+}
+
+function tesseractRectangle(area: Box) {
+  const left = Math.round(area.x0);
+  const top = Math.round(area.y0);
+  return {
+    left,
+    top,
+    width: Math.round(area.x1) - left,
+    height: Math.round(area.y1) - top
+  };
 }
 
 function linesFromBlocks(blocks: Block[] | null): OcrLine[] {
@@ -93,28 +103,28 @@ export class ScreenshotOcr {
       tessedit_pageseg_mode: PAGE_MODE.page as PSM,
       tessedit_char_whitelist: ''
     });
-    const rectangle = area && {
-      left: area.x0,
-      top: area.y0,
-      width: boxWidth(area),
-      height: boxHeight(area)
-    };
     const { data } = await this.#worker.recognize(
       page,
-      { rectangle },
+      { rectangle: area && tesseractRectangle(area) },
       { text: false, blocks: true }
     );
     return linesFromBlocks(data.blocks);
   }
 
-  /** One line of text on its own, such as a stat's digits, limited to the given characters. */
-  async readLine(pixels: Pixels, characters: string): Promise<string> {
+  /** One line of text on its own, or in one area of the image, limited to the given characters. */
+  async readLine(image: Blob, characters: string, area?: Box): Promise<string> {
     await this.#worker.setParameters({
       tessedit_pageseg_mode: PAGE_MODE.line as PSM,
       tessedit_char_whitelist: characters
     });
-    const { data } = await this.#worker.recognize(pixelsCanvas(pixels), {}, { text: true });
-    return data.text.trim();
+    const { data } = await this.#worker.recognize(
+      image,
+      { rectangle: area && tesseractRectangle(area) },
+      { text: false, blocks: true }
+    );
+    return linesFromBlocks(data.blocks)
+      .map((line) => line.text)
+      .join(' ');
   }
 
   async stop(): Promise<void> {

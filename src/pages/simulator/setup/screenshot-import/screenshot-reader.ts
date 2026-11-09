@@ -1,15 +1,15 @@
 import { prepareScreenshot } from './screenshot-image';
-import type { PreparedScreenshot } from './screenshot-image-prep';
+import { keepDarkText, type PreparedScreenshot } from './screenshot-image-prep';
 import { inkGrade } from './screenshot-grades';
 import {
+  mostDigits,
   readScreenLayout,
   readStatValue,
   skillColumns,
   type ScreenLayout
 } from './screenshot-layout';
-import { ScreenshotOcr } from './screenshot-ocr';
+import { pixelsImage, ScreenshotOcr } from './screenshot-ocr';
 import {
-  boxHeight,
   cropPixels,
   inkColours,
   inkMask,
@@ -22,8 +22,9 @@ import { readSkillLines, type SkillChoice } from './screenshot-skills';
 import type { ScreenshotReading } from './screenshot-veteran';
 import type { SkillNameIndex } from './skill-names';
 
-/** Tesseract reads small digits best at about this height in pixels. */
-const READING_HEIGHT = 64;
+const DIGITS = '0123456789';
+/** The second reading of a stat's digits, enlarged from the working size, misses different digits than the first. */
+const STAT_ENLARGEMENT = 2;
 /** A round glyph's box is padded so its edge pixels are background. */
 const RING_PADDING = 3;
 
@@ -34,10 +35,6 @@ export class ScreenshotLayoutError extends Error {
     );
     this.name = 'ScreenshotLayoutError';
   }
-}
-
-function enlargement(box: Box): number {
-  return Math.max(1, Math.min(4, Math.round(READING_HEIGHT / Math.max(1, boxHeight(box)))));
 }
 
 function readCircle(pixels: Pixels, box: Box): '○' | '◎' | undefined {
@@ -68,18 +65,22 @@ function lineImage(pixels: Pixels, box: Box): string | undefined {
   return canvas.toDataURL('image/png');
 }
 
+/** Each stat from two readings of its cell, the page's own and an enlarged copy, as each can drop a digit. */
 async function readStats(
   ocr: ScreenshotOcr,
-  pixels: Pixels,
+  { page, pixels }: PreparedScreenshot,
   layout: ScreenLayout
 ): Promise<ScreenshotReading['stats']> {
   const stats: ScreenshotReading['stats'] = {};
   for (const { key, region, pageText } of layout.stats) {
+    const enlarged = cropPixels(pixels, region, STAT_ENLARGEMENT);
+    keepDarkText(enlarged.data);
+
     const value =
-      readStatValue(pageText) ??
-      readStatValue(
-        await ocr.readLine(cropPixels(pixels, region, enlargement(region)), '0123456789')
-      );
+      mostDigits([
+        readStatValue(await ocr.readLine(page, DIGITS, region)),
+        readStatValue(await ocr.readLine(await pixelsImage(enlarged), DIGITS))
+      ]) ?? readStatValue(pageText);
     if (value !== undefined) stats[key] = value;
   }
 
@@ -99,14 +100,15 @@ function readAptitudes(pixels: Pixels, layout: ScreenLayout): ScreenshotReading[
 
 async function readPreparedScreenshot(
   ocr: ScreenshotOcr,
-  { page, pixels }: PreparedScreenshot,
+  prepared: PreparedScreenshot,
   skillNames: SkillNameIndex
 ): Promise<ScreenshotReading> {
+  const { page, pixels } = prepared;
   const lines = await ocr.readLines(page);
   const layout = readScreenLayout(lines, pixels.width, (aptitudesTop) =>
     statsPanelAbove(pixels, aptitudesTop)
   );
-  const stats = await readStats(ocr, pixels, layout);
+  const stats = await readStats(ocr, prepared, layout);
   const aptitudes = readAptitudes(pixels, layout);
   const { skills, choices } = readSkillLines(
     skillColumns(lines, layout.skillArea),

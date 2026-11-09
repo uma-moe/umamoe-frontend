@@ -58,19 +58,32 @@ describe('inkColours', () => {
 });
 
 describe('statsPanelAbove', () => {
-  it('finds the cells under the nearest green strip above the aptitudes', () => {
-    const width = 100;
+  const width = 100;
+
+  function panelPixels(...strips: [y0: number, y1: number, x0: number, x1: number][]): Pixels {
     const pixels: Pixels = {
       width,
       height: 60,
       data: new Uint8ClampedArray(width * 60 * 4).fill(255)
     };
-    const paint = (y0: number, y1: number, x0: number, x1: number) => {
+    for (const [y0, y1, x0, x1] of strips) {
       for (let y = y0; y < y1; y++)
         for (let x = x0; x < x1; x++) pixels.data.set([120, 200, 40, 255], (y * width + x) * 4);
-    };
-    paint(2, 6, 0, 100);
-    paint(20, 26, 10, 90);
+    }
+
+    return pixels;
+  }
+
+  it('finds the cells under the nearest green strip above the aptitudes', () => {
+    const pixels = panelPixels([2, 6, 0, 100], [20, 26, 10, 90]);
+
+    const panel = statsPanelAbove(pixels, 50);
+
+    expect(panel).toEqual({ x0: 10, y0: 26, x1: 90, y1: 50 });
+  });
+
+  it('passes over the panel’s thin green outline below its cells', () => {
+    const pixels = panelPixels([20, 26, 10, 90], [40, 41, 10, 90]);
 
     const panel = statsPanelAbove(pixels, 50);
 

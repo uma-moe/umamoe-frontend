@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import {
+  mostDigits,
   readScreenLayout,
   readStatValue,
   skillColumns,
@@ -297,5 +298,18 @@ describe('readStatValue', () => {
   it('reads a 1 OCR wrote as a thin letter beside the other digits', () => {
     expect(readStatValue('(gl202')).toBe(1202);
     expect(readStatValue('|634')).toBe(634);
+  });
+});
+
+describe('mostDigits', () => {
+  it('keeps the reading that didn’t drop a digit', () => {
+    expect(mostDigits([98, 989])).toBe(989);
+    expect(mostDigits([1331, 133])).toBe(1331);
+  });
+
+  it('keeps the first reading when they agree in length, and skips failed ones', () => {
+    expect(mostDigits([650, 656])).toBe(650);
+    expect(mostDigits([undefined, 581])).toBe(581);
+    expect(mostDigits([undefined, undefined])).toBeUndefined();
   });
 });

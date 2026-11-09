@@ -32,6 +32,8 @@ const INK_DISTANCE = 72;
 const BRIGHT_INK = 130;
 /** The stats panel's header strip is green across most of its width, around its white labels and icons. */
 const GREEN_ROW_SHARE = 0.4;
+/** The header strip is about 4% of the screen's width tall; the panel's green outline is a row or two. */
+const MIN_STRIP_HEIGHT_SHARE = 0.015;
 /** Rows sampled through a glyph, as fractions of its height. */
 const RING_ROWS = [0.35, 0.4, 0.45, 0.5, 0.55, 0.6, 0.65];
 
@@ -179,22 +181,29 @@ function greenRun(pixels: Pixels, y: number): { x0: number; x1: number; count: n
 }
 
 /**
- * The stats panel's cells, under its green header strip: the nearest band of mostly green rows above `bottom`, as
- * wide as that strip, down to `bottom`. Undefined when no such band is there.
+ * The stats panel's cells, under its green header strip: the nearest band of mostly green rows above `bottom` that is
+ * tall enough to be the strip, as wide as it, down to `bottom`. Undefined when no such band is there.
  */
 export function statsPanelAbove(pixels: Pixels, bottom: number): Box | undefined {
   const isGreenRow = (y: number) => greenRun(pixels, y).count >= pixels.width * GREEN_ROW_SHARE;
 
+  const minStripHeight = pixels.width * MIN_STRIP_HEIGHT_SHARE;
   let y = Math.min(pixels.height, Math.floor(bottom)) - 1;
-  while (y >= 0 && !isGreenRow(y)) y--;
-  if (y < 0) return undefined;
 
-  const stripBottom = y + 1;
-  while (y >= 0 && isGreenRow(y)) y--;
-  const stripTop = y + 1;
-  const { x0, x1 } = greenRun(pixels, Math.floor((stripTop + stripBottom) / 2));
+  while (y >= 0) {
+    while (y >= 0 && !isGreenRow(y)) y--;
+    if (y < 0) return undefined;
 
-  return { x0, y0: stripBottom, x1, y1: bottom };
+    const stripBottom = y + 1;
+    while (y >= 0 && isGreenRow(y)) y--;
+    const stripTop = y + 1;
+    if (stripBottom - stripTop < minStripHeight) continue;
+
+    const { x0, x1 } = greenRun(pixels, Math.floor((stripTop + stripBottom) / 2));
+    return { x0, y0: stripBottom, x1, y1: bottom };
+  }
+
+  return undefined;
 }
 
 /** A copy of one box of the screenshot, enlarged, for reading a stat's digits on their own. */
