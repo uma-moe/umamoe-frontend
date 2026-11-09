@@ -1,19 +1,10 @@
 /**
- * The game's seating: it deals the gates from the race seed, and in Champions Meeting, Team Trials and room matches
- * with random moods the moods too. Each draw is the next xorshift32 state of `random_seed`. Career moods do not come
- * from the seed. The simulator seats estimates by the same rules.
+ * The game's seating: it deals the gates, and in Champions Meeting the moods, from the race seed. Each draw is the
+ * next xorshift32 state of `random_seed` and picks from what is left. The simulator seats estimates by the same rule.
  */
 
-/**
- * How the game dealt a race's moods from its seed: Champions Meeting's team deal, or each runner its own mood as in
- * Team Trials and room matches with random moods.
- */
-export type MoodDeal = 'championsMeeting' | 'perRunner';
-
-const AWFUL = 1;
 const BAD = 2;
 const GREAT = 5;
-const MOOD_LEVELS = GREAT - AWFUL + 1;
 const MOODS = [2, 3, 4, 5];
 const TEAM_MOOD_TOTAL = { min: 8, max: 11 };
 /** A mood pick takes its draw's remainder in buckets of 2,500, which keeps the choices near uniform. */
@@ -56,14 +47,6 @@ export function seededGates(seed: number, count: number): number[] {
     left[pick] = at(left, remaining - 1);
     return gate;
   });
-}
-
-/**
- * Moods in list order, as Team Trials and room matches with random moods deal them to `count` runners on `seed`: the
- * draw that seats runner `i` also gives its mood, Awful to Great by the draw's remainder over five.
- */
-export function seededRunnerMoods(seed: number, count: number): number[] {
-  return draws(seed, count).map((draw) => AWFUL + (draw % MOOD_LEVELS));
 }
 
 /**
@@ -110,9 +93,8 @@ function cmTeams(teamIds: readonly number[]): number[][] | undefined {
 }
 
 /**
- * Each runner's mood by list position, as the simulator deals Champions Meeting's moods on `seed` (`moodDeal`
- * `championsMeeting`): the first team listed takes the first team's draws, its members in list order. Undefined unless
- * three teams of three.
+ * Each runner's mood by list position, as the simulator deals Champions Meeting's moods on `seed` (`cmMoods`): the
+ * first team listed takes the first team's draws, its members in list order. Undefined unless three teams of three.
  */
 export function seededCmMoods(teamIds: readonly number[], seed: number): number[] | undefined {
   const teams = cmTeams(teamIds);
@@ -127,26 +109,18 @@ export function seededCmMoods(teamIds: readonly number[], seed: number): number[
   return moods;
 }
 
-function sameMoods(recorded: readonly (number | undefined)[], dealt: readonly number[]): boolean {
-  return recorded.length === dealt.length && recorded.every((mood, slot) => mood === dealt[slot]);
-}
-
 /**
- * Which deal gave a race its moods from its own seed, given each runner's recorded gate and mood in any order: the
- * gates put the runners back in the game's slots. Undefined when neither did, as for a room that set one mood for all
- * or a career race.
+ * Whether a race's moods are Champions Meeting's deal from its own seed, given each runner's recorded gate and mood in
+ * any order: the gates put the runners back in the game's slots. Room matches set the moods by the room, so they fail.
  */
-export function recordedMoodDeal(
+export function dealsCmMoods(
   seed: number,
   runners: readonly { gate: number; mood: number }[]
-): MoodDeal | undefined {
+): boolean {
+  if (runners.length !== 9) return false;
+
   const moodAtGate = new Map(runners.map((runner) => [runner.gate, runner.mood]));
-  const slotMoods = seededGates(seed, runners.length).map((gate) => moodAtGate.get(gate));
+  const dealt = seededTeamMoods(seed);
 
-  if (sameMoods(slotMoods, seededRunnerMoods(seed, runners.length))) return 'perRunner';
-
-  const nineRunners = runners.length === 9;
-  if (nineRunners && sameMoods(slotMoods, seededTeamMoods(seed))) return 'championsMeeting';
-
-  return undefined;
+  return seededGates(seed, 9).every((gate, slot) => moodAtGate.get(gate) === dealt[slot]);
 }

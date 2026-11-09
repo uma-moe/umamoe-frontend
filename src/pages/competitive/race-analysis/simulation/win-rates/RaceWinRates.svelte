@@ -67,9 +67,8 @@
           race when any of its runners does; top 3 is how often a runner finished on the podium.
         </p>
         <p>
-          With random gates every race draws its own gates. Champions Meeting and Team Trials races,
-          and room matches with random moods, also deal their moods. Watch a runner's first win, or
-          any race from the race history.
+          With random gates every race draws its own gates, and a Champions Meeting race also deals
+          its moods. Watch a runner's first win, or any race from the race history.
         </p>
       </InspectPopover>
     </div>
@@ -86,7 +85,7 @@
         </span>
       {/if}
       {#if seating.gateOrder === 'randomized'}
-        <span>{seating.moodDeal === 'sent' ? 'Random gates' : 'Random gates and moods'}</span>
+        <span>{seating.cmMoods ? 'Random gates and moods' : 'Random gates'}</span>
       {/if}
       {#if ready}
         <span class="seed">Starting seed {ready.seed}</span>
