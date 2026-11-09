@@ -80,6 +80,7 @@
     telemetryOption(
       {
         capture: replay.capture,
+        raceDistance: replay.bounds.distanceMax,
         ensemble,
         runner: replay.runner,
         chartRunners,

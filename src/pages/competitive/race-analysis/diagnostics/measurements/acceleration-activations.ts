@@ -1,6 +1,7 @@
 import type { ParsedRaceCapture } from '@/lib/race/capture/race-capture-parser';
 import { diagnosticHorse } from '@/lib/race/capture/race-diagnostics';
 import { raceFrameAtTime } from '@/lib/race/replay/race-replay';
+import { startDashEnd } from '@/lib/race/start-dash';
 import type { SkillEffectAlternative } from '@/lib/game-data/skills/skill-effects';
 
 export interface AccelerationWindow {
@@ -63,22 +64,7 @@ export function speedSamples(
     capture.frames.map((frame) => frame.time);
   const runner = capture.runners.find((runner) => runner.index === index);
   const finish = runner?.result?.finishTimeRaw ?? runner?.result?.finishTime ?? Infinity;
-  const capturedBase = capture.original?.baseSpeed;
-  const baseSpeed =
-    typeof capturedBase === 'number' && capturedBase > 0
-      ? capturedBase
-      : raceDistance
-        ? 20 - (raceDistance - 2000) / 1000
-        : undefined;
-  const dashThreshold = baseSpeed === undefined ? undefined : baseSpeed * 0.85;
-  // Start dash ends at 85% of base speed. The next 66.6 ms tick raises the speed floor,
-  // so its measured speed jump is part of the start-dash transition too.
-  const dashEnd =
-    dashThreshold !== undefined &&
-    (capture.frames[0]?.horses[index]?.speed ?? Infinity) / 100 < dashThreshold
-      ? (capture.frames.find((frame) => (frame.horses[index]?.speed ?? 0) / 100 >= dashThreshold)
-          ?.time ?? Infinity)
-      : -Infinity;
+  const dashEnd = startDashEnd(capture, index, raceDistance);
   return times.flatMap((time, i) => {
     if (time > finish) return [];
     const frame = raceFrameAtTime(capture.frames, time)?.horses[index];
@@ -90,7 +76,7 @@ export function speedSamples(
         speed: frame.speed / 100,
         target: horse?.targetSpeeds?.[i] ?? null,
         acceleration: horse?.accelerationRates?.[i] ?? null,
-        startDash: time <= dashEnd + 0.0666 + 1e-5
+        startDash: time <= dashEnd
       }
     ];
   });

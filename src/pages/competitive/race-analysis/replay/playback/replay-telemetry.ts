@@ -10,6 +10,7 @@ import { hpRemainingColor } from '@/lib/race/replay/race-display';
 import { diagnosticHorse } from '@/lib/race/capture/race-diagnostics';
 import { chartTooltipStyle } from '@/components/charts/chart-tooltip';
 import { finalSpurtSection } from '@/lib/race/final-spurt';
+import { startDashEnd } from '@/lib/race/start-dash';
 import { phaseBandArea, racePhaseBands, type PhaseMarkArea } from '../../race-phase-bands';
 import {
   trajectorySeries,
@@ -34,6 +35,8 @@ export interface TelemetryEnsemble {
 
 export interface TelemetryChart {
   capture: ParsedRaceCapture;
+  /** Race length in metres; its base speed sets where each runner's start dash ends. */
+  raceDistance: number;
   ensemble?: TelemetryEnsemble;
   runner?: RaceRunner;
   chartRunners: RaceRunner[];
@@ -180,6 +183,42 @@ function frameAcceleration(capture: ParsedRaceCapture, index: number): (number |
 /** Target speed is a speed, so both share the speed scale. */
 const signalAxis = (signal: string) => (signal === 'target' ? 'speed' : signal);
 
+type RunnerSeries = { runner: RaceRunner; data: (number | null)[][] };
+
+/** The acceleration scale rounds out to this step, leaving room past the extremes. */
+const ACCELERATION_STEP = 0.5;
+
+/** Beside the other signals, acceleration keeps to this bottom share of the plot, below the speed lines. */
+const COMBINED_ACCELERATION_SHARE = 0.4;
+
+/**
+ * Scales acceleration to the race after each runner's start dash, whose 24 m/s² would flatten every
+ * acceleration skill; the dash runs off the top of the plot and its tooltip keeps the value.
+ */
+function racingAccelerationRange(chart: TelemetryChart, runners: RunnerSeries[]) {
+  let lowest = 0,
+    highest = 0,
+    racingSamples = 0;
+
+  for (const { runner, data } of runners) {
+    const dashEnd = startDashEnd(chart.capture, runner.index, chart.raceDistance);
+    for (const [time, value] of data) {
+      if (time == null || value == null || time <= dashEnd) continue;
+
+      lowest = Math.min(lowest, value);
+      highest = Math.max(highest, value);
+      racingSamples++;
+    }
+  }
+
+  if (racingSamples === 0) return undefined;
+
+  return {
+    min: (Math.ceil(lowest / ACCELERATION_STEP) - 1) * ACCELERATION_STEP,
+    max: (Math.floor(highest / ACCELERATION_STEP) + 1) * ACCELERATION_STEP
+  };
+}
+
 function chartData(chart: TelemetryChart, r: RaceRunner, signal: string) {
   const { capture, ensemble } = chart;
   const finish = chart.finishTimes.get(r.index);
@@ -281,6 +320,27 @@ export function telemetryOption(chart: TelemetryChart, expanded: boolean): EChar
   const multiple = axes.length > 1,
     color = dark ? '#abb4c3' : '#566071';
 
+  const signalSeries = chartSignals.map((signal) => ({
+    signal,
+    runners: chartRunners.map((r) => ({ runner: r, data: chartData(chart, r, signal.value) }))
+  }));
+
+  const acceleration = signalSeries.find(({ signal }) => signal.value === 'acceleration');
+  const accelerationRange = acceleration && racingAccelerationRange(chart, acceleration.runners);
+  const accelerationAxis = () => {
+    if (!accelerationRange || !multiple) return accelerationRange ?? {};
+
+    const { min, max } = accelerationRange;
+    return { min, max: min + (max - min) / COMBINED_ACCELERATION_SHARE };
+  };
+
+  const axisRange = (axis: string) => {
+    if (axis === 'hp') return { min: 0, max: 100, interval: 25 };
+    if (axis === 'acceleration') return accelerationAxis();
+
+    return { min: 0 };
+  };
+
   const hpColor = (value?: number) => hpRemainingColor(value, dark);
   return {
     animation: false,
@@ -318,9 +378,7 @@ export function telemetryOption(chart: TelemetryChart, expanded: boolean): EChar
         type: 'value',
         position: placement?.position ?? 'left',
         offset: placement?.offset ?? 0,
-        min: axis === 'acceleration' ? undefined : 0,
-        max: axis === 'hp' ? 100 : undefined,
-        interval: axis === 'hp' ? 25 : undefined,
+        ...axisRange(axis),
         splitNumber: 4,
         // Combined acceleration has no room for a scale; its live value and tooltip carry it.
         axisLabel: {
@@ -378,8 +436,8 @@ export function telemetryOption(chart: TelemetryChart, expanded: boolean): EChar
             data: sampledRaces(ensemble.trajectories, runner?.index ?? 0, signal.value)
           }))
         : []),
-      ...chartSignals.flatMap((signal, i) =>
-        chartRunners.map((r) => ({
+      ...signalSeries.flatMap(({ signal, runners }, i) =>
+        runners.map(({ runner: r, data }) => ({
           name:
             (ensemble ? 'Mean, ' : '') +
             (chartSignals.length > 1 ? signal.label + ', ' : '') +
@@ -413,7 +471,7 @@ export function telemetryOption(chart: TelemetryChart, expanded: boolean): EChar
                 ? value.toFixed(signal.value === 'hp' ? 1 : 2) + ' ' + signal.unit
                 : String(value)
           },
-          data: chartData(chart, r, signal.value),
+          data,
           ...(i === 0 && r.index === runner?.index
             ? {
                 markLine: {
