@@ -9,7 +9,8 @@
     plannerAffinityBreakdown,
     plannerAffinityFlows,
     plannerSkillSparks,
-    type PlannerPosition
+    type PlannerPosition,
+    withoutPlannerDescendants
   } from '@/lib/lineage/planner';
   import { VeteranAffinityEngine } from '@/lib/veterans/affinity/affinity-engine';
   import { veteranAffinityRepository } from '@/lib/veterans/affinity/affinity-repository';
@@ -168,8 +169,8 @@
     else pickerOpen = true;
   }
 
-  function validatePlacement(id: number): boolean {
-    if (canPlacePlannerCharacter(tree.nodes, activePosition, id)) return true;
+  function validatePlacement(id: number, nodes = tree.nodes): boolean {
+    if (canPlacePlannerCharacter(nodes, activePosition, id)) return true;
     notify('This slot cannot use the same character as a conflicting slot.', 'danger');
     return false;
   }
@@ -191,7 +192,11 @@
       parentCharacter(veteran, currentCharacters).cardId ??
       parentCharacter(veteran, tree.characters).cardId;
 
-    if (id == null || !validatePlacement(id)) return;
+    if (id == null) return;
+
+    const nodesAfterImport = withoutPlannerDescendants(tree.nodes, activePosition);
+    if (!validatePlacement(id, nodesAfterImport)) return;
+
     const entry = currentCharacters.get(id) ?? tree.characters.get(id);
     tree.placeVeteran(activePosition, id, entry, veteran);
     pickerOpen = false;

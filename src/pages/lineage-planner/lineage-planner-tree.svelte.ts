@@ -9,7 +9,8 @@ import {
   emptyPlannerNodes,
   type PlannerNode,
   type PlannerPayloadNode,
-  type PlannerPosition
+  type PlannerPosition,
+  withoutPlannerDescendants
 } from '@/lib/lineage/planner';
 import type { ProfileVeteran } from '@/pages/profile/profile-repository';
 import {
@@ -110,9 +111,11 @@ export class LineagePlannerTree {
     entry: CharacterData | undefined,
     veteran: ProfileVeteran
   ): void {
-    this.update(
-      position,
-      {
+    const withoutOldLineage = withoutPlannerDescendants(this.nodes, position);
+    const placed = {
+      ...withoutOldLineage,
+      [position]: {
+        ...withoutOldLineage[position],
         characterId: id,
         name: entry?.name ?? `Character ${id}`,
         image: characterImage(entry),
@@ -120,12 +123,11 @@ export class LineagePlannerTree {
         winSaddleIds: veteran.win_saddle_id_array ?? veteran.race_results ?? [],
         veteran,
         succession: undefined
-      },
-      false
-    );
+      }
+    };
 
     this.nodes = applySuccession(
-      this.nodes,
+      placed,
       position,
       veteran.succession_chara_array ?? [],
       this.characters

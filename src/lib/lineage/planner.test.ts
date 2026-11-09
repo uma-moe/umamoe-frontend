@@ -14,6 +14,7 @@ import {
   plannerExcludedCharacters,
   canPlacePlannerCharacter,
   plannerCharacterAffinity,
+  withoutPlannerDescendants,
   type PlannerPosition
 } from './planner';
 
@@ -96,6 +97,29 @@ describe('Angular lineage planner compatibility', () => {
     }
 
     expect(canPlacePlannerCharacter(nodes, 'p1-1', nodes.target.characterId!)).toBe(true);
+  });
+
+  it('clears only the slots below a parent when its lineage is replaced', () => {
+    const nodes = emptyPlannerNodes();
+    Object.values(nodes).forEach((node, index) => (node.characterId = (1001 + index) * 100 + 1));
+
+    const cleared = withoutPlannerDescendants(nodes, 'p1');
+    const emptied = Object.values(cleared)
+      .filter((node) => node.characterId == null)
+      .map((node) => node.position);
+
+    expect(emptied).toEqual(['p1-1', 'p1-2', 'p1-1-1', 'p1-1-2', 'p1-2-1', 'p1-2-2']);
+    expect(nodes['p1-1'].characterId).not.toBeNull();
+  });
+
+  it('lets a veteran replace a parent whose old grandparent shares its character', () => {
+    const nodes = emptyPlannerNodes();
+    nodes['p1-1'].characterId = 100101;
+
+    expect(canPlacePlannerCharacter(nodes, 'p1', 100102)).toBe(false);
+    expect(canPlacePlannerCharacter(withoutPlannerDescendants(nodes, 'p1'), 'p1', 100102)).toBe(
+      true
+    );
   });
 
   it('scores trial characters without mutating the tree or retaining the old slot race bonus', () => {

@@ -505,6 +505,33 @@ export function canPlacePlannerCharacter(
   return id != null && !plannerExcludedCharacters(nodes, position).has(id);
 }
 
+function isPlannerDescendant(position: PlannerPosition, ancestor: PlannerPosition): boolean {
+  let slot = TREE_POSITIONS.find((entry) => entry.position === position);
+
+  while (slot && 'parentPosition' in slot) {
+    if (slot.parentPosition === ancestor) return true;
+    const parent = slot.parentPosition;
+    slot = TREE_POSITIONS.find((entry) => entry.position === parent);
+  }
+
+  return false;
+}
+
+/** A veteran brings its own lineage, so everything below its slot is replaced on import. */
+export function withoutPlannerDescendants(
+  nodes: Record<PlannerPosition, PlannerNode>,
+  ancestor: PlannerPosition
+): Record<PlannerPosition, PlannerNode> {
+  const empty = emptyPlannerNodes();
+  const next = { ...nodes };
+
+  for (const { position } of TREE_POSITIONS) {
+    if (isPlannerDescendant(position, ancestor)) next[position] = empty[position];
+  }
+
+  return next;
+}
+
 /** Match Angular's scorePlannerSlot: a fresh character never inherits the old slot's wins. */
 export function plannerCharacterAffinity(
   engine: VeteranAffinityEngine | undefined,
