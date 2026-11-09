@@ -17,6 +17,7 @@ import type { RaceTrajectory } from '@/lib/race/replay/race-ensemble';
 import type { Course } from './replay-course';
 import { adjacentFrameTime } from './replay-timeline';
 import { teamColors } from './team-colors';
+import { RUNAWAY_SKILL_ID, speedUpCheckRanges } from './speed-up-check';
 
 const READOUTS_PER_SECOND = 10;
 
@@ -115,6 +116,51 @@ export class ReplayState {
     )?.horseIndex;
     return this.capture.runners.some((runner) => runner.index === index) ? index : undefined;
   });
+
+  /** Where the keep zones are measured from: the pacemaker when known, else the front runner. */
+  paceReference = $derived(
+    (this.pacemaker !== undefined ? this.frame?.horses[this.pacemaker]?.distance : undefined) ??
+      this.leader
+  );
+
+  #runaways = $derived(
+    new Set(
+      this.capture.events
+        .filter((e) => e.type === 3 && e.params[1] === RUNAWAY_SKILL_ID)
+        .map((e) => e.params[0])
+    )
+  );
+
+  /** Rear Speed Up check range per runner that can enter it now, in metres. */
+  speedUpRanges = $derived.by(() => {
+    if (!this.frame || this.time <= 0) return new Map<number, number>();
+
+    const runners = this.capture.runners.flatMap((runner) => {
+      const horse = this.frame?.horses[runner.index];
+      if (!horse) return [];
+
+      const spans = diagnosticHorse(this.capture, runner.index)?.temptationSpans;
+      const runningStyle =
+        runner.result?.runningStyle ||
+        Number(runner.raw.running_style ?? runner.raw.runningStyle) ||
+        1;
+      return [
+        {
+          index: runner.index,
+          distance: horse.distance,
+          runningStyle,
+          isRunaway: this.#runaways.has(runner.index) || runningStyle === 5,
+          temptationMode:
+            spans !== undefined
+              ? (activeSpan(spans, this.time)?.mode ?? 0)
+              : (horse.temptationMode ?? 0)
+        }
+      ];
+    });
+
+    return speedUpCheckRanges(runners, this.bounds.distanceMax);
+  });
+
   blockingSpans = $derived(frontBlockingSpans(this.capture));
   blockingNow = $derived(
     this.capture.runners.flatMap((r) => {

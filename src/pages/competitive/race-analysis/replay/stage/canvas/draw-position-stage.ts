@@ -1,9 +1,9 @@
-import type { CourseScene, StageGeometry } from '../position-scene';
+import { BANDS_BOTTOM, type CourseScene, type StageGeometry } from '../position-scene';
 import type { MinimapScene } from '../minimap-scene';
 import type { StageMarker } from '../stage-markers';
 import type { Paint2D } from './canvas-paint';
 import { drawCourse } from './draw-course';
-import { drawMarkers, type MarkerFocus } from './draw-markers';
+import { drawMarkers, drawSpeedUpChecks, type MarkerFocus } from './draw-markers';
 import { drawMinimap } from './draw-minimap';
 import type { StageImages } from './stage-images';
 import type { StagePalette } from './stage-palette';
@@ -25,6 +25,7 @@ export function drawPositionStage(
   { palette, images }: { palette: StagePalette; images: StageImages }
 ) {
   drawCourse(context, frame.course, frame.geometry, palette);
+  drawSpeedUpChecks(context, frame.markers, { top: BANDS_BOTTOM, bottom: frame.geometry.railY });
   drawMarkers(context, frame.markers, focus, {
     palette,
     images,

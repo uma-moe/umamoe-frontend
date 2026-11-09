@@ -25,6 +25,8 @@ export interface StageMarker {
   dim: boolean;
   readout: MarkerReadout;
   callouts: MarkerCallout[];
+  /** Stage x of the rear end of the runner's Speed Up check range, when it can enter one. */
+  speedUpRearX?: number;
 }
 
 /** Skill callouts take the rarity colours of the report's skill chips. */
@@ -78,12 +80,14 @@ export function stageMarkers({
     if (!inView || horse.lanePosition > laneMax) return [];
 
     const x = horse.distance * pixelsPerMetre - scroll;
-    return [{ runner, x, y: laneY(geometry, horse.lanePosition / laneMax) }];
+    const range = toggles.positionKeep ? replay.speedUpRanges.get(runner.index) : undefined;
+    const rearX = range === undefined ? undefined : x - range * pixelsPerMetre;
+    return [{ runner, x, y: laneY(geometry, horse.lanePosition / laneMax), rearX }];
   });
 
   const crowded = crowdedRunners(placed.map(({ runner, x, y }) => ({ index: runner.index, x, y })));
 
-  return placed.map(({ runner, x, y }) => ({
+  return placed.map(({ runner, x, y, rearX }) => ({
     index: runner.index,
     x: snapPixel(x, snap),
     y: snapPixel(y, snap),
@@ -94,6 +98,7 @@ export function stageMarkers({
     crowded: crowded.has(runner.index),
     dim: visibility[runner.index] === 1,
     readout: markerReadout({ replay, runner, toggles, dark }),
-    callouts: markerCallouts(callouts.get(runner.index), { timers: toggles.skillTimers, skills })
+    callouts: markerCallouts(callouts.get(runner.index), { timers: toggles.skillTimers, skills }),
+    speedUpRearX: rearX === undefined ? undefined : snapPixel(rearX, snap)
   }));
 }

@@ -130,7 +130,7 @@
     course: courseScene({
       features,
       geometry,
-      keepZones: keepZonesFor(replay.leader, raceDistance, toggles.positionKeep),
+      keepZones: keepZonesFor(replay.paceReference, raceDistance, toggles.positionKeep),
       laneMax,
       laneLabel: replay.laneMetres,
       startLanes,

@@ -368,14 +368,14 @@ export interface PositionKeepZone {
   end: number;
 }
 
-/** Distance bands behind the leader where each running style keeps position, while it lasts. */
-export function positionKeepZones(leader: number, raceDistance: number): PositionKeepZone[] {
-  if (leader >= (raceDistance * 10) / 24) return [];
+/** Distance bands behind the pacemaker where each running style keeps position, while it lasts. */
+export function positionKeepZones(reference: number, raceDistance: number): PositionKeepZone[] {
+  if (reference >= (raceDistance * 10) / 24) return [];
 
   const factor = 1 + (raceDistance - 1000) * 0.0008;
   return [
     { style: 2, min: 3, max: 5 * factor },
     { style: 3, min: 6.5 * factor, max: 7 * factor },
     { style: 4, min: 7.5 * factor, max: 8 * factor }
-  ].map((zone) => ({ style: zone.style, start: leader - zone.max, end: leader - zone.min }));
+  ].map((zone) => ({ style: zone.style, start: reference - zone.max, end: reference - zone.min }));
 }

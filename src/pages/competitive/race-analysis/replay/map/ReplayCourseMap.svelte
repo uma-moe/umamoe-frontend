@@ -350,7 +350,7 @@
   );
 
   const keepZones = $derived(
-    toggles.positionKeep ? positionKeepZones(replay.leader, replay.bounds.distanceMax) : []
+    toggles.positionKeep ? positionKeepZones(replay.paceReference, replay.bounds.distanceMax) : []
   );
 
   const screenMarkers = $derived(

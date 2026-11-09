@@ -366,6 +366,61 @@ function stackingOrder(marker: StageMarker, focus: MarkerFocus) {
   return 0;
 }
 
+/** A hex colour blended toward white by `ratio` (0 to 1); other colour strings pass through. */
+function towardWhite(color: string, ratio: number) {
+  if (!/^#[0-9a-f]{6}$/i.test(color)) return color;
+
+  const channel = (offset: number) =>
+    Math.round(parseInt(color.slice(offset, offset + 2), 16) * (1 - ratio) + 255 * ratio);
+  return `rgb(${channel(1)}, ${channel(3)}, ${channel(5)})`;
+}
+
+/**
+ * Speed Up check ranges, below the portraits as on Hakuraku: a dotted line across the track at the
+ * rear end of each range, and a solid line from there to the runner with a short tick at the runner.
+ */
+export function drawSpeedUpChecks(
+  context: Paint2D,
+  markers: StageMarker[],
+  { top, bottom }: { top: number; bottom: number }
+) {
+  for (const marker of markers) {
+    if (marker.speedUpRearX === undefined) continue;
+
+    const rearX = marker.speedUpRearX;
+    const opacity = marker.dim ? DIM_OPACITY : 1;
+    context.save();
+    context.globalAlpha = opacity * 0.95;
+    context.setLineDash([1, 7]);
+    context.lineCap = 'round';
+    context.beginPath();
+    context.moveTo(rearX, top);
+    context.lineTo(rearX, bottom);
+    context.strokeStyle = '#07101b';
+    context.lineWidth = 5;
+    context.stroke();
+    context.strokeStyle = towardWhite(marker.color, 0.45);
+    context.lineWidth = 2.5;
+    context.stroke();
+
+    context.setLineDash([]);
+    context.lineCap = 'butt';
+    context.globalAlpha = opacity;
+    context.beginPath();
+    context.moveTo(rearX, marker.y);
+    context.lineTo(marker.x, marker.y);
+    context.moveTo(marker.x, marker.y - 6);
+    context.lineTo(marker.x, marker.y + 6);
+    context.strokeStyle = '#0b111b';
+    context.lineWidth = 5;
+    context.stroke();
+    context.strokeStyle = marker.color;
+    context.lineWidth = 2;
+    context.stroke();
+    context.restore();
+  }
+}
+
 export function drawMarkers(
   context: Paint2D,
   markers: StageMarker[],
