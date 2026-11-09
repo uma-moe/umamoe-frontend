@@ -1,5 +1,11 @@
 import { describe, expect, it } from 'vitest';
-import { dealsCmMoods, seededCmMoods, seededGates, seededTeamMoods } from './game-seating';
+import {
+  recordedMoodDeal,
+  seededCmMoods,
+  seededGates,
+  seededRunnerMoods,
+  seededTeamMoods
+} from './game-seating';
 
 describe('seeded gates', () => {
   it('seat runners as the game did', () => {
@@ -44,22 +50,38 @@ describe('Champions Meeting moods', () => {
   });
 });
 
-describe('a race dealt Champions Meeting moods', () => {
-  const seed = 575300201;
-  const slotMoods = [4, 3, 2, 4, 2, 5, 3, 5, 2];
-  const slotGates = seededGates(seed, 9);
+describe('Team Trials moods', () => {
+  // Two Team Trials races from 2026-09-11 and a random-mood room match from CM10's archive, moods in capture order.
+  it('give every runner the mood its own draw deals', () => {
+    expect(seededRunnerMoods(1119669181, 12)).toEqual([2, 1, 2, 5, 1, 5, 2, 1, 4, 4, 5, 2]);
+    expect(seededRunnerMoods(621764430, 12)).toEqual([3, 2, 3, 4, 4, 4, 2, 5, 5, 4, 2, 2]);
+    expect(seededRunnerMoods(375632601, 9)).toEqual([4, 1, 2, 3, 5, 4, 5, 5, 4]);
+  });
+});
 
-  it('is recognised in any runner order', () => {
-    const inGateOrder = slotGates
+describe('the deal a race was dealt its moods by', () => {
+  /** Each runner's gate and mood, listed by gate as saved replays list them. */
+  function recordedRunners(seed: number, slotMoods: readonly number[]) {
+    return seededGates(seed, slotMoods.length)
       .map((gate, slot) => ({ gate, mood: slotMoods[slot] ?? 0 }))
       .toSorted((a, b) => a.gate - b.gate);
+  }
 
-    expect(dealsCmMoods(seed, inGateOrder)).toBe(true);
+  it('is Champions Meeting for a CM race in any runner order', () => {
+    const cmRace = recordedRunners(575300201, [4, 3, 2, 4, 2, 5, 3, 5, 2]);
+
+    expect(recordedMoodDeal(575300201, cmRace)).toBe('championsMeeting');
   });
 
-  it('is not a room match where every runner is Great', () => {
-    const roomMatch = slotGates.map((gate) => ({ gate, mood: 5 }));
+  it('is each runner its own for a Team Trials race', () => {
+    const teamTrialsRace = recordedRunners(1119669181, [2, 1, 2, 5, 1, 5, 2, 1, 4, 4, 5, 2]);
 
-    expect(dealsCmMoods(seed, roomMatch)).toBe(false);
+    expect(recordedMoodDeal(1119669181, teamTrialsRace)).toBe('perRunner');
+  });
+
+  it('is none for a room match where every runner is Great', () => {
+    const roomMatch = recordedRunners(575300201, Array(9).fill(5));
+
+    expect(recordedMoodDeal(575300201, roomMatch)).toBeUndefined();
   });
 });

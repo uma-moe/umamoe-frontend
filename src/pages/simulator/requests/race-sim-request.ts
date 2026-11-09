@@ -7,6 +7,7 @@
  * The caller selects JSON or MessagePack transport.
  */
 
+import type { MoodDeal } from '@/lib/race/seating/game-seating';
 import {
   buildRaceSetup,
   buildSkills,
@@ -20,6 +21,9 @@ export type MonteCarloOutputMode = 'procs' | 'skills' | 'results' | 'report';
 
 /** `sent` races every run at the runners' own gates; `randomized` seats each run by its own seed, as CM draws them. */
 export type MonteCarloGateOrder = 'sent' | 'randomized';
+
+/** `sent` races every run with the runners' own moods; a deal gives each run the moods its seed deals in the game. */
+export type MonteCarloMoodDeal = 'sent' | MoodDeal;
 
 /** At most 18 runners per field; a race needs at least 2. */
 export const MIN_FIELD_RUNNERS = 2;

@@ -16,8 +16,8 @@ type SampleContext = {
 };
 
 /**
- * The field seated as sampled race `index` ran. Under randomized gates each run has its own gates, and under CM moods
- * its own moods, so a rerun at the sent `frame_order` and `motivation` would race a different field.
+ * The field seated as sampled race `index` ran. Under randomized gates each run has its own gates, and under dealt
+ * moods its own moods, so a rerun at the sent `frame_order` and `motivation` would race a different field.
  */
 function seatedInput(
   input: MonteCarloInput,

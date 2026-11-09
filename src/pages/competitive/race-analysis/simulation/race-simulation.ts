@@ -3,20 +3,29 @@ import {
   type ParsedRaceCapture,
   type RaceRunner
 } from '@/lib/race/capture/race-capture-parser';
-import { dealsCmMoods, seededCmMoods, seededGates } from '@/lib/race/seating/game-seating';
+import {
+  recordedMoodDeal,
+  seededCmMoods,
+  seededGates,
+  seededRunnerMoods,
+  type MoodDeal
+} from '@/lib/race/seating/game-seating';
 import {
   captureRaceRequest,
   resimulateRace,
   type CaptureRaceSettings
 } from '@/services/race/race-resimulation';
-import type { MonteCarloGateOrder } from '@/pages/simulator/requests/race-sim-request';
+import type {
+  MonteCarloGateOrder,
+  MonteCarloMoodDeal
+} from '@/pages/simulator/requests/race-sim-request';
 import type { SimulatorHandoff } from '@/pages/simulator/simulator-handoff';
 import { simulatorRepository, type MonteCarloResult } from '@/pages/simulator/simulator-repository';
 import { simulatorUmasFromCapture } from '@/pages/simulator/simulator-uma';
 
 export const WIN_RATE_RACES = 100;
 
-/** New gates, and new moods for a race dealt Champions Meeting's moods, by capture order. */
+/** New gates, and new moods for a race whose seed dealt its moods, by capture order. */
 export type RaceSeating = Pick<CaptureRaceSettings, 'gates' | 'moods'>;
 
 /** The seed a simulated race runs on, and new gates and moods when it does not keep the recorded ones. */
@@ -27,10 +36,10 @@ export interface RaceRerun extends RaceSettings {
   capture: ParsedRaceCapture;
 }
 
-/** How an estimate seats its races: the gates, and whether each race's seed deals Champions Meeting's moods. */
+/** How an estimate seats its races: the gates, and whether each race's seed deals the moods. */
 export interface EstimateSeating {
   gateOrder: MonteCarloGateOrder;
-  cmMoods: boolean;
+  moodDeal: MonteCarloMoodDeal;
 }
 
 export interface WinRateEstimate extends EstimateSeating {
@@ -55,33 +64,50 @@ function captureTeams(capture: ParsedRaceCapture): number[] {
 }
 
 /**
- * Whether the recorded race is a Champions Meeting race whose moods its seed dealt, so another seed deals new ones.
- * Only Champions Meeting deals moods: a race of another named type, or a field that is not three teams of three, keeps
- * its moods.
+ * How the recorded race's seed dealt its moods, so another seed deals new ones the same way; undefined when the race
+ * keeps its moods. Each runner's own mood fits Team Trials and room matches with random moods. Champions Meeting's
+ * team deal needs three teams of three in a race of the Champions type or of no named type.
  */
-export function dealtCmMoods(recorded: ParsedRaceCapture): boolean {
+export function dealtMoods(recorded: ParsedRaceCapture): MoodDeal | undefined {
   const { raceType, randomSeed } = recorded;
-  if (randomSeed === undefined) return false;
-
-  // The game's "None" names no race type, which leaves the decision to the moods.
-  const namesOtherRace = raceType !== undefined && raceType !== 'Champions' && raceType !== 'None';
-  if (namesOtherRace) return false;
-
-  if (seededCmMoods(captureTeams(recorded), randomSeed) === undefined) return false;
+  if (randomSeed === undefined) return undefined;
 
   const runners = recorded.runners.map((runner) => ({
     gate: Number(runner.raw.frame_order),
     mood: Number(runner.raw.motivation)
   }));
-  return dealsCmMoods(randomSeed, runners);
+  const deal = recordedMoodDeal(randomSeed, runners);
+  if (deal !== 'championsMeeting') return deal;
+
+  // The game's "None" names no race type, which leaves the decision to the moods.
+  const namesOtherRace = raceType !== undefined && raceType !== 'Champions' && raceType !== 'None';
+  if (namesOtherRace) return undefined;
+
+  const threeTeamsOfThree = seededCmMoods(captureTeams(recorded), randomSeed) !== undefined;
+  return threeTeamsOfThree ? deal : undefined;
 }
 
-/** The recorded field as the game seats it on `seed`: new gates, and new moods when the race was dealt CM moods. */
+/** The recorded field's moods as `deal` gives them on `seed`, by capture order. */
+function moodsOnSeed(recorded: ParsedRaceCapture, deal: MoodDeal, seed: number) {
+  switch (deal) {
+    case 'perRunner':
+      return seededRunnerMoods(seed, recorded.runners.length);
+    case 'championsMeeting':
+      return seededCmMoods(captureTeams(recorded), seed);
+    default: {
+      const unhandled: never = deal;
+      throw new Error(`Unknown mood deal: ${String(unhandled)}`);
+    }
+  }
+}
+
+/** The recorded field as the game seats it on `seed`: new gates, and new moods when its seed dealt them. */
 export function seatingOnSeed(recorded: ParsedRaceCapture, seed: number): RaceSeating {
   const gates = seededGates(seed, recorded.runners.length);
-  if (!dealtCmMoods(recorded)) return { gates };
+  const deal = dealtMoods(recorded);
+  if (deal === undefined) return { gates };
 
-  const moods = seededCmMoods(captureTeams(recorded), seed);
+  const moods = moodsOnSeed(recorded, deal, seed);
   return moods ? { gates, moods } : { gates };
 }
 
@@ -125,14 +151,14 @@ export async function rerunRace(
   return { ...settings, capture };
 }
 
-/** How an estimate seats the recorded race: CM moods come with new gates, for a race that was dealt them. */
+/** How an estimate seats the recorded race: dealt moods come with new gates, for a race whose seed dealt them. */
 export function estimateSeating(
   recorded: ParsedRaceCapture,
   randomGates: boolean
 ): EstimateSeating {
-  if (!randomGates) return { gateOrder: 'sent', cmMoods: false };
+  if (!randomGates) return { gateOrder: 'sent', moodDeal: 'sent' };
 
-  return { gateOrder: 'randomized', cmMoods: dealtCmMoods(recorded) };
+  return { gateOrder: 'randomized', moodDeal: dealtMoods(recorded) ?? 'sent' };
 }
 
 export async function estimateWinRates(
@@ -146,7 +172,8 @@ export async function estimateWinRates(
       capture: captureRaceRequest(recorded, recorded.courseId ?? 0, { seed }),
       runs: WIN_RATE_RACES,
       gateOrder: seating.gateOrder,
-      ...(seating.cmMoods ? { cmMoods: true } : {}),
+      // Leaving out the default keeps the request valid for simulators that predate `moodDeal`.
+      ...(seating.moodDeal !== 'sent' ? { moodDeal: seating.moodDeal } : {}),
       output_mode: 'report',
       report_version: 2,
       output_format: 'msgpack'
@@ -161,7 +188,7 @@ export async function estimateWinRates(
 export function estimatedRace(estimate: WinRateEstimate, run: number): RaceSettings {
   const seed = estimate.result.seeds[run]!;
   const gates = estimate.gateOrder === 'randomized' ? estimate.result.gates?.[run] : undefined;
-  const moods = estimate.cmMoods ? estimate.result.moods?.[run] : undefined;
+  const moods = estimate.moodDeal !== 'sent' ? estimate.result.moods?.[run] : undefined;
 
   return { seed, ...(gates ? { gates } : {}), ...(moods ? { moods } : {}) };
 }

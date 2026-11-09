@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { seededGates } from '@/lib/race/seating/game-seating';
 import {
-  dealtCmMoods,
+  dealtMoods,
   estimatedRace,
   estimateSeating,
   raceHandoff,
@@ -20,15 +20,15 @@ const teamOrdered = () =>
     runner(2, { sourceIndex: 1 })
   ]);
 
-/** Nine runners listed in the game's slot order with the gates and moods its seed dealt, in three teams by default. */
-function nineRunnerRace(options: {
+/** Runners listed in the game's slot order with the gates and moods its seed dealt, in teams of three by default. */
+function dealtRace(options: {
   seed: number;
   moods: number[];
   raceType?: string;
   teamOf?: (slot: number) => number;
 }) {
   const { seed, moods, raceType, teamOf = (slot) => 1 + Math.floor(slot / 3) } = options;
-  const gates = seededGates(seed, 9);
+  const gates = seededGates(seed, moods.length);
   const runners = gates.map((gate, slot) =>
     runner(gate - 1, {
       sourceIndex: slot,
@@ -39,10 +39,14 @@ function nineRunnerRace(options: {
   return { ...capture(runners), randomSeed: seed, raceType };
 }
 
-// A CM20 race from 2026-10-11 as the game dealt it, and the same field in a room where everyone is Great.
+// A CM20 race from 2026-10-11 as the game dealt it, the same field in a room where everyone is Great, and a Team
+// Trials race from 2026-09-11.
 const cmMoods = [4, 3, 2, 4, 2, 5, 3, 5, 2];
-const cmRace = () => nineRunnerRace({ seed: 575300201, moods: cmMoods });
-const roomMatch = () => nineRunnerRace({ seed: 575300201, moods: Array(9).fill(5) });
+const cmRace = () => dealtRace({ seed: 575300201, moods: cmMoods });
+const roomMatch = () => dealtRace({ seed: 575300201, moods: Array(9).fill(5) });
+const teamTrialsMoods = [2, 1, 2, 5, 1, 5, 2, 1, 4, 4, 5, 2];
+const teamTrialsRace = () =>
+  dealtRace({ seed: 1119669181, moods: teamTrialsMoods, raceType: 'TeamStadium' });
 
 describe('capture order', () => {
   it('finds the runner the simulator reports by its place in the capture', () => {
@@ -66,27 +70,51 @@ describe('a race on a new seed', () => {
     expect(seating.gates).toEqual(seededGates(1262192222, 9));
     expect(seating.moods).toEqual([2, 5, 3, 2, 2, 4, 5, 3, 2]);
   });
+
+  it('deals a Team Trials race every runner a new mood with its gates', () => {
+    const seating = seatingOnSeed(teamTrialsRace(), 621764430);
+
+    expect(seating.gates).toEqual(seededGates(621764430, 12));
+    expect(seating.moods).toEqual([3, 2, 3, 4, 4, 4, 2, 5, 5, 4, 2, 2]);
+  });
 });
 
 describe('a race dealt Champions Meeting moods', () => {
   it('is a race of the Champions type or of no named type', () => {
-    expect(
-      dealtCmMoods(nineRunnerRace({ seed: 575300201, moods: cmMoods, raceType: 'Champions' }))
-    ).toBe(true);
-    expect(dealtCmMoods(cmRace())).toBe(true);
+    const namedCmRace = dealtRace({ seed: 575300201, moods: cmMoods, raceType: 'Champions' });
+
+    expect(dealtMoods(namedCmRace)).toBe('championsMeeting');
+    expect(dealtMoods(cmRace())).toBe('championsMeeting');
   });
 
   it('is never a race of another type, whatever its moods', () => {
-    const roomRace = nineRunnerRace({ seed: 575300201, moods: cmMoods, raceType: 'RoomMatch' });
+    const roomRace = dealtRace({ seed: 575300201, moods: cmMoods, raceType: 'RoomMatch' });
 
-    expect(dealtCmMoods(roomRace)).toBe(false);
+    expect(dealtMoods(roomRace)).toBeUndefined();
     expect(seatingOnSeed(roomRace, 1262192222).moods).toBeUndefined();
   });
 
   it('is never a field without three teams of three', () => {
-    const noTeams = nineRunnerRace({ seed: 575300201, moods: cmMoods, teamOf: () => 0 });
+    const noTeams = dealtRace({ seed: 575300201, moods: cmMoods, teamOf: () => 0 });
 
-    expect(dealtCmMoods(noTeams)).toBe(false);
+    expect(dealtMoods(noTeams)).toBeUndefined();
+  });
+});
+
+describe('a race dealt every runner its own mood', () => {
+  it('is a Team Trials race whose moods its seed dealt', () => {
+    expect(dealtMoods(teamTrialsRace())).toBe('perRunner');
+  });
+
+  it('is a room match with random moods, whatever teams it lists', () => {
+    const roomMatchMoods = [4, 1, 2, 3, 5, 4, 5, 5, 4];
+    const randomRoom = dealtRace({ seed: 375632601, moods: roomMatchMoods, raceType: 'RoomMatch' });
+
+    expect(dealtMoods(randomRoom)).toBe('perRunner');
+  });
+
+  it('is not a room match where every runner is Great', () => {
+    expect(dealtMoods(roomMatch())).toBeUndefined();
   });
 });
 
@@ -131,12 +159,17 @@ describe('a rerun on new gates', () => {
 
 describe('the seating of an estimate', () => {
   it('keeps the recorded gates and moods without random gates', () => {
-    expect(estimateSeating(cmRace(), false)).toEqual({ gateOrder: 'sent', cmMoods: false });
+    expect(estimateSeating(cmRace(), false)).toEqual({ gateOrder: 'sent', moodDeal: 'sent' });
   });
 
   it('deals moods with random gates only to a race that was dealt them', () => {
-    expect(estimateSeating(cmRace(), true)).toEqual({ gateOrder: 'randomized', cmMoods: true });
-    expect(estimateSeating(roomMatch(), true)).toEqual({ gateOrder: 'randomized', cmMoods: false });
+    const cm = estimateSeating(cmRace(), true);
+    const teamTrials = estimateSeating(teamTrialsRace(), true);
+    const room = estimateSeating(roomMatch(), true);
+
+    expect(cm).toEqual({ gateOrder: 'randomized', moodDeal: 'championsMeeting' });
+    expect(teamTrials).toEqual({ gateOrder: 'randomized', moodDeal: 'perRunner' });
+    expect(room).toEqual({ gateOrder: 'randomized', moodDeal: 'sent' });
   });
 });
 
@@ -159,19 +192,29 @@ describe('a race of the estimate', () => {
   );
 
   it('races again on its seed and the gates it drew', () => {
-    const estimate: WinRateEstimate = { seed: 7, gateOrder: 'randomized', cmMoods: false, result };
+    const estimate: WinRateEstimate = {
+      seed: 7,
+      gateOrder: 'randomized',
+      moodDeal: 'sent',
+      result
+    };
 
     expect(estimatedRace(estimate, 1)).toEqual({ seed: 1001, gates: [2, 3, 1] });
   });
 
   it('races again on the moods it dealt', () => {
-    const estimate: WinRateEstimate = { seed: 7, gateOrder: 'randomized', cmMoods: true, result };
+    const estimate: WinRateEstimate = {
+      seed: 7,
+      gateOrder: 'randomized',
+      moodDeal: 'perRunner',
+      result
+    };
 
     expect(estimatedRace(estimate, 1)).toEqual({ seed: 1001, gates: [2, 3, 1], moods: [3, 4, 2] });
   });
 
   it('keeps the recorded gates when the estimate did', () => {
-    const estimate: WinRateEstimate = { seed: 7, gateOrder: 'sent', cmMoods: false, result };
+    const estimate: WinRateEstimate = { seed: 7, gateOrder: 'sent', moodDeal: 'sent', result };
 
     expect(estimatedRace(estimate, 1)).toEqual({ seed: 1001 });
   });
@@ -196,7 +239,12 @@ describe('the race simulator hand-off', () => {
 
   it('hands over the estimate with the seed and gates it raced on', () => {
     const result = monteCarlo([[1, 0]]);
-    const estimate: WinRateEstimate = { seed: 7, gateOrder: 'randomized', cmMoods: false, result };
+    const estimate: WinRateEstimate = {
+      seed: 7,
+      gateOrder: 'randomized',
+      moodDeal: 'sent',
+      result
+    };
 
     const handoff = raceHandoff(race, { origin: 'race.json', gateOrder: 'sent', estimate });
 
