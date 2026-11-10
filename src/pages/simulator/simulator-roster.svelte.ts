@@ -53,10 +53,15 @@ export function isGeneratedRunner(uma: SimulatorUma): boolean {
 }
 
 export const POPULATED_TAG = '[Populated]';
+const POPULATED_SUFFIX = ' ' + POPULATED_TAG;
 
-/** Her name as the field and its reports show it, so the runners a populate seated stand out. */
-export function fieldRunnerName(uma: SimulatorUma): string {
-  return isGeneratedRunner(uma) ? uma.name + ' ' + POPULATED_TAG : uma.name;
+/** A populated runner's name carries the tag, so the field, results and codes all show where she came from. */
+export function populatedName(name: string): string {
+  return name + POPULATED_SUFFIX;
+}
+
+export function untaggedName(name: string): string {
+  return name.endsWith(POPULATED_SUFFIX) ? name.slice(0, -POPULATED_SUFFIX.length) : name;
 }
 
 export function isPlaceholderRunner(uma: SimulatorUma): boolean {
@@ -71,8 +76,9 @@ export function isDrawnOpponent(uma: SimulatorUma): boolean {
   return uma.drawnFrom !== undefined;
 }
 
-/** A runner the user edits or copies is theirs from then on, so imports and room draws keep her. */
+/** A runner the user edits or copies is theirs from then on: populates and room draws keep her, without the tag. */
 export function claimRunner(uma: SimulatorUma): void {
+  if (isGeneratedRunner(uma)) uma.name = untaggedName(uma.name);
   if (isPlaceholderRunner(uma)) delete uma.source;
   delete uma.drawnFrom;
 }

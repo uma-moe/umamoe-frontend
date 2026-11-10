@@ -51,7 +51,6 @@
     MAX_FIELD,
     simulatorRoster,
     importSimulatorUmas,
-    fieldRunnerName,
     isGeneratedRunner,
     ownRunners,
     replaceSimulatorField,
@@ -337,7 +336,6 @@
     const target = structuredClone($state.snapshot(course));
     const umas = structuredClone($state.snapshot(simulatorRoster.umas)).map((uma) => ({
       ...uma,
-      name: fieldRunnerName(uma),
       teamColor: simulatorTeamColor(uma.teamId)
     }));
 

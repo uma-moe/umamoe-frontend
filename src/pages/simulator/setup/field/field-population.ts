@@ -2,7 +2,7 @@ import { aptitudeGrade } from '@/lib/profile/profile-display';
 import type { CharacterData } from '@/lib/game-data/characters';
 import type { FieldResult } from '../../simulator-repository';
 import { createTrainee } from '../trainee';
-import { GENERATED_FIELD_SOURCE, MOB_SOURCE } from '../../simulator-roster.svelte';
+import { GENERATED_FIELD_SOURCE, MOB_SOURCE, populatedName } from '../../simulator-roster.svelte';
 import type { SimulatorUma } from '../../simulator-uma';
 
 /**
@@ -23,7 +23,7 @@ export function simulatorTeamsFromField(
         : (character?.name ?? (runner.card_id ? 'Uma ' + runner.card_id : 'Uma'));
       return {
         id: crypto.randomUUID(),
-        name,
+        name: populatedName(name),
         cardId: runner.card_id,
         trainee: createTrainee({
           speed: String(runner.stats.speed),

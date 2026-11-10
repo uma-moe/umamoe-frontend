@@ -44,7 +44,7 @@ describe('a generated field as simulator runners', () => {
 
     expect(teams.map((team) => team.length)).toEqual([1, 1]);
     expect(umas[0]).toMatchObject({
-      name: 'Silence Suzuka',
+      name: 'Silence Suzuka [Populated]',
       cardId: 100201,
       teamId: 1,
       frameOrder: 1,
@@ -54,7 +54,7 @@ describe('a generated field as simulator runners', () => {
     expect(umas[0]!.skills).toEqual([{ skillId: 200001, level: 1 }]);
 
     expect(umas[1]).toMatchObject({
-      name: 'Mob 2',
+      name: 'Mob 2 [Populated]',
       cardId: undefined,
       teamId: 2,
       fanCount: 5000,

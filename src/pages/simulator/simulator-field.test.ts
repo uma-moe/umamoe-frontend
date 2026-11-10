@@ -2,8 +2,8 @@ import { describe, expect, it } from 'vitest';
 import {
   GENERATED_FIELD_SOURCE,
   claimRunner,
-  fieldRunnerName,
   isDrawnOpponent,
+  populatedName,
   replaceSimulatorField,
   restoreSimulatorField,
   seatCmRoom,
@@ -132,15 +132,15 @@ describe('a populated CM room seated beside the field', () => {
     expect(names).toEqual(['Seiun Sky', 'First A 1', ...secondRoom]);
   });
 
-  it('marks the populated runners by name, but not the user’s or one she edited', () => {
-    simulatorRoster.umas = [runner('Seiun Sky')];
-    seatPopulatedTeams(populatedRoom('First'));
-    claimRunner(simulatorRoster.umas[1]!);
+  it('drops the populate’s tag from a runner the user claims, but not from her own name', () => {
+    const populated = { ...runner(populatedName('Maruzensky')), source: GENERATED_FIELD_SOURCE };
+    const own = runner('Tagged [Populated]');
 
-    const names = simulatorRoster.umas.slice(0, 3).map(fieldRunnerName);
+    claimRunner(populated);
+    claimRunner(own);
 
-    expect(names).toEqual(['Seiun Sky', 'First A 1', 'First A 2 [Populated]']);
-    expect(simulatorRoster.umas[2]?.name).toBe('First A 2');
+    expect(populated.name).toBe('Maruzensky');
+    expect(own.name).toBe('Tagged [Populated]');
   });
 
   it('takes the example runners’ place', () => {

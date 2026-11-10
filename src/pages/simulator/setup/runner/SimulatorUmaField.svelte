@@ -29,9 +29,8 @@
     createRosterUma,
     ensureSimulatorRoster,
     claimRunner,
-    fieldRunnerName,
-    isGeneratedRunner,
     POPULATED_TAG,
+    untaggedName,
     importKeeps,
     importSimulatorUmas,
     saveFieldRunner
@@ -143,9 +142,9 @@
     if (simulatorRoster.umas.length >= 18) return;
     const copy = structuredClone($state.snapshot(uma));
     copy.id = crypto.randomUUID();
+    claimRunner(copy);
     copy.name += ' copy';
     copy.frameOrder = undefined;
-    claimRunner(copy);
     simulatorRoster.umas.push(copy);
     simulatorRoster.configured = true;
   }
@@ -289,11 +288,11 @@
         {@const ranked = rankSkills(encodedSkills)}
         {@const sp = skillPointTotal(skills, encodedSkills)}
         {@const outfit = characters.get(uma.cardId ?? 0)?.subtitle}
-        {@const name = fieldRunnerName(uma)}
+        {@const untagged = untaggedName(uma.name)}
         <article
           class="runner"
           data-uma-id={uma.id}
-          aria-label={name}
+          aria-label={uma.name}
         >
           <Artwork
             src={look.image}
@@ -301,9 +300,9 @@
             size="sm"
           />
           <div class="identity">
-            <h3 title={name}>
-              <span class="name">{uma.name}</span>
-              {#if isGeneratedRunner(uma)}
+            <h3 title={uma.name}>
+              <span class="name">{untagged}</span>
+              {#if untagged !== uma.name}
                 <span class="populated">{POPULATED_TAG}</span>
               {/if}
             </h3>

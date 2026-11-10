@@ -370,7 +370,7 @@ test('Setup rows preserve cancelled edits and enforce the field capacity', async
   await expect(page.getByRole('button', { name: 'Run samples', exact: true })).toBeDisabled();
   await page.getByLabel('Sampled races', { exact: true }).fill('250');
   await expect(field.getByRole('button', { name: /^Delete / }).first()).toBeDisabled();
-  const firstName = await field.locator('.runner h3 .name').first().innerText();
+  const firstName = await field.locator('.runner h3').first().getAttribute('title');
   await field
     .getByRole('button', { name: /^Edit / })
     .first()
@@ -378,7 +378,7 @@ test('Setup rows preserve cancelled edits and enforce the field capacity', async
   const speed = await editor.getByLabel('Speed', { exact: true }).inputValue();
   await editor.getByLabel('Speed', { exact: true }).fill('1400');
   await editor.getByRole('button', { name: 'Cancel', exact: true }).click();
-  await field.getByRole('button', { name: 'Edit ' + firstName, exact: true }).click();
+  await field.getByRole('button', { name: 'Edit ' + String(firstName), exact: true }).click();
   await expect(editor.getByLabel('Speed', { exact: true })).toHaveValue(speed);
   await editor.getByLabel('Speed', { exact: true }).fill('1400');
   await editor.getByRole('button', { name: 'Save Uma', exact: true }).click();
