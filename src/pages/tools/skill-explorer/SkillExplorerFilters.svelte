@@ -98,8 +98,8 @@
     personal: 'Own unique'
   };
   const uniqueVersionOptions: { value: UniqueVersion; label: string }[] = [
-    { value: 'inherited', label: 'Inherited' },
-    { value: 'own', label: 'Own' }
+    { value: 'inherited', label: 'Inherited uniques' },
+    { value: 'own', label: 'Own uniques' }
   ];
   const KIND_NAMES: Record<SkillKind, string> = {
     speed: 'Speed',
@@ -137,7 +137,6 @@
   );
   const changedFilters = $derived(
     Number(rarities.size !== SKILL_RARITIES.length) +
-      Number(uniqueVersion !== 'inherited') +
       Number(kinds.size !== SKILL_KINDS.length) +
       Number(surface !== 'all') +
       Number(distance !== 'all') +
@@ -167,7 +166,6 @@
     surface = 'all';
     distance = 'all';
     rarities = new Set(SKILL_RARITIES);
-    uniqueVersion = 'inherited';
     kinds = new Set(SKILL_KINDS);
     bestOfFamily = false;
     showDayBound = true;
@@ -243,6 +241,14 @@
         ]}
         bind:value={yMode}
       />
+      {#if bothUniqueVersions}
+        <SegmentedControl
+          label="Unique version"
+          compact
+          options={uniqueVersionOptions}
+          bind:value={uniqueVersion}
+        />
+      {/if}
     </div>
     <div class="limit-segments">
       <SegmentedControl
@@ -315,17 +321,6 @@
                 onchange={keepCourseInScope}
               />
             </div>
-            {#if bothUniqueVersions}
-              <div class="filter-group">
-                <span class="group-label">Uniques</span>
-                <SegmentedControl
-                  label="Unique version"
-                  compact
-                  options={uniqueVersionOptions}
-                  bind:value={uniqueVersion}
-                />
-              </div>
-            {/if}
             <TypeFilters
               label="Rarity"
               all={rarityOptions}
