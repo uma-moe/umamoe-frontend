@@ -17,3 +17,12 @@ export function teamColors(runners: RaceRunner[]): (runner: RaceRunner) => strin
     return replayTeamColors[teams.indexOf(teamKey(runner)) % replayTeamColors.length]!;
   };
 }
+
+/** A hex colour blended toward white by `ratio` (0 to 1); other colour strings pass through. */
+export function towardWhite(color: string, ratio: number) {
+  if (!/^#[0-9a-f]{6}$/i.test(color)) return color;
+
+  const channel = (offset: number) =>
+    Math.round(parseInt(color.slice(offset, offset + 2), 16) * (1 - ratio) + 255 * ratio);
+  return `rgb(${channel(1)}, ${channel(3)}, ${channel(5)})`;
+}

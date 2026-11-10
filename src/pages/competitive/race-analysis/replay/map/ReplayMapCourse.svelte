@@ -4,6 +4,7 @@
   import { finalSpurtSection, FINAL_SPURT_HELP } from '@/lib/race/final-spurt';
   import { styleColors } from '@/pages/competitive/analysis-view';
   import { courseSegments, slopeColor, type Course, type PositionKeepZone } from '../replay-course';
+  import { towardWhite } from '../team-colors';
   import { gateStalls, OPEN_DOOR_RADIANS } from '../replay-gate';
   import {
     trackBandPoints,
@@ -32,6 +33,7 @@
     showSections,
     showSlopes,
     keepZones,
+    speedUpChecks,
     packPath,
     packWidth,
     cone,
@@ -62,6 +64,8 @@
     showSections: boolean;
     showSlopes: boolean;
     keepZones: PositionKeepZone[];
+    /** Runners that can enter Speed Up mode: position, lane in metres and check range. */
+    speedUpChecks: { distance: number; lane: number; range: number; color: string; dim: boolean }[];
     /** In map pixels, like the cone and trail; empty while the camera follows the window it marks. */
     packPath: string;
     packWidth: number;
@@ -158,6 +162,39 @@
         ...zone,
         outline: trackBandPoints(points, outerPoints, Math.max(0, zone.start), zone.end)
       }))
+  );
+
+  // As on the race positions stage: a dotted line across the track at the rear end of the range,
+  // a solid line along the runner's lane up to the runner and a short tick across it there.
+  const CHECK_TICK_PIXELS = 6;
+  const CHECK_STEP_METRES = 0.5;
+  const checks = $derived(
+    speedUpChecks.map((check) => {
+      const rear = check.distance - check.range;
+      const along: TrackPoint[] = [];
+      for (let d = rear; d < check.distance; d += CHECK_STEP_METRES)
+        along.push(offsetAt(d, check.lane));
+      along.push(offsetAt(check.distance, check.lane));
+
+      const inside = offsetAt(check.distance, 0),
+        outside = offsetAt(check.distance, 1);
+      const lanePixels =
+        (Math.hypot(outside.x - inside.x, outside.y - inside.y) / unitsPerMetre) * pixelsPerMetre;
+      const tick = CHECK_TICK_PIXELS / Math.max(0.01, lanePixels);
+
+      return {
+        ...check,
+        across: screenPoints(matrix, [offsetAt(rear, 0), offsetAt(rear, laneWidth)]),
+        path:
+          'M' +
+          screenPoints(matrix, along) +
+          'M' +
+          screenPoints(matrix, [
+            offsetAt(check.distance, check.lane - tick),
+            offsetAt(check.distance, check.lane + tick)
+          ])
+      };
+    })
   );
 
   const gate = $derived.by(() => {
@@ -369,6 +406,31 @@
     <title>Final spurt window from {Math.round(spurt.start)} m. {FINAL_SPURT_HELP}</title>
   </polyline>
 {/if}
+{#each checks as check}
+  <g
+    class="speed-up-check"
+    opacity={check.dim ? 0.25 : 1}
+  >
+    <polyline
+      class="check-rear-edge"
+      points={check.across}
+    />
+    <polyline
+      class="check-rear"
+      points={check.across}
+      stroke={towardWhite(check.color, 0.45)}
+    />
+    <path
+      class="check-line-edge"
+      d={check.path}
+    />
+    <path
+      class="check-line"
+      d={check.path}
+      stroke={check.color}
+    />
+  </g>
+{/each}
 {#if trailColor}
   <polyline
     class="runner-trail"
@@ -452,6 +514,32 @@
     stroke: var(--accent-warning);
     stroke-width: 2;
     stroke-dasharray: 5 3;
+  }
+  .speed-up-check {
+    pointer-events: none;
+  }
+  .speed-up-check path {
+    fill: none;
+  }
+  .check-rear-edge,
+  .check-rear {
+    stroke-dasharray: 1 7;
+    stroke-linecap: round;
+    opacity: 0.95;
+  }
+  .check-rear-edge {
+    stroke: #07101b;
+    stroke-width: 5;
+  }
+  .check-rear {
+    stroke-width: 2.5;
+  }
+  .check-line-edge {
+    stroke: #0b111b;
+    stroke-width: 5;
+  }
+  .check-line {
+    stroke-width: 2;
   }
   .runner-trail {
     stroke-width: 2;

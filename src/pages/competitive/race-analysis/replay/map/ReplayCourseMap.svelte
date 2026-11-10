@@ -1,4 +1,5 @@
 <script lang="ts">
+  // Overlays must match the other replay view (stage/ReplayPositionStage.svelte): implement every change in both.
   import { onDestroy, untrack, type Snippet } from 'svelte';
   import { prefersReducedMotion } from 'svelte/motion';
   import { raceFrameAtTime, replayLaneMetres } from '@/lib/race/replay/race-replay';
@@ -353,6 +354,26 @@
     toggles.positionKeep ? positionKeepZones(replay.paceReference, replay.bounds.distanceMax) : []
   );
 
+  // Speed Up check ranges, as on the race positions stage.
+  const speedUpChecks = $derived(
+    toggles.positionKeep
+      ? markers.flatMap(({ runner, horse }) => {
+          const range = replay.speedUpRanges.get(runner.index);
+          if (range === undefined) return [];
+
+          return [
+            {
+              distance: horse.distance,
+              lane: runnerLane(horse.lanePosition),
+              range,
+              color: replay.teamColor(runner),
+              dim: visibility[runner.index] === 1
+            }
+          ];
+        })
+      : []
+  );
+
   const screenMarkers = $derived(
     markers
       .map((marker) => ({ ...marker, anchor: view.project(marker.point) }))
@@ -526,6 +547,7 @@
             showSections={toggles.course && !view.following}
             showSlopes={toggles.slopes && !view.following}
             {keepZones}
+            {speedUpChecks}
             {packPath}
             packWidth={framedOuterLane * lateralScale * pixelsPerMetre}
             {cone}

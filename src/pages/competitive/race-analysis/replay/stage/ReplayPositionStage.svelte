@@ -1,4 +1,5 @@
 <script lang="ts">
+  // Overlays must match the other replay view (map/ReplayCourseMap.svelte): implement every change in both.
   import { onMount, type Snippet } from 'svelte';
   import { MediaQuery } from 'svelte/reactivity';
   import { loadSkills, type SkillData } from '@/lib/game-data/skills/skills';

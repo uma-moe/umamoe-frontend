@@ -14,6 +14,7 @@ import {
 import { skillChipColors, UNIQUE_BORDER_STOPS, type SkillChipColors } from './skill-chip-colors';
 import type { StageImages } from './stage-images';
 import type { StagePalette } from './stage-palette';
+import { towardWhite } from '../../team-colors';
 
 // A marker's parts, relative to the runner's point, as the marker's stylesheet places them.
 const PORTRAIT_CENTRE_Y = 2;
@@ -364,15 +365,6 @@ function stackingOrder(marker: StageMarker, focus: MarkerFocus) {
   if (marker.readout.selected || marker.index === focus.focused) return 1;
 
   return 0;
-}
-
-/** A hex colour blended toward white by `ratio` (0 to 1); other colour strings pass through. */
-function towardWhite(color: string, ratio: number) {
-  if (!/^#[0-9a-f]{6}$/i.test(color)) return color;
-
-  const channel = (offset: number) =>
-    Math.round(parseInt(color.slice(offset, offset + 2), 16) * (1 - ratio) + 255 * ratio);
-  return `rgb(${channel(1)}, ${channel(3)}, ${channel(5)})`;
 }
 
 /**

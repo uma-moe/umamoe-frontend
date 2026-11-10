@@ -26,6 +26,10 @@ Write for the next maintainer. Passing tests and compiling are necessary, but th
 - Before finishing, read the changed code and its callers as a maintainer: is control flow predictable, are variants explicit, are exceptional states handled, and are responsibilities cohesive? Simplify unclear code and run the relevant checks from `CONTRIBUTING.md`, with focused tests for changed behavior and important edge cases.
 - Make tests readable as arrange, act, and assert. Give substantial transformations and results meaningful names before asserting on them, and split tests that cover unrelated behaviors. Keep simple property assertions direct.
 
+# Race replay views
+
+- The replay has two views of the same race: race positions (`replay/stage/`) and the course map (`replay/map/`). Every overlay, marker or toggle effect must be implemented in both, from the same shared state in `replay-state.svelte.ts`, and checked in both before finishing. A feature in only one view is unfinished.
+
 # Svelte readability
 
 - Run `npm run format` after editing components or styles; `npm run format:check` must pass.
@@ -44,9 +48,11 @@ When connected to the svelte-llm MCP server, you have access to comprehensive Sv
 ## Available MCP Tools:
 
 ### 1. list_sections
+
 Use this FIRST to discover all available documentation sections. Returns a structured list with titles and paths.
 When asked about Svelte or SvelteKit topics, ALWAYS use this tool at the start of the chat to find relevant sections.
 
 ### 2. get_documentation
+
 Retrieves full documentation content for specific sections. Accepts single or multiple sections.
 After calling the list_sections tool, you MUST analyze the returned documentation sections and then use the get_documentation tool to fetch ALL documentation sections that are relevant for the users task.
