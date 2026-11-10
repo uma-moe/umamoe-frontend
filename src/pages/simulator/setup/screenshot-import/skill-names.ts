@@ -25,11 +25,11 @@ export interface SkillText {
   level?: number;
   /** A trailing symbol; `circle` when OCR saw a round glyph but can't say which one. */
   mark?: SkillMark | 'circle';
-  /** Which of the line's words is the mark. */
-  markWord?: number;
+  /** The name's last word with letters in it, which a mark follows. */
+  nameEnd?: number;
 }
 
-/** Reads ○ or ◎ from the pixels of the line's word at this index. */
+/** Reads ○ or ◎ from the pixels right after the line's word at this index. */
 export type CircleReader = (wordIndex: number) => '○' | '◎' | undefined;
 
 export type SkillMatch =
@@ -64,6 +64,7 @@ const NAME_MARK = /\s*([○◎×])\s*$/;
 /** How Tesseract's English model writes ○ and ◎: one or two round letters or digits, or a lone symbol other than a frame. */
 const CIRCLE_TOKEN = /^(?:[○◎OoQ0@©®°◯]|[Oo0]{2}|\(\)|(?![[\]|(){}=_.,:;'"!~-])[^\p{L}\p{N}])$/u;
 const CROSS_TOKEN = /^[xX×]$/;
+const HAS_LETTERS = /\p{L}/u;
 
 export function textKey(text: string): string {
   return text
@@ -141,13 +142,13 @@ function readWords(words: string[]): SkillText {
 
   const last = nameWords.at(-1);
   const mark = nameWords.length > 1 && last !== undefined ? markOf(words[last]!) : undefined;
-  const name = (mark ? nameWords.slice(0, -1) : nameWords).map((position) => words[position]);
+  const name = mark ? nameWords.slice(0, -1) : nameWords;
 
   return {
-    key: textKey(name.join(' ')),
+    key: textKey(name.map((position) => words[position]).join(' ')),
     level: level?.level,
     mark,
-    markWord: mark ? last : undefined
+    nameEnd: name.findLast((position) => HAS_LETTERS.test(words[position]!))
   };
 }
 
@@ -179,13 +180,29 @@ export function similarity(a: string, b: string): number {
   return length ? 1 - editDistance(a, b) / length : 0;
 }
 
+function isRing(mark: SkillMark | undefined): boolean {
+  return mark === '○' || mark === '◎';
+}
+
+/**
+ * Whether the line's ring has to be read from its pixels: OCR saw only a round glyph, or no mark at all where the name
+ * comes with one, since it drops a ring as easily as it misreads one.
+ */
+function needsRing(names: SkillName[], text: SkillText): boolean {
+  if (text.mark === 'circle') return true;
+  if (text.mark) return false;
+
+  return names.some((name) => isRing(name.mark));
+}
+
 /** Of the skills that share a name, the ones this line can be. */
-function namesForLine(names: SkillName[], text: SkillText, circle?: '○' | '◎'): SkillName[] {
+function namesForLine(names: SkillName[], text: SkillText, ring?: '○' | '◎'): SkillName[] {
   const withMark = (marks: (SkillMark | undefined)[]) =>
     names.filter((name) => marks.includes(name.mark));
 
   let fitting: SkillName[];
-  if (text.mark === 'circle') fitting = withMark(circle ? [circle] : ['○', '◎']);
+  if (ring) fitting = withMark([ring]);
+  else if (text.mark === 'circle') fitting = withMark(['○', '◎']);
   else if (text.mark) fitting = withMark([text.mark]);
   else fitting = withMark([undefined]);
 
@@ -255,8 +272,8 @@ function bestReading(index: SkillNameIndex, words: string[]): LineReading | unde
 
 /**
  * The skill a line of OCR text names. A close match to one skill is read as it; a looser match, or a name several
- * skills share, comes back as candidates for the player to pick from. `readCircle` reads the mark from the glyph's
- * pixels when OCR saw only a round shape.
+ * skills share, comes back as candidates for the player to pick from. `readCircle` reads ○ or ◎ from the pixels after
+ * the name when OCR can't say which it is.
  */
 export function matchSkillLine(
   index: SkillNameIndex,
@@ -272,12 +289,13 @@ export function matchSkillLine(
   if (best.score < ACCEPT_SCORE && text.key.length < MIN_CHOICE_LENGTH)
     return { kind: 'none', score: best.score };
 
-  const circle =
-    text.mark === 'circle' && text.markWord !== undefined
-      ? readCircle?.(start + text.markWord)
+  const sharingName = index.byKey.get(best.key) ?? [];
+  const ring =
+    text.nameEnd !== undefined && needsRing(sharingName, text)
+      ? readCircle?.(start + text.nameEnd)
       : undefined;
   const level = text.level ?? 1;
-  const names = namesForLine(index.byKey.get(best.key) ?? [], text, circle);
+  const names = namesForLine(sharingName, text, ring);
   const clearlyBest = (ranked[1]?.score ?? 0) <= best.score - ACCEPT_MARGIN;
   if (best.score >= ACCEPT_SCORE && clearlyBest && names.length === 1)
     return { kind: 'skill', skillId: names[0]!.skillId, level, score: best.score };

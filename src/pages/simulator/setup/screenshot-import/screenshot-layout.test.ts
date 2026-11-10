@@ -1,8 +1,11 @@
 import { describe, expect, it } from 'vitest';
+import type { Box } from './screenshot-pixels';
 import {
+  detailsCardArea,
   mostDigits,
   readScreenLayout,
   readStatValue,
+  skillCell,
   skillColumns,
   type OcrLine,
   type OcrWord
@@ -97,24 +100,41 @@ describe('readScreenLayout', () => {
     expect(layout.stats.map((stat) => stat.pageText)).toEqual(['©1150', '812', '', '', '']);
   });
 
-  it('looks for the stats panel right above the aptitudes', () => {
-    const asked: number[] = [];
+  it('looks for the stats panel right above the aptitude grid', () => {
+    const asked: Box[] = [];
 
-    readScreenLayout(detailsScreen, 1100, (aptitudesTop) => {
-      asked.push(aptitudesTop);
+    readScreenLayout(detailsScreen, 1100, (aptitudes) => {
+      asked.push(aptitudes);
       return undefined;
     });
 
-    expect(asked).toEqual([300]);
+    expect(asked).toEqual([{ x0: 200, y0: 300, x1: 840, y1: 400 }]);
   });
 
   it('finds all ten aptitudes and looks for each grade from the end of its label', () => {
     expect(layout.aptitudes).toHaveLength(10);
 
-    const turf = layout.aptitudes.find((aptitude) => aptitude.key === 'proper_ground_turf')!;
-    expect(turf.region.x0).toBeLessThan(240);
-    expect(turf.region.x0).toBeGreaterThan(200);
-    expect(turf.region.x1).toBeGreaterThan(260);
+    const turf = layout.aptitudes.find((aptitude) => aptitude.key === 'proper_ground_turf');
+    expect(turf?.region).toMatchObject({ x0: 240, x1: 300 });
+  });
+
+  it('reaches back over a label whose box took in its grade', () => {
+    const swallowed = detailsScreen.map((line) =>
+      line.text.startsWith('Distance')
+        ? row(340, [
+            ['Distance', 60],
+            ['Sprint', 200],
+            ['Mile', 400],
+            ['Medium.', 600],
+            ['Long', 800]
+          ])
+        : line
+    );
+
+    const grades = readScreenLayout(swallowed, 1100, () => statsPanel).aptitudes;
+    const medium = grades.find((grade) => grade.key === 'proper_distance_middle');
+
+    expect(medium?.region.x0).toBe(650);
   });
 
   it('lets a row’s last grade reach past where the next row starts', () => {
@@ -155,7 +175,7 @@ describe('readScreenLayout', () => {
   });
 
   it('leaves the scrollbar, read as one tall bracket, out of a skill line', () => {
-    const scrollbar: OcrWord = { text: ']', box: { x0: 1080, y0: 480, x1: 1090, y1: 900 } };
+    const scrollbar: OcrWord = { text: ']', box: { x0: 1030, y0: 480, x1: 1040, y1: 900 } };
     const lines = detailsScreen.map((line) =>
       line.text.startsWith('Shooting') ? { ...line, words: [...line.words, scrollbar] } : line
     );
@@ -168,6 +188,26 @@ describe('readScreenLayout', () => {
 
     expect(right?.text).toBe('Corner Recovery O');
     expect(right?.box.y1).toBe(520);
+  });
+
+  it('keeps words beside the stats panel’s width out of the skills', () => {
+    const lines = detailsScreen.map((line) =>
+      line.text.startsWith('Long Shot')
+        ? row(540, [
+            ['Long', 120],
+            ['Shot', 170],
+            ['Menu', 1070]
+          ])
+        : line
+    );
+
+    const skillLines = skillColumns(lines, layout.skillArea);
+
+    expect(skillLines.map((line) => line.text)).toEqual([
+      'Shooting Star Lvl 3',
+      'Long Shot',
+      'Corner Recovery O'
+    ]);
   });
 
   it('keeps the title above the stats', () => {
@@ -277,6 +317,42 @@ describe('readScreenLayout on a Global details screen', () => {
       ['left', '& Hands in Ya'],
       ['right', 'Victoria por']
     ]);
+  });
+});
+
+describe('detailsCardArea', () => {
+  it('crops a desktop capture to the card around its stats panel', () => {
+    const capture = { width: 2000, height: 1125 };
+    const layout = readScreenLayout(detailsScreen, capture.width, () => statsPanel);
+
+    expect(detailsCardArea(layout, capture)).toEqual({ x0: 20, y0: 0, x1: 1080, y1: 1125 });
+  });
+
+  it('leaves a screenshot of the card alone', () => {
+    const screenshot = { width: 1100, height: 2000 };
+    const layout = readScreenLayout(detailsScreen, screenshot.width, () => statsPanel);
+
+    expect(detailsCardArea(layout, screenshot)).toBeUndefined();
+  });
+});
+
+describe('skillCell', () => {
+  const area = { top: 0, split: 550, x0: 50, x1: 1050 };
+
+  it('reaches from just before a line to its column’s edge, a little above and below it', () => {
+    const [left, right] = skillColumns(
+      [
+        row(540, [
+          ['Long', 120],
+          ['Shot', 170],
+          ['Groundwork', 600]
+        ])
+      ],
+      area
+    );
+
+    expect(skillCell(left!, area)).toEqual({ x0: 100, y0: 516, x1: 550, y1: 584 });
+    expect(skillCell(right!, area)).toEqual({ x0: 580, y0: 516, x1: 1050, y1: 584 });
   });
 });
 

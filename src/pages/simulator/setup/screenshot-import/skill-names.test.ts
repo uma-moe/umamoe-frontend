@@ -30,7 +30,8 @@ describe('readSkillText', () => {
     expect(readSkillText('Shooting Star Lvl 3')).toEqual({
       key: 'shootingstar',
       level: 3,
-      mark: undefined
+      mark: undefined,
+      nameEnd: 1
     });
     expect(readSkillText('Right-Handed O').mark).toBe('circle');
     expect(readSkillText('Right-Handed ◎').mark).toBe('◎');
@@ -100,7 +101,7 @@ describe('matchSkillLine', () => {
     });
   });
 
-  it('reads the ring from the mark’s own word when stray words follow it', () => {
+  it('reads the ring right after the name’s last word when stray words follow it', () => {
     const asked: number[] = [];
     const match = matchSkillLine(index, '] @ Right-Handed O J', (word) => {
       asked.push(word);
@@ -108,7 +109,23 @@ describe('matchSkillLine', () => {
     });
 
     expect(match).toMatchObject({ skillId: 200011 });
-    expect(asked).toEqual([3]);
+    expect(asked).toEqual([2]);
+  });
+
+  it('reads the ring from the pixels when OCR dropped it or read it as a frame', () => {
+    expect(matchSkillLine(index, 'Right-Handed', () => '◎')).toMatchObject({ skillId: 200012 });
+    expect(matchSkillLine(index, 'Right-Handed ~)', () => '○')).toMatchObject({ skillId: 200011 });
+  });
+
+  it('keeps a mark OCR read outright without looking at the pixels', () => {
+    const asked: number[] = [];
+    const match = matchSkillLine(index, 'Right-Handed ◎', (word) => {
+      asked.push(word);
+      return '○';
+    });
+
+    expect(match).toMatchObject({ skillId: 200012 });
+    expect(asked).toEqual([]);
   });
 
   it('ignores text that names no skill', () => {

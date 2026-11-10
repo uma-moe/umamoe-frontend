@@ -2,35 +2,46 @@ import { prepareScreenshot } from './screenshot-image';
 import { keepDarkText, type PreparedScreenshot } from './screenshot-image-prep';
 import { inkGrade } from './screenshot-grades';
 import {
+  detailsCardArea,
   mostDigits,
   readScreenLayout,
   readStatValue,
+  skillCell,
   skillColumns,
+  type OcrLine,
   type ScreenLayout
 } from './screenshot-layout';
 import { pixelsImage, ScreenshotOcr } from './screenshot-ocr';
 import {
   cropPixels,
+  glyphCount,
   inkColours,
-  inkMask,
-  ringMark,
+  markAfter,
+  scaleBox,
   statsPanelAbove,
   type Box,
   type Pixels
 } from './screenshot-pixels';
-import { readSkillLines, type SkillChoice } from './screenshot-skills';
+import { readSkillLines, type SkillChoice, type SkillLineReading } from './screenshot-skills';
 import type { ScreenshotReading } from './screenshot-veteran';
 import type { SkillNameIndex } from './skill-names';
 
 const DIGITS = '0123456789';
-/** A stat is read at these sizes; each reading can drop a digit the other keeps. */
-const STAT_SCALES = [1, 2];
-/** Some captures draw the stats lighter than the names; a looser cut keeps their strokes whole. */
-const STAT_DARK_TEXT = 185;
+/**
+ * Ways to read a stat's digits, in order. Tesseract can drop a digit in any one of them, a different one in each, so
+ * they're tried until a reading has as many digits as the number shows. Some captures draw the stats lighter than the
+ * names, so the first cut is looser than the page's.
+ */
+const STAT_READINGS: { darkText: number; scale: number }[] = [
+  { darkText: 185, scale: 1 },
+  { darkText: 185, scale: 2 },
+  { darkText: 200, scale: 2 },
+  { darkText: 200, scale: 1 },
+  { darkText: 170, scale: 1 },
+  { darkText: 170, scale: 2 }
+];
 /** The rank badge fills the left of a stat's cell; its letters read as stray digits. */
 const STAT_BADGE_SHARE = 0.4;
-/** A round glyph's box is padded so its edge pixels are background. */
-const RING_PADDING = 3;
 
 export class ScreenshotLayoutError extends Error {
   constructor() {
@@ -39,17 +50,6 @@ export class ScreenshotLayoutError extends Error {
     );
     this.name = 'ScreenshotLayoutError';
   }
-}
-
-function readCircle(pixels: Pixels, box: Box): '○' | '◎' | undefined {
-  return ringMark(
-    inkMask(pixels, {
-      x0: box.x0 - RING_PADDING,
-      y0: box.y0 - RING_PADDING,
-      x1: box.x1 + RING_PADDING,
-      y1: box.y1 + RING_PADDING
-    })
-  );
 }
 
 /** A picture of one skill line, for the player to compare against the candidates. */
@@ -74,14 +74,37 @@ function statNumberRegion(cell: Box): Box {
   return { ...cell, x0: cell.x0 + (cell.x1 - cell.x0) * STAT_BADGE_SHARE };
 }
 
-/** One reading of a stat's number, from its own crop at `scale`. */
-async function readStatAt(ocr: ScreenshotOcr, pixels: Pixels, region: Box, scale: number) {
-  const crop = cropPixels(pixels, region, scale);
-  keepDarkText(crop.data, STAT_DARK_TEXT);
-  return readStatValue(await ocr.readLine(await pixelsImage(crop), DIGITS));
+/** The stat's number as black-on-white digits, cut and enlarged for one way of reading it. */
+function statDigits(
+  pixels: Pixels,
+  number: Box,
+  { darkText, scale }: (typeof STAT_READINGS)[number]
+): Pixels {
+  const crop = cropPixels(pixels, number, scale);
+  keepDarkText(crop.data, darkText);
+  return crop;
 }
 
-/** Each stat from readings of its number at a few sizes, falling back on what the page's own reading found. */
+/** A stat from the first reading with as many digits as its number shows, or the longest reading when none has. */
+async function readStat(ocr: ScreenshotOcr, pixels: Pixels, cell: Box) {
+  const number = statNumberRegion(cell);
+  const readings: (number | undefined)[] = [];
+  let shownDigits: number | undefined;
+
+  for (const reading of STAT_READINGS) {
+    const digits = statDigits(pixels, number, reading);
+    shownDigits ??= glyphCount(digits);
+
+    const value = readStatValue(await ocr.readLine(await pixelsImage(digits), DIGITS));
+    if (value !== undefined && String(value).length === shownDigits) return value;
+
+    readings.push(value);
+  }
+
+  return mostDigits(readings);
+}
+
+/** Each stat from its own cell, falling back on what the page's own reading found there. */
 async function readStats(
   ocr: ScreenshotOcr,
   pixels: Pixels,
@@ -89,11 +112,7 @@ async function readStats(
 ): Promise<ScreenshotReading['stats']> {
   const stats: ScreenshotReading['stats'] = {};
   for (const { key, region, pageText } of layout.stats) {
-    const number = statNumberRegion(region);
-    const readings: (number | undefined)[] = [];
-    for (const scale of STAT_SCALES) readings.push(await readStatAt(ocr, pixels, number, scale));
-
-    const value = mostDigits(readings) ?? readStatValue(pageText);
+    const value = (await readStat(ocr, pixels, region)) ?? readStatValue(pageText);
     if (value !== undefined) stats[key] = value;
   }
 
@@ -111,22 +130,79 @@ function readAptitudes(pixels: Pixels, layout: ScreenLayout): ScreenshotReading[
   return aptitudes;
 }
 
-async function readPreparedScreenshot(
+/** A prepared screenshot with its text and the parts of the details screen found in it. */
+interface ReadPage {
+  prepared: PreparedScreenshot;
+  lines: OcrLine[];
+  layout: ScreenLayout;
+}
+
+async function readPage(ocr: ScreenshotOcr, prepared: PreparedScreenshot): Promise<ReadPage> {
+  const lines = await ocr.readLines(prepared.page);
+  const layout = readScreenLayout(lines, prepared.pixels.width, (aptitudes) =>
+    statsPanelAbove(prepared.pixels, aptitudes)
+  );
+  return { prepared, lines, layout };
+}
+
+/**
+ * The screenshot's text, read again from just the details card when the screenshot shows more around it, as a desktop
+ * capture does: the card is then read at the size the reader works at, and nothing beside it gets in.
+ */
+async function readDetailsCard(
   ocr: ScreenshotOcr,
-  { page, pixels }: PreparedScreenshot,
+  file: Blob,
+  prepared: PreparedScreenshot
+): Promise<ReadPage> {
+  const whole = await readPage(ocr, prepared);
+  const card = detailsCardArea(whole.layout, whole.prepared.pixels);
+  if (!card) return whole;
+
+  const cardInScreenshot = scaleBox(card, 1 / whole.prepared.scale);
+  return readPage(ocr, await prepareScreenshot(file, cardInScreenshot));
+}
+
+/**
+ * The skills on the page. A line that names none is read again from its own cell, since the page's reading can run a
+ * wrapped name's two lines together.
+ */
+async function readSkills(
+  ocr: ScreenshotOcr,
+  { prepared, lines, layout }: ReadPage,
+  skillNames: SkillNameIndex
+): Promise<Omit<SkillLineReading, 'unread'>> {
+  const readMark = (box: Box) => markAfter(prepared.pixels, box);
+  const page = readSkillLines(skillColumns(lines, layout.skillArea), skillNames, readMark);
+  const skills = [...page.skills];
+  const choices = [...page.choices];
+
+  for (const line of page.unread) {
+    const cellLines = await ocr.readLines(prepared.page, skillCell(line, layout.skillArea));
+    const cell = readSkillLines(
+      cellLines.map((cellLine) => ({ ...cellLine, column: line.column })),
+      skillNames,
+      readMark
+    );
+
+    for (const skill of cell.skills) {
+      if (!skills.some((read) => read.skillId === skill.skillId)) skills.push(skill);
+    }
+    choices.push(...cell.choices);
+  }
+
+  return { skills, choices };
+}
+
+async function readScreenshot(
+  ocr: ScreenshotOcr,
+  page: ReadPage,
   skillNames: SkillNameIndex
 ): Promise<ScreenshotReading> {
-  const lines = await ocr.readLines(page);
-  const layout = readScreenLayout(lines, pixels.width, (aptitudesTop) =>
-    statsPanelAbove(pixels, aptitudesTop)
-  );
+  const { pixels } = page.prepared;
+  const { layout } = page;
   const stats = await readStats(ocr, pixels, layout);
   const aptitudes = readAptitudes(pixels, layout);
-  const { skills, choices } = readSkillLines(
-    skillColumns(lines, layout.skillArea),
-    skillNames,
-    (box) => readCircle(pixels, box)
-  );
+  const { skills, choices } = await readSkills(ocr, page, skillNames);
   // A screenshot with neither the stats nor a single skill on it shows some other screen.
   if (layout.kind === 'skillList' && !skills.length && !choices.length)
     throw new ScreenshotLayoutError();
@@ -154,7 +230,7 @@ export class ScreenshotReader {
     });
 
     const [ocr, prepared] = await Promise.all([this.#ocr, prepareScreenshot(file)]);
-    return readPreparedScreenshot(ocr, prepared, skillNames);
+    return readScreenshot(ocr, await readDetailsCard(ocr, file, prepared), skillNames);
   }
 
   async stop(): Promise<void> {

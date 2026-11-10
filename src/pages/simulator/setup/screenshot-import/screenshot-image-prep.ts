@@ -1,7 +1,9 @@
-import type { Pixels } from './screenshot-pixels';
+import { boxHeight, boxWidth, clampBox, type Box, type Pixels } from './screenshot-pixels';
 
 export interface ScreenshotImageRequest {
   file: Blob;
+  /** The part of the screenshot to prepare, in its own pixels; all of it when left out. */
+  area?: Box;
 }
 
 /** A screenshot at the size the reader works at: its colours for grades and marks, and its text for Tesseract. */
@@ -12,6 +14,8 @@ export interface PreparedScreenshot {
    * Tesseract reads the names cleanly and has far less of the page to lay out.
    */
   page: Blob;
+  /** Working pixels per pixel of the screenshot. */
+  scale: number;
 }
 
 /** Narrower screenshots are enlarged to this width; skill names break up for Tesseract much below it. */
@@ -35,8 +39,11 @@ export function workingScale(width: number): number {
   return Math.max(1, Math.min(MAX_ENLARGEMENT, MIN_WORKING_WIDTH / width));
 }
 
-/** Runs in the worker: decodes, scales and thresholds the screenshot off the page's thread. */
-export async function prepareScreenshotImage(file: Blob): Promise<PreparedScreenshot> {
+/** Runs in the worker: decodes, crops, scales and thresholds the screenshot off the page's thread. */
+export async function prepareScreenshotImage({
+  file,
+  area
+}: ScreenshotImageRequest): Promise<PreparedScreenshot> {
   let bitmap: ImageBitmap;
   try {
     bitmap = await createImageBitmap(file);
@@ -50,15 +57,28 @@ export async function prepareScreenshotImage(file: Blob): Promise<PreparedScreen
     if (bitmap.width * bitmap.height > MAX_PIXELS)
       throw new Error('This image is too large. Use a plain screenshot.');
 
-    const scale = workingScale(bitmap.width);
-    const width = Math.round(bitmap.width * scale);
-    const height = Math.round(bitmap.height * scale);
+    const source = clampBox(area ?? { x0: 0, y0: 0, x1: bitmap.width, y1: bitmap.height }, bitmap);
+    if (!boxWidth(source) || !boxHeight(source)) throw new Error('This screenshot is empty.');
+
+    const scale = workingScale(boxWidth(source));
+    const width = Math.round(boxWidth(source) * scale);
+    const height = Math.round(boxHeight(source) * scale);
     const canvas = new OffscreenCanvas(width, height);
     const context = canvas.getContext('2d', { willReadFrequently: true });
     if (!context) throw new Error('This browser can’t read screenshots.');
 
     context.imageSmoothingQuality = 'high';
-    context.drawImage(bitmap, 0, 0, width, height);
+    context.drawImage(
+      bitmap,
+      source.x0,
+      source.y0,
+      boxWidth(source),
+      boxHeight(source),
+      0,
+      0,
+      width,
+      height
+    );
     const colour = context.getImageData(0, 0, width, height);
 
     const text = new ImageData(new Uint8ClampedArray(colour.data), width, height);
@@ -67,7 +87,7 @@ export async function prepareScreenshotImage(file: Blob): Promise<PreparedScreen
     context.putImageData(text, 0, 0);
     const page = await canvas.convertToBlob({ type: 'image/png' });
 
-    return { pixels: { width, height, data: colour.data }, page };
+    return { pixels: { width, height, data: colour.data }, page, scale };
   } finally {
     bitmap.close();
   }

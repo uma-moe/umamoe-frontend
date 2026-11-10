@@ -1,4 +1,4 @@
-import { boxHeight, type Box } from './screenshot-pixels';
+import { boxHeight, boxWidth, type Box } from './screenshot-pixels';
 import { similarity, textKey } from './skill-names';
 
 export interface OcrWord {
@@ -84,24 +84,29 @@ export interface SkillLine {
   column: 'left' | 'right';
 }
 
-/** Where the skill list sits: below `top`, its two columns either side of `split`. */
+/** Where the skill list sits: below `top` and between `x0` and `x1`, its two columns either side of `split`. */
 export interface SkillArea {
   top: number;
   split: number;
+  x0: number;
+  x1: number;
 }
 
 export interface ScreenLayout {
   /** The top of the details screen, or a screenshot further down its skill list with only skills on it. */
   kind: 'details' | 'skillList';
   stats: LabelledRegion<StatKey>[];
+  /** The stats panel's cells, as wide as the details card's content. */
+  statsPanel: Box | undefined;
   aptitudes: GradeRegion[];
   skillArea: SkillArea;
   /** Text above the stats, where the screen names the Uma and her outfit. */
   titleLines: string[];
 }
 
-/** A grade letter and the gap before it span about this many label heights. */
-const GRADE_WIDTH_HEIGHTS = 4;
+/** A grade letter ends within this many label heights past its label. */
+const GRADE_REACH_HEIGHTS = 3;
+/** How far back over a label's box a grade it swallowed starts, in label heights. */
 const GRADE_OVERLAP_HEIGHTS = 1;
 /** A grade letter stands a little taller than its label; the next row's letters start not much further away. */
 const GRADE_HALF_HEIGHTS = 1;
@@ -116,10 +121,18 @@ const MAX_STAT_VALUE = 2000;
 const MAX_WORD_HEIGHTS = 2;
 /** Label words may be a letter off. */
 const LABEL_SIMILARITY = 0.75;
+/** A skill's cell reaches about this many word heights above and below a line of its name. */
+const CELL_REACH_HEIGHTS = 1.2;
+/** A details card narrower than this share of its screenshot is cropped and read again, as on a desktop capture. */
+const CARD_FILL_SHARE = 0.75;
+/** The card's edge sits a little outside its stats panel. */
+const CARD_MARGIN_SHARE = 0.03;
 
 interface FoundLabel<Key> {
   key: Key;
   box: Box;
+  /** OCR read more characters than the label has: its box took in a grade printed tight against it. */
+  overreaches: boolean;
 }
 
 interface LabelRow<Key> {
@@ -140,11 +153,21 @@ function median(values: number[]): number {
   return sorted[Math.floor(sorted.length / 2)] ?? 0;
 }
 
-function isLabelWord(text: string, label: Label<unknown>): boolean {
-  const key = textKey(text);
-  if (!key) return false;
+function boundingBox(boxes: Box[]): Box {
+  return {
+    x0: Math.min(...boxes.map((box) => box.x0)),
+    y0: Math.min(...boxes.map((box) => box.y0)),
+    x1: Math.max(...boxes.map((box) => box.x1)),
+    y1: Math.max(...boxes.map((box) => box.y1))
+  };
+}
 
-  return label.words.some((word) =>
+/** The label's word the text reads as, if any. */
+function labelWordFor(text: string, label: Label<unknown>): string | undefined {
+  const key = textKey(text);
+  if (!key) return undefined;
+
+  return label.words.find((word) =>
     word.length <= 4 ? key === word : similarity(key, word) >= LABEL_SIMILARITY
   );
 }
@@ -167,19 +190,32 @@ function wordRows(lines: OcrLine[]): OcrWord[][] {
   return rows.map((row) => row.sort((a, b) => a.box.x0 - b.box.x0));
 }
 
+/** The first label from `from` on that the word reads as, with the label's word it matched. */
+function findLabel<Key>(word: OcrWord, labels: Label<Key>[], from: number) {
+  for (let index = from; index < labels.length; index++) {
+    const label = labels[index]!;
+    const labelWord = labelWordFor(word.text, label);
+    if (labelWord !== undefined) return { index, key: label.key, labelWord };
+  }
+
+  return undefined;
+}
+
 /** The labels found in a row, left to right as the screen prints them, or none when the order breaks. */
 function labelsInRow<Key>(row: OcrWord[], labels: Label<Key>[]): FoundLabel<Key>[] {
   const found: FoundLabel<Key>[] = [];
   let next = 0;
 
   for (const word of row) {
-    const index = labels.findIndex(
-      (label, position) => position >= next && isLabelWord(word.text, label)
-    );
-    if (index < 0) continue;
+    const match = findLabel(word, labels, next);
+    if (!match) continue;
 
-    found.push({ key: labels[index]!.key, box: word.box });
-    next = index + 1;
+    found.push({
+      key: match.key,
+      box: word.box,
+      overreaches: word.text.length > match.labelWord.length
+    });
+    next = match.index + 1;
   }
 
   return found;
@@ -227,12 +263,12 @@ function regionRightOf(
   next: FoundLabel<AptitudeKey> | undefined
 ): Box {
   const height = boxHeight(label.box);
-  // OCR's box for a label can swallow a grade printed tight against it, as Medium's is.
-  const start = label.box.x1 - height * GRADE_OVERLAP_HEIGHTS;
+  // A label's brown reads as A's orange, so the region only reaches back over a label that swallowed its grade.
+  const start = label.overreaches ? label.box.x1 - height * GRADE_OVERLAP_HEIGHTS : label.box.x1;
 
   return {
     x0: start,
-    x1: Math.min(start + height * GRADE_WIDTH_HEIGHTS, next?.box.x0 ?? Infinity),
+    x1: Math.min(label.box.x1 + height * GRADE_REACH_HEIGHTS, next?.box.x0 ?? Infinity),
     y0: centreY(label.box) - height * GRADE_HALF_HEIGHTS,
     y1: centreY(label.box) + height * GRADE_HALF_HEIGHTS
   };
@@ -298,18 +334,22 @@ function columnLine(lineWords: OcrWord[], column: SkillLine['column']): SkillLin
  * The skill list's lines, left column first. Tesseract can join the two columns into one line where their rows line
  * up, so each line is split at the middle of the card by its words.
  */
-export function skillColumns(lines: OcrLine[], { top, split }: SkillArea): SkillLine[] {
+export function skillColumns(lines: OcrLine[], { top, split, x0, x1 }: SkillArea): SkillLine[] {
   const columns: Record<SkillLine['column'], SkillLine[]> = { left: [], right: [] };
 
   for (const line of lines) {
     if (centreY(line.box) <= top) continue;
 
+    const words = line.words.filter((word) => {
+      const x = centreX(word.box);
+      return x >= x0 && x < x1;
+    });
     const left = columnLine(
-      line.words.filter((word) => centreX(word.box) < split),
+      words.filter((word) => centreX(word.box) < split),
       'left'
     );
     const right = columnLine(
-      line.words.filter((word) => centreX(word.box) >= split),
+      words.filter((word) => centreX(word.box) >= split),
       'right'
     );
     if (left) columns.left.push(left);
@@ -318,6 +358,19 @@ export function skillColumns(lines: OcrLine[], { top, split }: SkillArea): Skill
 
   const byTop = (a: SkillLine, b: SkillLine) => a.box.y0 - b.box.y0;
   return [...columns.left.sort(byTop), ...columns.right.sort(byTop)];
+}
+
+/** The skill cell a line sits in, from just before the line to its column's edge. */
+export function skillCell(line: SkillLine, { split, x1 }: SkillArea): Box {
+  const wordHeight = median(line.words.map((word) => boxHeight(word.box)));
+  const reach = wordHeight * CELL_REACH_HEIGHTS;
+
+  return {
+    x0: line.box.x0 - wordHeight,
+    y0: line.box.y0 - reach,
+    x1: line.column === 'left' ? split : x1,
+    y1: line.box.y1 + reach
+  };
 }
 
 /** The aptitude rows below `below`: Track, Distance and Style, each found by its grade labels. */
@@ -351,12 +404,7 @@ function numbersPanel(rows: OcrWord[][], aptitudesTop: number): Box | undefined 
     .findLast((row) => row.some((word) => /\d/.test(word.text)));
   if (!numbersRow) return undefined;
 
-  return {
-    x0: Math.min(...numbersRow.map((word) => word.box.x0)),
-    y0: Math.min(...numbersRow.map((word) => word.box.y0)),
-    x1: Math.max(...numbersRow.map((word) => word.box.x1)),
-    y1: Math.max(...numbersRow.map((word) => word.box.y1))
-  };
+  return boundingBox(numbersRow.map((word) => word.box));
 }
 
 /** The panel's five equal cells, one per stat, with the words OCR read in each. */
@@ -370,8 +418,8 @@ function statCells(rows: OcrWord[][], panel: Box): LabelledRegion<StatKey>[] {
   });
 }
 
-/** Finds the stats panel above the aptitudes from the screenshot's pixels. */
-export type StatsPanelFinder = (aptitudesTop: number) => Box | undefined;
+/** Finds the stats panel from the screenshot's pixels, above `aptitudes`, the box around the grade labels. */
+export type StatsPanelFinder = (aptitudes: Box) => Box | undefined;
 
 /**
  * Finds the parts of the Uma details screen in its OCR text: the three aptitude rows by their labels, the stats panel
@@ -390,33 +438,58 @@ export function readScreenLayout(
     return {
       kind: 'skillList',
       stats: [],
+      statsPanel: undefined,
       aptitudes: [],
-      skillArea: { top: 0, split: width / 2 },
+      skillArea: { top: 0, split: width / 2, x0: 0, x1: width },
       titleLines: []
     };
   }
 
-  const aptitudesTop = Math.min(...aptitudes.map(({ row }) => rowTop(row)));
-  const aptitudesBottom = Math.max(...aptitudes.map(({ row }) => rowBottom(row)));
-  const labelHeight = median(
-    aptitudes.flatMap(({ row }) => row.found.map((label) => boxHeight(label.box)))
-  );
-  const panel = findStatsPanel?.(aptitudesTop) ?? numbersPanel(rows, aptitudesTop);
+  const labelBoxes = aptitudes.flatMap(({ row }) => row.found.map((label) => label.box));
+  const grid = boundingBox(labelBoxes);
+  const labelHeight = median(labelBoxes.map(boxHeight));
+  const panel = findStatsPanel?.(grid) ?? numbersPanel(rows, grid.y0);
   const tabs = findLabelRow(rows, TAB_LABELS, {
     minimum: 1,
-    below: aptitudesBottom,
-    above: aptitudesBottom + labelHeight * TAB_SEARCH_HEIGHTS
+    below: grid.y1,
+    above: grid.y1 + labelHeight * TAB_SEARCH_HEIGHTS
   });
-  const skillsTop = tabs ? Math.max(...tabs.words.map((word) => word.box.y1)) : aptitudesBottom;
-  const statsTop = panel?.y0 ?? aptitudesTop;
+  const skillsTop = tabs ? Math.max(...tabs.words.map((word) => word.box.y1)) : grid.y1;
+  const statsTop = panel?.y0 ?? grid.y0;
 
   return {
     kind: 'details',
     stats: panel ? statCells(rows, panel) : [],
+    statsPanel: panel,
     aptitudes: aptitudeRegions(aptitudes),
-    // The skill columns split under the middle of the stats, wherever the card sits in the screenshot.
-    skillArea: { top: skillsTop, split: panel ? centreX(panel) : width / 2 },
+    // The skill list sits under the stats, its columns split under their middle, wherever the card is.
+    skillArea: {
+      top: skillsTop,
+      split: panel ? centreX(panel) : width / 2,
+      x0: panel?.x0 ?? 0,
+      x1: panel?.x1 ?? width
+    },
     titleLines: lines.filter((line) => line.box.y1 <= statsTop).map((line) => line.text)
+  };
+}
+
+/**
+ * The details card's part of a screenshot that shows more around it, as a desktop capture does, for reading the card
+ * again on its own at the size the reader works at. Undefined when the card already fills the screenshot's width.
+ */
+export function detailsCardArea(
+  layout: ScreenLayout,
+  size: { width: number; height: number }
+): Box | undefined {
+  const panel = layout.statsPanel;
+  if (!panel || boxWidth(panel) >= size.width * CARD_FILL_SHARE) return undefined;
+
+  const margin = boxWidth(panel) * CARD_MARGIN_SHARE;
+  return {
+    x0: Math.max(0, panel.x0 - margin),
+    y0: 0,
+    x1: Math.min(size.width, panel.x1 + margin),
+    y1: size.height
   };
 }
 

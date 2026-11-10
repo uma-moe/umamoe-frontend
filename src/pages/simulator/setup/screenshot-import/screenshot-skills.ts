@@ -20,13 +20,18 @@ export interface SkillChoice {
 export interface SkillLineReading {
   skills: ReadSkill[];
   choices: SkillChoice[];
+  /** Lines with a name's worth of letters that named no skill, to read again on their own. */
+  unread: SkillLine[];
 }
 
 /** A wrapped name's second line starts within this many line heights of the first. */
 const WRAP_GAP_HEIGHTS = 0.8;
 const MAX_WRAP_LINES = 2;
+/** Fewer letters than this is a scrap of an icon or the card's frame, not a name. */
+const MIN_NAME_LETTERS = 5;
+const LETTER = /\p{L}/gu;
 
-/** Reads ○ or ◎ from the pixels of a word's box. */
+/** Reads ○ or ◎ from the pixels right after a word's box. */
 export type CircleReader = (box: Box) => '○' | '◎' | undefined;
 
 function matchLine(index: SkillNameIndex, line: SkillLine, readCircle: CircleReader): SkillMatch {
@@ -51,6 +56,28 @@ function joinLines(first: SkillLine, second: SkillLine): SkillLine {
   };
 }
 
+function leadingSkill(match: SkillMatch): number | undefined {
+  if (match.kind === 'skill') return match.skillId;
+  if (match.kind === 'choice') return match.candidates[0];
+
+  return undefined;
+}
+
+/**
+ * Whether two lines read together name more than the second does alone. Re-reading the second line's own skill makes
+ * them two skills; a longer name that matches as well as the second line's own skill does, as "Straightaway" and
+ * "Acceleration" make "Straightaway Acceleration", is one wrapped name.
+ */
+function namesMoreThan(joined: SkillMatch, next: SkillMatch): boolean {
+  if (joined.score !== next.score) return joined.score > next.score;
+
+  return leadingSkill(joined) !== leadingSkill(next);
+}
+
+function hasNameLetters(line: SkillLine): boolean {
+  return (line.text.match(LETTER)?.length ?? 0) >= MIN_NAME_LETTERS;
+}
+
 function wrapsOnto(line: SkillLine, next: SkillLine | undefined): next is SkillLine {
   if (!next || next.column !== line.column) return false;
 
@@ -68,6 +95,7 @@ export function readSkillLines(
 ): SkillLineReading {
   const skills: ReadSkill[] = [];
   const choices: SkillChoice[] = [];
+  const unread: SkillLine[] = [];
 
   for (let position = 0; position < lines.length; position++) {
     let line = lines[position]!;
@@ -82,9 +110,12 @@ export function readSkillLines(
 
       joined = joinLines(joined, next);
       const joinedMatch = matchLine(index, joined, readCircle);
-      // A joined match that only re-reads the next line's own skill is two skills, not one wrapped name.
-      const nextScore = matchLine(index, next, readCircle).score;
-      if (joinedMatch.kind !== 'none' && joinedMatch.score > Math.max(match.score, nextScore)) {
+      const nextMatch = matchLine(index, next, readCircle);
+      if (
+        joinedMatch.kind !== 'none' &&
+        joinedMatch.score > match.score &&
+        namesMoreThan(joinedMatch, nextMatch)
+      ) {
         line = joined;
         match = joinedMatch;
         consumed = extra;
@@ -102,8 +133,10 @@ export function readSkillLines(
         level: match.level,
         box: line.box
       });
+    } else if (hasNameLetters(line)) {
+      unread.push(line);
     }
   }
 
-  return { skills, choices };
+  return { skills, choices, unread };
 }
