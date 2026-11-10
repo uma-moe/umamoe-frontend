@@ -72,7 +72,8 @@ export function mergeReadings(readings: ScreenshotReading[]): ScreenshotReading 
     }
 
     for (const choice of reading.choices) {
-      const same = (other: SkillChoice) => other.candidates.join() === choice.candidates.join();
+      // A skill shows once per runner, so lines whose best guess is the same skill are one line read twice.
+      const same = (other: SkillChoice) => other.candidates[0] === choice.candidates[0];
       if (!merged.choices.some(same)) merged.choices.push(choice);
     }
   }

@@ -23,8 +23,12 @@ import type { ScreenshotReading } from './screenshot-veteran';
 import type { SkillNameIndex } from './skill-names';
 
 const DIGITS = '0123456789';
-/** The second reading of a stat's digits, enlarged from the working size, misses different digits than the first. */
-const STAT_ENLARGEMENT = 2;
+/** A stat is read at these sizes; each reading can drop a digit the other keeps. */
+const STAT_SCALES = [1, 2];
+/** Some captures draw the stats lighter than the names; a looser cut keeps their strokes whole. */
+const STAT_DARK_TEXT = 185;
+/** The rank badge fills the left of a stat's cell; its letters read as stray digits. */
+const STAT_BADGE_SHARE = 0.4;
 /** A round glyph's box is padded so its edge pixels are background. */
 const RING_PADDING = 3;
 
@@ -65,22 +69,31 @@ function lineImage(pixels: Pixels, box: Box): string | undefined {
   return canvas.toDataURL('image/png');
 }
 
-/** Each stat from two readings of its cell, the page's own and an enlarged copy, as each can drop a digit. */
+/** The part of a stat's cell right of its rank badge, where the number is. */
+function statNumberRegion(cell: Box): Box {
+  return { ...cell, x0: cell.x0 + (cell.x1 - cell.x0) * STAT_BADGE_SHARE };
+}
+
+/** One reading of a stat's number, from its own crop at `scale`. */
+async function readStatAt(ocr: ScreenshotOcr, pixels: Pixels, region: Box, scale: number) {
+  const crop = cropPixels(pixels, region, scale);
+  keepDarkText(crop.data, STAT_DARK_TEXT);
+  return readStatValue(await ocr.readLine(await pixelsImage(crop), DIGITS));
+}
+
+/** Each stat from readings of its number at a few sizes, falling back on what the page's own reading found. */
 async function readStats(
   ocr: ScreenshotOcr,
-  { page, pixels }: PreparedScreenshot,
+  pixels: Pixels,
   layout: ScreenLayout
 ): Promise<ScreenshotReading['stats']> {
   const stats: ScreenshotReading['stats'] = {};
   for (const { key, region, pageText } of layout.stats) {
-    const enlarged = cropPixels(pixels, region, STAT_ENLARGEMENT);
-    keepDarkText(enlarged.data);
+    const number = statNumberRegion(region);
+    const readings: (number | undefined)[] = [];
+    for (const scale of STAT_SCALES) readings.push(await readStatAt(ocr, pixels, number, scale));
 
-    const value =
-      mostDigits([
-        readStatValue(await ocr.readLine(page, DIGITS, region)),
-        readStatValue(await ocr.readLine(await pixelsImage(enlarged), DIGITS))
-      ]) ?? readStatValue(pageText);
+    const value = mostDigits(readings) ?? readStatValue(pageText);
     if (value !== undefined) stats[key] = value;
   }
 
@@ -100,15 +113,14 @@ function readAptitudes(pixels: Pixels, layout: ScreenLayout): ScreenshotReading[
 
 async function readPreparedScreenshot(
   ocr: ScreenshotOcr,
-  prepared: PreparedScreenshot,
+  { page, pixels }: PreparedScreenshot,
   skillNames: SkillNameIndex
 ): Promise<ScreenshotReading> {
-  const { page, pixels } = prepared;
   const lines = await ocr.readLines(page);
   const layout = readScreenLayout(lines, pixels.width, (aptitudesTop) =>
     statsPanelAbove(pixels, aptitudesTop)
   );
-  const stats = await readStats(ocr, prepared, layout);
+  const stats = await readStats(ocr, pixels, layout);
   const aptitudes = readAptitudes(pixels, layout);
   const { skills, choices } = readSkillLines(
     skillColumns(lines, layout.skillArea),

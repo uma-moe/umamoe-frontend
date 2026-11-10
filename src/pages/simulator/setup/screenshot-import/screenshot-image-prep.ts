@@ -14,24 +14,25 @@ export interface PreparedScreenshot {
   page: Blob;
 }
 
-/** Wide enough for skill names to stay legible to Tesseract (they break up at 800), small enough to read quickly. */
-const WORKING_WIDTH = 1000;
+/** Narrower screenshots are enlarged to this width; skill names break up for Tesseract much below it. */
+const MIN_WORKING_WIDTH = 1000;
 /** Small screenshots are enlarged at most this much; beyond it the text only blurs. */
 const MAX_ENLARGEMENT = 2;
 const MAX_PIXELS = 40_000_000;
 /** The game's brown text stays below this in every channel; its cards and highlights rise above it. */
 const DARK_TEXT = 170;
 
-/** Turns RGBA pixels, in place, into the page's dark text: black where the game's text is, white elsewhere. */
-export function keepDarkText(data: Uint8ClampedArray): void {
+/** Turns RGBA pixels, in place, into dark text: black below `limit` in every channel, white elsewhere. */
+export function keepDarkText(data: Uint8ClampedArray, limit = DARK_TEXT): void {
   for (let offset = 0; offset < data.length; offset += 4) {
     const brightest = Math.max(data[offset]!, data[offset + 1]!, data[offset + 2]!);
-    data.fill(brightest < DARK_TEXT ? 0 : 255, offset, offset + 3);
+    data.fill(brightest < limit ? 0 : 255, offset, offset + 3);
   }
 }
 
+/** Large screenshots are read at their own size: shrinking them resamples the text and costs digits. */
 export function workingScale(width: number): number {
-  return Math.min(MAX_ENLARGEMENT, WORKING_WIDTH / width);
+  return Math.max(1, Math.min(MAX_ENLARGEMENT, MIN_WORKING_WIDTH / width));
 }
 
 /** Runs in the worker: decodes, scales and thresholds the screenshot off the page's thread. */

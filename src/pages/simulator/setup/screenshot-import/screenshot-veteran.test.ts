@@ -54,6 +54,16 @@ describe('mergeReadings', () => {
 
     expect(merged.choices).toEqual([]);
   });
+
+  it('asks once about a line two screenshots read with different runner-up guesses', () => {
+    const box = { x0: 0, y0: 0, x1: 1, y1: 1 };
+    const merged = mergeReadings([
+      reading({ choices: [{ text: 'Mudy', candidates: [200011, 200012], level: 1, box }] }),
+      reading({ choices: [{ text: 'Muddy o', candidates: [200011], level: 1, box }] })
+    ]);
+
+    expect(merged.choices.map((choice) => choice.text)).toEqual(['Mudy']);
+  });
 });
 
 /** A reading whose stats are all filled in, as the dialog hands it over. */

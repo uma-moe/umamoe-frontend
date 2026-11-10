@@ -1,3 +1,9 @@
+.file-error {
+  margin: 0;
+  font-size: 12px;
+  line-height: 1.5;
+  color: var(--accent-error);
+}
 .stats {
   display: grid;
   grid-template-columns: repeat(5, minmax(0, 1fr));
@@ -47,6 +53,9 @@
   white-space: nowrap;
 }
 @media (max-width: 767px) {
+  .file-error {
+    font-size: 11px;
+  }
   .stats {
     gap: 6px;
   }

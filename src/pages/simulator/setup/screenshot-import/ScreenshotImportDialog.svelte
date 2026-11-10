@@ -1,11 +1,10 @@
 <script lang="ts">
-  import { onDestroy } from 'svelte';
+  import { untrack } from 'svelte';
   import Button from '@/components/controls/Button.svelte';
   import FileDrop from '@/components/controls/FileDrop.svelte';
   import SelectField from '@/components/controls/SelectField.svelte';
   import TextField from '@/components/controls/TextField.svelte';
   import Banner from '@/components/feedback/Banner.svelte';
-  import Icon from '@/components/Icon.svelte';
   import Dialog from '@/components/overlays/Dialog.svelte';
   import { loadReleasedSkillIds, skillImage } from '@/lib/game-data/skills/skills';
   import DialogStatus from '../../shell/DialogStatus.svelte';
@@ -15,14 +14,10 @@
   import BuildCodeSummary from '../build/code/BuildCodeSummary.svelte';
   import { veteranCode } from '../json-import/runner-json';
   import { STAT_KEYS, type StatKey } from './screenshot-layout';
-  import type { ScreenshotReader } from './screenshot-reader';
-  import {
-    mergeReadings,
-    screenshotVeteran,
-    STAT_NAMES,
-    unreadFields,
-    type ScreenshotReading
-  } from './screenshot-veteran';
+  import { ScreenshotQueue } from './screenshot-queue.svelte';
+  import type { SkillChoice } from './screenshot-skills';
+  import { screenshotVeteran, STAT_NAMES, unreadFields } from './screenshot-veteran';
+  import ScreenshotStrip from './ScreenshotStrip.svelte';
   import { buildSkillNameIndex } from './skill-names';
 
   /** A runner read from screenshots of her details screen, previewed and loaded like a build code. */
@@ -40,23 +35,27 @@
 
   const uid = $props.id();
   const review = new BuildCodeReview(() => ({ target, restorable: false }));
+  const queue = new ScreenshotQueue();
 
   let released = $state.raw<ReadonlySet<number>>(new Set()),
-    reading = $state.raw<ScreenshotReading>(),
-    screenshotCount = $state(0),
-    progress = $state(''),
-    readError = $state(''),
-    skippedNotice = $state(''),
     applyError = $state(''),
-    picks = $state<string[]>([]),
-    statInputs = $state<Record<StatKey, string>>(emptyStats());
-
-  let fileInput = $state<HTMLInputElement>();
-  let reader: ScreenshotReader | undefined;
-  let scan = 0;
+    /** The player's picks for lines the reader couldn't settle, by the line's candidates. */
+    picks = $state<Record<string, string>>({}),
+    /** Stats the player typed over what the screenshots read. */
+    statEdits = $state<Partial<Record<StatKey, string>>>({});
 
   const skillNames = $derived(
     review.skills.size ? buildSkillNameIndex(review.skills, released) : undefined
+  );
+  const reading = $derived(queue.reading);
+
+  const statInputs = $derived(
+    Object.fromEntries(
+      STAT_KEYS.map((key) => {
+        const read = reading?.stats[key];
+        return [key, statEdits[key] ?? (read === undefined ? '' : String(read))];
+      })
+    ) as Record<StatKey, string>
   );
 
   const stats = $derived.by(() => {
@@ -70,8 +69,8 @@
   });
 
   const pickedSkills = $derived(
-    (reading?.choices ?? []).flatMap((choice, index) => {
-      const skillId = picks[index];
+    (reading?.choices ?? []).flatMap((choice) => {
+      const skillId = pickFor(choice);
       return skillId ? [{ skillId: Number(skillId), level: choice.level }] : [];
     })
   );
@@ -86,9 +85,20 @@
   });
 
   const unread = $derived(reading ? unreadFields(reading) : []);
-  const statsUnread = $derived(
-    reading ? STAT_KEYS.some((key) => reading?.stats[key] === undefined) : false
+  const failures = $derived(
+    queue.screenshots.flatMap((screenshot, index) =>
+      screenshot.state.status === 'failed'
+        ? [{ id: screenshot.id, text: `Screenshot ${index + 1}: ${screenshot.state.error}` }]
+        : []
+    )
   );
+  const progressText = $derived.by(() => {
+    if (!queue.progress) return '';
+    if (!skillNames) return 'Loading skill data…';
+
+    const { current, total } = queue.progress;
+    return total === 1 ? 'Reading the screenshot…' : `Reading screenshot ${current} of ${total}…`;
+  });
 
   $effect(() => {
     review.code = veteran ? veteranCode(veteran) : undefined;
@@ -96,12 +106,17 @@
 
   $effect(() => {
     if (!open) {
-      void stopReader();
+      // Stopping touches the queue, which this effect must not come to depend on.
+      untrack(() => void queue.stop());
       return;
     }
 
     applyError = '';
     return review.loadGameData();
+  });
+
+  $effect(() => {
+    if (open && skillNames && queue.waiting) void queue.read(skillNames);
   });
 
   $effect(() => {
@@ -120,85 +135,25 @@
     };
   });
 
-  onDestroy(() => void stopReader());
+  $effect(
+    () => () =>
+      untrack(() => {
+        queue.clear();
+        void queue.stop();
+      })
+  );
 
-  function emptyStats(): Record<StatKey, string> {
-    return { speed: '', stamina: '', power: '', guts: '', wiz: '' };
+  function choiceKey(choice: SkillChoice): string {
+    return choice.candidates.join();
   }
 
-  function errorText(reason: unknown): string {
-    return reason instanceof Error ? reason.message : 'This screenshot couldn’t be read.';
+  function pickFor(choice: SkillChoice): string {
+    return picks[choiceKey(choice)] ?? String(choice.candidates[0] ?? LEAVE_OUT);
   }
 
-  async function stopReader() {
-    const running = reader;
-    reader = undefined;
-    scan++;
-    progress = '';
-    await running?.stop();
-  }
-
-  async function openFiles(list: FileList | null) {
-    const files = [...(list ?? [])];
-    if (!files.length || !skillNames) return;
-
-    const attempt = ++scan;
-    const names = skillNames;
-    reading = undefined;
-    readError = '';
-    skippedNotice = '';
+  function addScreenshots(files: File[]) {
     applyError = '';
-    screenshotCount = files.length;
-    progress = 'Loading the text reader…';
-
-    const readings: ScreenshotReading[] = [];
-    const failures: string[] = [];
-    try {
-      reader ??= new (await import('./screenshot-reader')).ScreenshotReader();
-      for (const [index, file] of files.entries()) {
-        progress = `Reading screenshot ${index + 1} of ${files.length}…`;
-        try {
-          readings.push(await reader.read(file, names));
-        } catch (reason) {
-          failures.push(errorText(reason));
-        }
-        if (attempt !== scan) return;
-      }
-    } catch (reason) {
-      failures.push(errorText(reason));
-    }
-
-    if (attempt !== scan) return;
-
-    progress = '';
-    if (!readings.length) {
-      readError = failures[0] ?? 'These screenshots couldn’t be read.';
-      return;
-    }
-
-    if (failures.length)
-      skippedNotice = `${failures.length} of ${files.length} screenshots couldn’t be read and were left out.`;
-
-    const merged = mergeReadings(readings);
-    picks = merged.choices.map((choice) => String(choice.candidates[0] ?? LEAVE_OUT));
-    statInputs = Object.fromEntries(
-      STAT_KEYS.map((key) => [
-        key,
-        merged.stats[key] === undefined ? '' : String(merged.stats[key])
-      ])
-    ) as Record<StatKey, string>;
-    reading = merged;
-  }
-
-  function clear() {
-    scan++;
-    reading = undefined;
-    screenshotCount = 0;
-    progress = '';
-    readError = '';
-    skippedNotice = '';
-    picks = [];
-    statInputs = emptyStats();
+    queue.add(files);
   }
 
   function apply() {
@@ -208,7 +163,9 @@
       return;
     }
 
-    clear();
+    queue.clear();
+    picks = {};
+    statEdits = {};
     open = false;
   }
 
@@ -248,30 +205,13 @@
         </Banner>
       </div>
     {/if}
-    {#if screenshotCount}
-      <div class="file-row">
-        <Icon
-          name="image"
-          size={16}
-        />
-        <span class="file">
-          <strong>
-            {screenshotCount === 1 ? 'One screenshot' : screenshotCount + ' screenshots'}
-          </strong>
-          {#if progress}
-            <span>{progress}</span>
-          {/if}
-        </span>
-        <Button
-          variant="secondary"
-          size="sm"
-          icon="image"
-          disabled={Boolean(progress)}
-          onclick={() => fileInput?.click()}
-        >
-          Choose others
-        </Button>
-      </div>
+    {#if queue.screenshots.length}
+      <ScreenshotStrip
+        screenshots={queue.screenshots}
+        accept={IMAGE_TYPES}
+        onadd={addScreenshots}
+        onremove={(id) => queue.remove(id)}
+      />
     {:else}
       <FileDrop
         id="{uid}-file"
@@ -280,27 +220,23 @@
         actionLabel="Choose screenshots"
         accept={IMAGE_TYPES}
         multiple
-        disabled={!skillNames}
-        onfiles={openFiles}
+        onfiles={(list) => addScreenshots([...list])}
       />
     {/if}
-    {#if readError}
+    {#each failures as failure (failure.id)}
       <p
         class="file-error"
         role="alert"
       >
-        {readError}
+        {failure.text}
       </p>
-    {/if}
+    {/each}
     {#if reading}
-      {#if skippedNotice || unread.length || (veteran && veteran.card_id === null)}
+      {#if unread.length || (veteran && veteran.card_id === null)}
         <Banner
           title="Check after loading"
           tone="warning"
         >
-          {#if skippedNotice}
-            <p>{skippedNotice}</p>
-          {/if}
           {#if veteran && veteran.card_id === null}
             <p>Her character wasn’t recognised. Pick her in the runner editor.</p>
           {/if}
@@ -309,28 +245,26 @@
           {/if}
         </Banner>
       {/if}
-      {#if statsUnread}
-        <fieldset class="stats">
-          <legend>Stats</legend>
-          {#each STAT_KEYS as key (key)}
-            <TextField
-              id="{uid}-{key}"
-              label={STAT_NAMES[key]}
-              inputmode="numeric"
-              placeholder="–"
-              maxlength={4}
-              bind:value={statInputs[key]}
-            />
-          {/each}
-        </fieldset>
-      {/if}
+      <fieldset class="stats">
+        <legend>Stats</legend>
+        {#each STAT_KEYS as key (key)}
+          <TextField
+            id="{uid}-{key}"
+            label={STAT_NAMES[key]}
+            inputmode="numeric"
+            placeholder="–"
+            maxlength={4}
+            bind:value={() => statInputs[key], (value) => (statEdits[key] = value)}
+          />
+        {/each}
+      </fieldset>
       {#if reading.choices.length}
         <section
           class="choices"
           aria-labelledby="{uid}-choices"
         >
           <strong id="{uid}-choices">Which skill is this?</strong>
-          {#each reading.choices as choice, index (index)}
+          {#each reading.choices as choice, index (choiceKey(choice))}
             <div class="choice">
               {#if choice.image}
                 <img
@@ -345,8 +279,8 @@
                 label="Skill read as “{choice.text}”"
                 hideLabel
                 options={choiceOptions(choice.candidates)}
-                value={picks[index]}
-                onchange={(value) => (picks[index] = value)}
+                value={pickFor(choice)}
+                onchange={(value) => (picks[choiceKey(choice)] = value)}
               />
             </div>
           {/each}
@@ -364,7 +298,7 @@
         goal={review.goal}
         skills={review.skills}
       />
-    {:else if !screenshotCount || readError}
+    {:else if !reading && !queue.progress}
       <div class="holds">
         <strong>Her details screen</strong>
         <ul>
@@ -375,30 +309,17 @@
       </div>
     {/if}
   </div>
-  <input
-    bind:this={fileInput}
-    class="sr-only"
-    type="file"
-    accept={IMAGE_TYPES}
-    multiple
-    tabindex="-1"
-    aria-hidden="true"
-    onchange={(event) => {
-      void openFiles(event.currentTarget.files);
-      event.currentTarget.value = '';
-    }}
-  />
   {#snippet actions()}
     <DialogStatus>
       {#if applyError}
         <span class="bad">{applyError}</span>
-      {:else if progress}
-        <span>{progress}</span>
+      {:else if progressText}
+        <span>{progressText}</span>
       {:else if review.ready}
         <BuildCodeSummary {review} />
       {:else if reading && !stats}
         <span class="blocked">Fill in her stats to load her.</span>
-      {:else if readError}
+      {:else if failures.length && !reading}
         <span class="blocked">These screenshots can’t be loaded.</span>
       {:else if !skillNames && !review.gameDataError}
         <span>Loading skill data…</span>
@@ -414,7 +335,7 @@
     </Button>
     <Button
       icon="download"
-      disabled={!review.ready || Boolean(progress)}
+      disabled={!review.ready || Boolean(queue.progress)}
       onclick={apply}
     >
       Load
@@ -424,6 +345,5 @@
 
 <style>
   @import '../build/code/build-import.css';
-  @import '../import-file.css';
   @import './screenshot-import.css';
 </style>

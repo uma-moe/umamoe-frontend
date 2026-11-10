@@ -1,0 +1,87 @@
+.shots {
+  display: grid;
+  grid-template-columns: repeat(var(--columns), minmax(0, 1fr));
+  gap: 8px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.shot,
+.shot-add {
+  position: relative;
+  width: 100%;
+  height: 240px;
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-md);
+}
+.shot {
+  overflow: hidden;
+}
+.shot img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: center 30%;
+}
+.shot-status {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-content: center;
+  justify-items: center;
+  gap: 4px;
+  background: color-mix(in srgb, var(--surface-0) 70%, transparent);
+  font-size: 11px;
+  font-weight: 650;
+  color: var(--text-primary);
+}
+.shot-status.failed {
+  color: var(--accent-warning);
+}
+.shot-remove {
+  position: absolute;
+  top: 0;
+  right: 0;
+  border-bottom-left-radius: var(--radius-sm);
+  background: color-mix(in srgb, var(--surface-overlay) 85%, transparent);
+}
+.shot-remove :global(.icon-button) {
+  border-radius: 0 0 0 var(--radius-sm);
+}
+.shot-add {
+  display: grid;
+  place-content: center;
+  justify-items: center;
+  gap: 6px;
+  padding: 8px;
+  border-style: dashed;
+  background: none;
+  font: inherit;
+  font-size: 12px;
+  font-weight: 650;
+  color: var(--text-secondary);
+  text-align: center;
+  cursor: pointer;
+  transition:
+    border-color var(--duration-fast),
+    color var(--duration-fast);
+}
+.shot-add:hover,
+.shots.dragging .shot-add {
+  border-color: var(--color-accent);
+  color: var(--text-primary);
+}
+.shot-add:focus-visible {
+  outline: 2px solid var(--color-accent);
+  outline-offset: 2px;
+}
+@media (max-width: 767px) {
+  .shots {
+    gap: 6px;
+  }
+  .shot,
+  .shot-add {
+    height: 180px;
+  }
+}
