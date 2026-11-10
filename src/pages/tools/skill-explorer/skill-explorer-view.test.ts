@@ -291,6 +291,21 @@ describe('Skill Explorer plot view', () => {
     expect(shown('inherited')).toEqual([[900011, 'inherited']]);
   });
 
+  it('shows one version of each unique at a time, unless compared', () => {
+    const own = skill(100011, 'Own', { rarity: 4, unique: true });
+    const both = {
+      points: [...points, point(100011, 0.6, 0.5)],
+      skills: new Map([...skills, [100011, own]])
+    };
+
+    expect(shownIds({ ...both, uniqueVersion: 'own' })).toContain(100011);
+    expect(shownIds({ ...both, uniqueVersion: 'own' })).not.toContain(900011);
+    expect(shownIds({ ...both, uniqueVersion: 'inherited' })).not.toContain(100011);
+    expect(
+      shownIds({ ...both, uniqueVersion: 'inherited', comparedSkillIds: new Set([100011]) })
+    ).toContain(100011);
+  });
+
   it('shows a unique by its character', () => {
     const unique = view().plotted.find((plotted) => plotted.skillId === 900011)!;
 

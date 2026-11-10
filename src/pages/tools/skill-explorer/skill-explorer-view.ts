@@ -45,6 +45,17 @@ export type SkillRarity = 'white' | 'gold' | 'inherited' | 'personal';
 
 export const SKILL_RARITIES: readonly SkillRarity[] = ['white', 'gold', 'inherited', 'personal'];
 
+/**
+ * Which version of each unique shows: inherited from a parent, or the character's own. One at a time, so each ranks
+ * among the other skills without its twin beside it.
+ */
+export type UniqueVersion = 'inherited' | 'own';
+
+/** The unique rarity `version` leaves out. */
+export function hiddenRarity(version: UniqueVersion): SkillRarity {
+  return version === 'own' ? 'inherited' : 'personal';
+}
+
 /** Toggle one filter without changing any of the other selections. */
 export function toggleType<Type>(selected: ReadonlySet<Type>, type: Type): Set<Type> {
   const next = new Set(selected);
@@ -93,6 +104,8 @@ export interface PlotOptions {
   yMode: YMode;
   /** The rarities and kinds to show for skills outside the comparison. */
   rarities: ReadonlySet<SkillRarity>;
+  /** The version of each unique to show; none shows both. */
+  uniqueVersion?: UniqueVersion;
   kinds: ReadonlySet<SkillKind>;
   search: string;
   /** A picked uma's skills: only they match, along with the search. */
@@ -245,7 +258,10 @@ function candidatesOf(options: PlotOptions): Candidate[] {
     if (isDayBound(skill) && !dayBoundShown(skill, options)) continue;
 
     const compared = options.comparedSkillIds?.has(point.skillId) === true;
-    if (!compared && !options.rarities.has(rarityOf(skill))) continue;
+    const rarity = rarityOf(skill);
+    const versionHidden =
+      options.uniqueVersion !== undefined && rarity === hiddenRarity(options.uniqueVersion);
+    if (!compared && (!options.rarities.has(rarity) || versionHidden)) continue;
 
     const kind = options.facts.get(skill.skill_id)?.kind ?? 'other';
     if (!compared && !options.kinds.has(kind)) continue;

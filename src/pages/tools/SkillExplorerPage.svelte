@@ -90,12 +90,14 @@
   } from './skill-explorer/skill-explorer-data';
   import {
     SKILL_RARITIES,
+    hiddenRarity,
     isNegativeSkill,
     limitOf,
     plotView,
     raritiesOf,
     type ShowLimit,
     type SkillRarity,
+    type UniqueVersion,
     type XMode,
     type YMode
   } from './skill-explorer/skill-explorer-view';
@@ -139,6 +141,7 @@
   let xMode = $state<XMode>('position');
   let yMode = $state<YMode>('value');
   let rarities = $state.raw<ReadonlySet<SkillRarity>>(new Set(SKILL_RARITIES));
+  let uniqueVersion = $state<UniqueVersion>('inherited');
   let kinds = $state.raw<ReadonlySet<SkillKind>>(new Set(SKILL_KINDS));
   let search = $state('');
   let umaCardId = $state<number>();
@@ -256,7 +259,17 @@
   const buildStyle = $derived(selectedCourse && style !== 'all' ? style : undefined);
   const referenceBuild = $derived(buildStyle ? scopeData?.builds?.[buildStyle] : undefined);
   const points = $derived(scopeData?.styles[style] ?? []);
-  const rarityOptions = $derived(raritiesOf(points, allSkills));
+  const heldRarities = $derived(raritiesOf(points, allSkills));
+  // With both versions of uniques valued, one shows at a time: a version alone shows whatever the toggle says.
+  const bothUniqueVersions = $derived(
+    heldRarities.includes('inherited') && heldRarities.includes('personal')
+  );
+  const shownUniqueVersion = $derived(bothUniqueVersions ? uniqueVersion : undefined);
+  const rarityOptions = $derived(
+    shownUniqueVersion === undefined
+      ? heldRarities
+      : heldRarities.filter((rarity) => rarity !== hiddenRarity(shownUniqueVersion))
+  );
 
   const view = $derived(
     scopeData
@@ -267,10 +280,11 @@
           xMode,
           yMode,
           rarities,
+          uniqueVersion: shownUniqueVersion,
           kinds,
           search,
           comparedSkillIds,
-          umaSkillIds: selectedUma && skillsGivenBy(selectedUma),
+          umaSkillIds: selectedUma && skillsGivenBy(selectedUma, shownUniqueVersion === 'own'),
           bestOfFamily,
           limit: limitOf(show),
           showDayBound,
@@ -607,6 +621,8 @@
         bind:yMode
         bind:rarities
         {rarityOptions}
+        bind:uniqueVersion
+        {bothUniqueVersions}
         bind:kinds
         bind:search
         bind:umaCardId
