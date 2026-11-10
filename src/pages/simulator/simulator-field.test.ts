@@ -1,13 +1,16 @@
 import { describe, expect, it } from 'vitest';
 import {
+  GENERATED_FIELD_SOURCE,
   claimRunner,
   isDrawnOpponent,
   replaceSimulatorField,
   restoreSimulatorField,
   seatCmRoom,
+  seatPopulatedTeams,
   simulatorRoster,
   simulatorTeamColors
 } from './simulator-roster.svelte';
+import { createExampleRace } from './simulator-example';
 import { createSimulatorUma } from './simulator-uma';
 
 const runner = (name: string, id: string = crypto.randomUUID()) => ({
@@ -87,5 +90,60 @@ describe('a CM room drawn beside the user’s runners', () => {
       ...team('Fifth').map((uma) => uma.name),
       ...team('Sixth').map((uma) => uma.name)
     ]);
+  });
+});
+
+describe('a populated CM room seated beside the field', () => {
+  const populatedTeam = (name: string, teamId: number) =>
+    [1, 2, 3].map((member) => ({
+      ...runner(name + ' ' + member),
+      teamId,
+      source: GENERATED_FIELD_SOURCE
+    }));
+
+  const populatedRoom = (name: string) => [
+    populatedTeam(name + ' A', 1),
+    populatedTeam(name + ' B', 2),
+    populatedTeam(name + ' C', 3)
+  ];
+
+  it('adds the room beside the user’s runners on team numbers they leave free', () => {
+    simulatorRoster.umas = [{ ...runner('Seiun Sky'), teamId: 1 }];
+
+    seatPopulatedTeams(populatedRoom('First'));
+
+    const populated = simulatorRoster.umas.slice(1);
+    expect(simulatorRoster.umas[0]?.name).toBe('Seiun Sky');
+    expect(populated.map((uma) => uma.teamId)).toEqual([2, 2, 2, 3, 3, 3, 4, 4, 4]);
+  });
+
+  it('replaces only the last populate’s runners and keeps one the user edited', () => {
+    simulatorRoster.umas = [runner('Seiun Sky')];
+    seatPopulatedTeams(populatedRoom('First'));
+    claimRunner(simulatorRoster.umas[1]!);
+
+    seatPopulatedTeams(populatedRoom('Second'));
+
+    const names = simulatorRoster.umas.map((uma) => uma.name);
+    const secondRoom = populatedRoom('Second')
+      .flat()
+      .map((uma) => uma.name);
+    expect(names).toEqual(['Seiun Sky', 'First A 1', ...secondRoom]);
+  });
+
+  it('takes the example runners’ place', () => {
+    simulatorRoster.umas = [...createExampleRace().umas, runner('Seiun Sky')];
+
+    seatPopulatedTeams(populatedRoom('First'));
+
+    expect(simulatorRoster.umas).toHaveLength(10);
+    expect(simulatorRoster.umas[0]?.name).toBe('Seiun Sky');
+  });
+
+  it('refuses a room that would overfill the field and leaves it as it was', () => {
+    simulatorRoster.umas = Array.from({ length: 10 }, (_, index) => runner('Uma ' + index));
+
+    expect(() => seatPopulatedTeams(populatedRoom('First'))).toThrow('at most 18');
+    expect(simulatorRoster.umas).toHaveLength(10);
   });
 });

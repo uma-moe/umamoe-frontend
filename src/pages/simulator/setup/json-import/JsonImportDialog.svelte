@@ -6,7 +6,7 @@
   import Dialog from '@/components/overlays/Dialog.svelte';
   import DialogStatus from '../../shell/DialogStatus.svelte';
   import type { SimulatorUma } from '../../simulator-uma';
-  import { ownRunners } from '../../simulator-roster.svelte';
+  import { importKeeps } from '../../simulator-roster.svelte';
   import type { BuildCodeTab } from '../build/code/build-code';
   import { BuildCodeReview, type BuildCodeHandlers } from '../build/code/build-code-review.svelte';
   import BuildCodePreview from '../build/code/BuildCodePreview.svelte';
@@ -318,8 +318,8 @@
   fromFile={fileVeterans}
   onselect={target === 'race' ? undefined : (uma) => addVeterans([uma])}
   onselectMany={target === 'race' ? addVeterans : undefined}
-  room={18 - ownRunners().length}
-  placed={target === 'race' ? ownRunners() : []}
+  room={18 - importKeeps().length}
+  placed={target === 'race' ? importKeeps() : []}
 />
 
 <style>

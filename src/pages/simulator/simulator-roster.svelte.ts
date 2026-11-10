@@ -2,7 +2,7 @@ import { createSimulatorUma, restoreSimulatorUma, type SimulatorUma } from './si
 import { loadReleasedCharacters, type CharacterData } from '@/lib/game-data/characters';
 import { EXAMPLE_SOURCE } from './simulator-example';
 
-/** The generated field's player runners and its mobs; both yield to the user's own builds. */
+/** A populated CM room's player runners and its mobs; the next populate replaces both, imports keep them. */
 export const GENERATED_FIELD_SOURCE = 'Simulator field';
 export const MOB_SOURCE = 'Mob';
 
@@ -84,15 +84,20 @@ export function saveFieldRunner(uma: SimulatorUma): void {
   simulatorRoster.configured = true;
 }
 
-/** The runners the user placed, without the placeholder field an import makes room for. */
+/** The runners the user placed: neither the example field nor a populated CM room. */
 export function ownRunners(): SimulatorUma[] {
   return simulatorRoster.umas.filter((uma) => !isPlaceholderRunner(uma));
 }
 
+/** The runners an import joins: everyone but the example field, so populated CM runners stay. */
+export function importKeeps(): SimulatorUma[] {
+  return simulatorRoster.umas.filter((uma) => !isExampleRunner(uma));
+}
+
 /** A whole team/lobby explicitly replaces the current field. Individual builds take the example runners' place. */
 export function importSimulatorUmas(umas: SimulatorUma[], replace = false): void {
-  const existing = replace ? [] : ownRunners();
-  if (existing.length + umas.length > 18)
+  const existing = replace ? [] : importKeeps();
+  if (existing.length + umas.length > MAX_FIELD)
     throw new Error('A race can contain at most 18 Uma. Remove a runner first.');
   simulatorRoster.umas = [...existing, ...umas];
   if (simulatorRoster.umas.length === 1) simulatorRoster.umas.push(createRosterUma('Opponent'));
@@ -104,23 +109,42 @@ export function roomRunners(): SimulatorUma[] {
   return ownRunners().filter((uma) => !isDrawnOpponent(uma));
 }
 
-/** Seats drawn teams beside the kept runners, each team on the lowest team number the kept runners leave free. */
-export function seatCmRoom(teams: SimulatorUma[][], snapshotId: string): void {
-  const kept = roomRunners();
+/** `teams` in order, each moved to the lowest team number `kept` and the teams before it leave free. */
+function teamsBeside(kept: SimulatorUma[], teams: SimulatorUma[][]): SimulatorUma[][] {
   const usedTeams = new Set(kept.map((uma) => uma.teamId ?? 0));
-  const seated = teams.flatMap((team) => {
+
+  return teams.map((team) => {
     let teamId = 1;
     while (usedTeams.has(teamId)) teamId++;
     usedTeams.add(teamId);
 
-    return team.map((uma) => ({ ...uma, teamId, drawnFrom: snapshotId }));
+    return team.map((uma) => ({ ...uma, teamId }));
   });
+}
 
+function seatBeside(kept: SimulatorUma[], seated: SimulatorUma[]): void {
   if (kept.length + seated.length > MAX_FIELD)
     throw new Error('A race can contain at most 18 Uma. Remove a runner first.');
 
   simulatorRoster.umas = [...kept, ...seated];
   simulatorRoster.configured = true;
+}
+
+/** Seats drawn teams beside the kept runners, each team on the lowest team number the kept runners leave free. */
+export function seatCmRoom(teams: SimulatorUma[][], snapshotId: string): void {
+  const kept = roomRunners();
+  const seated = teamsBeside(kept, teams)
+    .flat()
+    .map((uma) => ({ ...uma, drawnFrom: snapshotId }));
+
+  seatBeside(kept, seated);
+}
+
+/** Seats populated CM teams beside the user's own runners, replacing the last populate's and the example field. */
+export function seatPopulatedTeams(teams: SimulatorUma[][]): void {
+  const kept = ownRunners();
+
+  seatBeside(kept, teamsBeside(kept, teams).flat());
 }
 
 /** Saved as empty too, so a reload does not bring the example field back. */

@@ -29,8 +29,8 @@
     createRosterUma,
     ensureSimulatorRoster,
     claimRunner,
+    importKeeps,
     importSimulatorUmas,
-    ownRunners,
     saveFieldRunner
   } from '../../simulator-roster.svelte';
   import { selectedCourse, simulatorSession } from '../../simulator-session.svelte';
@@ -423,8 +423,8 @@
 <SimulatorVeteranPicker
   bind:open={veteransOpen}
   onselectMany={addVeterans}
-  room={18 - ownRunners().length}
-  placed={ownRunners()}
+  room={18 - importKeeps().length}
+  placed={importKeeps()}
 />
 {#if editing}
   <SimulatorUmaEditor

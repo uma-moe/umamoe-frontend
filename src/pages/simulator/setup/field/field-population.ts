@@ -6,15 +6,15 @@ import { GENERATED_FIELD_SOURCE, MOB_SOURCE } from '../../simulator-roster.svelt
 import type { SimulatorUma } from '../../simulator-uma';
 
 /**
- * A generated field as the race field's runners. Player teams keep the card, stats and aptitudes the simulator drew;
+ * A generated field's teams as race field runners. Player teams keep the card, stats and aptitudes the simulator drew;
  * mobs are deliberately nameless and outfitless, with the simulator's generic build.
  */
-export function simulatorUmasFromField(
+export function simulatorTeamsFromField(
   result: FieldResult,
   characters: ReadonlyMap<number, CharacterData>
-): SimulatorUma[] {
+): SimulatorUma[][] {
   let index = 0;
-  return result.teams.flatMap((team) =>
+  return result.teams.map((team) =>
     team.runners.map((runner) => {
       const position = index++;
       const character = runner.card_id === undefined ? undefined : characters.get(runner.card_id);

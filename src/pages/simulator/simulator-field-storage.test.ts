@@ -91,29 +91,35 @@ describe('the field this browser last raced', () => {
     expect(simulatorRoster.umas.map((uma) => uma.name)).toEqual(['Pick', 'Runner-up']);
   });
 
-  it('drops a generated field when a build joins it', async () => {
-    const { importSimulatorUmas, simulatorRoster } = await rosterModule();
+  it('keeps a populated CM room when a build joins it', async () => {
+    const { GENERATED_FIELD_SOURCE, MOB_SOURCE, importSimulatorUmas, simulatorRoster } =
+      await rosterModule();
     simulatorRoster.umas.push({
-      ...runner('Generated', 'generated'),
-      source: 'Simulator field'
+      ...runner('Populated', 'populated'),
+      source: GENERATED_FIELD_SOURCE
     });
+    simulatorRoster.umas.push({ ...runner('Mob 2', 'mob'), source: MOB_SOURCE });
     simulatorRoster.umas.push(runner('Seiun Sky', 'own'));
     simulatorRoster.configured = true;
 
     importSimulatorUmas([runner('Pick', 'a')]);
 
-    expect(simulatorRoster.umas.map((uma) => uma.name)).toEqual(['Seiun Sky', 'Pick']);
+    expect(simulatorRoster.umas.map((uma) => uma.name)).toEqual([
+      'Populated',
+      'Mob 2',
+      'Seiun Sky',
+      'Pick'
+    ]);
   });
 
-  it('keeps a generated runner once it is edited', async () => {
-    const { importSimulatorUmas, saveFieldRunner, simulatorRoster } = await rosterModule();
-    const generated = { ...runner('Generated', 'generated'), source: 'Simulator field' };
-    simulatorRoster.umas.push(generated);
-    saveFieldRunner({ ...generated, name: 'Tuned generated' });
+  it('takes the example runners’ place when a build joins them', async () => {
+    const { importSimulatorUmas, simulatorRoster } = await rosterModule();
+    simulatorRoster.umas.push(...createExampleRace().umas);
+    simulatorRoster.umas.push(runner('Seiun Sky', 'own'));
 
     importSimulatorUmas([runner('Pick', 'a')]);
 
-    expect(simulatorRoster.umas.map((uma) => uma.name)).toEqual(['Tuned generated', 'Pick']);
+    expect(simulatorRoster.umas.map((uma) => uma.name)).toEqual(['Seiun Sky', 'Pick']);
   });
 
   it('adds a build beside the runners already placed', async () => {

@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import type { CharacterData } from '@/lib/game-data/characters';
 import type { FieldResult } from '../../simulator-repository';
-import { simulatorUmasFromField } from './field-population';
+import { simulatorTeamsFromField } from './field-population';
 
 const runner = (overrides: Partial<FieldResult['teams'][number]['runners'][number]> = {}) => ({
   stats: { speed: 1200, stamina: 900, power: 1000, guts: 600, wisdom: 800 },
@@ -39,9 +39,10 @@ const field = (): FieldResult => ({
 describe('a generated field as simulator runners', () => {
   it('keeps the player card and build, and the mob nameless and outfitless', () => {
     const character = { name: 'Silence Suzuka', subtitle: 'Innocent Silence' } as CharacterData;
-    const umas = simulatorUmasFromField(field(), new Map([[100201, character]]));
+    const teams = simulatorTeamsFromField(field(), new Map([[100201, character]]));
+    const umas = teams.flat();
 
-    expect(umas).toHaveLength(2);
+    expect(teams.map((team) => team.length)).toEqual([1, 1]);
     expect(umas[0]).toMatchObject({
       name: 'Silence Suzuka',
       cardId: 100201,

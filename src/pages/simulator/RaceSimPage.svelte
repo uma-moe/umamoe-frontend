@@ -11,7 +11,6 @@
   import Button from '@/components/controls/Button.svelte';
   import Checkbox from '@/components/controls/Checkbox.svelte';
   import TextField from '@/components/controls/TextField.svelte';
-  import Dialog from '@/components/overlays/Dialog.svelte';
   import InspectPopover from '@/components/overlays/InspectPopover.svelte';
   import { HttpError } from '@/services/http/http-client';
   import SimulatorShell from './shell/SimulatorShell.svelte';
@@ -49,11 +48,14 @@
   } from './simulator-session.svelte';
   import { SIMULATOR_HANDOFF_PARAMETER, takeSimulatorHandoff } from './simulator-handoff';
   import {
+    MAX_FIELD,
     simulatorRoster,
     importSimulatorUmas,
-    isPlaceholderRunner,
+    isGeneratedRunner,
+    ownRunners,
     replaceSimulatorField,
     restoreSimulatorField,
+    seatPopulatedTeams,
     simulatorTeamColor,
     simulatorTeamColors
   } from './simulator-roster.svelte';
@@ -63,7 +65,8 @@
   import { trackName, type RaceCourse } from '@/lib/game-data/racing/courses';
   import { loadCharacters } from '@/lib/game-data/characters';
   import { buildFieldRequest } from './requests/field-request';
-  import { simulatorUmasFromField } from './setup/field/field-population';
+  import { simulatorTeamsFromField } from './setup/field/field-population';
+  import { LOBBY_SIZE } from '@/pages/competitive/champions-meeting/archetypes/lobby/lobby-slots';
 
   const GATE_OPTIONS: Array<{ value: MonteCarloGateOrder; label: string; title: string }> = [
     { value: 'sent', label: 'As set', title: 'Every race starts each runner from her own gate' },
@@ -92,7 +95,6 @@
     populateError = $state(''),
     busy = $state(false),
     populating = $state(false),
-    replaceOpen = $state(false),
     codeOpen = $state(false),
     jsonOpen = $state(false),
     screenshotOpen = $state(false);
@@ -173,8 +175,15 @@
 
   const canRun = $derived(Boolean(course) && simulatorRoster.umas.length >= 2 && !seedInvalid);
 
-  /** Populating silently replaces only a field the simulator itself filled. */
-  const hasOwnRunners = $derived(simulatorRoster.umas.some((uma) => !isPlaceholderRunner(uma)));
+  // Populating seats a CM room beside the user's runners and replaces only the CM runners it seated before.
+  const populatedOnField = $derived(simulatorRoster.umas.some(isGeneratedRunner));
+  const populateFits = $derived(ownRunners().length + LOBBY_SIZE <= MAX_FIELD);
+  const populateTitle = $derived.by(() => {
+    if (!populateFits) return 'A CM room needs nine places. Remove runners to make room.';
+    if (populatedOnField) return 'Replace the CM runners with a new real CM room';
+
+    return 'Add a real CM room for these race settings';
+  });
 
   function loadExample() {
     const example = createExampleRace();
@@ -220,15 +229,6 @@
       : 'course ' + courseId;
   }
 
-  function beginPopulate() {
-    if (hasOwnRunners) {
-      replaceOpen = true;
-      return;
-    }
-
-    void populate();
-  }
-
   /** Why populate failed, in words: a CM-less course and the backend's limits need explaining. */
   function populateErrorText(reason: unknown): string {
     if (reason instanceof HttpError && reason.status === 429) {
@@ -248,9 +248,9 @@
       : message;
   }
 
-  /** Fill the field with real CM runners for the settings on screen. */
+  /** Seats real CM runners for the settings on screen beside the user's own runners. */
   async function populate() {
-    if (!course || busy || populating || seedInvalid) return;
+    if (!course || busy || populating || seedInvalid || !populateFits) return;
 
     populating = true;
     populateError = '';
@@ -272,9 +272,12 @@
       });
       const response = await simulatorRepository.field({ body: { ...body } });
       const characters = await loadCharacters().catch(() => new Map());
-      const umas = simulatorUmasFromField(response.result, characters);
-      replaceSimulatorField(umas, {});
-      simulatorSession.umaId = umas[0]?.id ?? '';
+      const teams = simulatorTeamsFromField(response.result, characters);
+      seatPopulatedTeams(teams);
+
+      const selectedStays = simulatorRoster.umas.some((uma) => uma.id === simulatorSession.umaId);
+      if (!selectedStays) simulatorSession.umaId = simulatorRoster.umas[0]?.id ?? '';
+
       const source = response.result.source;
       const target = courseLabel(source.course_id);
       const origin =
@@ -282,7 +285,11 @@
           ? ' from ' + target
           : ' from ' + courseLabel(source.from_course_id) + ', adapted to ' + target;
       simulatorSession.importNotice =
-        'Populated ' + umas.length + ' real CM runners' + origin + ' for these race settings.';
+        'Populated ' +
+        teams.flat().length +
+        ' real CM runners' +
+        origin +
+        ' for these race settings.';
       error = '';
     } catch (reason) {
       populateError = populateErrorText(reason);
@@ -438,13 +445,11 @@
     size="sm"
     icon="users-add"
     loading={populating}
-    disabled={!course || seedInvalid || busy || populating}
-    title={simulatorRoster.umas.length
-      ? 'Replace the field with a new CM field'
-      : 'Fill the field with real CM runners'}
-    onclick={beginPopulate}
+    disabled={!course || seedInvalid || busy || populating || !populateFits}
+    title={populateTitle}
+    onclick={populate}
   >
-    {simulatorRoster.umas.length ? 'Repopulate' : 'Populate'}
+    {populatedOnField ? 'Repopulate' : 'Populate'}
   </Button>
 {/snippet}
 
@@ -774,35 +779,6 @@
   target="race"
   onimport={({ umas }) => addImportedRunners(umas, 'a screenshot')}
 />
-
-<Dialog
-  bind:open={replaceOpen}
-  title="Replace the field?"
-  compact
-  maxWidth="420px"
->
-  <p class="replace-note">
-    Populating replaces the {simulatorRoster.umas.length} runners on the field with real CM runners for
-    these race settings.
-  </p>
-  {#snippet actions()}
-    <Button
-      variant="secondary"
-      onclick={() => (replaceOpen = false)}
-    >
-      Cancel
-    </Button>
-    <Button
-      icon="users-add"
-      onclick={() => {
-        replaceOpen = false;
-        void populate();
-      }}
-    >
-      Populate
-    </Button>
-  {/snippet}
-</Dialog>
 
 <style>
   @import './race-sim-page.css';

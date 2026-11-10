@@ -158,25 +158,58 @@ test('Populating explains a course without CM data and the minute limit', async 
   await expect(page.getByText(/once a minute. Try again in 42 seconds/)).toBeVisible();
 });
 
-test('Repopulating asks before replacing the user’s runners', async ({ page }) => {
-  await gotoRaceField(page);
+test('Populating keeps the user’s runners, and imports keep the populated CM runners', async ({
+  page
+}) => {
+  const imports = [100101, 100201].map((card, index) => ({
+    ...veteran,
+    id: 100 + index,
+    member_id: null,
+    trained_chara_id: 90001 + index,
+    card_id: card,
+    skill_array: [],
+    skills: []
+  }));
+
+  await page.goto('/veterans');
+  await page.locator('.collection-controls input[type=file]').setInputFiles({
+    name: 'veterans.json',
+    mimeType: 'application/json',
+    buffer: Buffer.from(JSON.stringify({ veterans: imports }))
+  });
+  await expect(page.locator('.feedback')).toContainText('2');
+
+  await page.goto('/simulator/race');
   const field = page.getByRole('region', { name: 'Race field', exact: true });
-  await field
-    .getByRole('button', { name: /^Edit / })
-    .first()
-    .click();
-  await page.getByRole('button', { name: 'Save Uma', exact: true }).click();
+  const runners = field.locator('.runner');
+  const picker = page.getByRole('dialog', { name: 'Choose from Veterans', exact: true });
+  const addVeteran = async (row: number) => {
+    await page.getByRole('button', { name: 'Import', exact: true }).click();
+    await page.getByRole('menuitem', { name: 'Choose from Veterans', exact: true }).click();
+    const name = await picker.locator('.row .name').nth(row).innerText();
+    await picker.locator('.row').nth(row).getByRole('checkbox').check();
+    await picker.getByRole('button', { name: 'Add 1 to the field', exact: true }).click();
+    await expect(picker).toBeHidden();
+    return name;
+  };
+
+  // A lone runner gets an opponent, so the user's field is two runners.
+  const own = await addVeteran(0);
+  await expect(runners).toHaveCount(2);
+
+  await field.getByRole('button', { name: 'Populate', exact: true }).click();
+  await expect(runners).toHaveCount(11);
+  await expect(runners.first()).toContainText(own);
 
   await field.getByRole('button', { name: 'Repopulate', exact: true }).click();
-  const dialog = page.getByRole('dialog', { name: 'Replace the field?' });
-  await expect(dialog).toBeVisible();
-  await dialog.getByRole('button', { name: 'Cancel', exact: true }).click();
-  await expect(field.locator('.runner')).toHaveCount(9);
+  await expect(page.getByText(/Populated 9 real CM runners/)).toBeVisible();
+  await expect(runners).toHaveCount(11);
+  await expect(runners.first()).toContainText(own);
 
-  await field.getByRole('button', { name: 'Repopulate', exact: true }).click();
-  await dialog.getByRole('button', { name: 'Populate', exact: true }).click();
-  await expect(dialog).toBeHidden();
-  await expect(field.locator('.runner')).toHaveCount(9);
+  const imported = await addVeteran(1);
+  await expect(runners).toHaveCount(12);
+  await expect(runners.last()).toContainText(imported);
+  await expect(field.getByRole('button', { name: 'Repopulate', exact: true })).toBeVisible();
 });
 
 test('Course setup preserves every searchable resource option and its breakdown', async ({
