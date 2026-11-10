@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import {
   GENERATED_FIELD_SOURCE,
   claimRunner,
+  fieldRunnerName,
   isDrawnOpponent,
   replaceSimulatorField,
   restoreSimulatorField,
@@ -129,6 +130,17 @@ describe('a populated CM room seated beside the field', () => {
       .flat()
       .map((uma) => uma.name);
     expect(names).toEqual(['Seiun Sky', 'First A 1', ...secondRoom]);
+  });
+
+  it('marks the populated runners by name, but not the user’s or one she edited', () => {
+    simulatorRoster.umas = [runner('Seiun Sky')];
+    seatPopulatedTeams(populatedRoom('First'));
+    claimRunner(simulatorRoster.umas[1]!);
+
+    const names = simulatorRoster.umas.slice(0, 3).map(fieldRunnerName);
+
+    expect(names).toEqual(['Seiun Sky', 'First A 1', 'First A 2 [Populated]']);
+    expect(simulatorRoster.umas[2]?.name).toBe('First A 2');
   });
 
   it('takes the example runners’ place', () => {

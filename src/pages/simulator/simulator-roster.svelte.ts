@@ -52,6 +52,13 @@ export function isGeneratedRunner(uma: SimulatorUma): boolean {
   return uma.source === GENERATED_FIELD_SOURCE || uma.source === MOB_SOURCE;
 }
 
+export const POPULATED_TAG = '[Populated]';
+
+/** Her name as the field and its reports show it, so the runners a populate seated stand out. */
+export function fieldRunnerName(uma: SimulatorUma): string {
+  return isGeneratedRunner(uma) ? uma.name + ' ' + POPULATED_TAG : uma.name;
+}
+
 export function isPlaceholderRunner(uma: SimulatorUma): boolean {
   return isExampleRunner(uma) || isGeneratedRunner(uma);
 }

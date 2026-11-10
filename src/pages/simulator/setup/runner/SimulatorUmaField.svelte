@@ -29,6 +29,9 @@
     createRosterUma,
     ensureSimulatorRoster,
     claimRunner,
+    fieldRunnerName,
+    isGeneratedRunner,
+    POPULATED_TAG,
     importKeeps,
     importSimulatorUmas,
     saveFieldRunner
@@ -286,10 +289,11 @@
         {@const ranked = rankSkills(encodedSkills)}
         {@const sp = skillPointTotal(skills, encodedSkills)}
         {@const outfit = characters.get(uma.cardId ?? 0)?.subtitle}
+        {@const name = fieldRunnerName(uma)}
         <article
           class="runner"
           data-uma-id={uma.id}
-          aria-label={uma.name}
+          aria-label={name}
         >
           <Artwork
             src={look.image}
@@ -297,7 +301,12 @@
             size="sm"
           />
           <div class="identity">
-            <h3 title={uma.name}>{uma.name}</h3>
+            <h3 title={name}>
+              <span class="name">{uma.name}</span>
+              {#if isGeneratedRunner(uma)}
+                <span class="populated">{POPULATED_TAG}</span>
+              {/if}
+            </h3>
             <p class="build">
               {#if outfit}
                 <span

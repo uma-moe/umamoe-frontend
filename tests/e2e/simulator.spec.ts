@@ -200,6 +200,8 @@ test('Populating keeps the user’s runners, and imports keep the populated CM r
   await field.getByRole('button', { name: 'Populate', exact: true }).click();
   await expect(runners).toHaveCount(11);
   await expect(runners.first()).toContainText(own);
+  await expect(runners.first()).not.toContainText('[Populated]');
+  await expect(runners.filter({ hasText: '[Populated]' })).toHaveCount(9);
 
   await field.getByRole('button', { name: 'Repopulate', exact: true }).click();
   await expect(page.getByText(/Populated 9 real CM runners/)).toBeVisible();
@@ -368,7 +370,7 @@ test('Setup rows preserve cancelled edits and enforce the field capacity', async
   await expect(page.getByRole('button', { name: 'Run samples', exact: true })).toBeDisabled();
   await page.getByLabel('Sampled races', { exact: true }).fill('250');
   await expect(field.getByRole('button', { name: /^Delete / }).first()).toBeDisabled();
-  const firstName = await field.locator('.runner h3').first().innerText();
+  const firstName = await field.locator('.runner h3 .name').first().innerText();
   await field
     .getByRole('button', { name: /^Edit / })
     .first()
@@ -752,6 +754,8 @@ for (const count of [2, 9, 18])
 
       await expect(meanReplay).toBeVisible();
       expect(await glance.locator('figure h3').first().innerText()).toMatch(/^Mean race/);
+      // The runners a populate seated stay marked in the results.
+      await expect(glance).toContainText('[Populated]');
       if (count === 2) await expect(meanReplay).toContainText('Race telemetry unavailable');
       else {
         await meanReplay.scrollIntoViewIfNeeded();

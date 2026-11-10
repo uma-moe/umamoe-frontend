@@ -66,14 +66,25 @@
 }
 h3 {
   flex: none;
+  display: flex;
+  gap: 4px;
   max-width: 60%;
   margin: 0;
-  overflow: hidden;
   font-size: 13px;
   font-weight: 650;
   line-height: 1.35;
   white-space: nowrap;
+}
+h3 > .name {
+  min-width: 0;
+  overflow: hidden;
   text-overflow: ellipsis;
+}
+/* Only her name gives way, so a populated runner stays marked on narrow cards. */
+h3 > .populated {
+  flex: none;
+  font-weight: 500;
+  color: var(--text-secondary);
 }
 .build {
   display: flex;
