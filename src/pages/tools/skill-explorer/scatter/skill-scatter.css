@@ -312,8 +312,15 @@
   border-color: var(--accent-pink);
 }
 
-.skill-dot.tier-personal {
-  border-color: var(--accent-purple);
+/* An own unique: the game's rainbow edge, as on skill chips, a pixel wider at the padding's cost so it reads at icon
+   size. A dashed state edge takes its place. */
+.skill-dot.tier-personal:not(.forced, .optimal) {
+  padding: 1px;
+  border-width: 2px;
+  border-color: transparent;
+  background:
+    linear-gradient(var(--bg-tertiary), var(--bg-tertiary)) padding-box,
+    linear-gradient(135deg, #ff8a65, #ffd166 30%, #5eead4 58%, #64b5f6 76%, #ce93d8) border-box;
 }
 
 .skill-dot.active {
