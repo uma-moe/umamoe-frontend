@@ -44,6 +44,11 @@
       runner with no other skills, like a solo sim.
     </p>
     <p>
+      The build holds one own unique and two inherited ones, never both versions of the same unique.
+      An own unique shows what it adds in place of the build's own unique, since an uma has only
+      one. The unique toggle switches the chart between own and inherited versions.
+    </p>
+    <p>
       Over all races multiplies the value by how often the reference runner activates the skill: a
       skill worth +10% that activates in half the races shows +5%. Without it, values count only the
       races the skill activates in.
@@ -88,9 +93,9 @@
 
     <h3>Highlight Uma</h3>
     <p>
-      Pick an uma to highlight her unique, as an inherited skill, and the skills she starts with or
-      unlocks with potential levels. Umas not on Global yet use Japanese data. Skills from training
-      events are not highlighted.
+      Pick an uma to highlight her unique, in the version the toggle shows, and the skills she
+      starts with or unlocks with potential levels. Umas not on Global yet use Japanese data. Skills
+      from training events are not highlighted.
     </p>
   </InspectPopover>
 </span>
