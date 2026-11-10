@@ -92,6 +92,7 @@
         size={20}
       />
       Add screenshot
+      <small>or paste one</small>
     </button>
   </li>
 </ul>

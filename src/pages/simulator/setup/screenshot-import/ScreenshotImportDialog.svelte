@@ -30,7 +30,8 @@
     target: BuildCodeTab;
   } & Pick<BuildCodeHandlers, 'onimport'> = $props();
 
-  const IMAGE_TYPES = 'image/png,image/jpeg,image/webp';
+  const IMAGE_TYPES = ['image/png', 'image/jpeg', 'image/webp'];
+  const ACCEPT = IMAGE_TYPES.join(',');
   const LEAVE_OUT = '';
 
   const uid = $props.id();
@@ -156,6 +157,19 @@
     queue.add(files);
   }
 
+  /** An image pasted anywhere while the dialog is open, such as a snip from the clipboard, is added like a chosen one. */
+  function paste(event: ClipboardEvent) {
+    if (!open) return;
+
+    const images = [...(event.clipboardData?.files ?? [])].filter((file) =>
+      IMAGE_TYPES.includes(file.type)
+    );
+    if (!images.length) return;
+
+    event.preventDefault();
+    addScreenshots(images);
+  }
+
   function apply() {
     const message = review.apply({ onimport });
     if (message) {
@@ -184,6 +198,8 @@
   }
 </script>
 
+<svelte:window onpaste={paste} />
+
 <Dialog
   bind:open
   title="Screenshot"
@@ -208,17 +224,17 @@
     {#if queue.screenshots.length}
       <ScreenshotStrip
         screenshots={queue.screenshots}
-        accept={IMAGE_TYPES}
+        accept={ACCEPT}
         onadd={addScreenshots}
         onremove={(id) => queue.remove(id)}
       />
     {:else}
       <FileDrop
         id="{uid}-file"
-        label="Drop screenshots here"
+        label="Drop or paste screenshots here"
         description="PNG or JPEG of her details screen; add more to cover a long skill list"
         actionLabel="Choose screenshots"
-        accept={IMAGE_TYPES}
+        accept={ACCEPT}
         multiple
         onfiles={(list) => addScreenshots([...list])}
       />

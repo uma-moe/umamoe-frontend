@@ -67,6 +67,11 @@
     border-color var(--duration-fast),
     color var(--duration-fast);
 }
+.shot-add small {
+  font-size: 11px;
+  font-weight: 500;
+  color: var(--text-muted);
+}
 .shot-add:hover,
 .shots.dragging .shot-add {
   border-color: var(--color-accent);
