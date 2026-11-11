@@ -196,6 +196,8 @@ export interface OptimizeFinalist {
   line?: Array<OptimizeLineStep>;
   /** What each purchase adds to the best build on its own (what builds on it left out). Most first. */
   contributions?: Array<OptimizeContribution>;
+  /** Her win rate with it less with the first finalist's, paired by seed in the check races (0–1); absent for the first. */
+  win_rate_vs_pick?: OptimizeEstimate;
 }
 
 export interface OptimizeContribution {

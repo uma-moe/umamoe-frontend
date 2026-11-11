@@ -123,6 +123,7 @@
         ? builds[0]!.value! - build.value
         : undefined}
       winRate={build.winRate ?? build.raced?.win_rate}
+      pickGap={build.pickGap}
       teamTrialsScore={build.teamTrialsScore}
       racedBehind={index > 0 ? racedBehind(build) : undefined}
       check={checkText(build.finalist, field, checkRaces)}

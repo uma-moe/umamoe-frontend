@@ -14,8 +14,11 @@ import {
   fireText,
   leftoverSp,
   theorizedResult,
+  tiedText,
+  tiedWithPick,
   valueText,
   v5Tally,
+  winsGapText,
   worthState
 } from './build-result';
 
@@ -203,6 +206,37 @@ describe('V5 in the existing optimizer', () => {
     delete response.model!.build!.explanation.runner_up;
     response.report.finalists = [response.report.finalists[1]!];
     expect(theorizedResult({ result: response, offers })!.builds).toHaveLength(1);
+  });
+
+  it('reads a runner-up the check races cannot tell from the pick as tied with it', () => {
+    const response = result();
+    response.report.finalists[1]!.win_rate_vs_pick = {
+      samples: 128,
+      mean: 0.054,
+      standard_error: 0.032
+    };
+
+    const [pick, runnerUp] = theorizedResult({ result: response, offers })!.builds;
+    const gap = runnerUp!.pickGap!;
+
+    expect(pick!.pickGap).toBeUndefined();
+    expect(gap.races).toBe(128);
+    expect(tiedWithPick(gap)).toBe(true);
+    expect(tiedText(gap)).toBe('7 more wins in 128 test races, too few to tell them apart');
+  });
+
+  it('says a gap to the pick that the check races resolve in wins', () => {
+    const behind = { ahead: -0.117, chance: 0.063, races: 128 };
+
+    expect(tiedWithPick(behind)).toBe(false);
+    expect(winsGapText(behind)).toBe('15 fewer wins in 128 test races');
+  });
+
+  it('reads one win and no difference in plain words', () => {
+    expect(winsGapText({ ahead: 1 / 128, chance: 0.03, races: 128 })).toBe(
+      '1 more win in 128 test races'
+    );
+    expect(tiedText({ ahead: 0, chance: 0, races: 128 })).toBe('as many wins in 128 test races');
   });
 
   it('leaves out a later build V5 did not explain', () => {
