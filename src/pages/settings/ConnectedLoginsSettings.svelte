@@ -7,12 +7,14 @@
   import Icon from '@/components/Icon.svelte';
   import { authRepository } from '@/services/auth/auth-repository';
   import { settingsErrorMessage as message } from './settings-errors';
+  import { readConnectResult } from './connect-result';
 
   let { onerror }: { onerror: (message: string) => void } = $props();
 
   let identities = $state<AuthIdentity[]>([]);
   let loading = $state(true);
   let loadError = $state('');
+  let connectedProvider = $state('');
 
   let identitiesRequest = 0;
 
@@ -62,7 +64,17 @@
     }
   }
 
+  function showConnectResult(): void {
+    const result = readConnectResult(new URL(window.location.href));
+    if (!result) return;
+
+    history.replaceState(history.state, '', '/settings');
+    if (result.status === 'connected') connectedProvider = result.provider;
+    else onerror(result.message);
+  }
+
   onMount(() => {
+    showConnectResult();
     void loadIdentities();
   });
 </script>
@@ -95,6 +107,13 @@
         </Button>
       </Banner>
     {:else}
+      {#if connectedProvider}
+        <Banner
+          title="{providerLabel(connectedProvider)} connected"
+          tone="success"
+          dismissible
+        />
+      {/if}
       <div class="identity-list">
         {#each identities as identity (`${identity.provider}:${identity.provider_id}`)}
           <div class="identity-row">

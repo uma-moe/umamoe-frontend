@@ -58,7 +58,9 @@ export const authRepository = {
     ),
   identities: () => appHttp.request<AuthIdentity[]>('/api/auth/identities'),
   connectProvider: (provider: string) =>
-    appHttp.request<AuthLoginResponse>(`/api/auth/connect/${encodeURIComponent(provider)}`),
+    appHttp.request<AuthLoginResponse>(`/api/auth/connect/${encodeURIComponent(provider)}`, {
+      query: { origin: window.location.origin }
+    }),
   disconnectProvider: (provider: string) =>
     appHttp.request<void>(`/api/auth/disconnect/${encodeURIComponent(provider)}`, {
       method: 'DELETE'

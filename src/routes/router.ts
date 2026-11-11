@@ -72,6 +72,8 @@ const pageModules = {
   '/profile/:accountId/titles': () => import('@/pages/profile/ProfilePlaceholderPage.svelte'),
   '/profile/:accountId': () => import('@/pages/profile/ProfilePage.svelte'),
   '/settings': () => import('@/pages/settings/SettingsPage.svelte'),
+  // The backend returns finished login connects here with ?success= or ?error=.
+  '/auth/connect': () => import('@/pages/settings/SettingsPage.svelte'),
   '/wip': () => import('@/pages/errors/WipPage.svelte'),
   '/inheritance': () => import('./LegacyRedirectPage.svelte'),
   '/support-cards': () => import('./LegacyRedirectPage.svelte'),
