@@ -3,10 +3,7 @@
   import AppPage from '@/layouts/AppPage.svelte';
   import Button from '@/components/controls/Button.svelte';
   import Banner from '@/components/feedback/Banner.svelte';
-  import {
-    readRaceCaptureFile,
-    type ParsedRaceCapture
-  } from '@/lib/race/capture/race-capture-parser';
+  import { readRaceCaptures, type ParsedRaceCapture } from '@/lib/race/capture/race-capture-parser';
   import { groupMultiRaceCaptures } from '@/lib/race/multi-race-analysis';
   import { resimulateRace } from '@/services/race/race-resimulation';
   import { loadCharacters } from '@/lib/game-data/characters';
@@ -178,7 +175,7 @@
     for (const file of Array.from(files)) {
       try {
         if (file.size > 50 * 1024 * 1024) throw new Error('File exceeds the 50 MB limit.');
-        loaded.push(await readRaceCaptureFile(file));
+        loaded.push(...(await readRaceCaptures(file)));
       } catch (error) {
         errors.push(
           `${file.name}: ${error instanceof Error ? error.message : 'Unable to read capture.'}`

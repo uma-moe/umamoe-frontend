@@ -1,5 +1,12 @@
 import * as pako from 'pako';
 import { validateDetailedReplay, type DetailedReplay } from './race-diagnostics';
+import {
+  isTeamTrialCapture,
+  teamTrialRaceInputs,
+  teamTrialRunnerKey,
+  type TeamTrialRace,
+  type TeamTrialScore
+} from './team-trial-capture';
 
 export interface RaceHorseFrame {
   distance: number;
@@ -49,6 +56,8 @@ export interface RaceRunner {
   aptitudes: { surface?: number; distance?: number; style?: number };
   skillIds: number[];
   result?: RaceHorseResult;
+  /** Her Team Trials score items; only the player's team scores. */
+  teamTrialScores?: TeamTrialScore[];
   raw: Record<string, unknown>;
 }
 
@@ -75,6 +84,8 @@ export interface ParsedRaceCapture {
   runners: RaceRunner[];
   frames: RaceFrame[];
   events: RaceEvent[];
+  /** The round and team score of a race from a Team Trials file. */
+  teamTrial?: TeamTrialRace;
 }
 
 interface DecodedRace {
@@ -676,11 +687,8 @@ export function parseRaceCapture(value: unknown, fileName = 'capture.json'): Par
   }
 
   const input = normalizeInput(envelope);
-  if (
-    Array.isArray(first(input, 'race_start_params_array')) &&
-    Array.isArray(first(input, 'race_result_array'))
-  )
-    throw new Error('Team Trial captures belong in Multi-Race analysis.');
+  if (isTeamTrialCapture(input))
+    throw new Error('A Team Trials file holds several races; read it with parseRaceCaptures.');
   const apiHorses = first(input, 'race_horse_data_array', 'raceHorseDataArray');
   const actMembers = first(input, '<RaceHorse>k__BackingField', 'raceHorse');
   const source = Array.isArray(apiHorses)
@@ -852,7 +860,30 @@ export function applyResimulation(capture: ParsedRaceCapture, value: unknown): P
   };
 }
 
-export async function readRaceCaptureFile(file: File): Promise<ParsedRaceCapture> {
+/**
+ * Every race a capture holds: one, or each race of a Team Trials file. A Team Trials race marks the player's team,
+ * which the game seats as team 1 and alone scores.
+ */
+export function parseRaceCaptures(value: unknown, fileName = 'capture.json'): ParsedRaceCapture[] {
+  if (!isTeamTrialCapture(value)) return [parseRaceCapture(value, fileName)];
+
+  const races = teamTrialRaceInputs(value);
+  if (!races.length) throw new Error('The Team Trials file holds no races.');
+
+  return races.map(({ input, race, runnerScores }) => {
+    const capture = parseRaceCapture(input, `${fileName} · Race ${race.round}`);
+    const runners = capture.runners.map((runner) => {
+      const teamTrialScores = runnerScores.get(teamTrialRunnerKey(runner.raw));
+      const isPlayer = Number(runner.raw.team_id) === 1;
+
+      return { ...runner, isPlayer, ...(teamTrialScores ? { teamTrialScores } : {}) };
+    });
+
+    return { ...capture, runners, teamTrial: race };
+  });
+}
+
+export async function readRaceCaptures(file: File): Promise<ParsedRaceCapture[]> {
   const bytes = new Uint8Array(await file.arrayBuffer());
   let jsonText: string;
   if (file.name.toLowerCase().endsWith('.gz'))
@@ -865,5 +896,5 @@ export async function readRaceCaptureFile(file: File): Promise<ParsedRaceCapture
     throw new Error('The selected file is not valid JSON or gzip-compressed JSON.');
   }
 
-  return parseRaceCapture(value, file.name);
+  return parseRaceCaptures(value, file.name);
 }

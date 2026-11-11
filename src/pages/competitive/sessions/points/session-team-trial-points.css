@@ -1,0 +1,61 @@
+.points-card {
+  min-width: 0;
+  padding: 10px 12px;
+  border: 1px solid var(--card-surface-border);
+  border-radius: var(--radius-lg);
+  background: var(--card-surface-bg);
+}
+.points-head {
+  display: flex;
+  align-items: baseline;
+  flex-wrap: wrap;
+  gap: 4px 12px;
+}
+h3 {
+  margin: 0;
+  font-size: 13px;
+  font-weight: 600;
+}
+.facts {
+  display: flex;
+  flex-wrap: wrap;
+  margin: 0;
+  color: var(--text-secondary);
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
+}
+.facts > span + span::before {
+  content: '·';
+  margin-inline: 6px;
+  color: var(--text-muted);
+}
+/* The legend is the library's checkbox in each source's colour, as the timeline filters are. */
+.legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0 14px;
+}
+.legend-item :global(.checkbox) {
+  min-height: 28px;
+  grid-template-columns: 16px auto;
+  gap: 6px;
+}
+.legend-item :global(.box) {
+  width: 16px;
+  height: 16px;
+}
+.legend-item :global(strong) {
+  color: var(--text-secondary);
+  font-size: 11px;
+  font-weight: 500;
+  white-space: nowrap;
+}
+@media (max-width: 600px) {
+  .points-card {
+    padding: 8px;
+  }
+  .legend {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}

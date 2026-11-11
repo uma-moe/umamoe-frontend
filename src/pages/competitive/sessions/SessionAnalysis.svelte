@@ -13,6 +13,8 @@
   import SessionTeams from './teams/SessionTeams.svelte';
   import SessionSkills from './skills/SessionSkills.svelte';
   import SessionRunners from './diagnostics/SessionRunners.svelte';
+  import SessionTeamTrialPoints from './points/SessionTeamTrialPoints.svelte';
+  import { teamTrialPoints } from './points/team-trial-points';
   import { styleColors, teamBuilds } from '../analysis-view';
   import { styleCompositions, type SessionView, type TeamFilter } from './session-statistics';
 
@@ -28,8 +30,9 @@
     onreplay?: (index: number, runner?: number, time?: number) => void;
   } = $props();
 
-  const views: (TabItem & { id: SessionView })[] = [
+  const allViews: (TabItem & { id: SessionView })[] = [
     { id: 'overview', label: 'Overview', icon: 'grid' },
+    { id: 'points', label: 'Points', icon: 'trophy' },
     { id: 'strategy', label: 'Strategy', icon: 'chart' },
     { id: 'umas', label: 'Umas', icon: 'users' },
     { id: 'teams', label: 'Teams', icon: 'community' },
@@ -54,6 +57,9 @@
     detailRace = $state(0);
 
   const analysis = $derived(analyzeMultiRace(captures));
+  const points = $derived(teamTrialPoints(captures));
+  // Only Team Trials races score, so other sessions have no points view.
+  const views = $derived(allViews.filter((item) => item.id !== 'points' || points !== undefined));
   const entries = $derived(
     captures.flatMap((capture, race) => capture.runners.map((runner) => ({ runner, race })))
   );
@@ -69,6 +75,10 @@
   $effect(() => {
     captures;
     detail = undefined;
+  });
+
+  $effect(() => {
+    if (view === 'points' && points === undefined) view = 'overview';
   });
 
   /**
@@ -215,6 +225,11 @@
           oninspect={inspect}
           {onreplay}
         />
+      </div>
+    {/if}
+    {#if points && visited.includes('points')}
+      <div hidden={view !== 'points'}>
+        <SessionTeamTrialPoints data={points} />
       </div>
     {/if}
     {#if visited.includes('strategy')}

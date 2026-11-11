@@ -8,7 +8,8 @@ export type SessionEntry = { runner: RaceRunner; race: number };
 
 export type SessionTeam = ReturnType<typeof teamBuilds>[number];
 
-export type SessionView = 'overview' | 'strategy' | 'umas' | 'teams' | 'skills' | 'runners';
+export type SessionView =
+  'overview' | 'points' | 'strategy' | 'umas' | 'teams' | 'skills' | 'runners';
 
 /** What the Teams view is narrowed to when another view sends the reader there. */
 export type TeamFilter = { uma?: string; style?: string; composition?: string; own?: boolean };
