@@ -176,6 +176,19 @@ export function neededStamina(
   );
 }
 
+/** The whole raw stamina to add so maximum HP rises by `extraMaxHp`; `hpPerPoint` comes from `hpPerStamina`. */
+export function staminaForMaxHp(options: {
+  extraMaxHp: number;
+  rawStamina: number;
+  hpPerPoint: number;
+}): number | undefined {
+  const { extraMaxHp, rawStamina, hpPerPoint } = options;
+  if (!(hpPerPoint > 0) || !finite(extraMaxHp) || !finite(rawStamina)) return undefined;
+
+  const neededStat = compress(rawStamina) + Math.max(0, extraMaxHp) / hpPerPoint;
+  return Math.ceil(expand(neededStat) - rawStamina - 1e-9);
+}
+
 /** The effective stamina a raw stat runs with: above 1200 counts half. */
 export const effectiveStamina = (raw: number) => compress(raw);
 

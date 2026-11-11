@@ -76,9 +76,16 @@
 .race-group.won {
   background: color-mix(in srgb, var(--team, var(--accent-warning)) 42%, transparent);
 }
+.race-entry {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+}
 .race-runner {
   position: relative;
   display: flex;
+  flex: none;
 }
 /* Runners off the podium recede, so each race reads as its podium and the team that won. */
 .race-runner:not(.podium) :global(.art) {
@@ -110,6 +117,68 @@
 .race-place-2,
 .race-place-3 {
   color: var(--accent-primary);
+}
+/* The HP view gives each race a full line: every runner's margins beside her portrait, the teams side by side. */
+.history-view {
+  display: flex;
+  padding: 0 4px 6px;
+}
+.race-history.detailed {
+  grid-template-columns: minmax(0, 1fr);
+}
+.detailed .race-groups {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 2px 8px;
+}
+.detailed .race-group {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 6px;
+  padding: 3px 6px;
+}
+.hp-margins {
+  display: grid;
+  flex: 0 1 13ch;
+  min-width: 0;
+  font-size: 11px;
+  font-variant-numeric: tabular-nums;
+  line-height: 14px;
+  white-space: nowrap;
+}
+.hp-margin {
+  display: flex;
+  justify-content: space-between;
+  gap: 6px;
+  color: var(--accent-error);
+}
+.hp-margin.passed {
+  color: var(--accent-success);
+}
+.hp-label {
+  color: var(--text-secondary);
+}
+.hp-margin b {
+  font-weight: 650;
+}
+@container win-rates (min-width: 1240px) {
+  .detailed .race-groups {
+    grid-template-columns: repeat(var(--group-count), minmax(0, 1fr));
+  }
+}
+/* A narrow team stacks each runner's margins under her portrait. */
+@container race-row (max-width: 460px) {
+  .detailed .race-entry {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 4px;
+  }
+  .detailed .race-runner {
+    align-self: center;
+  }
+  .detailed .race-group {
+    gap: 12px;
+  }
 }
 /* A narrow race keeps its three teams whole with smaller portraits. */
 @container race-row (max-width: 380px) {

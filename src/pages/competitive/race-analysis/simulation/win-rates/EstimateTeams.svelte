@@ -15,6 +15,7 @@
   } from '@/pages/competitive/analysis-view';
   import { raceAptitudes, type RaceContext } from '@/pages/competitive/runners/race-aptitudes';
   import type { MonteCarloResult } from '@/pages/simulator/simulator-repository';
+  import EstimateRunnerDetails from './EstimateRunnerDetails.svelte';
   import { runnerName, topThreeRate, type OddsGroup, type RunnerOdds } from './estimate-groups';
   import { firstWin } from './estimate-races';
   import { percent } from './estimate-format';
@@ -38,6 +39,7 @@
   } = $props();
 
   let catalog = $state.raw(new Map<number, SkillData>());
+  let detailedRunner = $state.raw<RunnerOdds>();
 
   function groupColor(group: OddsGroup) {
     const member = group.runners[0]?.runner;
@@ -109,7 +111,15 @@
       <strong>{percent(odds.winRate)}</strong>
       <small>Top 3 {percent(topThreeRate(odds, result.runs))}</small>
     </span>
-    <span class="watch">
+    <span class="runner-actions">
+      <Button
+        variant="secondary"
+        size="sm"
+        icon="chart"
+        ariaLabel={'View simulation details for ' + name}
+        title="View details"
+        onclick={() => (detailedRunner = odds)}
+      />
       <Button
         variant="secondary"
         size="sm"
@@ -155,6 +165,15 @@
     </section>
   {/each}
 </div>
+
+{#if detailedRunner}
+  <EstimateRunnerDetails
+    odds={detailedRunner}
+    {result}
+    {catalog}
+    onclose={() => (detailedRunner = undefined)}
+  />
+{/if}
 
 <style>
   @import './estimate-teams.css';

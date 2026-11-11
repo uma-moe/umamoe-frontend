@@ -165,12 +165,16 @@ h3 {
   color: var(--text-secondary);
   font-size: 10px;
 }
-.watch {
+/* A two-line tile stacks its two actions, which leaves the build and the odds their width. */
+.runner-actions {
   grid-area: watch;
-  display: flex;
+  display: grid;
+  gap: 2px;
 }
-.watch :global(.ui-button) {
+.runner-actions :global(.ui-button) {
   aspect-ratio: 1;
+  height: 26px;
+  min-height: 0;
   padding: 0;
   justify-content: center;
 }
@@ -202,6 +206,13 @@ h3 {
     grid-template-columns: auto minmax(0, 1fr) max-content auto auto auto;
     column-gap: 14px;
   }
+  .runner-actions {
+    grid-auto-flow: column;
+    gap: 4px;
+  }
+  .runner-actions :global(.ui-button) {
+    height: var(--control-height);
+  }
   .runner-name {
     flex-direction: column;
     gap: 0;
@@ -215,6 +226,13 @@ h3 {
       'stats stats aptitudes aptitudes aptitudes';
     grid-template-columns: auto minmax(0, 1fr) auto auto auto;
     gap: 6px 8px;
+  }
+  .runner-actions {
+    grid-auto-flow: column;
+    gap: 4px;
+  }
+  .runner-actions :global(.ui-button) {
+    height: var(--control-height);
   }
   .runner-name {
     flex-direction: column;

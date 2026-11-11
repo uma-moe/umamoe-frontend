@@ -1,0 +1,187 @@
+.details {
+  display: grid;
+  gap: 8px;
+  min-width: 0;
+}
+.detail-section {
+  min-width: 0;
+  padding: 10px 12px;
+  border-radius: var(--radius-lg);
+  background: var(--surface-1);
+}
+.section-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+h3 {
+  margin: 0;
+  font-size: 13px;
+  font-weight: 650;
+}
+.section-head strong {
+  font-size: 16px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+.section-head span,
+.empty {
+  color: var(--text-secondary);
+  font-size: 12px;
+}
+.empty {
+  margin: 0;
+}
+.headlines {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  margin: 0 0 10px;
+  text-align: center;
+}
+.headlines dd {
+  margin: 0;
+  font-size: 20px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+.headlines dt {
+  color: var(--text-secondary);
+  font-size: 11px;
+}
+.placements,
+.skills {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.placements {
+  display: grid;
+  grid-template-columns: repeat(var(--places), minmax(0, 1fr));
+  gap: 4px;
+  margin-top: 8px;
+  font-size: 11px;
+  font-variant-numeric: tabular-nums;
+  text-align: center;
+}
+.placements li {
+  display: grid;
+  gap: 2px;
+  min-width: 0;
+}
+.placements li > span:last-child {
+  color: var(--text-secondary);
+}
+.bar {
+  display: flex;
+  align-items: flex-end;
+  height: 72px;
+}
+.bar i {
+  width: 100%;
+  min-height: 1px;
+  border-radius: var(--radius-sm) var(--radius-sm) 0 0;
+  background: var(--accent-primary);
+}
+.hp-checks {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 360px), 1fr));
+  gap: 8px;
+}
+.current-rate {
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+}
+.current-rate small {
+  color: var(--text-secondary);
+  font-size: 11px;
+}
+/* Each higher chance reads as a bar of the extra HP it needs, on one scale for both checks. */
+.hp-needs {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
+}
+.hp-needs thead th {
+  padding: 0 0 4px;
+  color: var(--text-secondary);
+  font-size: 10px;
+  font-weight: 500;
+  text-align: left;
+}
+.hp-needs thead th:last-child,
+.stamina {
+  text-align: right;
+}
+.hp-needs tbody th,
+.hp-needs td {
+  padding: 3px 0;
+  border-top: 1px solid var(--border-subtle);
+}
+.hp-needs tbody th {
+  width: 5ch;
+  padding-right: 10px;
+  font-weight: 650;
+  text-align: left;
+}
+.hp-need {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.hp-bar {
+  flex: 1;
+  height: 12px;
+}
+.hp-bar i {
+  display: block;
+  height: 100%;
+  min-width: 2px;
+  border-radius: 0 var(--radius-sm) var(--radius-sm) 0;
+  background: var(--accent-primary);
+}
+.hp-need b {
+  min-width: 4.5ch;
+  font-weight: 650;
+  text-align: right;
+}
+.stamina {
+  width: 9ch;
+  padding-left: 12px;
+  color: var(--text-secondary);
+}
+.skills {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 200px), 1fr));
+  gap: 0 16px;
+}
+.skills li {
+  display: grid;
+  grid-template-columns: 22px minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 6px;
+  margin-top: -1px;
+  padding: 4px 0;
+  border-top: 1px solid var(--border-subtle);
+  font-size: 12px;
+}
+.skills img {
+  width: 22px;
+  height: 22px;
+}
+.skill-name {
+  grid-column: 2;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.skills b {
+  font-variant-numeric: tabular-nums;
+}
+.skills b.inactive {
+  color: var(--text-muted);
+  font-weight: 400;
+}
