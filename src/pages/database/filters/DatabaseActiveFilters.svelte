@@ -8,9 +8,16 @@
   import { scenarioLabel } from '@/lib/game-data/scenarios';
   import type {
     InheritanceFilterMode,
-    InheritanceSearchFilters
+    InheritanceSearchFilters,
+    TrainerNameMatch
   } from '@/lib/inheritance/search/inheritance-search';
   import type { UqlValidation } from '@/lib/inheritance/uql/uql';
+
+  const trainerNameMatchLabels = {
+    contains: '',
+    exact: ' (exact)',
+    exact_case: ' (exact, case-sensitive)'
+  } satisfies Record<TrainerNameMatch, string>;
 
   interface Props {
     filters: InheritanceSearchFilters;
@@ -89,9 +96,15 @@
         filters.trainerId = undefined;
       });
     if (filters.trainerName?.trim())
-      add('trainer-name', `Username: ${filters.trainerName.trim()}`, 'default', () => {
-        filters.trainerName = undefined;
-      });
+      add(
+        'trainer-name',
+        `Username${trainerNameMatchLabels[filters.trainerNameMatch ?? 'contains']}: ${filters.trainerName.trim()}`,
+        'default',
+        () => {
+          filters.trainerName = undefined;
+          filters.trainerNameMatch = 'contains';
+        }
+      );
     const characterGroups = [
       ['mainParentIds', 'Allow main', 'character'],
       ['includeParentIds', 'Allow great', 'character'],

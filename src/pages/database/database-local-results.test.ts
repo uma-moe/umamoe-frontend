@@ -1,7 +1,8 @@
 import { describe, expect, it } from 'vitest';
 import {
   emptyInheritanceFilters,
-  type InheritanceRecord
+  type InheritanceRecord,
+  type TrainerNameMatch
 } from '@/lib/inheritance/search/inheritance-search';
 import {
   automaticInheritanceSort,
@@ -142,5 +143,21 @@ describe('Angular Database local result behavior', () => {
     );
 
     expect(overlapping.map((item) => item.id)).toEqual([1, 3]);
+  });
+
+  it('matches saved bookmarks with the same trainer name mode as the search', () => {
+    const records = ['neb', 'Nebula', 'NEB'].map((trainerName, index) =>
+      record({ id: index + 1, trainerName })
+    );
+    const matchingIds = (match: TrainerNameMatch) => {
+      const filters = emptyInheritanceFilters();
+      filters.trainerName = 'neb';
+      filters.trainerNameMatch = match;
+      return filterAndSortBookmarks(records, filters, 'all', true).map((item) => item.id);
+    };
+
+    expect(matchingIds('contains')).toEqual([1, 2, 3]);
+    expect(matchingIds('exact')).toEqual([1, 3]);
+    expect(matchingIds('exact_case')).toEqual([1]);
   });
 });
