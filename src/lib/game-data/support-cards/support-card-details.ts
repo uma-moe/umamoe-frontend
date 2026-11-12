@@ -61,9 +61,10 @@ export function matchesSupportSearch(text: string, query: string): boolean {
   );
 }
 
-export function supportTypeName(
-  type: string
-): 'Speed' | 'Stamina' | 'Power' | 'Guts' | 'Wit' | 'Friend' {
+/** Label for a support card's stat type; group cards stay distinct from friend cards. */
+export type SupportTypeName = 'Speed' | 'Stamina' | 'Power' | 'Guts' | 'Wit' | 'Friend' | 'Group';
+
+export function supportTypeName(type: string): SupportTypeName {
   switch (type.toLowerCase()) {
     case 'stamina':
       return 'Stamina';
@@ -75,8 +76,9 @@ export function supportTypeName(
     case 'intelligence':
       return 'Wit';
     case 'friend':
-    case 'group':
       return 'Friend';
+    case 'group':
+      return 'Group';
     default:
       return 'Speed';
   }

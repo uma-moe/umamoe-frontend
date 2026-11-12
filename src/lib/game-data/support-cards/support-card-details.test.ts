@@ -123,7 +123,7 @@ describe('support-card type labels', () => {
   it.each([
     { type: 'intelligence', label: 'Wit' },
     { type: 'wisdom', label: 'Wit' },
-    { type: 'group', label: 'Friend' },
+    { type: 'group', label: 'Group' },
     { type: 'unknown', label: 'Speed' }
   ])('displays $type as $label', ({ type, label }) => {
     const displayName = supportTypeName(type);
