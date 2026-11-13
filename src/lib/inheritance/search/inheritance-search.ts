@@ -26,9 +26,13 @@ export interface FactorRequirement {
   operator?: 'and' | 'or';
 }
 
+export type TrainerNameMatch = 'contains' | 'exact' | 'exact_case';
+
 export interface InheritanceSearchFilters {
   trainerId?: string;
   trainerName?: string;
+  /** How `trainerName` matches; `exact` compares the whole name, ignoring case. */
+  trainerNameMatch?: TrainerNameMatch;
   playerCharaId?: number;
   mainParentIds: number[];
   parentLeftId?: number;
@@ -406,7 +410,12 @@ export function inheritanceSearchQuery(
   });
 
   if (filters.trainerId?.trim()) query.set('trainer_id', filters.trainerId.trim());
-  if (filters.trainerName?.trim()) query.set('trainer_name', filters.trainerName.trim());
+  if (filters.trainerName?.trim()) {
+    query.set('trainer_name', filters.trainerName.trim());
+
+    if (filters.trainerNameMatch && filters.trainerNameMatch !== 'contains')
+      query.set('trainer_name_mode', filters.trainerNameMatch);
+  }
   if (filters.playerCharaId) query.set('player_chara_id', String(filters.playerCharaId));
   appendList(query, 'main_parent_id', filters.mainParentIds);
   if (filters.parentLeftId) query.set('parent_left_id', String(filters.parentLeftId));

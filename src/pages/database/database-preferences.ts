@@ -3,7 +3,8 @@ import {
   emptyInheritanceFilters,
   type FactorRequirement,
   type InheritanceFilterMode,
-  type InheritanceSearchFilters
+  type InheritanceSearchFilters,
+  type TrainerNameMatch
 } from '@/lib/inheritance/search/inheritance-search';
 import type { SparkOrder } from '@/lib/inheritance/sparks/inheritance-factors';
 
@@ -49,6 +50,7 @@ export interface CompactDatabaseFilterState extends Record<string, unknown> {
   lb?: number;
   uid?: string;
   un?: string;
+  unm?: TrainerNameMatch;
   mwc?: number;
   mwh?: number;
   pr?: number;
@@ -109,6 +111,10 @@ export interface RestoredDatabasePreferences {
 
 function isMode(value: unknown): value is InheritanceFilterMode {
   return value === 'basic' || value === 'advanced' || value === 'uql';
+}
+
+function trainerNameMatch(value: unknown): TrainerNameMatch {
+  return value === 'exact' || value === 'exact_case' ? value : 'contains';
 }
 
 function utf8ToBinary(value: string): string {
@@ -283,6 +289,7 @@ export function filtersFromCompactState(
   filters.minLimitBreak = finiteNumber(state.lb);
   filters.trainerId = typeof state.uid === 'string' ? state.uid : undefined;
   filters.trainerName = typeof state.un === 'string' ? state.un : undefined;
+  filters.trainerNameMatch = trainerNameMatch(state.unm);
   filters.minWinCount = finiteNumber(state.mwc);
   filters.minWhiteCount = finiteNumber(state.mwh);
   filters.minParentRank = finiteNumber(state.pr);
@@ -368,6 +375,12 @@ export function compactStateFromFilters(
   );
   setOrDelete(state, 'uid', filters.trainerId?.trim() || undefined);
   setOrDelete(state, 'un', filters.trainerName?.trim() || undefined);
+  const trainerMatch = filters.trainerNameMatch ?? 'contains';
+  setOrDelete(
+    state,
+    'unm',
+    filters.trainerName?.trim() && trainerMatch !== 'contains' ? trainerMatch : undefined
+  );
   setOrDelete(state, 'mwc', filters.minWinCount);
   setOrDelete(state, 'mwh', filters.minWhiteCount);
   setOrDelete(

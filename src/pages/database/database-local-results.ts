@@ -98,15 +98,29 @@ function parents(record: InheritanceRecord): number[] {
   return [record.mainParentId, record.leftParentId, record.rightParentId];
 }
 
+/** Same match the search service applies, so saved bookmarks filter like live results. */
+function trainerNameMatches(
+  name: string,
+  query: string,
+  filters: InheritanceSearchFilters
+): boolean {
+  const match = filters.trainerNameMatch ?? 'contains';
+  if (match === 'exact_case') return name === query;
+
+  const lowerName = name.toLocaleLowerCase();
+  const lowerQuery = query.toLocaleLowerCase();
+  return match === 'exact' ? lowerName === lowerQuery : lowerName.includes(lowerQuery);
+}
+
 export function bookmarkMatchesFilters(
   record: InheritanceRecord,
   filters: InheritanceSearchFilters,
   includeMaxFollowers: boolean
 ): boolean {
   const trainerId = filters.trainerId?.trim().toLocaleLowerCase();
-  const trainerName = filters.trainerName?.trim().toLocaleLowerCase();
+  const trainerName = filters.trainerName?.trim();
   if (trainerId && !record.accountId.toLocaleLowerCase().includes(trainerId)) return false;
-  if (trainerName && !record.trainerName.toLocaleLowerCase().includes(trainerName)) return false;
+  if (trainerName && !trainerNameMatches(record.trainerName, trainerName, filters)) return false;
   if (filters.mainParentIds.length && !filters.mainParentIds.includes(record.mainParentId))
     return false;
   if (filters.parentLeftId && filters.parentLeftId !== record.leftParentId) return false;
