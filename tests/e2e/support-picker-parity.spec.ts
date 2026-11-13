@@ -109,6 +109,49 @@ test('Support failures stay in the dialog, retry preserves filters and cannot tu
   await expect(dialog.getByText('Resource fetch failed', { exact: true })).not.toBeVisible();
 });
 
+test('Group support cards keep their own label, type filter and icon', async ({ page }) => {
+  await mockDatabase(page);
+  await mockAffinity(page);
+  await page.route('**/resources/*/support-cards-db.json*', (route) =>
+    route.fulfill({
+      json: [
+        {
+          id: '30067',
+          name: 'Heirs to the Throne',
+          card_title: 'Esteemed and Adored',
+          rarity: 3,
+          type: 'group',
+          release_date: '2026-09-01',
+          isReleased_en: true
+        },
+        {
+          id: '30028',
+          name: 'Kitasan Black',
+          card_title: 'Fire at My Heels',
+          rarity: 3,
+          type: 'speed',
+          release_date: '2026-08-01',
+          isReleased_en: true
+        }
+      ]
+    })
+  );
+
+  const dialog = await openPicker(page);
+  await expect(dialog.getByRole('radio')).toHaveCount(2);
+
+  await dialog.getByRole('combobox').first().click();
+  await dialog.getByRole('option', { name: 'Group', exact: true }).click();
+
+  const rows = dialog.getByRole('radio');
+  await expect(rows).toHaveCount(1);
+  await expect(rows.first()).toContainText('Heirs to the Throne');
+  await expect(rows.first().locator('img[alt="Group support"]')).toHaveAttribute(
+    'src',
+    '/assets/images/icon/stats/group.webp'
+  );
+});
+
 test('persistent resources render before the manifest, survive navigation, and refresh only changed hashes', async ({
   playwright,
   browserName,

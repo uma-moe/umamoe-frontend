@@ -50,17 +50,24 @@
   let virtualRange = $state<VirtualRange>({ start: 0, end: 0 });
   let open = $state(false);
 
-  const types: SelectOption[] = ['All', 'Speed', 'Stamina', 'Power', 'Guts', 'Wit', 'Friend'].map(
-    (value) => {
-      if (value === 'All') return { value, label: 'All types' };
+  const types: SelectOption[] = [
+    'All',
+    'Speed',
+    'Stamina',
+    'Power',
+    'Guts',
+    'Wit',
+    'Friend',
+    'Group'
+  ].map((value) => {
+    if (value === 'All') return { value, label: 'All types' };
 
-      return {
-        value,
-        label: value,
-        image: `/assets/images/icon/stats/${value.toLowerCase()}.webp`
-      };
-    }
-  );
+    return {
+      value,
+      label: value,
+      image: `/assets/images/icon/stats/${value.toLowerCase()}.webp`
+    };
+  });
 
   const rarities = ['All', 'R', 'SR', 'SSR'].map((value) => ({
     value,

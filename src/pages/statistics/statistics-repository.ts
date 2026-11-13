@@ -89,7 +89,7 @@ export const statisticsRepository = {
           title: card.name,
           image: supportCardImagePath(card.id),
           tags: [
-            card.type === 'group' ? 'Group' : supportTypeName(card.type),
+            supportTypeName(card.type),
             card.rarity === 3 ? 'SSR' : card.rarity === 2 ? 'SR' : 'R'
           ]
         })),

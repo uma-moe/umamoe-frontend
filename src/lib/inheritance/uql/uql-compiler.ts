@@ -180,7 +180,8 @@ export class UqlCompiler {
           power: 'Power',
           guts: 'Guts',
           intelligence: 'Wit',
-          friend: 'Friend'
+          friend: 'Friend',
+          group: 'Group'
         } as Record<string, string>
       )[type] ?? 'Unknown'
     );
