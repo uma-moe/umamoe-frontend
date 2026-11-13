@@ -29,7 +29,7 @@
     createRosterUma,
     ensureSimulatorRoster,
     claimRunner,
-    POPULATED_TAG,
+    generatedTag,
     untaggedName,
     importKeeps,
     importSimulatorUmas,
@@ -288,7 +288,7 @@
         {@const ranked = rankSkills(encodedSkills)}
         {@const sp = skillPointTotal(skills, encodedSkills)}
         {@const outfit = characters.get(uma.cardId ?? 0)?.subtitle}
-        {@const untagged = untaggedName(uma.name)}
+        {@const tag = generatedTag(uma.name)}
         <article
           class="runner"
           data-uma-id={uma.id}
@@ -301,9 +301,9 @@
           />
           <div class="identity">
             <h3 title={uma.name}>
-              <span class="name">{untagged}</span>
-              {#if untagged !== uma.name}
-                <span class="populated">{POPULATED_TAG}</span>
+              <span class="name">{untaggedName(uma.name)}</span>
+              {#if tag}
+                <span class="populated">{tag}</span>
               {/if}
             </h3>
             <p class="build">

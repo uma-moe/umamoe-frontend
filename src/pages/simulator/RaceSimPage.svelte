@@ -65,7 +65,7 @@
   import { trackName, type RaceCourse } from '@/lib/game-data/racing/courses';
   import { loadCharacters } from '@/lib/game-data/characters';
   import { buildFieldRequest } from './requests/field-request';
-  import { simulatorTeamsFromField } from './setup/field/field-population';
+  import { populateNotice, simulatorTeamsFromField } from './setup/field/field-population';
   import { LOBBY_SIZE } from '@/pages/competitive/champions-meeting/archetypes/lobby/lobby-slots';
 
   const GATE_OPTIONS: Array<{ value: MonteCarloGateOrder; label: string; title: string }> = [
@@ -278,18 +278,7 @@
       const selectedStays = simulatorRoster.umas.some((uma) => uma.id === simulatorSession.umaId);
       if (!selectedStays) simulatorSession.umaId = simulatorRoster.umas[0]?.id ?? '';
 
-      const source = response.result.source;
-      const target = courseLabel(source.course_id);
-      const origin =
-        source.from_course_id === undefined
-          ? ' from ' + target
-          : ' from ' + courseLabel(source.from_course_id) + ', adapted to ' + target;
-      simulatorSession.importNotice =
-        'Populated ' +
-        teams.flat().length +
-        ' real CM runners' +
-        origin +
-        ' for these race settings.';
+      simulatorSession.importNotice = populateNotice(response.result, courseLabel);
       error = '';
     } catch (reason) {
       populateError = populateErrorText(reason);

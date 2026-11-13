@@ -287,6 +287,12 @@ function field(value: Record<string, unknown>): boolean {
         )
       )
         return false;
+
+      const refit = runner.refit;
+      const refitValid =
+        refit === undefined || (isRecord(refit) && numbers(refit.removed) && numbers(refit.added));
+      if (!refitValid) return false;
+
       runners += 1;
     }
   }

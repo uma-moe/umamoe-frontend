@@ -566,6 +566,8 @@ export interface FieldRunnerResult {
   team_id: number;
   fan_count?: number | null;
   is_mob: boolean;
+  /** Skills the model re-spent because another course stood in for the race's own; absent on a build as she ran it. */
+  refit?: { removed: number[]; added: number[] };
 }
 
 export interface FieldTeamResult {

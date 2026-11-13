@@ -53,15 +53,27 @@ export function isGeneratedRunner(uma: SimulatorUma): boolean {
 }
 
 export const POPULATED_TAG = '[Populated]';
-const POPULATED_SUFFIX = ' ' + POPULATED_TAG;
+/** A populated runner from another course whose skills the model re-spent for this one. */
+export const REFIT_TAG = '[Refit]';
+const GENERATED_TAGS = [POPULATED_TAG, REFIT_TAG];
 
 /** A populated runner's name carries the tag, so the field, results and codes all show where she came from. */
 export function populatedName(name: string): string {
-  return name + POPULATED_SUFFIX;
+  return name + ' ' + POPULATED_TAG;
+}
+
+export function refitName(name: string): string {
+  return name + ' ' + REFIT_TAG;
+}
+
+/** The tag a populated runner's name ends with. */
+export function generatedTag(name: string): string | undefined {
+  return GENERATED_TAGS.find((tag) => name.endsWith(' ' + tag));
 }
 
 export function untaggedName(name: string): string {
-  return name.endsWith(POPULATED_SUFFIX) ? name.slice(0, -POPULATED_SUFFIX.length) : name;
+  const tag = generatedTag(name);
+  return tag === undefined ? name : name.slice(0, -(tag.length + 1));
 }
 
 export function isPlaceholderRunner(uma: SimulatorUma): boolean {
