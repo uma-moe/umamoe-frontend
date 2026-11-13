@@ -10,6 +10,7 @@ import {
   tracksWithCourses,
   type RaceCourse
 } from '@/lib/game-data/racing/courses';
+import { gameAssetUrl } from '@/lib/assets/game-assets';
 import {
   importSimulatorUmas,
   replaceSimulatorField,
@@ -35,13 +36,13 @@ export interface ImageConditionOption extends ConditionOption {
 }
 
 /**
- * Game icons for the race conditions, published under `/game-assets`.
+ * Game icons for the race conditions, published under the artwork manifest.
  *
  * `utx_ico_*` are the raw game textures; the English season tiles live beside
  * the other track details, already lettered for an English UI.
  */
-const conditionIcon = (file: string): string => `/game-assets/textures/${file}`;
-const seasonIcon = (file: string): string => `/game-assets/track_details/${file}`;
+const conditionIcon = (file: string): string => gameAssetUrl(`textures/${file}`);
+const seasonIcon = (file: string): string => gameAssetUrl(`track_details/${file}`);
 
 /** The going by the English game's names, as the schedule and recorded races say them. */
 export const GROUND_OPTIONS: Array<ConditionOption> = [

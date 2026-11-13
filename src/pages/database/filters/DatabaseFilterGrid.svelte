@@ -11,6 +11,7 @@
   } from '@/components/pickers/picker-types';
   import type { VeteranUiRecord } from '@/components/game/veteran-ui-types';
   import { supportCardImagePath } from '@/lib/game-data/support-cards/support-cards';
+  import { gameAssetUrl } from '@/lib/assets/game-assets';
   import type {
     InheritanceFilterMode,
     InheritanceSearchFilters
@@ -243,7 +244,7 @@
     <div class="support-identity">
       <img
         class="support-rarity"
-        src={`/game-assets/support-rarity/${option.rarity.toLowerCase()}.png`}
+        src={gameAssetUrl(`support-rarity/${option.rarity.toLowerCase()}.png`)}
         alt={option.rarity}
       />
       <strong>{option.character || option.title}</strong>

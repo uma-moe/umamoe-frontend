@@ -1,4 +1,5 @@
 import { resourceCache } from '@/services/resources/resource-cache';
+import { gameAssetUrl } from '@/lib/assets/game-assets';
 
 export interface CharacterData {
   id: string;
@@ -66,7 +67,7 @@ export async function loadReleasedCharacters(): Promise<CharacterData[]> {
 
 /** Canonical path for optimized character thumbnails. */
 export function characterImagePath(cardId: number): string {
-  return `/game-assets/character_thumbs/chara_stand_${Math.floor(cardId / 100)}_${cardId}.webp`;
+  return gameAssetUrl(`character_thumbs/chara_stand_${Math.floor(cardId / 100)}_${cardId}.webp`);
 }
 
 /** Demand-loaded lookup so character data never enters the base shell chunk. */

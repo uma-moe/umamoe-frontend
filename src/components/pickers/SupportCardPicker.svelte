@@ -9,6 +9,7 @@
   import { matchesSupportSearch } from '@/lib/game-data/support-cards/support-card-details';
   import type { SupportCardPickerOption } from './picker-types';
   import { virtualScroll, type VirtualRange } from '@/lib/virtual-scroll';
+  import { gameAssetUrl } from '@/lib/assets/game-assets';
 
   interface Props {
     id?: string;
@@ -65,7 +66,7 @@
   const rarities = ['All', 'R', 'SR', 'SSR'].map((value) => ({
     value,
     label: value === 'All' ? 'All rarities' : value,
-    ...(value === 'All' ? {} : { image: `/game-assets/support-rarity/${value.toLowerCase()}.png` })
+    ...(value === 'All' ? {} : { image: gameAssetUrl(`support-rarity/${value.toLowerCase()}.png`) })
   }));
 
   const filtered = $derived(
@@ -213,7 +214,7 @@
           {/if}
           <span class="meta">
             <img
-              src={`/game-assets/support-rarity/${option.rarity.toLowerCase()}.png`}
+              src={gameAssetUrl(`support-rarity/${option.rarity.toLowerCase()}.png`)}
               alt={option.rarity}
               title={option.rarity}
               width="22"

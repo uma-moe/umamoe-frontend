@@ -1,2 +1,6 @@
-/** The game's skill point icon, which stands in for "SP" beside amounts as stat icons do for stats. */
-export const SKILL_POINTS_ICON = '/game-assets/textures/hint.webp';
+import { gameAssetUrl } from '@/lib/assets/game-assets';
+
+/** Hint icon shown next to a skill-point cost. */
+export function skillPointsIcon(): string {
+  return gameAssetUrl('textures/hint.webp');
+}

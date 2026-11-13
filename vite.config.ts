@@ -190,7 +190,13 @@ export default defineConfig(async ({ mode, command }) => {
         '/assets/data': { target: 'https://uma.moe', changeOrigin: true },
         // Skill art lives in the separately deployed /assets bundle, so it has no
         // local copy to serve. Dev-only; production loads it from its own origin.
-        '/assets/images/skills': { target: 'https://uma.moe', changeOrigin: true }
+        '/assets/images/skills': { target: 'https://uma.moe', changeOrigin: true },
+        // Game artwork is published by umamoe-resources instead of being bundled with the app,
+        // so a development checkout has no local copy to serve either.
+        '/game-assets': {
+          target: variables.VITE_ASSETS_PROXY_TARGET ?? 'https://uma.moe',
+          changeOrigin: true
+        }
       }
     },
     test: {

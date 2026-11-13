@@ -1,6 +1,6 @@
 import type { ParsedRaceCapture, RaceRunner } from '@/lib/race/capture/race-capture-parser';
 import { characterImagePath } from '@/lib/game-data/characters';
-import { SKILL_POINTS_ICON } from '@/lib/game-assets/skill-points-icon';
+import { skillPointsIcon } from '@/lib/game-assets/skill-points-icon';
 import type { StatStripItem } from '@/components/game/StatStrip.svelte';
 import { runningStyleName } from '@/lib/race/replay/race-display';
 
@@ -30,7 +30,7 @@ export const skillPointsStat = (
   id: 'sp',
   label: 'Skill points',
   value: skillPoints ?? '—',
-  icon: SKILL_POINTS_ICON
+  icon: skillPointsIcon()
 });
 
 export const identity = (runner: RaceRunner) => ({

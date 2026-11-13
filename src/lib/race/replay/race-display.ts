@@ -1,3 +1,5 @@
+import { gameAssetUrl } from '@/lib/assets/game-assets';
+
 const fullStyleNames: Record<number, string> = {
   1: 'Front Runner',
   2: 'Pace Chaser',
@@ -58,7 +60,7 @@ export function runningStyleIcon(value?: number): string | undefined {
   const name = styleIconNames[value ?? 0];
   if (name === undefined) return undefined;
 
-  return '/game-assets/textures/' + name + '.webp';
+  return gameAssetUrl('textures/' + name + '.webp');
 }
 
 const moodNames = ['Awful', 'Bad', 'Normal', 'Good', 'Great'] as const;
@@ -74,7 +76,7 @@ export function moodName(motivation: unknown): MoodName | undefined {
 }
 
 export function moodIcon(mood: MoodName): string {
-  return '/game-assets/textures/' + mood.toLowerCase() + '.webp';
+  return gameAssetUrl('textures/' + mood.toLowerCase() + '.webp');
 }
 
 /** A finishing place as read aloud: 1st, 2nd, 11th, 23rd. */
