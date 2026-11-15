@@ -62,5 +62,13 @@ export const toolLinks = [
     accent: 'primary',
     title: 'Master Data',
     description: 'Query every game table'
+  },
+  {
+    id: 'racecourse-viewer',
+    href: '/tools/racecourse-viewer',
+    icon: 'stadium' as const,
+    accent: 'primary',
+    title: 'Racecourse Viewer',
+    description: 'Explore tracks in 3D'
   }
 ];

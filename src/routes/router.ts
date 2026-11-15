@@ -49,6 +49,7 @@ const pageModules = {
   '/competitive/cm-data': () => import('@/pages/competitive/CmDataPage.svelte'),
   '/tools/master-data': () => import('@/pages/tools/MasterDataPage.svelte'),
   '/tools/skill-explorer': () => import('@/pages/tools/SkillExplorerPage.svelte'),
+  '/tools/racecourse-viewer': () => import('@/pages/racecourse/RacecourseViewerPage.svelte'),
   '/research': () => import('@/pages/research-notes/ResearchPage.svelte'),
   '/research/:noteId': () => import('@/pages/research-notes/ResearchPage.svelte'),
   '/database': () => import('@/pages/database/DatabasePage.svelte'),
