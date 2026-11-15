@@ -1,0 +1,50 @@
+/* The canvas fills the stage; the overlays sit on its bottom edge. */
+
+.racecourse-stage {
+  position: relative;
+  height: clamp(320px, 62vh, 900px);
+  overflow: hidden;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  background: var(--color-surface-1);
+  touch-action: none;
+}
+
+.racecourse-stage canvas {
+  display: block;
+  width: 100%;
+  height: 100%;
+  cursor: grab;
+}
+
+.racecourse-stage canvas:active {
+  cursor: grabbing;
+}
+
+.racecourse-stage-loading,
+.racecourse-stage-message {
+  position: absolute;
+  inset: auto 0 0;
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-2) var(--space-3);
+  background: var(--color-surface-1);
+  border-top: 1px solid var(--color-border);
+  font-size: var(--font-sm);
+}
+
+.racecourse-stage-message {
+  inset: 0;
+  justify-content: center;
+  padding: var(--space-6);
+  border-top: none;
+  text-align: center;
+  color: var(--color-text-muted);
+}
+
+@media (max-width: 767px) {
+  .racecourse-stage {
+    height: clamp(260px, 52vh, 520px);
+  }
+}
