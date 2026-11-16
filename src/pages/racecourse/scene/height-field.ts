@@ -16,6 +16,39 @@ export interface HeightField {
 /** Cells across the longest side of the course: ~8 m per cell on a 1000 m course. */
 const RESOLUTION = 128;
 
+export interface Oval {
+  centre: Vector3;
+  /** How far the part's surface reaches from its centre: the 95th percentile of its vertices. */
+  radius: number;
+}
+
+/**
+ * The oval a part describes, from its own vertices: a bounding box is inflated by whatever else the
+ * part contains (Chukyo's turf box includes the paddock), while the vertices' spread is not.
+ */
+export function measureOval(meshes: Mesh[]): Oval | undefined {
+  const vertex = new Vector3();
+  const points: Vector3[] = [];
+  for (const mesh of meshes) {
+    mesh.updateWorldMatrix(true, false);
+    const position = mesh.geometry.getAttribute('position');
+    if (!position) continue;
+    for (let i = 0; i < position.count; i += 1) {
+      points.push(vertex.fromBufferAttribute(position, i).applyMatrix4(mesh.matrixWorld).clone());
+    }
+  }
+  if (points.length === 0) return undefined;
+
+  const centre = points
+    .reduce((total, point) => total.add(point), new Vector3())
+    .divideScalar(points.length);
+  const distances = points
+    .map((point) => Math.hypot(point.x - centre.x, point.z - centre.z))
+    .sort((left, right) => left - right);
+  const radius = distances[Math.floor(distances.length * 0.95)] ?? distances.at(-1) ?? 0;
+  return { centre, radius };
+}
+
 export function buildHeightField(meshes: Mesh[], area: Box3): HeightField {
   const size = area.getSize(new Vector3());
   const step = Math.max(size.x, size.z) / RESOLUTION;

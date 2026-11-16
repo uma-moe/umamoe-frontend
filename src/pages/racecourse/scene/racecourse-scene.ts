@@ -297,10 +297,18 @@ export function createRacecourseScene({
    * Stands the outfit at the start of the track, facing whoever is looking. The models are in metres,
    * so she is 1.63 m tall next to a 1400 m course.
    */
+  /**
+   * Where the racing surface begins. The lane path the simulator loads knows the start line, but its
+   * artifact is 16.6 MB for a single point, so it arrives through `setTrackStart` only when a caller
+   * already has it; otherwise she stands in the middle of the course.
+   */
+  function startOfTrack(): { x: number; z: number } | undefined {
+    return trackStart;
+  }
+
   function placeCharacter(target: Object3D): void {
     if (!area) return;
-    const centre = area.getCenter(new Vector3());
-    const spot = trackStart ?? { x: centre.x, z: centre.z };
+    const spot = startOfTrack() ?? area.getCenter(new Vector3());
     target.position.set(spot.x, groundAt(spot.x, spot.z), spot.z);
     target.rotation.y = Math.atan2(camera.position.x - spot.x, camera.position.z - spot.z);
   }
