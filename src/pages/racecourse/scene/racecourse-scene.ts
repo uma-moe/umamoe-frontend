@@ -14,15 +14,18 @@ import {
   Vector3,
   WebGLRenderer,
   type Material,
-  type Object3D
+  type Object3D,
+  type ShaderMaterial
 } from 'three';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 import { GLTFLoader, type GLTF } from 'three/addons/loaders/GLTFLoader.js';
+import { aimCharacterLight, applyCharacterMaterials } from './character-toon';
+import { createThirdPersonCamera } from './third-person-camera';
 import { applyUnityMaterials } from './unity-materials';
-import { createWalkCamera, SKY_NODE } from './walk-camera';
+import { SKY_NODE } from './sky';
 
-/** How the reader looks at the course: from outside it, or standing on it at a horsegirl's height. */
-export type CameraMode = 'overview' | 'walk';
+/** How the reader looks at the course: from outside it, or behind an uma walking on it. */
+export type CameraMode = 'overview' | 'third';
 
 /** Close enough to the ground that the track surface stays in front of the near plane. */
 const WALK_NEAR = 0.1;
@@ -55,6 +58,8 @@ export interface RacecourseSceneOptions {
 export interface RacecourseScene {
   /** Draws one course model, replacing whatever was drawn. */
   load(url: string): Promise<void>;
+  /** Stands one uma on the course; `undefined` removes it. */
+  setCharacter(url: string | undefined): Promise<void>;
   /** Puts the camera back around the current model. */
   frame(): void;
   setMode(mode: CameraMode): void;
@@ -89,9 +94,19 @@ export function createRacecourseScene({
   controls.maxDistance = 6000;
 
   const loader = new GLTFLoader();
-  const walk = createWalkCamera({ camera, canvas });
-  walk.listen();
+  let characterMaterials: ShaderMaterial[] = [];
+  const third = createThirdPersonCamera({
+    camera,
+    canvas,
+    controls,
+    subject: () => character,
+    ground: () => ground,
+    area: () => area
+  });
+  third.listen();
   let model: Object3D | undefined;
+  let character: Object3D | undefined;
+  let characterUrl: string | undefined;
   let area: Box3 | undefined;
   let ground = 0;
   let sceneRadius = 1000;
@@ -120,7 +135,7 @@ export function createRacecourseScene({
 
   /**
    * The sky is drawn from inside it: in the overview it is a hollow shell around the course, so it
-   * only appears at eye level, where it is the sky the reader stands under.
+   * only appears up close, where it is the sky the reader stands under.
    */
   function setSkyVisible(visible: boolean): void {
     if (!model) return;
@@ -156,9 +171,9 @@ export function createRacecourseScene({
     if (box.isEmpty()) return;
     const sphere = box.getBoundingSphere(new Sphere());
 
-    // A walker stays where they stand when the course under them changes; only the depth range
-    // follows the new model.
-    if (walk.walking) {
+    // Nothing moves the camera in third person but the follow controller; the frame only follows the
+    // depth range of whatever the course turned out to be.
+    if (third.active) {
       camera.far = sceneRadius * 4;
       camera.updateProjectionMatrix();
       return;
@@ -192,28 +207,21 @@ export function createRacecourseScene({
   }
 
   /**
-   * Swaps the camera between the overview and walking it. Walking keeps where the view was pointed,
-   * so the reader steps onto the course where they were looking instead of somewhere arbitrary.
+   * Swaps between looking at the whole course and walking an uma around it. Third person needs
+   * somebody to follow, and leaves the course where it was rather than reframing it.
    */
   function applyMode(): void {
-    if (currentMode === 'walk') {
-      // Before the first model lands there is no ground to stand on; the load applies it instead.
-      if (!area || walk.walking) return;
-      walk.setArea(area, ground);
-      controls.enabled = false;
-      // Stand where the overview was pointed at, and look back out over the course.
-      const facing = camera.position.clone().sub(controls.target);
-      facing.y = 0;
-      walk.enable(controls.target, facing);
+    if (currentMode === 'third') {
+      if (!character) return;
       setSkyVisible(true);
       camera.near = WALK_NEAR;
       camera.far = sceneRadius * 4;
       camera.updateProjectionMatrix();
+      third.enable();
       return;
     }
-    if (!walk.walking) return;
-    walk.disable();
-    controls.enabled = true;
+    if (!third.active) return;
+    third.disable();
     setSkyVisible(false);
     // Coming back from the ground, the reader wants the whole course again, not the view they left.
     frame();
@@ -234,6 +242,56 @@ export function createRacecourseScene({
       if (Array.isArray(mesh.material)) mesh.material.forEach(release);
       else if (mesh.material) release(mesh.material);
     });
+  }
+
+  /**
+   * Stands the outfit on the infield where the course was framed from, facing whoever is looking. The
+   * models are in metres, so she is 1.63 m tall next to a 1400 m course.
+   */
+  function placeCharacter(target: Object3D): void {
+    if (!area) return;
+    const centre = area.getCenter(new Vector3());
+    target.position.set(centre.x, ground, centre.z);
+    target.rotation.y = Math.atan2(camera.position.x - centre.x, camera.position.z - centre.z);
+  }
+
+  function clearCharacter(): void {
+    if (!character) return;
+    character.removeFromParent();
+    disposeModel(character);
+    character = undefined;
+    characterMaterials = [];
+  }
+
+  async function setCharacter(url: string | undefined): Promise<void> {
+    if (url === characterUrl) {
+      if (character) placeCharacter(character);
+      return;
+    }
+    characterUrl = url;
+    clearCharacter();
+    if (!url) {
+      if (third.active) {
+        third.disable();
+        frame();
+      }
+      return;
+    }
+
+    const gltf = await loader.loadAsync(url);
+    try {
+      characterMaterials = await applyCharacterMaterials(gltf);
+    } catch {
+      // A missing shadow mask should still show the outfit; the loaded materials stay as they are.
+    }
+    if (stopped || characterUrl !== url) {
+      disposeModel(gltf.scene);
+      return;
+    }
+    character = gltf.scene;
+    scene.add(character);
+    placeCharacter(character);
+    applyMode();
   }
 
   function clear(): void {
@@ -284,8 +342,8 @@ export function createRacecourseScene({
     sceneRadius = new Box3().setFromObject(loaded).getBoundingSphere(new Sphere()).radius;
     area = courseBounds(loaded);
     ground = groundUnder(loaded, area);
-    walk.setArea(area, ground);
-    setSkyVisible(walk.walking);
+    setSkyVisible(third.active);
+    if (character) placeCharacter(character);
     frame();
     applyMode();
   }
@@ -296,9 +354,10 @@ export function createRacecourseScene({
     if (stopped) return;
     const delta = (now - lastFrame) / 1000;
     lastFrame = now;
-    // Only the camera that is in charge updates the view; the other one would fight it.
-    if (walk.walking) walk.update(delta);
-    else controls.update();
+    // The follow camera moves the pivot itself; the orbit controls own the rest.
+    if (third.active) third.update(delta);
+    controls.update();
+    if (character) aimCharacterLight(characterMaterials, camera.position, character.position);
     renderer.render(scene, camera);
     frameHandle = requestAnimationFrame(render);
   }
@@ -318,7 +377,8 @@ export function createRacecourseScene({
     stop();
     resizeObserver.disconnect();
     canvas.removeEventListener('webglcontextlost', onContextLost);
-    walk.dispose();
+    clearCharacter();
+    third.dispose();
     controls.dispose();
     clear();
     renderer.dispose();
@@ -333,6 +393,7 @@ export function createRacecourseScene({
 
   return {
     load,
+    setCharacter,
     frame,
     setMode: (mode: CameraMode) => {
       currentMode = mode;

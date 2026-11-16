@@ -11,13 +11,15 @@
   interface Props {
     /** The course model to draw. Changing it swaps the model without rebuilding the canvas. */
     url?: string;
+    /** An outfit to stand on the course as a scale reference; `undefined` shows none. */
+    characterUrl?: string;
     /** What the model shows, for the stage's accessible name and the loading line. */
     label: string;
     /** Overview orbits the course; walk stands on it at a horsegirl's height. */
     mode?: CameraMode;
   }
 
-  let { url = '', label, mode = 'overview' }: Props = $props();
+  let { url = '', characterUrl, label, mode = 'overview' }: Props = $props();
 
   let host: HTMLDivElement;
   let canvas: HTMLCanvasElement;
@@ -25,7 +27,7 @@
   let unsupported = $state(false);
   let failure = $state('');
   let percent = $state<number | null>(null);
-  /** A phone has no keyboard to walk with, so it only gets the look gesture. */
+  /** A phone has no keyboard to walk with, so it only gets the orbit gesture. */
   const canWalk = matchMedia('(pointer: fine)').matches;
 
   function onProgress(loaded: number, total: number) {
@@ -70,6 +72,10 @@
   $effect(() => {
     view?.setMode(mode);
   });
+
+  $effect(() => {
+    void view?.setCharacter(characterUrl);
+  });
 </script>
 
 <div
@@ -106,9 +112,9 @@
       <Spinner size={18} />
       <span>Loading {label}{percent > 0 ? ` · ${percent}%` : ''}</span>
     </div>
-  {:else if mode === 'walk'}
+  {:else if mode === 'third'}
     <p class="racecourse-stage-hint">
-      {canWalk ? 'WASD to walk · Shift to run · drag to look' : 'Drag to look around'}
+      {canWalk ? 'WASD to walk · Shift to run · drag to orbit' : 'Drag to orbit'}
     </p>
   {/if}
 </div>
