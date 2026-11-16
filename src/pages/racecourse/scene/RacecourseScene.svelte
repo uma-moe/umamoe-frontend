@@ -3,6 +3,7 @@
   import Spinner from '@/components/feedback/Spinner.svelte';
   import {
     createRacecourseScene,
+    type CameraMode,
     type RacecourseScene as RacecourseSceneView
   } from './racecourse-scene';
   import { hasWebGL2 } from './webgl';
@@ -10,11 +11,13 @@
   interface Props {
     /** The course model to draw. Changing it swaps the model without rebuilding the canvas. */
     url?: string;
-    /** What the model shows, for the canvas's accessible name and the loading line. */
+    /** What the model shows, for the stage's accessible name and the loading line. */
     label: string;
+    /** Overview orbits the course; walk stands on it at a horsegirl's height. */
+    mode?: CameraMode;
   }
 
-  let { url = '', label }: Props = $props();
+  let { url = '', label, mode = 'overview' }: Props = $props();
 
   let host: HTMLDivElement;
   let canvas: HTMLCanvasElement;
@@ -22,6 +25,8 @@
   let unsupported = $state(false);
   let failure = $state('');
   let percent = $state<number | null>(null);
+  /** A phone has no keyboard to walk with, so it only gets the look gesture. */
+  const canWalk = matchMedia('(pointer: fine)').matches;
 
   function onProgress(loaded: number, total: number) {
     percent = total > 0 ? Math.round((loaded / total) * 100) : null;
@@ -61,6 +66,10 @@
     if (!scene || !target) return;
     void show(scene, target);
   });
+
+  $effect(() => {
+    view?.setMode(mode);
+  });
 </script>
 
 <div
@@ -97,6 +106,10 @@
       <Spinner size={18} />
       <span>Loading {label}{percent > 0 ? ` · ${percent}%` : ''}</span>
     </div>
+  {:else if mode === 'walk'}
+    <p class="racecourse-stage-hint">
+      {canWalk ? 'WASD to walk · Shift to run · drag to look' : 'Drag to look around'}
+    </p>
   {/if}
 </div>
 

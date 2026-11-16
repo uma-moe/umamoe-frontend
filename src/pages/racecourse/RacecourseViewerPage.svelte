@@ -2,30 +2,20 @@
   import { onMount } from 'svelte';
   import AppPage from '@/layouts/AppPage.svelte';
   import SelectField, { type SelectOption } from '@/components/controls/SelectField.svelte';
+  import SegmentedControl from '@/components/controls/SegmentedControl.svelte';
   import EmptyState from '@/components/feedback/EmptyState.svelte';
   import Spinner from '@/components/feedback/Spinner.svelte';
   import { loadRacecourseModels, type RacecourseModel } from '@/lib/game-assets/racecourse-models';
   import RacecourseScene from './scene/RacecourseScene.svelte';
+  import type { CameraMode } from './scene/racecourse-scene';
 
   const TRACK_PARAM = 'track';
-
-  // The pipeline publishes the whole courses; until that record lands, dev previews the one track
-  // part that is already in the bucket so the renderer can be worked on.
-  const developmentModels: RacecourseModel[] = import.meta.env.DEV
-    ? [
-        {
-          trackId: 10006,
-          name: 'Tokyo, track part',
-          slug: 'dev-tokyo',
-          url: 'https://assets.uma.moe/game-assets/3d/env/race/race10006/race10006_0000/pfb_env_race10006_0000_002.glb'
-        }
-      ]
-    : [];
 
   let models = $state.raw<RacecourseModel[]>([]);
   let loading = $state(true);
   let failure = $state('');
   let selected = $state('');
+  let mode = $state<CameraMode>('overview');
   /** The track the URL asks for, so a link opens the course it names. */
   const requested = new URLSearchParams(location.search).get(TRACK_PARAM);
 
@@ -40,13 +30,11 @@
 
   onMount(async () => {
     try {
-      models = [...(await loadRacecourseModels()), ...developmentModels];
+      models = await loadRacecourseModels();
     } catch (error) {
       failure = error instanceof Error ? error.message : 'Course models are unavailable.';
-      models = developmentModels;
     } finally {
-      const linked = models.find((model) => model.slug === requested) ?? models[0];
-      selected = linked?.slug ?? '';
+      selected = (models.find((model) => model.slug === requested) ?? models[0])?.slug ?? '';
       loading = false;
     }
   });
@@ -65,14 +53,14 @@
   <title>Umamusume Racecourse Viewer | uma.moe</title>
   <meta
     name="description"
-    content="Explore the Umamusume racecourses in 3D: orbit the track, zoom into the corners and stands, and switch between the courses the game races on."
+    content="Explore the Umamusume racecourses in 3D: orbit the track, stand on it at a horsegirl's height, and switch between the courses the game races on."
   />
 </svelte:head>
 
 <AppPage
   routeId="racecourse-viewer"
   title="Racecourse Viewer"
-  description="The game's own racecourse models, to orbit and zoom."
+  description="The game's own racecourse models, to orbit, zoom and walk."
   width="wide"
 >
   {#if loading}
@@ -96,11 +84,20 @@
         bind:value={selected}
         onchange={(value) => (selected = value)}
       />
+      <SegmentedControl
+        label="Camera"
+        bind:value={mode}
+        options={[
+          { value: 'overview', label: 'Overview' },
+          { value: 'walk', label: 'At eye level', short: 'Walk' }
+        ]}
+      />
     </div>
 
     <RacecourseScene
       url={current?.url}
       label={`${current?.name ?? 'Racecourse'} in 3D`}
+      {mode}
     />
   {/if}
 </AppPage>
