@@ -6,8 +6,6 @@
 
 import {
   Box3,
-  DirectionalLight,
-  HemisphereLight,
   PerspectiveCamera,
   Raycaster,
   Scene,
@@ -19,7 +17,8 @@ import {
   type Object3D
 } from 'three';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
-import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
+import { GLTFLoader, type GLTF } from 'three/addons/loaders/GLTFLoader.js';
+import { applyUnityMaterials } from './unity-materials';
 import { createWalkCamera, SKY_NODE } from './walk-camera';
 
 /** How the reader looks at the course: from outside it, or standing on it at a horsegirl's height. */
@@ -79,15 +78,8 @@ export function createRacecourseScene({
   const camera = new PerspectiveCamera(50, 1, 0.5, 20000);
   camera.position.copy(OPENING_DIRECTION).multiplyScalar(1200);
 
-  // The game bakes its lighting into the models, so a soft sky/ground pair plus one sun reads
-  // closer to the game than a physically correct setup would.
-  scene.add(new HemisphereLight(0xffffff, 0x5a6b7d, 3));
-  const sun = new DirectionalLight(0xffffff, 2.2);
-  sun.position.set(600, 900, 400);
-  scene.add(sun);
-  const fill = new DirectionalLight(0xffffff, 0.7);
-  fill.position.set(-500, 300, -400);
-  scene.add(fill);
+  // No lights: the game bakes its lighting into the course's lightmap, and the rebuilt materials
+  // read that instead of shading a normal.
 
   const controls = new OrbitControls(camera, canvas);
   controls.enableDamping = true;
@@ -258,23 +250,7 @@ export function createRacecourseScene({
       loader.load(
         url,
         (gltf) => {
-          // A slower load that lost the race to a newer one must not replace what is on screen.
-          if (stopped || token !== generation) {
-            disposeModel(gltf.scene);
-            resolve();
-            return;
-          }
-          model = gltf.scene;
-          scene.add(model);
-          // The sky dome stays in the scene for the view, but it is not part of the course.
-          sceneRadius = new Box3().setFromObject(model).getBoundingSphere(new Sphere()).radius;
-          area = courseBounds(model);
-          ground = groundUnder(model, area);
-          walk.setArea(area, ground);
-          setSkyVisible(walk.walking);
-          frame();
-          applyMode();
-          resolve();
+          void show(gltf, token).then(resolve);
         },
         (event) => {
           if (token === generation) handlers.onProgress?.(event.loaded, event.total);
@@ -285,6 +261,33 @@ export function createRacecourseScene({
         }
       );
     });
+  }
+
+  /** Applies the game's shading, then puts the model on screen once it is ready to draw. */
+  async function show(gltf: GLTF, token: number): Promise<void> {
+    try {
+      await applyUnityMaterials(gltf);
+    } catch {
+      // A missing lightmap should not cost the reader the whole course: keep the loaded materials.
+    }
+
+    // A slower load that lost the race to a newer one must not replace what is on screen.
+    if (stopped || token !== generation) {
+      disposeModel(gltf.scene);
+      return;
+    }
+
+    const loaded = gltf.scene;
+    model = loaded;
+    scene.add(loaded);
+    // The sky dome stays in the scene for the view, but it is not part of the course.
+    sceneRadius = new Box3().setFromObject(loaded).getBoundingSphere(new Sphere()).radius;
+    area = courseBounds(loaded);
+    ground = groundUnder(loaded, area);
+    walk.setArea(area, ground);
+    setSkyVisible(walk.walking);
+    frame();
+    applyMode();
   }
 
   let lastFrame = performance.now();
