@@ -56,11 +56,15 @@ interface UnityMaterial {
   colors?: Record<string, number[]>;
 }
 
-/** Unity's declared defaults for a material that binds no texture of its own. */
+/** Materials whose textures already carry their shading, so the toon step only hurts them. */
+const UNLIT_MATERIAL = /_(face|hair|eye|mayu|cheek|tear)$/;
 const WHITE = new DataTexture(new Uint8Array([255, 255, 255, 255]), 1, 1);
 WHITE.needsUpdate = true;
 
 const vertexShader = /* glsl */ `
+  #include <common>
+  #include <skinning_pars_vertex>
+
   attribute vec4 aUnityColor;
 
   varying vec2 vUv;
@@ -71,11 +75,20 @@ const vertexShader = /* glsl */ `
   void main() {
     vUv = uv;
     vColor = aUnityColor;
-    // View space: the camera is a fixed +Z direction there, which is what a skinned outfit needs —
-    // its object matrix is not what carries the bind pose.
-    vNormalView = normalize(normalMatrix * normal);
-    vPositionView = (modelViewMatrix * vec4(position, 1.0)).xyz;
-    gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
+
+    // Skinning: the outfit is a SkinnedMesh driven by the published clips, so the vertices have to
+    // follow the bones. These chunks are three's own and read the bone texture it binds.
+    #include <beginnormal_vertex>
+    #include <skinbase_vertex>
+    #include <skinnormal_vertex>
+    #include <defaultnormal_vertex>
+    #include <begin_vertex>
+    #include <skinning_vertex>
+
+    vNormalView = normalize(transformedNormal);
+    vec4 mvPosition = modelViewMatrix * vec4(transformed, 1.0);
+    vPositionView = mvPosition.xyz;
+    gl_Position = projectionMatrix * mvPosition;
   }
 `;
 
@@ -85,6 +98,7 @@ const fragmentShader = /* glsl */ `
   uniform sampler2D uToonMap;
   uniform float uToonStep;
   uniform float uToonFeather;
+  uniform float uUnlit;
   uniform float uCutoff;
   uniform float uVertexColorToonPower;
   uniform float uSaturation;
@@ -127,13 +141,15 @@ const fragmentShader = /* glsl */ `
     vec4 mainTex = texture2D(uMainTex, vUv);
 
     float halfLambert = dot(normal, uLightDirection) * 0.5 + 0.5;
-    float shadow = uToonFeather > 0.0
-      ? clamp(
-          ((uToonStep - uToonFeather) - triMask.r * halfLambert) / uToonFeather + 1.0,
-          0.0,
-          1.0
-        )
-      : 0.0;
+    float shadow = uUnlit > 0.5
+      ? 0.0
+      : (uToonFeather > 0.0
+          ? clamp(
+              ((uToonStep - uToonFeather) - triMask.r * halfLambert) / uToonFeather + 1.0,
+              0.0,
+              1.0
+            )
+          : 0.0);
 
     float brightness =
       1.0 - (1.0 - vColor.a) * uVertexColorToonPower * (min(halfLambert - 0.5, 0.0) + 0.5);
@@ -227,6 +243,12 @@ export async function applyCharacterMaterials(gltf: GLTF): Promise<ShaderMateria
       return index === undefined ? undefined : textures.get(index);
     };
 
+    // The face, hair, eye and brow each have their own shader in the corpus (`ToonFace`, `ToonHair`,
+    // `ToonEye`, `ToonMayu`) whose textures are painted with their shading already. Drawing them with
+    // the body program runs them through the body's shadow mask, which is what turned the face into a
+    // pale mask. They render unlit until those programs are ported.
+    const unlit = UNLIT_MATERIAL.test(source.name);
+
     const material = new ShaderMaterial({
       vertexShader,
       fragmentShader,
@@ -237,6 +259,7 @@ export async function applyCharacterMaterials(gltf: GLTF): Promise<ShaderMateria
         uToonMap: { value: slot('_ToonMap') ?? WHITE },
         uToonStep: { value: floats._ToonStep ?? 0.4 },
         uToonFeather: { value: floats._ToonFeather ?? 0.001 },
+        uUnlit: { value: unlit ? 1 : 0 },
         uCutoff: { value: floats._Cutoff ?? 0 },
         uVertexColorToonPower: { value: floats._VertexColorToonPower ?? 1 },
         uSaturation: { value: floats._Saturation ?? 1 },

@@ -7,23 +7,30 @@
   import Spinner from '@/components/feedback/Spinner.svelte';
   import { loadRacecourseModels, type RacecourseModel } from '@/lib/game-assets/racecourse-models';
   import { loadUmaModels, type UmaModel } from '@/lib/game-assets/uma-models';
+  import { loadUmaMotions, type UmaMotion } from '@/lib/game-assets/uma-motions';
   import RacecourseScene from './scene/RacecourseScene.svelte';
   import type { CameraMode } from './scene/racecourse-scene';
 
   const TRACK_PARAM = 'track';
   const UMA_PARAM = 'uma';
+  const MOTION_PARAM = 'motion';
+  /** The clip that stops her T-posing until another is chosen. */
+  const DEFAULT_MOTION = 'gate-waiting-left-foot';
 
   let models = $state.raw<RacecourseModel[]>([]);
   let umas = $state.raw<UmaModel[]>([]);
+  let motions = $state.raw<UmaMotion[]>([]);
   let loading = $state(true);
   let failure = $state('');
   let selected = $state('');
   let umaSlug = $state('');
+  let motionSlug = $state(DEFAULT_MOTION);
   let mode = $state<CameraMode>('overview');
-  /** The track and the outfit the URL asks for, so a link opens what it names. */
+  /** The track, outfit and clip the URL asks for, so a link opens what it names. */
   const params = new URLSearchParams(location.search);
   const requested = params.get(TRACK_PARAM);
   const requestedUma = params.get(UMA_PARAM) ?? '';
+  const requestedMotion = params.get(MOTION_PARAM);
 
   const current = $derived(
     models.find((model) => model.slug === selected) ??
@@ -38,16 +45,29 @@
     ...umas.map((uma) => ({ value: uma.slug, label: `${uma.character} · ${uma.outfit}` }))
   ]);
   const character = $derived(umas.find((uma) => uma.slug === umaSlug));
+  const motionOptions = $derived<SelectOption[]>([
+    { value: '', label: 'Bind pose' },
+    ...motions.map((motion) => ({ value: motion.slug, label: motion.name }))
+  ]);
+  const motion = $derived(motions.find((entry) => entry.slug === motionSlug));
 
   onMount(async () => {
-    const [courses, outfits] = await Promise.allSettled([loadRacecourseModels(), loadUmaModels()]);
+    const [courses, outfits, clips] = await Promise.allSettled([
+      loadRacecourseModels(),
+      loadUmaModels(),
+      loadUmaMotions()
+    ]);
     if (courses.status === 'fulfilled') models = courses.value;
     else
       failure = courses.reason instanceof Error ? courses.reason.message : 'Courses unavailable.';
     if (outfits.status === 'fulfilled') umas = outfits.value;
+    if (clips.status === 'fulfilled') motions = clips.value;
 
     selected = (models.find((model) => model.slug === requested) ?? models[0])?.slug ?? '';
     umaSlug = umas.some((uma) => uma.slug === requestedUma) ? requestedUma : '';
+    motionSlug = motions.some((entry) => entry.slug === requestedMotion)
+      ? (requestedMotion ?? '')
+      : DEFAULT_MOTION;
     loading = false;
   });
 
@@ -56,6 +76,8 @@
     if (current?.slug) next.set(TRACK_PARAM, current.slug);
     if (umaSlug) next.set(UMA_PARAM, umaSlug);
     else next.delete(UMA_PARAM);
+    if (motionSlug && motionSlug !== DEFAULT_MOTION) next.set(MOTION_PARAM, motionSlug);
+    else next.delete(MOTION_PARAM);
     if (next.toString() === location.search.replace(/^\?/, '')) return;
     history.replaceState(history.state, '', `${location.pathname}?${next}`);
   });
@@ -115,11 +137,20 @@
         bind:value={umaSlug}
         onchange={(value) => (umaSlug = value)}
       />
+      <SelectField
+        id="racecourse-motion"
+        label="Motion"
+        options={motionOptions}
+        bind:value={motionSlug}
+        onchange={(value) => (motionSlug = value)}
+        disabled={!umaSlug}
+      />
     </div>
 
     <RacecourseScene
       url={current?.url}
       characterUrl={character?.url}
+      motionUrl={motion?.url}
       label={`${current?.name ?? 'Racecourse'} in 3D`}
       {mode}
     />

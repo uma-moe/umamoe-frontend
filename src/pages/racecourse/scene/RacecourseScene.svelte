@@ -11,15 +11,17 @@
   interface Props {
     /** The course model to draw. Changing it swaps the model without rebuilding the canvas. */
     url?: string;
-    /** An outfit to stand on the course as a scale reference; `undefined` shows none. */
+    /** An outfit to stand on the course; `undefined` shows none. */
     characterUrl?: string;
+    /** A race clip to play on that outfit. */
+    motionUrl?: string;
     /** What the model shows, for the stage's accessible name and the loading line. */
     label: string;
     /** Overview orbits the course; walk stands on it at a horsegirl's height. */
     mode?: CameraMode;
   }
 
-  let { url = '', characterUrl, label, mode = 'overview' }: Props = $props();
+  let { url = '', characterUrl, motionUrl, label, mode = 'overview' }: Props = $props();
 
   let host: HTMLDivElement;
   let canvas: HTMLCanvasElement;
@@ -75,6 +77,10 @@
 
   $effect(() => {
     void view?.setCharacter(characterUrl);
+  });
+
+  $effect(() => {
+    void view?.setMotion(motionUrl);
   });
 </script>
 
