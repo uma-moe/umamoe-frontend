@@ -59,7 +59,7 @@ interface UnityMaterial {
 }
 
 /** Materials whose textures already carry their shading, so the toon step only hurts them. */
-const UNLIT_MATERIAL = /_(face|hair|eye|mayu|tear)$/;
+const UNLIT_MATERIAL = /_(hair|eye|mayu|tear)$/;
 /** The blush: white where the face should show through, pink where it should not. */
 const MULTIPLY_MATERIAL = /_cheek$/;
 const WHITE = new DataTexture(new Uint8Array([255, 255, 255, 255]), 1, 1);
