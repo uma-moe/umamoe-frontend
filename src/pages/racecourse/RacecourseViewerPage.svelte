@@ -9,7 +9,11 @@
   import { loadUmaModels, type UmaModel } from '@/lib/game-assets/uma-models';
   import { loadUmaMotions, type UmaMotion } from '@/lib/game-assets/uma-motions';
   import RacecourseScene from './scene/RacecourseScene.svelte';
-  import type { CameraMode } from './scene/racecourse-scene';
+  import type { CameraMode, StartPoint } from './scene/racecourse-scene';
+  import {
+    loadReplayCourses,
+    loadReplayGeometry
+  } from '@/pages/competitive/race-analysis/replay/replay-course';
 
   const TRACK_PARAM = 'track';
   const UMA_PARAM = 'uma';
@@ -27,6 +31,7 @@
   let selected = $state('');
   let umaSlug = $state('');
   let motionSlug = $state(DEFAULT_MOTION);
+  let trackStart = $state<StartPoint>();
   let mode = $state<CameraMode>('overview');
   /** The track, outfit and clip the URL asks for, so a link opens what it names. */
   const params = new URLSearchParams(location.search);
@@ -76,9 +81,39 @@
     loading = false;
   });
 
-  // The lane path would give the exact start line, but the geometry artifact is 16.6 MB and this
-  // page only needs one point of it, so the scene derives the spot from the course's own turf oval.
-
+  // The lane path puts the start line in the same space as the course model, and its first two
+  // points give the heading down the straight. It is a big artifact, but this page draws 15 MB
+  // courses already, and the resource cache keeps it after the first visit.
+  $effect(() => {
+    const trackId = current?.trackId;
+    trackStart = undefined;
+    if (!trackId) return;
+    let cancelled = false;
+    void (async () => {
+      try {
+        const [shapes, courses] = await Promise.all([loadReplayGeometry(), loadReplayCourses()]);
+        if (cancelled) return;
+        const candidates = Object.entries(courses.courses)
+          .filter(([, course]) => course.raceTrackId === trackId)
+          .sort((left, right) => left[1].distance - right[1].distance);
+        const [courseId] = candidates[0] ?? [];
+        const points = courseId ? shapes[courseId]?.points : undefined;
+        const start = points?.[0];
+        const next = points?.[1];
+        if (!start) return;
+        trackStart = {
+          x: start[0],
+          z: start[1],
+          heading: next ? Math.atan2(next[0] - start[0], next[1] - start[1]) : undefined
+        };
+      } catch {
+        // Without the lane path she stands in the middle of the course, which is still useful.
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  });
   $effect(() => {
     const next = new URLSearchParams(location.search);
     if (current?.slug) next.set(TRACK_PARAM, current.slug);
@@ -160,6 +195,7 @@
       characterUrl={character?.url}
       motionUrl={motion?.url}
       {motionUrls}
+      startPoint={trackStart}
       label={`${current?.name ?? 'Racecourse'} in 3D`}
       {mode}
     />

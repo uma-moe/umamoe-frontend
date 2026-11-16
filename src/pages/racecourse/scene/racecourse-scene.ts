@@ -31,6 +31,14 @@ import { SKY_NODE } from './sky';
 /** How the reader looks at the course: from outside it, or behind an uma walking on it. */
 export type CameraMode = 'overview' | 'third';
 
+/** Where the racing surface begins, and which way the track runs from there. */
+export interface StartPoint {
+  x: number;
+  z: number;
+  /** Radians, applied to the model's own +Z front. */
+  heading?: number;
+}
+
 /** Close enough to the ground that the track surface stays in front of the near plane. */
 const WALK_NEAR = 0.1;
 /** The clips the state machine uses, by the pipeline's file names. */
@@ -71,7 +79,7 @@ export interface RacecourseScene {
   /** Every published clip, preloaded so a state change never waits on the network. */
   setMotionCatalog(urls: string[]): void;
   /** Where the track starts, so a new outfit or course puts her at the line rather than the middle. */
-  setTrackStart(point: { x: number; z: number } | undefined): void;
+  setTrackStart(point: StartPoint | undefined): void;
   /** Plays one race clip on the outfit; `undefined` returns her to the bind pose. */
   setMotion(url: string | undefined): Promise<void>;
   /** Puts the camera back around the current model. */
@@ -133,7 +141,7 @@ export function createRacecourseScene({
   let area: Box3 | undefined;
   let ground = 0;
   let heights: HeightField | undefined;
-  let trackStart: { x: number; z: number } | undefined;
+  let trackStart: StartPoint | undefined;
   let sceneRadius = 1000;
   let currentMode: CameraMode = 'overview';
   let framing = 1200;
@@ -298,11 +306,11 @@ export function createRacecourseScene({
    * so she is 1.63 m tall next to a 1400 m course.
    */
   /**
-   * Where the racing surface begins. The lane path the simulator loads knows the start line, but its
-   * artifact is 16.6 MB for a single point, so it arrives through `setTrackStart` only when a caller
-   * already has it; otherwise she stands in the middle of the course.
+   * Where the racing surface begins. The lane path the simulator loads knows the start line and the
+   * heading down the straight, and arrives through `setTrackStart`; without it she stands in the
+   * middle of the course.
    */
-  function startOfTrack(): { x: number; z: number } | undefined {
+  function startOfTrack(): StartPoint | undefined {
     return trackStart;
   }
 
@@ -310,7 +318,11 @@ export function createRacecourseScene({
     if (!area) return;
     const spot = startOfTrack() ?? area.getCenter(new Vector3());
     target.position.set(spot.x, groundAt(spot.x, spot.z), spot.z);
-    target.rotation.y = Math.atan2(camera.position.x - spot.x, camera.position.z - spot.z);
+    // Face down the straight when the path says which way it runs, otherwise face the reader.
+    target.rotation.y =
+      'heading' in spot && spot.heading !== undefined
+        ? spot.heading
+        : Math.atan2(camera.position.x - spot.x, camera.position.z - spot.z);
   }
 
   function clearCharacter(): void {
