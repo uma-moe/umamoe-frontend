@@ -31,6 +31,7 @@
 //   * Fog is omitted; the viewer draws none.
 
 import {
+  BufferAttribute,
   Color,
   DataTexture,
   FrontSide,
@@ -70,14 +71,18 @@ const vertexShader = /* glsl */ `
   #include <skinning_pars_vertex>
 
   attribute vec4 aUnityColor;
+  /** The eye shader's second UV set: the highlight layers are placed relative to it. */
+  attribute vec2 uv1;
 
   varying vec2 vUv;
+  varying vec2 vUv1;
   varying vec3 vNormalView;
   varying vec3 vPositionView;
   varying vec4 vColor;
 
   void main() {
     vUv = uv;
+    vUv1 = uv1;
     vColor = aUnityColor;
 
     // Skinning: the outfit is a SkinnedMesh driven by the published clips, so the vertices have to
@@ -116,8 +121,14 @@ const fragmentShader = /* glsl */ `
   uniform vec4 uToonBrightColor;
   uniform vec4 uToonDarkColor;
   uniform vec4 uRimColor;
+  uniform sampler2D uHigh0Tex;
+  uniform sampler2D uHigh1Tex;
+  uniform sampler2D uHigh2Tex;
+  uniform float uHighLimit;
+  uniform float uHasHigh;
 
   varying vec2 vUv;
+  varying vec2 vUv1;
   varying vec3 vNormalView;
   varying vec3 vPositionView;
   varying vec4 vColor;
@@ -138,6 +149,16 @@ const fragmentShader = /* glsl */ `
     vec3 normal = normalize(vNormalView);
     if (normal.z < 0.0) normal = -normal;
     vec3 toView = normalize(-vPositionView);
+
+    // The eye's sparkle: three layers placed relative to the second UV set and thresholded against
+    // _Limit, summed and tinted the way Gallop/3D/Chara/ToonEye/T does. Every per-layer offset and
+    // rotation is zero on the shipped eye material, so the sampled coordinate is the second UV set
+    // with its axes swapped.
+    vec2 highUv = vUv1.yx;
+    float high0 = max(texture2D(uHigh0Tex, highUv).x - uHighLimit, 0.0);
+    float high1 = max(texture2D(uHigh1Tex, highUv).x - uHighLimit, 0.0);
+    float high2 = max(texture2D(uHigh2Tex, highUv).x - uHighLimit, 0.0);
+    float sparkle = (high0 + high1 + high2) * uHasHigh;
 
     vec4 mainTex = texture2D(uMainTex, vUv);
     vec3 triMask = texture2D(uTripleMaskMap, vUv).rgb;
@@ -177,6 +198,8 @@ const fragmentShader = /* glsl */ `
     }
 
     color *= uCharaColor * uLightProbeColor;
+    // The highlights sit on the tint, 0.7 of the global toon colour, as the eye program does.
+    color += sparkle * uGlobalToonColor * 0.7;
 
     float luma = dot(color, vec3(0.2125, 0.7154, 0.0721));
     color = mix(vec3(luma), color, uSaturation);
@@ -206,6 +229,13 @@ function linearColor4(value: number[] | undefined, fallback: [number, number, nu
     SRGBColorSpace
   );
   return new Vector4(colour.r, colour.g, colour.b, a ?? fallback[3]);
+}
+
+/** The eye shader reads a second UV set for its highlights; a mesh without one samples the origin. */
+function ensureSecondUv(geometry: BufferGeometry): void {
+  if (geometry.getAttribute('uv1')) return;
+  const count = geometry.getAttribute('position')?.count ?? 0;
+  geometry.setAttribute('uv1', new BufferAttribute(new Float32Array(count * 2), 2));
 }
 
 /** The game's vertex colour attribute, under a name three will not touch. */
@@ -296,7 +326,12 @@ export async function applyCharacterMaterials(gltf: GLTF): Promise<ShaderMateria
         uSpecularColor: { value: linearColor(colors._SpecularColor, new Color(1, 1, 1)) },
         uToonBrightColor: { value: linearColor4(colors._ToonBrightColor, [1, 1, 1, 0]) },
         uToonDarkColor: { value: linearColor4(colors._ToonDarkColor, [1, 1, 1, 0]) },
-        uRimColor: { value: linearColor4(colors._RimColor, [1, 1, 1, 0.392]) }
+        uRimColor: { value: linearColor4(colors._RimColor, [1, 1, 1, 0.392]) },
+        uHigh0Tex: { value: slot('_High0Tex') ?? WHITE },
+        uHigh1Tex: { value: slot('_High1Tex') ?? WHITE },
+        uHigh2Tex: { value: slot('_High2Tex') ?? WHITE },
+        uHighLimit: { value: floats._Limit ?? 0.5 },
+        uHasHigh: { value: slot('_High0Tex') ? 1 : 0 }
       }
     });
 
@@ -307,6 +342,7 @@ export async function applyCharacterMaterials(gltf: GLTF): Promise<ShaderMateria
   const materials = new Set<ShaderMaterial>();
   for (const mesh of meshes) {
     ensureVertexColor(mesh.geometry);
+    ensureSecondUv(mesh.geometry);
     const converted = [mesh.material].flat().map(convert);
     mesh.material = Array.isArray(mesh.material) ? converted : converted[0]!;
     for (const material of converted)
