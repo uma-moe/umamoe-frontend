@@ -8,13 +8,13 @@
   import { hasWebGL2 } from './webgl';
 
   interface Props {
-    /** The course model to draw. Changing it swaps the model without rebuilding the canvas. */
-    url?: string;
+    /** The files of the course to draw: one whole-course model, or the prefabs it is assembled from. */
+    urls?: string[];
     /** What the model shows, for the stage's accessible name and the loading line. */
     label: string;
   }
 
-  let { url = '', label }: Props = $props();
+  let { urls = [], label }: Props = $props();
 
   let host: HTMLDivElement;
   let canvas: HTMLCanvasElement;
@@ -32,10 +32,10 @@
     percent = null;
   }
 
-  async function show(scene: RacecourseSceneView, target: string) {
+  async function show(scene: RacecourseSceneView, targets: string[]) {
     percent = 0;
     try {
-      await scene.load(target);
+      await scene.load(targets);
     } catch {
       failure = 'This course model could not be loaded. Check the connection and try again.';
     } finally {
@@ -57,9 +57,9 @@
 
   $effect(() => {
     const scene = view;
-    const target = url;
-    if (!scene || !target) return;
-    void show(scene, target);
+    const targets = urls;
+    if (!scene || targets.length === 0) return;
+    void show(scene, targets);
   });
 </script>
 
