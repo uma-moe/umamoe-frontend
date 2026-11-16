@@ -31,6 +31,8 @@ const MOVEMENT_KEYS = new Set([
 
 export interface ThirdPersonCamera {
   readonly active: boolean;
+  /** How fast she is walking right now, in metres per second, so a motion state can follow her. */
+  readonly speed: number;
   enable(): void;
   disable(): void;
   listen(): void;
@@ -63,6 +65,7 @@ export function createThirdPersonCamera({
   const target = new Vector3();
   const delta = new Vector3();
   let active = false;
+  let speedNow = 0;
 
   function onKeyDown(event: KeyboardEvent): void {
     if (!active || !MOVEMENT_KEYS.has(event.code)) return;
@@ -112,6 +115,7 @@ export function createThirdPersonCamera({
   function update(deltaSeconds: number): void {
     const outfit = subject();
     if (!active || !outfit) return;
+    speedNow = 0;
 
     // Camera-relative movement, so W always walks away from the reader.
     forward.copy(controls.target).sub(camera.position).setY(0);
@@ -128,6 +132,7 @@ export function createThirdPersonCamera({
     if (move.lengthSq() > 0) {
       move.normalize();
       const speed = keys.has('ShiftLeft') || keys.has('ShiftRight') ? RUN_SPEED : WALK_SPEED;
+      speedNow = speed;
       // A tab that was hidden reports a huge delta; cap it so she cannot teleport across the course.
       outfit.position.addScaledVector(move, speed * Math.min(deltaSeconds, 0.1));
       const bounds = area();
@@ -167,6 +172,9 @@ export function createThirdPersonCamera({
   return {
     get active() {
       return active;
+    },
+    get speed() {
+      return speedNow;
     },
     enable,
     disable,

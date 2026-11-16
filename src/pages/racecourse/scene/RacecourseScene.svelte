@@ -13,8 +13,10 @@
     url?: string;
     /** An outfit to stand on the course; `undefined` shows none. */
     characterUrl?: string;
-    /** A race clip to play on that outfit. */
+    /** A race clip to play on that outfit; `undefined` lets her motion follow her speed. */
     motionUrl?: string;
+    /** Every published clip, so switching between them never waits on the network. */
+    motionUrls?: string[];
     /** Where the track starts, so she stands at the line rather than the middle. */
     startPoint?: { x: number; z: number };
     /** What the model shows, for the stage's accessible name and the loading line. */
@@ -23,7 +25,15 @@
     mode?: CameraMode;
   }
 
-  let { url = '', characterUrl, motionUrl, startPoint, label, mode = 'overview' }: Props = $props();
+  let {
+    url = '',
+    characterUrl,
+    motionUrl,
+    motionUrls,
+    startPoint,
+    label,
+    mode = 'overview'
+  }: Props = $props();
 
   let host: HTMLDivElement;
   let canvas: HTMLCanvasElement;
@@ -77,6 +87,10 @@
 
   $effect(() => {
     void view?.setCharacter(characterUrl);
+  });
+
+  $effect(() => {
+    view?.setMotionCatalog(motionUrls ?? []);
   });
 
   $effect(() => {
