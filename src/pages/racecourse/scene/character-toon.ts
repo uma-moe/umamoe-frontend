@@ -1,24 +1,34 @@
-// Draws a uma the way the game's character shader does: a computed cel step over the baked texture
-// plus a per-texel shadow tint.
+// Draws an outfit with the game's own character shader.
 //
-// Read from the shipped shader `Gallop/3D/Chara/Toon/TSER` (DXBC disassembly, pass 0). The step is
-// arithmetic, not a lookup:
+// Ported from the shader the site publishes at
+// `game-assets/shaders/gallop/3d/chara/toon/tser.json` (`Gallop/3D/Chara/Toon/TSER`, pass `Toon`,
+// fragment source). The per-texel masks and the uniforms come from the model's `extras.unity`, so the
+// same values the game uses drive it.
+//
+// Exact, from that source:
 //
 //   halfLambert = N·L * 0.5 + 0.5
-//   shadow      = saturate(((step - feather) - halfLambert) / feather + 1)
-//   tinted      = albedo * toonMap                    (a 2-D shadow-colour mask, sampled at UV0)
-//   out         = mix(albedo, tinted, shadow)
+//   shadow      = clamp(((_ToonStep - _ToonFeather) - triMask.r * halfLambert) / _ToonFeather + 1)
+//   brightness  = 1 - (1 - vColor.a) * _VertexColorToonPower * (min(halfLambert - 0.5, 0) + 0.5)
+//   side(base, c) = base * (brightness * on * (c.rgb - 1) + 1) + brightness * (1 - on) * c.rgb
+//                   with on = 1 when c.a <= 0.5   (`.w` is an enable flag, not opacity)
+//   lit         = side(_MainTex * _LightColor0, _ToonBrightColor)
+//   dark        = side(_ToonMap * _LightColor0 * _GlobalToonColor, _ToonDarkColor)
+//   out         = mix(lit, dark, shadow) + specular
+//   specular    = pow(max(dot(N, V), 0), _SpecularPower * 10 + 1) * triMask.g * _SpecularColor
+//   out         = out * _CharaColor * _LightProbeColor
+//   out         = mix(luma(out), out * _Saturation, 1 - _Saturation)
 //
-// `_ToonStep` is 0.4 and `_ToonFeather` 0.001 on the shipped body material, which makes the transition
-// one texel wide, i.e. a hard cel edge.
+// `_TripleMaskMap.r` is the per-texel toon mask and `.g` the specular mask; `_ToonMap` is a 2D
+// shadow-colour mask. There is no ramp LUT anywhere.
 //
-// The light comes from the camera instead of from a fixed sun: the viewer orbits, and the game's light
-// is whatever the scene sets. It keeps the cel edge readable from any angle.
-//
-// Not ported, and why: the per-region tint masks (`_TripleMaskMap` / `_OptionMaskMap`), the rim and
-// specular terms, the dirt and emissive layers, and the outline pass. Those need the slot-to-uniform
-// mapping the export could not pin down (the shader samples seven textures but Unity's serialized
-// parameter table names only `_MainTex`), and they change detail, not the cel step this proves.
+// Approximated or left out, with the reason:
+//   * Rim: the source skews the view vector by `_RimHorizonOffset` / `_RimVerticalOffset` in view
+//     space. A plain Fresnel term stands in; the colour and the step are the same, the falloff shape
+//     differs.
+//   * Environment reflection, dirt, emissive and the highlight overlay are omitted: their textures
+//     are not part of the published outfit and their weights are 0 on the shipped materials.
+//   * Fog is omitted; the viewer draws none.
 
 import {
   Color,
@@ -27,6 +37,7 @@ import {
   ShaderMaterial,
   SRGBColorSpace,
   Vector3,
+  Vector4,
   type BufferGeometry,
   type Material,
   type Mesh,
@@ -45,7 +56,7 @@ interface UnityMaterial {
   colors?: Record<string, number[]>;
 }
 
-/** Stands in for a material that binds no texture of its own. */
+/** Unity's declared defaults for a material that binds no texture of its own. */
 const WHITE = new DataTexture(new Uint8Array([255, 255, 255, 255]), 1, 1);
 WHITE.needsUpdate = true;
 
@@ -53,46 +64,98 @@ const vertexShader = /* glsl */ `
   attribute vec4 aUnityColor;
 
   varying vec2 vUv;
-  varying vec3 vNormalWorld;
+  varying vec3 vNormalView;
+  varying vec3 vPositionView;
   varying vec4 vColor;
 
   void main() {
     vUv = uv;
     vColor = aUnityColor;
-    vNormalWorld = normalize(mat3(modelMatrix) * normal);
+    // View space: the camera is a fixed +Z direction there, which is what a skinned outfit needs —
+    // its object matrix is not what carries the bind pose.
+    vNormalView = normalize(normalMatrix * normal);
+    vPositionView = (modelViewMatrix * vec4(position, 1.0)).xyz;
     gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
   }
 `;
 
 const fragmentShader = /* glsl */ `
   uniform sampler2D uMainTex;
+  uniform sampler2D uTripleMaskMap;
   uniform sampler2D uToonMap;
   uniform float uToonStep;
   uniform float uToonFeather;
   uniform float uCutoff;
+  uniform float uVertexColorToonPower;
+  uniform float uSaturation;
+  uniform float uSpecularPower;
   uniform vec3 uLightDirection;
   uniform vec3 uLightColor;
+  uniform vec3 uGlobalToonColor;
   uniform vec3 uCharaColor;
+  uniform vec3 uLightProbeColor;
+  uniform vec3 uSpecularColor;
+  uniform vec4 uToonBrightColor;
+  uniform vec4 uToonDarkColor;
+  uniform vec4 uRimColor;
 
   varying vec2 vUv;
-  varying vec3 vNormalWorld;
+  varying vec3 vNormalView;
+  varying vec3 vPositionView;
   varying vec4 vColor;
 
+  /** One toon side. The colour's alpha is an enable flag in the game's shader, not opacity. */
+  vec3 toonSide(vec3 base, vec4 colour, float weight) {
+    float enabled = colour.a <= 0.5 ? 1.0 : 0.0;
+    vec3 multiply = weight * enabled * (colour.rgb - 1.0) + 1.0;
+    vec3 add = weight * (1.0 - enabled) * colour.rgb;
+    return base * multiply + add;
+  }
+
   void main() {
-    vec4 main = texture2D(uMainTex, vUv);
-    if (uCutoff > 0.0 && main.a < uCutoff) discard;
+    // The published outfits carry normals that point the wrong way on some meshes: the converter
+    // mirrors X to undo Unity's handedness, and the meshes are not all mirrored the same. Orienting
+    // every normal towards the viewer is the stable answer for a viewer, and it costs nothing while
+    // the light sits behind the camera's shoulder.
+    vec3 normal = normalize(vNormalView);
+    if (normal.z < 0.0) normal = -normal;
+    vec3 toView = normalize(-vPositionView);
 
-    vec3 albedo = main.rgb * uCharaColor * uLightColor;
+    vec3 triMask = texture2D(uTripleMaskMap, vUv).rgb;
+    if (uCutoff > 0.0 && triMask.b < uCutoff) discard;
 
-    float halfLambert = dot(normalize(vNormalWorld), uLightDirection) * 0.5 + 0.5;
+    vec4 mainTex = texture2D(uMainTex, vUv);
+
+    float halfLambert = dot(normal, uLightDirection) * 0.5 + 0.5;
     float shadow = uToonFeather > 0.0
-      ? clamp(((uToonStep - uToonFeather) - halfLambert) / uToonFeather + 1.0, 0.0, 1.0)
+      ? clamp(
+          ((uToonStep - uToonFeather) - triMask.r * halfLambert) / uToonFeather + 1.0,
+          0.0,
+          1.0
+        )
       : 0.0;
 
-    vec3 tinted = albedo * texture2D(uToonMap, vUv).rgb;
-    vec3 color = mix(albedo, tinted, shadow);
+    float brightness =
+      1.0 - (1.0 - vColor.a) * uVertexColorToonPower * (min(halfLambert - 0.5, 0.0) + 0.5);
 
-    gl_FragColor = vec4(color, main.a);
+    vec3 shadowTint = texture2D(uToonMap, vUv).rgb * uLightColor * uGlobalToonColor;
+    vec3 dark = toonSide(shadowTint, uToonDarkColor, brightness);
+    vec3 color = mix(toonSide(mainTex.rgb * uLightColor, uToonBrightColor, brightness), dark, shadow);
+
+    float specular = pow(max(dot(normal, toView), 0.0), uSpecularPower * 10.0 + 1.0);
+    color += max(vec3(specular * triMask.g) * uSpecularColor * uLightColor, vec3(0.0));
+
+    // A silhouette rim, not a wash: the source skews the view vector so the term only reaches the
+    // edges, and a plain Fresnel curve is the honest stand-in for that shape.
+    float rim = pow(1.0 - clamp(dot(normal, toView), 0.0, 1.0), 3.0);
+    color += uRimColor.rgb * rim * uRimColor.a;
+
+    color *= uCharaColor * uLightProbeColor;
+
+    float luma = dot(color, vec3(0.2125, 0.7154, 0.0721));
+    color = mix(vec3(luma), color, uSaturation);
+
+    gl_FragColor = vec4(color, mainTex.a);
     #include <tonemapping_fragment>
     #include <colorspace_fragment>
   }
@@ -107,6 +170,18 @@ function linearColor(value: number[] | undefined, fallback: Color): Color {
   return new Color().setRGB(value[0]!, value[1]!, value[2]!, SRGBColorSpace);
 }
 
+/** A material colour that keeps its alpha, which the shader reads as an enable flag. */
+function linearColor4(value: number[] | undefined, fallback: [number, number, number, number]) {
+  const [r, g, b, a] = value ?? fallback;
+  const colour = new Color().setRGB(
+    r ?? fallback[0],
+    g ?? fallback[1],
+    b ?? fallback[2],
+    SRGBColorSpace
+  );
+  return new Vector4(colour.r, colour.g, colour.b, a ?? fallback[3]);
+}
+
 /** The game's vertex colour attribute, under a name three will not touch. */
 function ensureVertexColor(geometry: BufferGeometry): void {
   if (geometry.getAttribute('aUnityColor')) return;
@@ -116,8 +191,7 @@ function ensureVertexColor(geometry: BufferGeometry): void {
 
 /**
  * Rebuilds the outfit's materials with the character toon, and returns the materials whose light
- * direction follows the camera. Textures come through the glTF parser so the shadow mask loads even
- * though no material references it as a PBR map.
+ * direction follows the camera.
  */
 export async function applyCharacterMaterials(gltf: GLTF): Promise<ShaderMaterial[]> {
   const meshes: Mesh[] = [];
@@ -146,6 +220,8 @@ export async function applyCharacterMaterials(gltf: GLTF): Promise<ShaderMateria
     if (cached) return cached;
 
     const unity = unityOf(source);
+    const floats = unity?.floats ?? {};
+    const colors = unity?.colors ?? {};
     const slot = (name: string) => {
       const index = unity?.textures?.[name]?.index;
       return index === undefined ? undefined : textures.get(index);
@@ -157,13 +233,23 @@ export async function applyCharacterMaterials(gltf: GLTF): Promise<ShaderMateria
       side: FrontSide,
       uniforms: {
         uMainTex: { value: slot('_MainTex') ?? WHITE },
+        uTripleMaskMap: { value: slot('_TripleMaskMap') ?? WHITE },
         uToonMap: { value: slot('_ToonMap') ?? WHITE },
-        uToonStep: { value: unity?.floats?._ToonStep ?? 0.4 },
-        uToonFeather: { value: unity?.floats?._ToonFeather ?? 0.001 },
-        uCutoff: { value: source.alphaTest > 0 ? (unity?.floats?._Cutoff ?? source.alphaTest) : 0 },
-        uLightDirection: { value: new Vector3(0, 1, 0) },
+        uToonStep: { value: floats._ToonStep ?? 0.4 },
+        uToonFeather: { value: floats._ToonFeather ?? 0.001 },
+        uCutoff: { value: floats._Cutoff ?? 0 },
+        uVertexColorToonPower: { value: floats._VertexColorToonPower ?? 1 },
+        uSaturation: { value: floats._Saturation ?? 1 },
+        uSpecularPower: { value: floats._SpecularPower ?? 0.15 },
+        uLightDirection: { value: CHARACTER_LIGHT.clone() },
         uLightColor: { value: new Color(1, 1, 1) },
-        uCharaColor: { value: linearColor(unity?.colors?._CharaColor, new Color(1, 1, 1)) }
+        uGlobalToonColor: { value: linearColor(colors._GlobalToonColor, new Color(1, 1, 1)) },
+        uCharaColor: { value: linearColor(colors._CharaColor, new Color(1, 1, 1)) },
+        uLightProbeColor: { value: linearColor(colors._LightProbeColor, new Color(1, 1, 1)) },
+        uSpecularColor: { value: linearColor(colors._SpecularColor, new Color(1, 1, 1)) },
+        uToonBrightColor: { value: linearColor4(colors._ToonBrightColor, [1, 1, 1, 0]) },
+        uToonDarkColor: { value: linearColor4(colors._ToonDarkColor, [1, 1, 1, 0]) },
+        uRimColor: { value: linearColor4(colors._RimColor, [1, 1, 1, 0.392]) }
       }
     });
 
@@ -184,18 +270,5 @@ export async function applyCharacterMaterials(gltf: GLTF): Promise<ShaderMateria
   return [...materials];
 }
 
-/** Points the character light from the camera, so the cel edge stays readable while orbiting. */
-export function aimCharacterLight(
-  materials: ShaderMaterial[],
-  cameraPosition: Vector3,
-  subjectPosition: Vector3
-): void {
-  const direction = cameraPosition
-    .clone()
-    .sub(subjectPosition)
-    .setY(0)
-    .normalize()
-    .add(new Vector3(0, 1.1, 0))
-    .normalize();
-  for (const material of materials) material.uniforms.uLightDirection!.value = direction.clone();
-}
+/** The key light sits in view space, slightly above and to the left of the camera. */
+export const CHARACTER_LIGHT = new Vector3(0.3, 0.45, 0.85).normalize();

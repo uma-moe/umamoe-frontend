@@ -19,7 +19,7 @@ import {
 } from 'three';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 import { GLTFLoader, type GLTF } from 'three/addons/loaders/GLTFLoader.js';
-import { aimCharacterLight, applyCharacterMaterials } from './character-toon';
+import { applyCharacterMaterials } from './character-toon';
 import { createThirdPersonCamera } from './third-person-camera';
 import { applyUnityMaterials } from './unity-materials';
 import { SKY_NODE } from './sky';
@@ -357,7 +357,6 @@ export function createRacecourseScene({
     // The follow camera moves the pivot itself; the orbit controls own the rest.
     if (third.active) third.update(delta);
     controls.update();
-    if (character) aimCharacterLight(characterMaterials, camera.position, character.position);
     renderer.render(scene, camera);
     frameHandle = requestAnimationFrame(render);
   }
