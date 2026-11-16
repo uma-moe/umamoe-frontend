@@ -18,8 +18,8 @@
   const TRACK_PARAM = 'track';
   const UMA_PARAM = 'uma';
   const MOTION_PARAM = 'motion';
-  /** The clip that stops her T-posing until another is chosen. */
-  const DEFAULT_MOTION = 'gate-waiting-left-foot';
+  /** An empty value lets her motion follow her speed: gate waiting, then running. */
+  const DEFAULT_MOTION = '';
   /** The outfit the page opens with. */
   const DEFAULT_UMA = 'special-week/special-dreamer';
 
@@ -53,10 +53,11 @@
   ]);
   const character = $derived(umas.find((uma) => uma.slug === umaSlug));
   const motionOptions = $derived<SelectOption[]>([
-    { value: '', label: 'Bind pose' },
+    { value: '', label: 'Follow her speed' },
     ...motions.map((motion) => ({ value: motion.slug, label: motion.name }))
   ]);
   const motion = $derived(motions.find((entry) => entry.slug === motionSlug));
+  const motionUrls = $derived(motions.map((entry) => entry.url));
 
   onMount(async () => {
     const [courses, outfits, clips] = await Promise.allSettled([
@@ -186,6 +187,7 @@
       url={current?.url}
       characterUrl={character?.url}
       motionUrl={motion?.url}
+      {motionUrls}
       startPoint={trackStart}
       label={`${current?.name ?? 'Racecourse'} in 3D`}
       {mode}

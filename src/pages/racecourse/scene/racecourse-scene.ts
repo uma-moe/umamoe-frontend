@@ -19,7 +19,7 @@ import {
   type ShaderMaterial
 } from 'three';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
-import { AnimationMixer, type AnimationAction } from 'three';
+import { AnimationMixer, LoopRepeat, type AnimationAction, type AnimationClip } from 'three';
 import { GLTFLoader, type GLTF } from 'three/addons/loaders/GLTFLoader.js';
 import { applyCharacterMaterials } from './character-toon';
 import { createFlyCamera } from './fly-camera';
@@ -33,6 +33,10 @@ export type CameraMode = 'overview' | 'third';
 
 /** Close enough to the ground that the track surface stays in front of the near plane. */
 const WALK_NEAR = 0.1;
+/** The clips the state machine uses, by the pipeline's file names. */
+const IDLE_MOTION = 'gate-waiting-left-foot';
+const RUN_MOTION = 'run-fast-standard';
+const CROSSFADE = 0.25;
 /** The parts the game models where they stand that describe the racing surface: track and turf. */
 const TRACK_PART = /_000[01]_/;
 
@@ -64,6 +68,8 @@ export interface RacecourseScene {
   load(url: string): Promise<void>;
   /** Stands one uma on the course; `undefined` removes it. */
   setCharacter(url: string | undefined): Promise<void>;
+  /** Every published clip, preloaded so a state change never waits on the network. */
+  setMotionCatalog(urls: string[]): void;
   /** Where the track starts, so a new outfit or course puts her at the line rather than the middle. */
   setTrackStart(point: { x: number; z: number } | undefined): void;
   /** Plays one race clip on the outfit; `undefined` returns her to the bind pose. */
@@ -103,6 +109,10 @@ export function createRacecourseScene({
 
   const loader = new GLTFLoader();
   let characterMaterials: ShaderMaterial[] = [];
+  const clips = new Map<string, AnimationClip>();
+  const clipLoads = new Map<string, Promise<AnimationClip | undefined>>();
+  let motionCatalog: string[] = [];
+  let currentState: 'idle' | 'run' | undefined;
   let mixer: AnimationMixer | undefined;
   let motionAction: AnimationAction | undefined;
   let motionUrl: string | undefined;
@@ -297,40 +307,113 @@ export function createRacecourseScene({
 
   function clearCharacter(): void {
     if (!character) return;
-    stopMotion();
+    clearMotion();
+    if (mixer) {
+      mixer.uncacheRoot(character);
+      mixer = undefined;
+    }
     character.removeFromParent();
     disposeModel(character);
     character = undefined;
     characterMaterials = [];
     motionUrl = undefined;
+    currentState = undefined;
   }
 
-  function stopMotion(): void {
+  /** Stops whatever clip is playing, keeping the loaded clips around. */
+  function clearMotion(): void {
     if (mixer) {
       mixer.stopAllAction();
-      mixer.uncacheRoot(mixer.getRoot());
-      mixer = undefined;
+      currentState = undefined;
     }
     motionAction = undefined;
   }
 
   /**
-   * Binds a published clip to the outfit. The clips carry no meshes, only channels on the bone names
-   * every outfit also has, so the mixer can drive the loaded skeleton directly.
+   * Binds the outfit's motion. `undefined` runs the state machine: standing still plays the gate
+   * clip, moving plays the run clip, and the two crossfade so no T-pose shows between them.
    */
   async function setMotion(url: string | undefined): Promise<void> {
     if (url === motionUrl) return;
     motionUrl = url;
-    stopMotion();
-    if (!url || !character) return;
+    clearMotion();
+    if (!character) return;
+    if (!url) {
+      playState('idle');
+      return;
+    }
 
-    const clipGltf = await loader.loadAsync(url);
-    const clip = clipGltf.animations[0];
+    const clip = await clipFor(url);
     if (!clip || stopped || motionUrl !== url || !character) return;
+    play(clip);
+  }
 
-    mixer = new AnimationMixer(character);
-    motionAction = mixer.clipAction(clip);
-    motionAction.play();
+  /** Loads a clip once and keeps it, so switching back to it costs nothing. */
+  async function clipFor(url: string): Promise<AnimationClip | undefined> {
+    const cached = clips.get(url);
+    if (cached) return cached;
+    const pending = clipLoads.get(url);
+    if (pending) return pending;
+
+    const load = loader
+      .loadAsync(url)
+      .then((gltf) => {
+        const clip = gltf.animations[0];
+        if (clip) clips.set(url, clip);
+        clipLoads.delete(url);
+        return clip;
+      })
+      .catch(() => {
+        clipLoads.delete(url);
+        return undefined;
+      });
+    clipLoads.set(url, load);
+    return load;
+  }
+
+  function ensureMixer(): AnimationMixer | undefined {
+    if (!character) return undefined;
+    mixer ??= new AnimationMixer(character);
+    return mixer;
+  }
+
+  /** Crossfades to one clip, looping it. */
+  function play(clip: AnimationClip): void {
+    const activeMixer = ensureMixer();
+    if (!activeMixer) return;
+    const next = activeMixer.clipAction(clip);
+    next.reset();
+    next.setLoop(LoopRepeat, Number.POSITIVE_INFINITY);
+    next.enabled = true;
+    next.setEffectiveWeight(1);
+    next.play();
+    if (motionAction && motionAction !== next) next.crossFadeFrom(motionAction, CROSSFADE, true);
+    motionAction = next;
+  }
+
+  /** The state machine: idle when she stands, running when she does not. */
+  async function playState(state: 'idle' | 'run'): Promise<void> {
+    if (state === currentState) return;
+    currentState = state;
+    if (motionUrl) return;
+    const slug = state === 'idle' ? IDLE_MOTION : RUN_MOTION;
+    const url = motionCatalog.find((entry) => entry.endsWith(`/${slug}.glb`));
+    if (!url) return;
+    const clip = await clipFor(url);
+    if (!clip || stopped || motionUrl || !character) return;
+    play(clip);
+  }
+
+  /** Preloads every published clip so a state change never waits on the network. */
+  async function preloadMotions(): Promise<void> {
+    const queue = [...motionCatalog];
+    const workers = Array.from({ length: 4 }, async () => {
+      while (queue.length > 0 && !stopped) {
+        const url = queue.shift();
+        if (url) await clipFor(url);
+      }
+    });
+    await Promise.all(workers);
   }
 
   async function setCharacter(url: string | undefined): Promise<void> {
@@ -362,11 +445,14 @@ export function createRacecourseScene({
     scene.add(character);
     placeCharacter(character);
     applyMode();
-    // A clip chosen before the outfit existed plays once it does.
+    void preloadMotions();
+    // A clip chosen before the outfit existed plays once it does; otherwise the state machine starts.
     if (motionUrl) {
       const pending = motionUrl;
       motionUrl = undefined;
       void setMotion(pending);
+    } else {
+      void playState('idle');
     }
   }
 
@@ -442,6 +528,8 @@ export function createRacecourseScene({
     if (third.active) {
       third.update(delta);
       controls.update();
+      // The state machine follows her feet unless the reader pinned a clip.
+      void playState(third.speed > 0.1 ? 'run' : 'idle');
     } else {
       fly.update(delta);
     }
@@ -483,6 +571,10 @@ export function createRacecourseScene({
   return {
     load,
     setCharacter,
+    setMotionCatalog: (urls) => {
+      motionCatalog = urls;
+      void preloadMotions();
+    },
     setTrackStart: (point) => {
       trackStart = point;
       if (character) placeCharacter(character);
