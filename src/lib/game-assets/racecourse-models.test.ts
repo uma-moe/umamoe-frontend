@@ -1,99 +1,109 @@
 import { describe, expect, it } from 'vitest';
-import { artUrl, loadRacecourseModels, racecourseModels } from './racecourse-models';
+import {
+  artUrl,
+  loadRacecourseModels,
+  racecourseModels,
+  selectVariants
+} from './racecourse-models';
 
-const listing = (entries: unknown[]) => ({ schema: 1, racecourses: entries });
+const ROOT = 'https://assets.uma.moe';
 
 describe('artUrl', () => {
   it('resolves rooted and relative links against the art root', () => {
     expect(artUrl('/art/umas/100101/model.glb', '/art/index.json')).toBe(
-      'https://assets.uma.moe/art/umas/100101/model.glb'
+      `${ROOT}/art/umas/100101/model.glb`
     );
     expect(artUrl('model.glb', '/art/racecourses/10006/index.json')).toBe(
-      'https://assets.uma.moe/art/racecourses/10006/model.glb'
+      `${ROOT}/art/racecourses/10006/model.glb`
     );
   });
 });
 
+describe('selectVariants', () => {
+  const parts = [
+    '0000_002.glb',
+    '0001_002.glb',
+    '4000_100.glb',
+    '4000_200.glb',
+    '6000_100.glb',
+    '6000_442.glb',
+    '7001_010.glb',
+    '7001_030.glb',
+    '7013_000.glb'
+  ].map((file) => `/art/racecourses/10001/parts/${file}`);
+
+  it('keeps one variant per slot, closest to the wanted season, weather and time', () => {
+    expect(selectVariants(parts).map((link) => link.split('/').pop())).toEqual([
+      '0000_002.glb',
+      '0001_002.glb',
+      '4000_100.glb',
+      '6000_100.glb',
+      '7001_010.glb'
+    ]);
+  });
+
+  it('drops the spectator markers the course model leaves out', () => {
+    expect(selectVariants(parts).some((link) => link.includes('7013'))).toBe(false);
+  });
+});
+
 describe('racecourseModels', () => {
-  it('reads the courses a listing names directly', () => {
-    const models = racecourseModels(
-      listing([
-        { id: 10006, name: 'Tokyo', model: '/art/racecourses/10006/model.glb' },
-        { id: 10201, name: 'Longchamp', model: '/art/racecourses/10201/model.glb' }
-      ])
-    );
-
-    expect(models.map((model) => model.trackId)).toEqual([10201, 10006]);
-    expect(models.map((model) => model.name)).toEqual(['Longchamp', 'Tokyo']);
-    expect(models[1]).toEqual({
-      trackId: 10006,
-      name: 'Tokyo',
-      slug: 'model',
-      url: 'https://assets.uma.moe/art/racecourses/10006/model.glb'
+  it('skips listing entries that only point at a document, which the loader reads', () => {
+    const models = racecourseModels({
+      schema: 1,
+      racecourses: [{ id: 10001, name: 'Sapporo', index: '/art/racecourses/10001/index.json' }]
     });
-  });
-
-  it('accepts a model given as a file inside the course folder', () => {
-    const models = racecourseModels(
-      listing([{ id: 10007, name: 'Chukyo', model: { file: 'tokyo-course.glb' } }])
-    );
-
-    expect(models).toHaveLength(1);
-    expect(models[0]?.url).toBe('https://assets.uma.moe/art/racecourses/10007/tokyo-course.glb');
-    expect(models[0]?.slug).toBe('tokyo-course');
-  });
-
-  it('falls back to the site name for a track the table does not know', () => {
-    const models = racecourseModels(
-      listing([{ id: 99999, name: 'Somewhere Downs', model: 'somewhere.glb' }])
-    );
-
-    expect(models[0]?.name).toBe('Somewhere Downs');
-  });
-
-  it('skips entries that name no model and cannot be read further', () => {
-    const models = racecourseModels(
-      listing([{ id: 10006, index: '/art/racecourses/10006/index.json' }, { name: 'no id' }, null])
-    );
 
     expect(models).toEqual([]);
   });
 
-  it('returns nothing for a listing that is not the shape', () => {
-    expect(racecourseModels(null)).toEqual([]);
-    expect(racecourseModels({ schema: 1 })).toEqual([]);
+  it('takes a whole-course model when the entry names one', () => {
+    const models = racecourseModels({
+      racecourses: [{ id: 10006, name: 'Tokyo', model: '/art/racecourses/10006/model.glb' }]
+    });
+
+    expect(models[0]).toMatchObject({
+      trackId: 10006,
+      slug: 'model',
+      url: `${ROOT}/art/racecourses/10006/model.glb`,
+      parts: []
+    });
   });
 });
 
 describe('loadRacecourseModels', () => {
   const respond = (bodies: Record<string, unknown>) =>
     (async (input: RequestInfo | URL) => {
-      const url = String(input);
-      const body = bodies[url];
-      if (body === undefined) return new Response('missing', { status: 404 });
-      return new Response(JSON.stringify(body), { status: 200 });
+      const body = bodies[String(input)];
+      return body === undefined
+        ? new Response('missing', { status: 404 })
+        : new Response(JSON.stringify(body), { status: 200 });
     }) as typeof fetch;
 
   it('says plainly that the tree has no courses yet', () => {
-    const fetchImpl = respond({ 'https://assets.uma.moe/art/index.json': { sections: {} } });
+    const fetchImpl = respond({ [`${ROOT}/art/index.json`]: { sections: {} } });
 
     return expect(loadRacecourseModels(fetchImpl)).rejects.toThrow('no racecourses section');
   });
 
-  it('follows a listing that only points at course documents', async () => {
+  it('assembles a course from its parts when no whole model is published', async () => {
     const fetchImpl = respond({
-      'https://assets.uma.moe/art/index.json': {
+      [`${ROOT}/art/index.json`]: {
         schema: 1,
         sections: { racecourses: '/art/racecourses/index.json' }
       },
-      'https://assets.uma.moe/art/racecourses/index.json': listing([
-        { id: 10006, name: 'Tokyo', index: '/art/racecourses/10006/index.json' }
-      ]),
-      'https://assets.uma.moe/art/racecourses/10006/index.json': {
+      [`${ROOT}/art/racecourses/index.json`]: {
         schema: 1,
-        id: 10006,
-        name: 'Tokyo',
-        model: { file: 'model.glb' }
+        racecourses: [{ id: 10001, name: 'Sapporo', index: '/art/racecourses/10001/index.json' }]
+      },
+      [`${ROOT}/art/racecourses/10001/index.json`]: {
+        schema: 1,
+        id: 10001,
+        name: 'Sapporo',
+        parts: [
+          '/art/racecourses/10001/parts/0000_002.glb',
+          '/art/racecourses/10001/parts/0001_002.glb'
+        ]
       }
     });
 
@@ -101,10 +111,13 @@ describe('loadRacecourseModels', () => {
 
     expect(models).toEqual([
       {
-        trackId: 10006,
-        name: 'Tokyo',
-        slug: 'model',
-        url: 'https://assets.uma.moe/art/racecourses/10006/model.glb'
+        trackId: 10001,
+        name: 'Sapporo',
+        slug: 'course-10001',
+        parts: [
+          `${ROOT}/art/racecourses/10001/parts/0000_002.glb`,
+          `${ROOT}/art/racecourses/10001/parts/0001_002.glb`
+        ]
       }
     ]);
   });

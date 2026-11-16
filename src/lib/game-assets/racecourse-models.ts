@@ -1,8 +1,9 @@
 // Resolves the whole-course models the game art pipeline publishes.
 //
-// Since the art tree landed, everything is addressed from `art/index.json`: a section name points at
-// a listing, and each entry in that listing names its own files. Courses are not in that tree yet, so
-// this reader looks for the `racecourses` section and says plainly when it is not there.
+// Since the art tree landed, everything is addressed from `art/index.json`: a section points at a
+// listing, each entry at a course document, and that document names the files. A course may be
+// published whole (`model`) or as the prefabs it was assembled from (`parts`); both are handled, and
+// the parts are narrowed to one variant per slot the way the pipeline assembles the whole model.
 
 import { trackName } from '@/lib/game-data/racing/courses';
 
@@ -10,6 +11,13 @@ const ART_ROOT = 'https://assets.uma.moe';
 const INDEX_PATH = '/art/index.json';
 /** The section of `art/index.json` that lists the courses. */
 const SECTION = 'racecourses';
+/**
+ * The season, weather and time digits the whole-course model is assembled for, from the pipeline's
+ * README: a sunny spring day. `0` in a variant's digits fits any value.
+ */
+const VARIANT = '112';
+/** A slot only the game uses: it marks where 3D spectators stand, and the course model leaves it out. */
+const SPECTATOR_SLOT = '7013';
 
 export interface RacecourseModel {
   /** `race_track_id` from the game's course master: 10006 is Tokyo. */
@@ -18,7 +26,10 @@ export interface RacecourseModel {
   name: string;
   /** File name without extension; the page's `?track=` value. */
   slug: string;
-  url: string;
+  /** The whole course, when the pipeline published it as one file. */
+  url?: string;
+  /** Otherwise the prefabs to draw, one variant per slot, as absolute URLs. */
+  parts: string[];
 }
 
 /** Absolute URL for a link from a document, which may be rooted at `/` or relative to it. */
@@ -45,23 +56,80 @@ function modelLink(entry: Record<string, unknown>): string | undefined {
   return record ? asString(record.file) : undefined;
 }
 
-function model(path: string, link: string, from: string, fallbackName?: string): RacecourseModel {
-  const url = artUrl(link, from);
-  const file = url.split('/').pop() ?? '';
-  const slug = file.replace(/\.glb$/, '');
-  const id = Number(path.replace(/\D+/g, ''));
-  return {
-    trackId: id,
-    name: trackName(id) === `Track ${id}` ? (fallbackName ?? trackName(id)) : trackName(id),
-    slug,
-    url
-  };
+/** `0000_002.glb` is slot `0000`, variant `002`. */
+function slotOf(file: string): string {
+  return file.split('_')[0] ?? '';
+}
+
+/** How badly a variant's digits miss the wanted season, weather and time; a `0` digit fits any. */
+function variantDistance(file: string, target: string): number {
+  const digits = (file.split('_')[1] ?? '').replace(/\.glb$/, '');
+  let distance = 0;
+  for (let index = 0; index < target.length; index += 1) {
+    const digit = Number(digits[index] ?? 0);
+    if (digit !== 0) distance += Math.abs(digit - Number(target[index]));
+  }
+  return distance;
 }
 
 /**
- * Turns the `racecourses` listing into courses. An entry may name its model directly, or point at the
- * course document that names it; both shapes are accepted so the tree can settle.
+ * One prefab per slot, the variant closest to the wanted season, weather and time. A slot with a
+ * single variant is kept as it is; the spectator markers are dropped.
  */
+export function selectVariants(links: string[], target = VARIANT): string[] {
+  const slots = new Map<string, string[]>();
+  for (const link of links) {
+    const slot = slotOf(link.split('/').pop() ?? '');
+    if (!slot || slot === SPECTATOR_SLOT) continue;
+    slots.set(slot, [...(slots.get(slot) ?? []), link]);
+  }
+
+  const chosen: string[] = [];
+  for (const slot of [...slots.keys()].sort()) {
+    const variants = slots.get(slot) ?? [];
+    const best = variants.reduce((winner, candidate) =>
+      variantDistance(candidate.split('/').pop() ?? '', target) <
+      variantDistance(winner.split('/').pop() ?? '', target)
+        ? candidate
+        : winner
+    );
+    if (best) chosen.push(best);
+  }
+  return chosen;
+}
+
+function course(
+  entry: Record<string, unknown>,
+  docPath: string,
+  document: Record<string, unknown>
+): RacecourseModel | undefined {
+  const id = typeof entry.id === 'number' ? entry.id : Number(asString(entry.id));
+  if (!Number.isFinite(id)) return undefined;
+
+  const from = docPath.replace(/\/[^/]*$/, '/');
+  const link = modelLink(document);
+  const parts = Array.isArray(document.parts)
+    ? document.parts.flatMap((part) => {
+        const path = asString(part);
+        return path ? [artUrl(path, from)] : [];
+      })
+    : [];
+
+  const url = link ? artUrl(link, from) : undefined;
+  if (!url && parts.length === 0) return undefined;
+
+  const file = (url ?? parts[0] ?? '').split('/').pop() ?? '';
+  const named = asString(entry.name) ?? asString(document.name);
+  return {
+    trackId: id,
+    name: trackName(id) === `Track ${id}` ? (named ?? trackName(id)) : trackName(id),
+    slug: url ? file.replace(/\.glb$/, '') : `course-${id}`,
+    url,
+    parts: url ? [] : selectVariants(parts)
+  };
+}
+
+/** Turns the `racecourses` listing into courses, reading the document each entry points at. */
 export function racecourseModels(
   listing: unknown,
   listingPath = `/art/${SECTION}/index.json`
@@ -69,22 +137,18 @@ export function racecourseModels(
   const entries = asRecord(listing)?.[SECTION];
   if (!Array.isArray(entries)) return [];
 
-  const seen = new Set<string>();
   const models: RacecourseModel[] = [];
   for (const entry of entries) {
     const record = asRecord(entry);
     if (!record) continue;
     const id = typeof record.id === 'number' ? String(record.id) : asString(record.id);
     if (!id) continue;
-    const link = modelLink(record);
-    const from =
+    const docPath =
       asString(record.index) ?? `${listingPath.replace(/index\.json$/, '')}${id}/index.json`;
-    // The listing may only point at the course document; then the model comes from a later read.
-    if (!link) continue;
-    const course = model(`/${id}`, link, from.replace(/\/[^/]*$/, '/'), asString(record.name));
-    if (seen.has(course.url)) continue;
-    seen.add(course.url);
-    models.push(course);
+    // A listing may carry the model itself; then no document read is needed.
+    const inline = modelLink(record);
+    const course_ = inline ? course(record, docPath, { ...record, model: inline }) : undefined;
+    if (course_) models.push(course_);
   }
   return models.sort((left, right) => left.name.localeCompare(right.name));
 }
@@ -106,7 +170,7 @@ export async function loadArtIndex(
   );
 }
 
-/** Reads the published courses. */
+/** Reads the published courses, following each course document. */
 export async function loadRacecourseModels(
   fetchImpl: typeof fetch = fetch
 ): Promise<RacecourseModel[]> {
@@ -114,32 +178,30 @@ export async function loadRacecourseModels(
   const section = sections[SECTION];
   if (!section) throw new Error('The art tree has no racecourses section yet');
 
-  const response = await fetchImpl(artUrl(section, INDEX_PATH), {
-    headers: { accept: 'application/json' }
-  });
-  if (!response.ok) throw new Error(`Course listing unavailable (${response.status})`);
-
-  const listing = await response.json();
-  const listed = racecourseModels(listing, section);
-  if (listed.length > 0) return listed;
-
-  // The listing only points at course documents: read them, they are small.
+  const listingUrl = artUrl(section, INDEX_PATH);
+  const listing = await fetchImpl(listingUrl, { headers: { accept: 'application/json' } }).then(
+    (response) => (response.ok ? response.json() : undefined)
+  );
   const entries = asRecord(listing)?.[SECTION];
-  const documents = Array.isArray(entries) ? entries : [];
+  if (!Array.isArray(entries)) throw new Error('Course listing unavailable');
+
   const courses = await Promise.all(
-    documents.map(async (entry) => {
+    entries.map(async (entry) => {
       const record = asRecord(entry);
-      const path = record ? asString(record.index) : undefined;
-      if (!path) return undefined;
-      const doc = await fetchImpl(artUrl(path, INDEX_PATH), {
+      if (!record) return undefined;
+      const id = typeof record.id === 'number' ? String(record.id) : asString(record.id);
+      if (!id) return undefined;
+      const docPath =
+        asString(record.index) ?? `${listingUrl.replace(/index\.json$/, '')}${id}/index.json`;
+
+      if (modelLink(record)) return course(record, docPath, record);
+      const document = await fetchImpl(artUrl(docPath, INDEX_PATH), {
         headers: { accept: 'application/json' }
-      }).then((result) => (result.ok ? result.json() : undefined));
-      const docRecord = asRecord(doc);
-      const link = docRecord ? modelLink(docRecord) : undefined;
-      const id = record && typeof record.id === 'number' ? String(record.id) : '';
-      if (!link || !id) return undefined;
-      return model(`/${id}`, link, path.replace(/\/[^/]*$/, '/'), asString(record?.name));
+      }).then((response) => (response.ok ? response.json() : undefined));
+      const docRecord = asRecord(document);
+      return docRecord ? course(record, docPath, docRecord) : undefined;
     })
   );
-  return courses.filter((course): course is RacecourseModel => course !== undefined);
+
+  return courses.filter((entry): entry is RacecourseModel => entry !== undefined);
 }

@@ -6,6 +6,8 @@
 
 import {
   Box3,
+  Group,
+  LoadingManager,
   PerspectiveCamera,
   Raycaster,
   Scene,
@@ -54,8 +56,8 @@ export interface RacecourseSceneOptions {
 }
 
 export interface RacecourseScene {
-  /** Draws one course model, replacing whatever was drawn. */
-  load(url: string): Promise<void>;
+  /** Draws one course, from one whole-course file or the prefabs it is assembled from. */
+  load(targets: string[]): Promise<void>;
   /** Puts the camera back around the current model. */
   frame(): void;
   dispose(): void;
@@ -221,43 +223,40 @@ export function createRacecourseScene({
     area = undefined;
   }
 
-  function load(url: string): Promise<void> {
+  function load(targets: string[]): Promise<void> {
     const token = ++generation;
     // The course already on screen keeps circling while the next one streams in.
     loading = true;
-    return new Promise<void>((resolve, reject) => {
-      loader.load(
-        url,
-        (gltf) => {
-          void show(gltf, token).then(resolve);
-        },
-        (event) => {
-          if (token === generation) handlers.onProgress?.(event.loaded, event.total);
-        },
-        (error) => {
-          if (token !== generation) return;
-          reject(error instanceof Error ? error : new Error(String(error)));
-        }
-      );
-    });
+    return Promise.all(targets.map((target) => loader.loadAsync(target)))
+      .then((gltfs) => show(gltfs, token))
+      .catch((error: unknown) => {
+        loading = false;
+        if (token !== generation) return;
+        throw error instanceof Error ? error : new Error(String(error));
+      });
   }
 
-  /** Applies the game's shading, then puts the model on screen once it is ready to draw. */
-  async function show(gltf: GLTF, token: number): Promise<void> {
-    try {
-      await applyUnityMaterials(gltf);
-    } catch {
-      // A missing lightmap should not cost the reader the whole course: keep the loaded materials.
+  /** Applies the game's shading, then puts the course on screen once it is ready to draw. */
+  async function show(gltfs: GLTF[], token: number): Promise<void> {
+    for (const gltf of gltfs) {
+      try {
+        await applyUnityMaterials(gltf);
+      } catch {
+        // A missing lightmap should not cost the reader the whole course: keep the loaded materials.
+      }
     }
 
     // A slower load that lost the race to a newer one must not replace what is on screen.
     if (stopped || token !== generation) {
-      disposeModel(gltf.scene);
+      for (const gltf of gltfs) disposeModel(gltf.scene);
       return;
     }
     loading = false;
 
-    const loaded = gltf.scene;
+    // A whole-course model arrives as one scene; a course assembled from prefabs arrives as several,
+    // all modelled where they stand, so they are added side by side without a transform.
+    const loaded = gltfs.length === 1 ? gltfs[0]!.scene : new Group();
+    if (gltfs.length > 1) for (const gltf of gltfs) loaded.add(gltf.scene);
     // The course already on screen stays while the next one streams in, so a track change is a swap
     // rather than a blank stage.
     const previous = model;
@@ -313,7 +312,10 @@ export function createRacecourseScene({
     renderer.forceContextLoss();
   }
 
-  const loader = new GLTFLoader();
+  const manager = new LoadingManager();
+  // Progress across the prefabs of one course: how many files are done, not how many bytes.
+  manager.onProgress = (_url, loaded, total) => handlers.onProgress?.(loaded, total);
+  const loader = new GLTFLoader(manager);
   const resizeObserver = new ResizeObserver(resize);
   resizeObserver.observe(host);
   canvas.addEventListener('webglcontextlost', onContextLost);

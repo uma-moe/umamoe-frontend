@@ -24,6 +24,8 @@
   const options = $derived<SelectOption[]>(
     models.map((model) => ({ value: model.slug, label: model.name }))
   );
+  /** The whole course when it is published as one file, otherwise the prefabs it was assembled from. */
+  const files = $derived(current ? (current.url ? [current.url] : current.parts) : []);
 
   onMount(async () => {
     try {
@@ -84,7 +86,7 @@
     </div>
 
     <RacecourseScene
-      url={current?.url}
+      urls={files}
       label={`${current?.name ?? 'Racecourse'} in 3D`}
     />
   {/if}
