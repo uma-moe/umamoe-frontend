@@ -10,12 +10,18 @@
   import { loadUmaMotions, type UmaMotion } from '@/lib/game-assets/uma-motions';
   import RacecourseScene from './scene/RacecourseScene.svelte';
   import type { CameraMode } from './scene/racecourse-scene';
+  import {
+    loadReplayCourses,
+    loadReplayGeometry
+  } from '@/pages/competitive/race-analysis/replay/replay-course';
 
   const TRACK_PARAM = 'track';
   const UMA_PARAM = 'uma';
   const MOTION_PARAM = 'motion';
   /** The clip that stops her T-posing until another is chosen. */
   const DEFAULT_MOTION = 'gate-waiting-left-foot';
+  /** The outfit the page opens with. */
+  const DEFAULT_UMA = 'special-week/special-dreamer';
 
   let models = $state.raw<RacecourseModel[]>([]);
   let umas = $state.raw<UmaModel[]>([]);
@@ -25,6 +31,7 @@
   let selected = $state('');
   let umaSlug = $state('');
   let motionSlug = $state(DEFAULT_MOTION);
+  let trackStart = $state<{ x: number; z: number }>();
   let mode = $state<CameraMode>('overview');
   /** The track, outfit and clip the URL asks for, so a link opens what it names. */
   const params = new URLSearchParams(location.search);
@@ -64,11 +71,39 @@
     if (clips.status === 'fulfilled') motions = clips.value;
 
     selected = (models.find((model) => model.slug === requested) ?? models[0])?.slug ?? '';
-    umaSlug = umas.some((uma) => uma.slug === requestedUma) ? requestedUma : '';
+    umaSlug = umas.some((uma) => uma.slug === requestedUma)
+      ? requestedUma
+      : (umas.find((uma) => uma.slug === DEFAULT_UMA)?.slug ?? '');
     motionSlug = motions.some((entry) => entry.slug === requestedMotion)
       ? (requestedMotion ?? '')
       : DEFAULT_MOTION;
     loading = false;
+  });
+
+  // The lane path the simulator already loads puts the start line in the same space as the course
+  // model, so the outfit stands where a race would begin.
+  $effect(() => {
+    const trackId = current?.trackId;
+    trackStart = undefined;
+    if (!trackId) return;
+    let cancelled = false;
+    void (async () => {
+      try {
+        const [shapes, courses] = await Promise.all([loadReplayGeometry(), loadReplayCourses()]);
+        if (cancelled) return;
+        const candidates = Object.entries(courses.courses)
+          .filter(([, course]) => course.raceTrackId === trackId)
+          .sort((left, right) => left[1].distance - right[1].distance);
+        const [courseId] = candidates[0] ?? [];
+        const start = courseId ? shapes[courseId]?.points[0] : undefined;
+        if (start) trackStart = { x: start[0], z: start[1] };
+      } catch {
+        // Without the lane path she stands in the middle of the course, which is still useful.
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
   });
 
   $effect(() => {
@@ -151,6 +186,7 @@
       url={current?.url}
       characterUrl={character?.url}
       motionUrl={motion?.url}
+      startPoint={trackStart}
       label={`${current?.name ?? 'Racecourse'} in 3D`}
       {mode}
     />

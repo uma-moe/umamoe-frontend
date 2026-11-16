@@ -15,13 +15,15 @@
     characterUrl?: string;
     /** A race clip to play on that outfit. */
     motionUrl?: string;
+    /** Where the track starts, so she stands at the line rather than the middle. */
+    startPoint?: { x: number; z: number };
     /** What the model shows, for the stage's accessible name and the loading line. */
     label: string;
     /** Overview orbits the course; walk stands on it at a horsegirl's height. */
     mode?: CameraMode;
   }
 
-  let { url = '', characterUrl, motionUrl, label, mode = 'overview' }: Props = $props();
+  let { url = '', characterUrl, motionUrl, startPoint, label, mode = 'overview' }: Props = $props();
 
   let host: HTMLDivElement;
   let canvas: HTMLCanvasElement;
@@ -29,8 +31,6 @@
   let unsupported = $state(false);
   let failure = $state('');
   let percent = $state<number | null>(null);
-  /** A phone has no keyboard to walk with, so it only gets the orbit gesture. */
-  const canWalk = matchMedia('(pointer: fine)').matches;
 
   function onProgress(loaded: number, total: number) {
     percent = total > 0 ? Math.round((loaded / total) * 100) : null;
@@ -82,6 +82,10 @@
   $effect(() => {
     void view?.setMotion(motionUrl);
   });
+
+  $effect(() => {
+    view?.setTrackStart(startPoint);
+  });
 </script>
 
 <div
@@ -119,9 +123,7 @@
       <span>Loading {label}{percent > 0 ? ` · ${percent}%` : ''}</span>
     </div>
   {:else if mode === 'third'}
-    <p class="racecourse-stage-hint">
-      {canWalk ? 'WASD to walk · Shift to run · drag to orbit' : 'Drag to orbit'}
-    </p>
+    <p class="racecourse-stage-hint">WASD to walk · Shift to run · drag to orbit</p>
   {/if}
 </div>
 

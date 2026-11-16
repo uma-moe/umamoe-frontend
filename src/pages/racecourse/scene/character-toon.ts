@@ -158,13 +158,15 @@ const fragmentShader = /* glsl */ `
     vec3 dark = toonSide(shadowTint, uToonDarkColor, brightness);
     vec3 color = mix(toonSide(mainTex.rgb * uLightColor, uToonBrightColor, brightness), dark, shadow);
 
-    float specular = pow(max(dot(normal, toView), 0.0), uSpecularPower * 10.0 + 1.0);
-    color += max(vec3(specular * triMask.g) * uSpecularColor * uLightColor, vec3(0.0));
+    if (uUnlit < 0.5) {
+      float specular = pow(max(dot(normal, toView), 0.0), uSpecularPower * 10.0 + 1.0);
+      color += max(vec3(specular * triMask.g) * uSpecularColor * uLightColor, vec3(0.0));
 
-    // A silhouette rim, not a wash: the source skews the view vector so the term only reaches the
-    // edges, and a plain Fresnel curve is the honest stand-in for that shape.
-    float rim = pow(1.0 - clamp(dot(normal, toView), 0.0, 1.0), 3.0);
-    color += uRimColor.rgb * rim * uRimColor.a;
+      // A silhouette rim, not a wash: the source skews the view vector so the term only reaches the
+      // edges, and a plain Fresnel curve is the honest stand-in for that shape.
+      float rim = pow(1.0 - clamp(dot(normal, toView), 0.0, 1.0), 3.0);
+      color += uRimColor.rgb * rim * uRimColor.a;
+    }
 
     color *= uCharaColor * uLightProbeColor;
 
