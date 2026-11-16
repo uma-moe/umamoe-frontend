@@ -3,38 +3,18 @@
   import Spinner from '@/components/feedback/Spinner.svelte';
   import {
     createRacecourseScene,
-    type CameraMode,
-    type RacecourseScene as RacecourseSceneView,
-    type StartPoint
+    type RacecourseScene as RacecourseSceneView
   } from './racecourse-scene';
   import { hasWebGL2 } from './webgl';
 
   interface Props {
     /** The course model to draw. Changing it swaps the model without rebuilding the canvas. */
     url?: string;
-    /** An outfit to stand on the course; `undefined` shows none. */
-    characterUrl?: string;
-    /** A race clip to play on that outfit; `undefined` lets her motion follow her speed. */
-    motionUrl?: string;
-    /** Every published clip, so switching between them never waits on the network. */
-    motionUrls?: string[];
-    /** Where the track starts, so she stands at the line rather than the middle. */
-    startPoint?: StartPoint;
     /** What the model shows, for the stage's accessible name and the loading line. */
     label: string;
-    /** Overview orbits the course; walk stands on it at a horsegirl's height. */
-    mode?: CameraMode;
   }
 
-  let {
-    url = '',
-    characterUrl,
-    motionUrl,
-    motionUrls,
-    startPoint,
-    label,
-    mode = 'overview'
-  }: Props = $props();
+  let { url = '', label }: Props = $props();
 
   let host: HTMLDivElement;
   let canvas: HTMLCanvasElement;
@@ -81,33 +61,16 @@
     if (!scene || !target) return;
     void show(scene, target);
   });
-
-  $effect(() => {
-    view?.setMode(mode);
-  });
-
-  $effect(() => {
-    void view?.setCharacter(characterUrl);
-  });
-
-  $effect(() => {
-    view?.setMotionCatalog(motionUrls ?? []);
-  });
-
-  $effect(() => {
-    void view?.setMotion(motionUrl);
-  });
-
-  $effect(() => {
-    view?.setTrackStart(startPoint);
-  });
 </script>
 
 <div
   class="racecourse-stage"
   bind:this={host}
 >
-  <p class="sr-only">Interactive 3D view of the {label}. Drag to orbit it and scroll to zoom.</p>
+  <p class="sr-only">
+    Interactive 3D view of the {label}. Click to capture the pointer, then move the mouse to look
+    and use W, A, S, D to fly, Q and E to drop and rise.
+  </p>
 
   <canvas
     bind:this={canvas}
@@ -137,8 +100,8 @@
       <Spinner size={18} />
       <span>Loading {label}{percent > 0 ? ` · ${percent}%` : ''}</span>
     </div>
-  {:else if mode === 'third'}
-    <p class="racecourse-stage-hint">WASD to walk · Shift to run · drag to orbit</p>
+  {:else}
+    <p class="racecourse-stage-hint">Click to look · WASD to fly · Q/E down and up</p>
   {/if}
 </div>
 
