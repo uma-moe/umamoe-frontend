@@ -36,6 +36,10 @@ const FRAME_MARGIN = 1.05;
 const OPENING_DIRECTION = new Vector3(0.4, 0.85, 0.45).normalize();
 /** A phone is taller than the course is wide: look down more so the ring uses the height. */
 const PORTRAIT_DIRECTION = new Vector3(0.25, 0.93, 0.28).normalize();
+/** How fast the opening view circles the course, in radians per second. */
+const INTRO_SPIN = 0.25;
+/** How long it circles after a course lands, unless the reader grabs it first. */
+const INTRO_SECONDS = 6;
 
 export interface RacecourseSceneHandlers {
   onProgress?: (loaded: number, total: number) => void;
@@ -82,6 +86,12 @@ export function createRacecourseScene({
   let model: Object3D | undefined;
   let area: Box3 | undefined;
   let sceneRadius = 1000;
+  /** The framed view the opening orbit turns around, and how far it has turned. */
+  let framed: { centre: Vector3; distance: number; polar: number } | undefined;
+  let introAngle = 0;
+  let introLeft = 0;
+  let intro = false;
+  let loading = false;
   let generation = 0;
   let stopped = false;
   let frameHandle = 0;
@@ -149,8 +159,41 @@ export function createRacecourseScene({
 
     camera.position.copy(sphere.center).addScaledVector(direction, distance);
     camera.lookAt(sphere.center);
-    // The fly camera starts looking wherever the camera points; let it take over from here.
+
+    // Circle the course for a moment before handing over: the camera is already where it should be,
+    // and a slow orbit reads as the model arriving rather than a still frame appearing.
+    framed = {
+      centre: sphere.center.clone(),
+      distance,
+      polar: Math.acos(direction.y)
+    };
+    introAngle = Math.atan2(direction.x, direction.z);
+    introLeft = INTRO_SECONDS;
+    intro = true;
+    fly.disable();
+
+    // The fly camera starts looking wherever the camera points; it takes over on the first input.
+  }
+
+  /** Ends the opening orbit and hands the camera to the reader. */
+  function takeControl(): void {
+    if (!intro) return;
+    intro = false;
     fly.enable();
+  }
+
+  function spin(deltaSeconds: number): void {
+    if (!framed) return;
+    introAngle += INTRO_SPIN * deltaSeconds;
+    introLeft -= deltaSeconds;
+    if (introLeft <= 0) {
+      takeControl();
+      return;
+    }
+    camera.position
+      .setFromSphericalCoords(framed.distance, framed.polar, introAngle)
+      .add(framed.centre);
+    camera.lookAt(framed.centre);
   }
 
   function release(material: Material): void {
@@ -180,7 +223,8 @@ export function createRacecourseScene({
 
   function load(url: string): Promise<void> {
     const token = ++generation;
-    clear();
+    // The course already on screen keeps circling while the next one streams in.
+    loading = true;
     return new Promise<void>((resolve, reject) => {
       loader.load(
         url,
@@ -211,8 +255,12 @@ export function createRacecourseScene({
       disposeModel(gltf.scene);
       return;
     }
+    loading = false;
 
     const loaded = gltf.scene;
+    // The course already on screen stays while the next one streams in, so a track change is a swap
+    // rather than a blank stage.
+    const previous = model;
     model = loaded;
     scene.add(loaded);
     sceneRadius = new Box3().setFromObject(loaded).getBoundingSphere(new Sphere()).radius;
@@ -221,6 +269,10 @@ export function createRacecourseScene({
         skyDome = new Box3().setFromObject(child).getBoundingSphere(new Sphere());
     area = courseBounds(loaded);
     frame();
+    if (previous) {
+      previous.removeFromParent();
+      disposeModel(previous);
+    }
   }
 
   let lastFrame = performance.now();
@@ -229,7 +281,8 @@ export function createRacecourseScene({
     if (stopped) return;
     const delta = (now - lastFrame) / 1000;
     lastFrame = now;
-    fly.update(delta);
+    if (intro || loading) spin(delta);
+    else fly.update(delta);
     // The dome is drawn from inside: seen from above the course it is a hollow shell that reads as a
     // bowl, so it only appears once the camera has flown down under its rim.
     if (skyDome) setSkyVisible(camera.position.y < skyDome.center.y + skyDome.radius * 0.25);
@@ -252,6 +305,8 @@ export function createRacecourseScene({
     stop();
     resizeObserver.disconnect();
     canvas.removeEventListener('webglcontextlost', onContextLost);
+    canvas.removeEventListener('pointerdown', takeControl);
+    window.removeEventListener('keydown', takeControl);
     fly.dispose();
     clear();
     renderer.dispose();
@@ -262,6 +317,9 @@ export function createRacecourseScene({
   const resizeObserver = new ResizeObserver(resize);
   resizeObserver.observe(host);
   canvas.addEventListener('webglcontextlost', onContextLost);
+  // Any input hands the camera over; the orbit is an arrival, not a mode.
+  canvas.addEventListener('pointerdown', takeControl);
+  window.addEventListener('keydown', takeControl);
   resize();
   render();
 
