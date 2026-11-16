@@ -44,7 +44,7 @@ export interface ThirdPersonOptions {
   controls: OrbitControls;
   /** The outfit being walked; nobody to follow means the camera does nothing. */
   subject: () => Object3D | undefined;
-  ground: () => number;
+  ground: (x: number, z: number) => number;
   area: () => Box3 | undefined;
 }
 
@@ -141,7 +141,7 @@ export function createThirdPersonCamera({
           bounds.max.z - 2
         );
       }
-      outfit.position.y = ground();
+      outfit.position.y = ground(outfit.position.x, outfit.position.z);
       outfit.rotation.y = Math.atan2(move.x, move.z);
     }
 
@@ -152,7 +152,7 @@ export function createThirdPersonCamera({
       controls.target.add(delta);
       camera.position.add(delta);
     }
-    const floor = ground() + MIN_CAMERA_HEIGHT;
+    const floor = ground(outfit.position.x, outfit.position.z) + MIN_CAMERA_HEIGHT;
     if (camera.position.y < floor) camera.position.y = floor;
   }
 

@@ -14,6 +14,7 @@ import {
   Vector3,
   WebGLRenderer,
   type Material,
+  type Mesh,
   type Object3D,
   type ShaderMaterial
 } from 'three';
@@ -21,7 +22,9 @@ import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 import { AnimationMixer, type AnimationAction } from 'three';
 import { GLTFLoader, type GLTF } from 'three/addons/loaders/GLTFLoader.js';
 import { applyCharacterMaterials } from './character-toon';
+import { createFlyCamera } from './fly-camera';
 import { createThirdPersonCamera } from './third-person-camera';
+import { buildHeightField, type HeightField } from './height-field';
 import { applyUnityMaterials } from './unity-materials';
 import { SKY_NODE } from './sky';
 
@@ -61,6 +64,8 @@ export interface RacecourseScene {
   load(url: string): Promise<void>;
   /** Stands one uma on the course; `undefined` removes it. */
   setCharacter(url: string | undefined): Promise<void>;
+  /** Where the track starts, so a new outfit or course puts her at the line rather than the middle. */
+  setTrackStart(point: { x: number; z: number } | undefined): void;
   /** Plays one race clip on the outfit; `undefined` returns her to the bind pose. */
   setMotion(url: string | undefined): Promise<void>;
   /** Puts the camera back around the current model. */
@@ -101,12 +106,14 @@ export function createRacecourseScene({
   let mixer: AnimationMixer | undefined;
   let motionAction: AnimationAction | undefined;
   let motionUrl: string | undefined;
+  const fly = createFlyCamera({ camera, canvas, bounds: () => skyDome });
+  let skyDome: Sphere | undefined;
   const third = createThirdPersonCamera({
     camera,
     canvas,
     controls,
     subject: () => character,
-    ground: () => ground,
+    ground: groundAt,
     area: () => area
   });
   third.listen();
@@ -115,6 +122,8 @@ export function createRacecourseScene({
   let characterUrl: string | undefined;
   let area: Box3 | undefined;
   let ground = 0;
+  let heights: HeightField | undefined;
+  let trackStart: { x: number; z: number } | undefined;
   let sceneRadius = 1000;
   let currentMode: CameraMode = 'overview';
   let framing = 1200;
@@ -146,6 +155,16 @@ export function createRacecourseScene({
   function setSkyVisible(visible: boolean): void {
     if (!model) return;
     for (const child of model.children) if (SKY_NODE.test(child.name)) child.visible = visible;
+  }
+
+  /** Every mesh under a course part, which is what the height field samples. */
+  function trackMeshes(root: Object3D): Mesh[] {
+    const meshes: Mesh[] = [];
+    root.traverse((child) => {
+      const mesh = child as Mesh;
+      if (mesh.isMesh) meshes.push(mesh);
+    });
+    return meshes;
   }
 
   /** The track surface under the middle of the course, from one downward ray. */
@@ -198,8 +217,11 @@ export function createRacecourseScene({
     const halfLateral = (Math.abs(extent.x * right.x) + Math.abs(extent.z * right.z)) / 2;
     const halfVertical =
       (Math.abs(extent.x * up.x) + Math.abs(extent.y * up.y) + Math.abs(extent.z * up.z)) / 2;
-    const distance =
-      Math.max(halfLateral / tanHorizontal, halfVertical / tanVertical) * FRAME_MARGIN;
+    const distance = Math.min(
+      Math.max(halfLateral / tanHorizontal, halfVertical / tanVertical) * FRAME_MARGIN,
+      // The dome is the edge of the world, so the camera never starts outside it.
+      skyDome ? skyDome.radius * 0.9 : Number.POSITIVE_INFINITY
+    );
     framing = distance;
     camera.far = distance + sceneRadius * 4;
     camera.near = WALK_NEAR;
@@ -213,12 +235,13 @@ export function createRacecourseScene({
   }
 
   /**
-   * Swaps between looking at the whole course and walking an uma around it. Third person needs
-   * somebody to follow, and leaves the course where it was rather than reframing it.
+   * Swaps between the free camera over the course and walking an uma around it. Third person needs
+   * somebody to follow; the free camera keeps whatever view the reader left it pointing at.
    */
   function applyMode(): void {
     if (currentMode === 'third') {
       if (!character) return;
+      fly.disable();
       setSkyVisible(true);
       camera.near = WALK_NEAR;
       camera.far = sceneRadius * 4;
@@ -226,11 +249,13 @@ export function createRacecourseScene({
       third.enable();
       return;
     }
-    if (!third.active) return;
     third.disable();
+    controls.enabled = false;
     setSkyVisible(false);
-    // Coming back from the ground, the reader wants the whole course again, not the view they left.
-    frame();
+    camera.near = WALK_NEAR;
+    camera.far = sceneRadius * 4;
+    camera.updateProjectionMatrix();
+    fly.enable();
   }
 
   function release(material: Material): void {
@@ -251,14 +276,23 @@ export function createRacecourseScene({
   }
 
   /**
-   * Stands the outfit on the infield where the course was framed from, facing whoever is looking. The
-   * models are in metres, so she is 1.63 m tall next to a 1400 m course.
+   * Ground height at a world position: the course's own surface where the height field knows it, and
+   * the middle of the course elsewhere.
+   */
+  function groundAt(x: number, z: number): number {
+    return heights?.sample(x, z) ?? ground;
+  }
+
+  /**
+   * Stands the outfit at the start of the track, facing whoever is looking. The models are in metres,
+   * so she is 1.63 m tall next to a 1400 m course.
    */
   function placeCharacter(target: Object3D): void {
     if (!area) return;
     const centre = area.getCenter(new Vector3());
-    target.position.set(centre.x, ground, centre.z);
-    target.rotation.y = Math.atan2(camera.position.x - centre.x, camera.position.z - centre.z);
+    const spot = trackStart ?? { x: centre.x, z: centre.z };
+    target.position.set(spot.x, groundAt(spot.x, spot.z), spot.z);
+    target.rotation.y = Math.atan2(camera.position.x - spot.x, camera.position.z - spot.z);
   }
 
   function clearCharacter(): void {
@@ -341,6 +375,7 @@ export function createRacecourseScene({
     model.removeFromParent();
     disposeModel(model);
     model = undefined;
+    heights = undefined;
   }
 
   function load(url: string): Promise<void> {
@@ -382,8 +417,15 @@ export function createRacecourseScene({
     scene.add(loaded);
     // The sky dome stays in the scene for the view, but it is not part of the course.
     sceneRadius = new Box3().setFromObject(loaded).getBoundingSphere(new Sphere()).radius;
+    for (const child of loaded.children)
+      if (SKY_NODE.test(child.name))
+        skyDome = new Box3().setFromObject(child).getBoundingSphere(new Sphere());
     area = courseBounds(loaded);
     ground = groundUnder(loaded, area);
+    heights = buildHeightField(
+      loaded.children.flatMap((child) => (TRACK_PART.test(child.name) ? trackMeshes(child) : [])),
+      area
+    );
     setSkyVisible(third.active);
     if (character) placeCharacter(character);
     frame();
@@ -397,8 +439,12 @@ export function createRacecourseScene({
     const delta = (now - lastFrame) / 1000;
     lastFrame = now;
     // The follow camera moves the pivot itself; the orbit controls own the rest.
-    if (third.active) third.update(delta);
-    controls.update();
+    if (third.active) {
+      third.update(delta);
+      controls.update();
+    } else {
+      fly.update(delta);
+    }
     mixer?.update(delta);
     renderer.render(scene, camera);
     frameHandle = requestAnimationFrame(render);
@@ -421,6 +467,7 @@ export function createRacecourseScene({
     canvas.removeEventListener('webglcontextlost', onContextLost);
     clearCharacter();
     third.dispose();
+    fly.dispose();
     controls.dispose();
     clear();
     renderer.dispose();
@@ -436,6 +483,10 @@ export function createRacecourseScene({
   return {
     load,
     setCharacter,
+    setTrackStart: (point) => {
+      trackStart = point;
+      if (character) placeCharacter(character);
+    },
     setMotion,
     frame,
     setMode: (mode: CameraMode) => {
