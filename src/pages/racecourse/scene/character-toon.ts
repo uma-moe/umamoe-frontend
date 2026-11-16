@@ -31,16 +31,20 @@
 //   * Fog is omitted; the viewer draws none.
 
 import {
+  AddEquation,
   BufferAttribute,
   Color,
+  CustomBlending,
   DataTexture,
   FrontSide,
   MeshBasicMaterial,
-  MultiplyBlending,
   ShaderMaterial,
+  SrcAlphaFactor,
   SRGBColorSpace,
   Vector3,
   Vector4,
+  ZeroFactor,
+  SrcColorFactor,
   type BufferGeometry,
   type Material,
   type Mesh,
@@ -60,7 +64,9 @@ interface UnityMaterial {
 }
 
 /** Materials whose textures already carry their shading, so the toon step only hurts them. */
-const UNLIT_MATERIAL = /_(hair|eye|mayu|tear)$/;
+const UNLIT_MATERIAL = /_(face|hair|eye|mayu|tear)$/;
+/** The parts drawn on top of the face; the game leans on depth state to keep them in front. */
+const DECAL_MATERIAL = /_(eye|mayu|tear)$/;
 /** The blush: white where the face should show through, pink where it should not. */
 const MULTIPLY_MATERIAL = /_cheek$/;
 const WHITE = new DataTexture(new Uint8Array([255, 255, 255, 255]), 1, 1);
@@ -126,6 +132,7 @@ const fragmentShader = /* glsl */ `
   uniform sampler2D uHigh2Tex;
   uniform float uHighLimit;
   uniform float uHasHigh;
+  uniform vec3 uDebugColor;
 
   varying vec2 vUv;
   varying vec2 vUv1;
@@ -205,8 +212,11 @@ const fragmentShader = /* glsl */ `
     color = mix(vec3(luma), color, uSaturation);
 
     gl_FragColor = vec4(color, mainTex.a);
-    #include <tonemapping_fragment>
-    #include <colorspace_fragment>
+
+    // No <colorspace_fragment> on purpose. The outfit's textures come from the loader without the
+    // sRGB tag (only a material's PBR maps get one), so they are sampled as the sRGB values they
+    // store; encoding again on output washed the outfits out — a white face and a pastel dress. The
+    // game's own character shader works in that same space.
   }
 `;
 
@@ -265,7 +275,6 @@ export async function applyCharacterMaterials(gltf: GLTF): Promise<ShaderMateria
   await Promise.all(
     [...wanted].map(async (index) => {
       const texture = (await gltf.parser.getDependency('texture', index)) as Texture;
-      texture.colorSpace = SRGBColorSpace;
       textures.set(index, texture);
     })
   );
@@ -274,6 +283,20 @@ export async function applyCharacterMaterials(gltf: GLTF): Promise<ShaderMateria
   const convert = (source: Material): Material => {
     const cached = rebuilt.get(source);
     if (cached) return cached;
+
+    console.debug(
+      '[chara]',
+      source.name,
+      'main',
+      unityOf(source)?.textures?._MainTex?.index,
+      'image',
+      (() => {
+        const index = unityOf(source)?.textures?._MainTex?.index;
+        return index === undefined
+          ? undefined
+          : (gltf.parser.json.images?.[index] as { name?: string })?.name;
+      })()
+    );
 
     const unity = unityOf(source);
     const floats = unity?.floats ?? {};
@@ -290,7 +313,14 @@ export async function applyCharacterMaterials(gltf: GLTF): Promise<ShaderMateria
       const blended = new MeshBasicMaterial({
         map: slot('_MainTex') ?? WHITE,
         transparent: true,
-        blending: MultiplyBlending,
+        // `Blend DstColor Zero` from the shader state, spelled out: `MultiplyBlending` did not take
+        // effect here and the near-white texture painted two white ovals over her cheeks.
+        blending: CustomBlending,
+        blendEquation: AddEquation,
+        blendSrc: ZeroFactor,
+        blendDst: SrcColorFactor,
+        blendSrcAlpha: ZeroFactor,
+        blendDstAlpha: SrcAlphaFactor,
         depthWrite: false
       });
       rebuilt.set(source, blended);
@@ -307,6 +337,12 @@ export async function applyCharacterMaterials(gltf: GLTF): Promise<ShaderMateria
       vertexShader,
       fragmentShader,
       side: FrontSide,
+      // The eyes, brows and lash line are separate quads sitting almost on the face surface, and the
+      // game leans on the depth state to keep them in front. Pulling them towards the camera by a
+      // depth unit each does the same job without z-fighting.
+      polygonOffset: DECAL_MATERIAL.test(source.name),
+      polygonOffsetFactor: DECAL_MATERIAL.test(source.name) ? -1 : 0,
+      polygonOffsetUnits: DECAL_MATERIAL.test(source.name) ? -1 : 0,
       uniforms: {
         uMainTex: { value: slot('_MainTex') ?? WHITE },
         uTripleMaskMap: { value: slot('_TripleMaskMap') ?? WHITE },
@@ -334,6 +370,10 @@ export async function applyCharacterMaterials(gltf: GLTF): Promise<ShaderMateria
         uHasHigh: { value: slot('_High0Tex') ? 1 : 0 }
       }
     });
+
+    // A material that binds no texture at all (the tear quads do not) would otherwise draw its
+    // fallback white over the face.
+    if (!unity?.textures || Object.keys(unity.textures).length === 0) material.visible = false;
 
     rebuilt.set(source, material);
     return material;
