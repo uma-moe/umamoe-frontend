@@ -34,6 +34,8 @@ import {
   Color,
   DataTexture,
   FrontSide,
+  MeshBasicMaterial,
+  MultiplyBlending,
   ShaderMaterial,
   SRGBColorSpace,
   Vector3,
@@ -57,7 +59,9 @@ interface UnityMaterial {
 }
 
 /** Materials whose textures already carry their shading, so the toon step only hurts them. */
-const UNLIT_MATERIAL = /_(face|hair|eye|mayu|cheek|tear)$/;
+const UNLIT_MATERIAL = /_(face|hair|eye|mayu|tear)$/;
+/** The blush: white where the face should show through, pink where it should not. */
+const MULTIPLY_MATERIAL = /_cheek$/;
 const WHITE = new DataTexture(new Uint8Array([255, 255, 255, 255]), 1, 1);
 WHITE.needsUpdate = true;
 
@@ -236,8 +240,8 @@ export async function applyCharacterMaterials(gltf: GLTF): Promise<ShaderMateria
     })
   );
 
-  const rebuilt = new Map<Material, ShaderMaterial>();
-  const convert = (source: Material): ShaderMaterial => {
+  const rebuilt = new Map<Material, Material>();
+  const convert = (source: Material): Material => {
     const cached = rebuilt.get(source);
     if (cached) return cached;
 
@@ -248,6 +252,20 @@ export async function applyCharacterMaterials(gltf: GLTF): Promise<ShaderMateria
       const index = unity?.textures?.[name]?.index;
       return index === undefined ? undefined : textures.get(index);
     };
+
+    // The blush is drawn by `Gallop/3D/Chara/MultiplyCheek`: its texture is white with pink patches,
+    // and multiply blending turns white into "leave the face alone". Drawn opaque it painted two white
+    // ovals over her cheeks.
+    if (MULTIPLY_MATERIAL.test(source.name)) {
+      const blended = new MeshBasicMaterial({
+        map: slot('_MainTex') ?? WHITE,
+        transparent: true,
+        blending: MultiplyBlending,
+        depthWrite: false
+      });
+      rebuilt.set(source, blended);
+      return blended;
+    }
 
     // The face, hair, eye and brow each have their own shader in the corpus (`ToonFace`, `ToonHair`,
     // `ToonEye`, `ToonMayu`) whose textures are painted with their shading already. Drawing them with
@@ -291,7 +309,8 @@ export async function applyCharacterMaterials(gltf: GLTF): Promise<ShaderMateria
     ensureVertexColor(mesh.geometry);
     const converted = [mesh.material].flat().map(convert);
     mesh.material = Array.isArray(mesh.material) ? converted : converted[0]!;
-    for (const material of converted) materials.add(material);
+    for (const material of converted)
+      if (material instanceof ShaderMaterial) materials.add(material);
     // A skinned mesh's bounds are in bind pose; the viewer moves the whole outfit instead.
     mesh.frustumCulled = false;
   }
