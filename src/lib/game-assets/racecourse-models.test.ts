@@ -23,6 +23,7 @@ describe('selectVariants', () => {
   const parts = [
     '0000_002.glb',
     '0001_002.glb',
+    '2000_000.glb',
     '4000_100.glb',
     '4000_200.glb',
     '6000_100.glb',
@@ -36,10 +37,14 @@ describe('selectVariants', () => {
     expect(selectVariants(parts).map((link) => link.split('/').pop())).toEqual([
       '0000_002.glb',
       '0001_002.glb',
-      '4000_100.glb',
       '6000_100.glb',
       '7001_010.glb'
     ]);
+  });
+
+  it('leaves out the rails, signs and flower beds the game places at runtime', () => {
+    expect(selectVariants(parts).some((link) => link.includes('_2000_'))).toBe(false);
+    expect(selectVariants(parts).some((link) => link.includes('_4000_'))).toBe(false);
   });
 
   it('drops the spectator markers the course model leaves out', () => {

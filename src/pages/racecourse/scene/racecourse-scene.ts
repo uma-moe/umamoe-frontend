@@ -254,9 +254,12 @@ export function createRacecourseScene({
     loading = false;
 
     // A whole-course model arrives as one scene; a course assembled from prefabs arrives as several,
-    // all modelled where they stand, so they are added side by side without a transform.
+    // all modelled where they stand, so their root nodes are added side by side without a transform.
+    // Adding the nodes rather than each file's scene wrapper keeps their names, which is how the sky
+    // and the racing surface are told apart when framing.
     const loaded = gltfs.length === 1 ? gltfs[0]!.scene : new Group();
-    if (gltfs.length > 1) for (const gltf of gltfs) loaded.add(gltf.scene);
+    if (gltfs.length > 1)
+      for (const gltf of gltfs) for (const child of [...gltf.scene.children]) loaded.add(child);
     // The course already on screen stays while the next one streams in, so a track change is a swap
     // rather than a blank stage.
     const previous = model;
