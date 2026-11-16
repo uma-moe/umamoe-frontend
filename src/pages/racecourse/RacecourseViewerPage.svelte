@@ -10,10 +10,6 @@
   import { loadUmaMotions, type UmaMotion } from '@/lib/game-assets/uma-motions';
   import RacecourseScene from './scene/RacecourseScene.svelte';
   import type { CameraMode } from './scene/racecourse-scene';
-  import {
-    loadReplayCourses,
-    loadReplayGeometry
-  } from '@/pages/competitive/race-analysis/replay/replay-course';
 
   const TRACK_PARAM = 'track';
   const UMA_PARAM = 'uma';
@@ -31,7 +27,6 @@
   let selected = $state('');
   let umaSlug = $state('');
   let motionSlug = $state(DEFAULT_MOTION);
-  let trackStart = $state<{ x: number; z: number }>();
   let mode = $state<CameraMode>('overview');
   /** The track, outfit and clip the URL asks for, so a link opens what it names. */
   const params = new URLSearchParams(location.search);
@@ -81,31 +76,8 @@
     loading = false;
   });
 
-  // The lane path the simulator already loads puts the start line in the same space as the course
-  // model, so the outfit stands where a race would begin.
-  $effect(() => {
-    const trackId = current?.trackId;
-    trackStart = undefined;
-    if (!trackId) return;
-    let cancelled = false;
-    void (async () => {
-      try {
-        const [shapes, courses] = await Promise.all([loadReplayGeometry(), loadReplayCourses()]);
-        if (cancelled) return;
-        const candidates = Object.entries(courses.courses)
-          .filter(([, course]) => course.raceTrackId === trackId)
-          .sort((left, right) => left[1].distance - right[1].distance);
-        const [courseId] = candidates[0] ?? [];
-        const start = courseId ? shapes[courseId]?.points[0] : undefined;
-        if (start) trackStart = { x: start[0], z: start[1] };
-      } catch {
-        // Without the lane path she stands in the middle of the course, which is still useful.
-      }
-    })();
-    return () => {
-      cancelled = true;
-    };
-  });
+  // The lane path would give the exact start line, but the geometry artifact is 16.6 MB and this
+  // page only needs one point of it, so the scene derives the spot from the course's own turf oval.
 
   $effect(() => {
     const next = new URLSearchParams(location.search);
@@ -188,7 +160,6 @@
       characterUrl={character?.url}
       motionUrl={motion?.url}
       {motionUrls}
-      startPoint={trackStart}
       label={`${current?.name ?? 'Racecourse'} in 3D`}
       {mode}
     />
