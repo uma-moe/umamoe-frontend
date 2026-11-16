@@ -8,8 +8,8 @@
 import { Vector3, type PerspectiveCamera, type Sphere } from 'three';
 
 const LOOK_SENSITIVITY = 0.0022;
-const BASE_SPEED = 40;
-const FAST_MULTIPLIER = 4;
+/** One speed: fast enough to cross a 1.4 km course in about twelve seconds. */
+const SPEED = 120;
 const PITCH_LIMIT = Math.PI * 0.495;
 const KEYS = new Set([
   'KeyW',
@@ -20,8 +20,6 @@ const KEYS = new Set([
   'KeyE',
   'KeyR',
   'KeyF',
-  'ShiftLeft',
-  'ShiftRight',
   'ArrowUp',
   'ArrowDown',
   'ArrowLeft',
@@ -118,9 +116,7 @@ export function createFlyCamera({ camera, canvas, bounds }: FlyCameraOptions): F
     const wantsKeyboard = keys.size > 0;
     if (!wantsKeyboard) return;
 
-    const speed =
-      BASE_SPEED * (keys.has('ShiftLeft') || keys.has('ShiftRight') ? FAST_MULTIPLIER : 1);
-    const distance = speed * Math.min(deltaSeconds, 0.1);
+    const distance = SPEED * Math.min(deltaSeconds, 0.1);
 
     forward.set(
       -Math.sin(yaw) * Math.cos(pitch),
