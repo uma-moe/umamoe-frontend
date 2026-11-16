@@ -18,6 +18,13 @@ const SECTION = 'racecourses';
 const VARIANT = '112';
 /** A slot only the game uses: it marks where 3D spectators stand, and the course model leaves it out. */
 const SPECTATOR_SLOT = '7013';
+/**
+ * The slots the whole-course model is assembled from, per the pipeline's README: the track and turf
+ * (`0xxx`), the trees (`6000`) and the stands (`7001`–`7003`). Rails, signs and flower beds
+ * (`1xxx`–`5xxx`) are templates the game places along the track at runtime, so they are not modelled
+ * where they stand and would pile up at the origin.
+ */
+const COURSE_SLOT = /^[067]/;
 
 export interface RacecourseModel {
   /** `race_track_id` from the game's course master: 10006 is Tokyo. */
@@ -73,14 +80,14 @@ function variantDistance(file: string, target: string): number {
 }
 
 /**
- * One prefab per slot, the variant closest to the wanted season, weather and time. A slot with a
- * single variant is kept as it is; the spectator markers are dropped.
+ * One prefab per slot, the variant closest to the wanted season, weather and time. Only the slots the
+ * whole-course model is built from are kept, and the spectator markers are dropped.
  */
 export function selectVariants(links: string[], target = VARIANT): string[] {
   const slots = new Map<string, string[]>();
   for (const link of links) {
     const slot = slotOf(link.split('/').pop() ?? '');
-    if (!slot || slot === SPECTATOR_SLOT) continue;
+    if (!COURSE_SLOT.test(slot) || slot === SPECTATOR_SLOT) continue;
     slots.set(slot, [...(slots.get(slot) ?? []), link]);
   }
 
@@ -96,6 +103,20 @@ export function selectVariants(links: string[], target = VARIANT): string[] {
     if (best) chosen.push(best);
   }
   return chosen;
+}
+
+/**
+ * The shared sky the whole-course model is drawn under, chosen by the same season/weather/time digits.
+ * The parts of a course do not include it, so it is fetched once from the shared folder.
+ */
+export function sharedSky(links: string[], target = VARIANT): string | undefined {
+  return links
+    .filter((link) => /00000_9000_/.test(link))
+    .reduce<string | undefined>((winner, candidate) => {
+      if (!winner) return candidate;
+      const score = variantDistance(candidate.split('/').pop() ?? '', target);
+      return score < variantDistance(winner.split('/').pop() ?? '', target) ? candidate : winner;
+    }, undefined);
 }
 
 function course(
@@ -203,5 +224,37 @@ export async function loadRacecourseModels(
     })
   );
 
-  return courses.filter((entry): entry is RacecourseModel => entry !== undefined);
+  const resolved = courses.filter((entry): entry is RacecourseModel => entry !== undefined);
+  if (resolved.some((entry) => entry.parts.length > 0)) {
+    // A course drawn from its parts is missing the shared sky the whole-course model carries.
+    const sky = sharedSky(await sharedSkyLinks(fetchImpl, section));
+    if (sky) for (const entry of resolved) if (!entry.url) entry.parts.push(sky);
+  }
+  return resolved;
+}
+
+/** The files under the shared folder, read once from the course tree. */
+async function sharedSkyLinks(fetchImpl: typeof fetch, section: string): Promise<string[]> {
+  const base = section.replace(/index\.json$/, '');
+  const read = async (path: string) => {
+    const body = await fetchImpl(artUrl(path, INDEX_PATH), {
+      headers: { accept: 'application/json' }
+    }).then((response) => (response.ok ? response.json() : undefined));
+    return asRecord(body);
+  };
+
+  const shared = await read(`${base}shared/index.json`);
+  const folders = Array.isArray(shared?.folders) ? shared.folders : [];
+  const skies = folders.flatMap((folder) => {
+    const path = asString(folder);
+    return path && /skies/.test(path) ? [path] : [];
+  });
+  if (skies.length === 0) return [];
+
+  const listing = await read(skies[0]!);
+  const files = Array.isArray(listing?.files) ? listing.files : [];
+  return files.flatMap((file) => {
+    const path = asString(file);
+    return path ? [artUrl(path, skies[0]!)] : [];
+  });
 }
