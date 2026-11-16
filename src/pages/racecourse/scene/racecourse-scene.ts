@@ -18,6 +18,7 @@ import {
   type ShaderMaterial
 } from 'three';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+import { AnimationMixer, type AnimationAction } from 'three';
 import { GLTFLoader, type GLTF } from 'three/addons/loaders/GLTFLoader.js';
 import { applyCharacterMaterials } from './character-toon';
 import { createThirdPersonCamera } from './third-person-camera';
@@ -60,6 +61,8 @@ export interface RacecourseScene {
   load(url: string): Promise<void>;
   /** Stands one uma on the course; `undefined` removes it. */
   setCharacter(url: string | undefined): Promise<void>;
+  /** Plays one race clip on the outfit; `undefined` returns her to the bind pose. */
+  setMotion(url: string | undefined): Promise<void>;
   /** Puts the camera back around the current model. */
   frame(): void;
   setMode(mode: CameraMode): void;
@@ -95,6 +98,9 @@ export function createRacecourseScene({
 
   const loader = new GLTFLoader();
   let characterMaterials: ShaderMaterial[] = [];
+  let mixer: AnimationMixer | undefined;
+  let motionAction: AnimationAction | undefined;
+  let motionUrl: string | undefined;
   const third = createThirdPersonCamera({
     camera,
     canvas,
@@ -257,10 +263,40 @@ export function createRacecourseScene({
 
   function clearCharacter(): void {
     if (!character) return;
+    stopMotion();
     character.removeFromParent();
     disposeModel(character);
     character = undefined;
     characterMaterials = [];
+    motionUrl = undefined;
+  }
+
+  function stopMotion(): void {
+    if (mixer) {
+      mixer.stopAllAction();
+      mixer.uncacheRoot(mixer.getRoot());
+      mixer = undefined;
+    }
+    motionAction = undefined;
+  }
+
+  /**
+   * Binds a published clip to the outfit. The clips carry no meshes, only channels on the bone names
+   * every outfit also has, so the mixer can drive the loaded skeleton directly.
+   */
+  async function setMotion(url: string | undefined): Promise<void> {
+    if (url === motionUrl) return;
+    motionUrl = url;
+    stopMotion();
+    if (!url || !character) return;
+
+    const clipGltf = await loader.loadAsync(url);
+    const clip = clipGltf.animations[0];
+    if (!clip || stopped || motionUrl !== url || !character) return;
+
+    mixer = new AnimationMixer(character);
+    motionAction = mixer.clipAction(clip);
+    motionAction.play();
   }
 
   async function setCharacter(url: string | undefined): Promise<void> {
@@ -292,6 +328,12 @@ export function createRacecourseScene({
     scene.add(character);
     placeCharacter(character);
     applyMode();
+    // A clip chosen before the outfit existed plays once it does.
+    if (motionUrl) {
+      const pending = motionUrl;
+      motionUrl = undefined;
+      void setMotion(pending);
+    }
   }
 
   function clear(): void {
@@ -357,6 +399,7 @@ export function createRacecourseScene({
     // The follow camera moves the pivot itself; the orbit controls own the rest.
     if (third.active) third.update(delta);
     controls.update();
+    mixer?.update(delta);
     renderer.render(scene, camera);
     frameHandle = requestAnimationFrame(render);
   }
@@ -393,6 +436,7 @@ export function createRacecourseScene({
   return {
     load,
     setCharacter,
+    setMotion,
     frame,
     setMode: (mode: CameraMode) => {
       currentMode = mode;
