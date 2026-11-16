@@ -135,10 +135,14 @@ const fragmentShader = /* glsl */ `
     if (normal.z < 0.0) normal = -normal;
     vec3 toView = normalize(-vPositionView);
 
-    vec3 triMask = texture2D(uTripleMaskMap, vUv).rgb;
-    if (uCutoff > 0.0 && triMask.b < uCutoff) discard;
-
     vec4 mainTex = texture2D(uMainTex, vUv);
+    vec3 triMask = texture2D(uTripleMaskMap, vUv).rgb;
+
+    // The eye, brow and tear meshes are painted atlases: their transparent pixels are what cuts the
+    // shape out, so they test the texture's own alpha. The body tests its mask's blue channel.
+    float alphaRef = uUnlit > 0.5 ? mainTex.a : triMask.b;
+    if (uCutoff > 0.0 && alphaRef < uCutoff) discard;
+
 
     float halfLambert = dot(normal, uLightDirection) * 0.5 + 0.5;
     float shadow = uUnlit > 0.5
