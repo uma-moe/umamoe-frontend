@@ -4,7 +4,8 @@
   import {
     createRacecourseScene,
     type CameraMode,
-    type RacecourseScene as RacecourseSceneView
+    type RacecourseScene as RacecourseSceneView,
+    type StartPoint
   } from './racecourse-scene';
   import { hasWebGL2 } from './webgl';
 
@@ -18,7 +19,7 @@
     /** Every published clip, so switching between them never waits on the network. */
     motionUrls?: string[];
     /** Where the track starts, so she stands at the line rather than the middle. */
-    startPoint?: { x: number; z: number };
+    startPoint?: StartPoint;
     /** What the model shows, for the stage's accessible name and the loading line. */
     label: string;
     /** Overview orbits the course; walk stands on it at a horsegirl's height. */
