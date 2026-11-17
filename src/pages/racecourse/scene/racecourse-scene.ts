@@ -14,6 +14,8 @@ import {
   Raycaster,
   Scene,
   Sphere,
+  DoubleSide,
+  MeshBasicMaterial,
   Texture,
   Vector3,
   WebGLRenderer,
@@ -98,9 +100,18 @@ export function createRacecourseScene({
   // read that instead of shading a normal.
 
   const fly = createFlyCamera({ camera, canvas, bounds: () => world });
-  /** The course's sky dome, which follows the camera so the reader is always inside it. */
+  /**
+   * The course's sky, which follows the camera so the reader is always inside it. Two nodes: the dome
+   * the model ships (a hemisphere, so a view from above would otherwise look into nothing) and a
+   * mirrored copy that closes it into a full sphere.
+   */
   let sky:
-    { node: Object3D; centre: Vector3; radius: number; base: Vector3; scale: number } | undefined;
+    | {
+        nodes: { node: Object3D; base: Vector3; scale: Vector3 }[];
+        centre: Vector3;
+        radius: number;
+      }
+    | undefined;
   /** How far the reader may fly from the course: well past the dome, so the opening frame fits. */
   let world: Sphere | undefined;
   let model: Object3D | undefined;
@@ -148,20 +159,22 @@ export function createRacecourseScene({
     const distance = camera.position.distanceTo(sky.centre);
     // Just far enough that the camera is inside it, so the dome keeps its painted detail: growing it
     // more pushes the clouds into a thin band at the top of the frame.
-    const scale = Math.max(1, (distance * 1.3) / sky.radius);
-    sky.node.position.set(
-      sky.base.x + (camera.position.x - sky.centre.x),
-      sky.base.y,
-      sky.base.z + (camera.position.z - sky.centre.z)
-    );
-    sky.node.scale.setScalar(sky.scale * scale);
+    const factor = Math.max(1, (distance * 1.3) / sky.radius);
+    for (const { node, base, scale } of sky.nodes) {
+      node.position.set(
+        base.x + (camera.position.x - sky.centre.x),
+        base.y,
+        base.z + (camera.position.z - sky.centre.z)
+      );
+      node.scale.set(scale.x * factor, scale.y * factor, scale.z * factor);
+    }
   }
 
   /**
    * Takes the haze colour from the sky texture's own horizon, so the edge of the dome and the empty
    * space below it meet in the same tone instead of showing a seam.
    */
-  function hazeFromSky(node: Object3D): void {
+  function hazeFromSky(node: Object3D): Color {
     let map: Texture | undefined;
     node.traverse((child) => {
       const mesh = child as Object3D & { material?: Material | Material[] };
@@ -173,13 +186,13 @@ export function createRacecourseScene({
     });
 
     const image = map?.image as (CanvasImageSource & { height?: number }) | undefined;
-    if (!image || typeof document === 'undefined') return;
+    if (!image || typeof document === 'undefined') return new Color(HAZE);
     try {
       const canvas = document.createElement('canvas');
       canvas.width = 1;
       canvas.height = 1;
       const context = canvas.getContext('2d');
-      if (!context) return;
+      if (!context) return new Color(HAZE);
 
       const height = image.height ?? 1;
       const edge = (from: number) => {
@@ -190,11 +203,18 @@ export function createRacecourseScene({
       };
 
       // glTF textures are not flipped, so the image's bottom row is the dome's rim: the horizon.
-      const horizon = edge(height * 0.98).lerp(new Color(0xffffff), 0.35);
-      scene.background = horizon;
-      fog.color.copy(horizon);
+      const horizon = edge(height * 0.98);
+      // A night course's sky is dark down there, and a dark backdrop reads as a hole: keep it light
+      // enough to stand in for the horizon haze whatever the course's sky does.
+      const light = (horizon.r + horizon.g + horizon.b) / 3;
+      const haze = light < 0.62 ? horizon.lerp(new Color(0xffffff), 0.62 - light) : horizon;
+      haze.lerp(new Color(0xffffff), 0.2);
+      scene.background = haze;
+      fog.color.copy(haze);
+      return haze;
     } catch {
       // A texture the browser will not let us read keeps the default haze.
+      return new Color(HAZE);
     }
   }
 
@@ -383,15 +403,13 @@ export function createRacecourseScene({
     model = loaded;
     scene.add(loaded);
     sceneRadius = new Box3().setFromObject(loaded).getBoundingSphere(new Sphere()).radius;
-    for (const child of loaded.children)
+    for (const child of [...loaded.children])
       if (SKY_NODE.test(child.name)) {
         const bounds = new Box3().setFromObject(child).getBoundingSphere(new Sphere());
         sky = {
-          node: child,
+          nodes: [{ node: child, base: child.position.clone(), scale: child.scale.clone() }],
           centre: bounds.center.clone(),
-          radius: bounds.radius,
-          base: child.position.clone(),
-          scale: child.scale.x
+          radius: bounds.radius
         };
       }
     world = new Sphere(
@@ -403,8 +421,9 @@ export function createRacecourseScene({
     const reach = area.getSize(new Vector3()).length() / 2;
     fog.near = reach * 1.1;
     fog.far = reach * 4;
-    // The dome is unlit and painted: fogging it would wash the sky out.
-    for (const child of loaded.children)
+    // The dome is unlit and painted: fogging it would wash the sky out. The children are copied first:
+    // the mirrored copy added below matches the same name and would otherwise be cloned forever.
+    for (const child of [...loaded.children])
       if (SKY_NODE.test(child.name)) {
         child.traverse((node) => {
           const mesh = node as Object3D & {
@@ -413,7 +432,19 @@ export function createRacecourseScene({
           const materials = Array.isArray(mesh.material) ? mesh.material : [mesh.material];
           for (const material of materials) if (material && 'fog' in material) material.fog = false;
         });
-        hazeFromSky(child);
+        const haze = hazeFromSky(child);
+        // The dome is only its upper half, so a view from above its rim looked into nothing. A mirrored
+        // copy closes it into a sphere, painted flat in the horizon haze: below the skyline the world is
+        // distance, not more sky.
+        const below = new MeshBasicMaterial({ color: haze, side: DoubleSide, fog: false });
+        const lower = child.clone(true);
+        lower.scale.y *= -1;
+        lower.traverse((node) => {
+          const mesh = node as Object3D & { material?: Material | Material[] };
+          if (mesh.material) mesh.material = below;
+        });
+        loaded.add(lower);
+        sky?.nodes.push({ node: lower, base: lower.position.clone(), scale: lower.scale.clone() });
       }
     frame();
     followSky();
