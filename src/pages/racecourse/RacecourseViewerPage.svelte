@@ -63,42 +63,45 @@
   width="wide"
   heading={false}
   fill
+  flush
 >
-  {#if loading}
-    <div class="racecourse-status">
-      <Spinner size={20} />
-      <span>Loading courses…</span>
-    </div>
-  {:else if !models.length}
-    <EmptyState
-      icon="stadium"
-      title="No racecourses to draw yet"
-      description={failure ||
-        'The course models have not been published yet. The simulator still has every course layout.'}
-    />
-  {:else}
-    <div class="racecourse-toolbar">
-      <label
-        class="racecourse-toolbar-label"
-        for="racecourse-track"
-      >
-        Track
-      </label>
-      <SelectField
-        id="racecourse-track"
-        label="Track"
-        hideLabel
-        {options}
-        bind:value={selected}
-        onchange={(value) => (selected = value)}
+  <div class="racecourse-page">
+    {#if loading}
+      <div class="racecourse-status">
+        <Spinner size={20} />
+        <span>Loading courses…</span>
+      </div>
+    {:else if !models.length}
+      <EmptyState
+        icon="stadium"
+        title="No racecourses to draw yet"
+        description={failure ||
+          'The course models have not been published yet. The simulator still has every course layout.'}
       />
-    </div>
+    {:else}
+      <div class="racecourse-toolbar">
+        <label
+          class="racecourse-toolbar-label"
+          for="racecourse-track"
+        >
+          Track
+        </label>
+        <SelectField
+          id="racecourse-track"
+          label="Track"
+          hideLabel
+          {options}
+          bind:value={selected}
+          onchange={(value) => (selected = value)}
+        />
+      </div>
 
-    <RacecourseScene
-      urls={files}
-      label={`${current?.name ?? 'Racecourse'} in 3D`}
-    />
-  {/if}
+      <RacecourseScene
+        urls={files}
+        label={`${current?.name ?? 'Racecourse'} in 3D`}
+      />
+    {/if}
+  </div>
 </AppPage>
 
 <style>
