@@ -40,8 +40,6 @@ const OPENING_DIRECTION = new Vector3(0.4, 0.85, 0.45).normalize();
 const PORTRAIT_DIRECTION = new Vector3(0.25, 0.93, 0.28).normalize();
 /** How fast the opening view circles the course, in radians per second. */
 const INTRO_SPIN = 0.25;
-/** How long it circles after a course lands, unless the reader grabs it first. */
-const INTRO_SECONDS = 6;
 
 export interface RacecourseSceneHandlers {
   onProgress?: (loaded: number, total: number) => void;
@@ -60,6 +58,8 @@ export interface RacecourseScene {
   load(targets: string[]): Promise<void>;
   /** Puts the camera back around the current model. */
   frame(): void;
+  /** Moves the camera along its line of sight: `1` closes in, `-1` pulls back. */
+  zoom(direction: 1 | -1): void;
   dispose(): void;
 }
 
@@ -93,7 +93,6 @@ export function createRacecourseScene({
   /** The framed view the opening orbit turns around, and how far it has turned. */
   let framed: { centre: Vector3; distance: number; polar: number } | undefined;
   let introAngle = 0;
-  let introLeft = 0;
   let intro = false;
   let loading = false;
   let generation = 0;
@@ -170,7 +169,6 @@ export function createRacecourseScene({
       polar: Math.acos(direction.y)
     };
     introAngle = Math.atan2(direction.x, direction.z);
-    introLeft = INTRO_SECONDS;
     intro = true;
     fly.disable();
 
@@ -184,14 +182,28 @@ export function createRacecourseScene({
     fly.enable();
   }
 
+  const MOVEMENT_KEYS = new Set(['KeyW', 'KeyA', 'KeyS', 'KeyD', 'KeyQ', 'KeyE', 'KeyR', 'KeyF']);
+
+  /** A movement key is an interaction with the view; anything else is left alone. */
+  function onMovementKey(event: KeyboardEvent): void {
+    if (MOVEMENT_KEYS.has(event.code) || event.code.startsWith('Arrow')) takeControl();
+  }
+
+  /**
+   * Zoom, Google-Maps style: a step along the line of sight, sized by how far the camera already is
+   * from what it is looking at. Any zoom is an interaction, so it takes the camera over.
+   */
+  function zoom(direction: 1 | -1): void {
+    takeControl();
+    const target = framed?.centre ?? area?.getCenter(new Vector3());
+    const span = target ? camera.position.distanceTo(target) : sceneRadius;
+    const step = Math.max(span * 0.25, 4) * direction;
+    camera.position.addScaledVector(camera.getWorldDirection(new Vector3()), step);
+  }
+
   function spin(deltaSeconds: number): void {
     if (!framed) return;
     introAngle += INTRO_SPIN * deltaSeconds;
-    introLeft -= deltaSeconds;
-    if (introLeft <= 0) {
-      takeControl();
-      return;
-    }
     camera.position
       .setFromSphericalCoords(framed.distance, framed.polar, introAngle)
       .add(framed.centre);
@@ -312,7 +324,7 @@ export function createRacecourseScene({
     resizeObserver.disconnect();
     canvas.removeEventListener('webglcontextlost', onContextLost);
     canvas.removeEventListener('pointerdown', takeControl);
-    window.removeEventListener('keydown', takeControl);
+    window.removeEventListener('keydown', onMovementKey);
     fly.dispose();
     clear();
     renderer.dispose();
@@ -327,10 +339,12 @@ export function createRacecourseScene({
   resizeObserver.observe(host);
   canvas.addEventListener('webglcontextlost', onContextLost);
   // Any input hands the camera over; the orbit is an arrival, not a mode.
+  // Only the view itself takes the camera over: a click on the stage, or a movement key. Typing in
+  // the track picker must not stop the orbit.
   canvas.addEventListener('pointerdown', takeControl);
-  window.addEventListener('keydown', takeControl);
+  window.addEventListener('keydown', onMovementKey);
   resize();
   render();
 
-  return { load, frame, dispose };
+  return { load, frame, zoom, dispose };
 }

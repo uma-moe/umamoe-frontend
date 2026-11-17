@@ -56,6 +56,28 @@
   pointer-events: none;
 }
 
+/* A corner stack, the way a map puts its zoom controls. */
+.racecourse-stage-controls {
+  position: absolute;
+  inset: var(--space-3) var(--space-3) auto auto;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 2px;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  background: var(--color-surface-1);
+}
+
+.racecourse-stage-controls :global(.icon-button) {
+  border: none;
+  background: transparent;
+}
+
+.racecourse-stage-controls :global(.icon-button:hover) {
+  background: var(--color-surface-2);
+}
+
 @media (max-width: 767px) {
   .racecourse-stage {
     min-height: clamp(260px, 45vh, 520px);
