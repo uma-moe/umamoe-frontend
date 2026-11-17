@@ -69,7 +69,7 @@ describe('racecourseModels', () => {
 
     expect(models[0]).toMatchObject({
       trackId: 10006,
-      slug: 'model',
+      slug: '10006',
       url: `${ROOT}/art/racecourses/10006/model.glb`,
       parts: []
     });
@@ -118,7 +118,7 @@ describe('loadRacecourseModels', () => {
       {
         trackId: 10001,
         name: 'Sapporo',
-        slug: 'course-10001',
+        slug: '10001',
         parts: [
           `${ROOT}/art/racecourses/10001/parts/0000_002.glb`,
           `${ROOT}/art/racecourses/10001/parts/0001_002.glb`

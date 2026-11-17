@@ -61,6 +61,8 @@
   title="Racecourse Viewer"
   description="The game's own racecourse models, to fly through."
   width="wide"
+  heading={false}
+  fill
 >
   {#if loading}
     <div class="racecourse-status">
@@ -76,9 +78,16 @@
     />
   {:else}
     <div class="racecourse-toolbar">
+      <label
+        class="racecourse-toolbar-label"
+        for="racecourse-track"
+      >
+        Track
+      </label>
       <SelectField
         id="racecourse-track"
         label="Track"
+        hideLabel
         {options}
         bind:value={selected}
         onchange={(value) => (selected = value)}

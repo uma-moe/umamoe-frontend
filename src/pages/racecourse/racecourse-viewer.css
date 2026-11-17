@@ -1,4 +1,4 @@
-/* The viewer page's toolbar and status line; the 3D stage owns its own styles. */
+/* The viewer page: one row with the track picker, then the stage filling the rest. */
 
 .racecourse-status {
   display: flex;
@@ -15,10 +15,16 @@
   margin-bottom: var(--space-3);
 }
 
-@media (max-width: 767px) {
-  .racecourse-toolbar {
-    align-items: stretch;
-    flex-direction: column;
-    gap: var(--space-2);
-  }
+.racecourse-toolbar-label {
+  font-size: var(--font-lg);
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+/* The picker is the page's only control, so it carries the row: taller than a form field. */
+.racecourse-toolbar :global(.select-control) {
+  min-height: 48px;
+  font-size: var(--font-lg);
+  font-weight: 600;
+  padding-inline: var(--space-3);
 }
