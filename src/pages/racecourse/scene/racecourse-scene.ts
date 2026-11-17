@@ -26,10 +26,15 @@ import { SKY_NODE } from './sky';
 /** Close enough to the ground that the track surface stays in front of the near plane. */
 const NEAR_PLANE = 0.1;
 /** The parts the game models where they stand that describe the racing surface: track and turf. */
+/**
+ * The racing surface, which is what the opening view frames: the track and turf lightmapped meshes. The
+ * track part also carries the far scenery and the cloud ring, so framing its whole box opens too wide.
+ */
+const SURFACE_MESH = /^(turf|dirt)_lm/;
 const TRACK_PART = /_000[01]_/;
 
 /** Leave the course inside the frame with a little air around it. */
-const FRAME_MARGIN = 1.05;
+const FRAME_MARGIN = 1.12;
 /**
  * The opening view looks down at the course rather than across it: a shallow angle projects the
  * infield's depth into the frame, which pushes the camera far enough back that a wide, short stage
@@ -105,15 +110,21 @@ export function createRacecourseScene({
    * ring the reader came to see. Only the track and turf parts decide the frame.
    */
   function courseBounds(target: Object3D): Box3 {
-    const box = new Box3();
-    for (const child of target.children)
-      if (!SKY_NODE.test(child.name) && TRACK_PART.test(child.name)) box.expandByObject(child);
+    // The racing surface itself, wherever it sits in the model: track and turf, track and dirt.
+    const surface = new Box3();
+    target.traverse((child) => {
+      if (SURFACE_MESH.test(child.name)) surface.expandByObject(child);
+    });
+    if (!surface.isEmpty()) return surface;
 
-    if (box.isEmpty()) {
-      for (const child of target.children)
-        if (!SKY_NODE.test(child.name)) box.expandByObject(child);
-    }
-    return box.isEmpty() ? new Box3().setFromObject(target) : box;
+    const parts = new Box3();
+    for (const child of target.children)
+      if (!SKY_NODE.test(child.name) && TRACK_PART.test(child.name)) parts.expandByObject(child);
+
+    if (!parts.isEmpty()) return parts;
+    for (const child of target.children)
+      if (!SKY_NODE.test(child.name)) parts.expandByObject(child);
+    return parts.isEmpty() ? new Box3().setFromObject(target) : parts;
   }
 
   /** The sky is drawn from inside it: it appears once the camera is close enough to be under it. */
@@ -239,7 +250,36 @@ export function createRacecourseScene({
     const token = ++generation;
     // The course already on screen keeps circling while the next one streams in.
     loading = true;
-    return Promise.all(targets.map((target) => loader.loadAsync(target)))
+
+    // Byte progress across the files of one course, so the overlay can show a real percentage.
+    const progress = new Map<string, { loaded: number; total: number }>();
+    const report = () => {
+      let loaded = 0;
+      let total = 0;
+      for (const entry of progress.values()) {
+        loaded += entry.loaded;
+        total += entry.total;
+      }
+      if (token === generation) handlers.onProgress?.(loaded, total);
+    };
+
+    return Promise.all(
+      targets.map(
+        (target) =>
+          new Promise<GLTF>((resolve, reject) => {
+            loader.load(
+              target,
+              resolve,
+              (event) => {
+                const total = event.total || event.loaded;
+                progress.set(target, { loaded: event.loaded, total });
+                report();
+              },
+              (error) => reject(error instanceof Error ? error : new Error(String(error)))
+            );
+          })
+      )
+    )
       .then((gltfs) => show(gltfs, token))
       .catch((error: unknown) => {
         loading = false;

@@ -11,7 +11,7 @@
   interface Props {
     /** The files of the course to draw: one whole-course model, or the prefabs it is assembled from. */
     urls?: string[];
-    /** What the model shows, for the stage's accessible name and the loading line. */
+    /** What the model shows, for the stage's accessible name and the loading card. */
     label: string;
   }
 
@@ -69,7 +69,7 @@
   bind:this={host}
 >
   <p class="sr-only">
-    Interactive 3D view of the {label}. Click to capture the pointer, then move the mouse to look
+    Interactive 3D view of the {label} course. Click to capture the pointer, then move the mouse to look
     and use W, A, S, D to fly, Q and E to drop and rise.
   </p>
 
@@ -94,12 +94,22 @@
       {failure}
     </p>
   {:else if percent !== null}
+    <!-- Switching courses keeps the old one on screen; this says what is happening over it. -->
     <div
       class="racecourse-stage-loading"
       role="status"
+      aria-live="polite"
     >
-      <Spinner size={18} />
-      <span>Loading {label}{percent > 0 ? ` · ${percent}%` : ''}</span>
+      <div class="racecourse-stage-loading-card">
+        <Spinner size={22} />
+        <span class="racecourse-stage-loading-label">Loading {label}</span>
+        <span class="racecourse-stage-loading-bar">
+          <span
+            class="racecourse-stage-loading-fill"
+            style:width={`${percent}%`}
+          ></span>
+        </span>
+      </div>
     </div>
   {:else}
     <p class="racecourse-stage-hint">Click to look · WASD to fly · Q/E down and up</p>
