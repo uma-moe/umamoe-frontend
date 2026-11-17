@@ -50,6 +50,10 @@ const TREE_SPAN = 40;
 const TRACK_PART = /_000[01]_/;
 /** The colour a marked course is drawn in: bright against turf and dirt alike. */
 const HIGHLIGHT = 0x5ad9ff;
+/** How wide the marked course is drawn: half-width in metres, so this is 5 m across. */
+const COURSE_LINE_HALF_WIDTH = 2.5;
+/** How solid the marked course is. */
+const COURSE_LINE_OPACITY = 0.9;
 /**
  * How far the fitted line may sit from the track, on average, before it is not drawn at all. A fit this
  * loose means the model carries a layout the geometry does not describe, and a wrong line is worse than
@@ -472,7 +476,7 @@ export function createRacecourseScene({
     if (!fit || fit.error > MAX_FIT_ERROR) return;
     const placed = applyCourseTransform(points, fit);
 
-    const HALF_WIDTH = 2.5;
+    const HALF_WIDTH = COURSE_LINE_HALF_WIDTH;
     const positions: number[] = [];
     const indices: number[] = [];
     for (let index = 0; index < placed.length; index += 1) {
@@ -502,7 +506,7 @@ export function createRacecourseScene({
       new MeshBasicMaterial({
         color: HIGHLIGHT,
         transparent: true,
-        opacity: 0.9,
+        opacity: COURSE_LINE_OPACITY,
         depthWrite: false,
         side: DoubleSide,
         polygonOffset: true,
