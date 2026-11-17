@@ -148,6 +148,8 @@ export function createRacecourseScene({
   let surfacePoints: [number, number][] = [];
   /** The same ground positions, kept apart: a turf course must not be fitted to the dirt track. */
   const surfacePointsByKind: Record<SurfaceKind, [number, number][]> = { turf: [], dirt: [] };
+  /** The finish line of each surface, taken from the model's own markers. */
+  const goals: Partial<Record<SurfaceKind, [number, number]>> = {};
   let courseLine: Mesh | undefined;
   let model: Object3D | undefined;
   let area: Box3 | undefined;
@@ -404,7 +406,19 @@ export function createRacecourseScene({
     surfacePoints = [];
     surfacePointsByKind.turf = [];
     surfacePointsByKind.dirt = [];
+    goals.turf = undefined;
+    goals.dirt = undefined;
     const point = new Vector3();
+    // The finish line of each surface, from the model's own markers.
+    target.traverse((child) => {
+      if (child.name === 'pos_goal_turf') {
+        child.getWorldPosition(point);
+        goals.turf = [point.x, point.z];
+      } else if (child.name === 'pos_goal_dirt') {
+        child.getWorldPosition(point);
+        goals.dirt = [point.x, point.z];
+      }
+    });
     target.traverse((child) => {
       const mesh = child as Object3D & {
         isMesh?: boolean;
@@ -452,7 +466,9 @@ export function createRacecourseScene({
     const target =
       kind && surfacePointsByKind[kind].length > 0 ? surfacePointsByKind[kind] : surfacePoints;
     if (target.length === 0) return;
-    const fit = fitCourseLine(target, points);
+    // The goal marker says which straight is the home straight: the finish is on it.
+    const anchor = kind ? goals[kind] : undefined;
+    const fit = fitCourseLine(target, points, anchor ? { anchor } : {});
     if (!fit || fit.error > MAX_FIT_ERROR) return;
     const placed = applyCourseTransform(points, fit);
 

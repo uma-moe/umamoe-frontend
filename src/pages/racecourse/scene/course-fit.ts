@@ -10,6 +10,11 @@ const CELL = 8;
 /** Distance beyond which a point is simply "far away", so a bad candidate cannot dominate. */
 const CAP = 24;
 
+/**
+ * How much worse a placement may fit the track and still be chosen because it finishes at the goal. The
+ * goal is a stronger signal than a metre of fit, but not strong enough to excuse a line off the track.
+ */
+const ANCHOR_SLACK = 8;
 export interface CourseTransform {
   /** Whether the line had to be mirrored across X first. */
   mirror: boolean;
@@ -113,12 +118,13 @@ function score(
 export function fitCourseLine(
   surface: readonly Point[],
   line: readonly Point[],
-  options: { mirror?: boolean } = {}
+  options: { mirror?: boolean; anchor?: Point } = {}
 ): CourseTransform | undefined {
   if (surface.length < 8 || line.length < 8) return undefined;
   const distance = buildDistanceField(surface);
   // Coarse passes judge a fit from every sixteenth point, which is plenty and keeps the search quick.
   const coarse = line.filter((_, index) => index % 16 === 0);
+  const fine = line.filter((_, index) => index % 4 === 0);
   const mirrors = options.mirror === false ? [false] : [false, true];
 
   let minX = Infinity;
@@ -132,44 +138,100 @@ export function fitCourseLine(
     if (z > maxZ) maxZ = z;
   }
 
-  let best: CourseTransform | undefined;
-  const consider = (candidate: CourseTransform, points: readonly Point[]) => {
-    const error = score(points, distance, candidate);
-    if (!best || error < best.error) best = { ...candidate, error };
-  };
+  /** The best placement for one mirror choice. */
+  const search = (mirror: boolean): CourseTransform | undefined => {
+    let best: CourseTransform | undefined;
+    const consider = (candidate: CourseTransform, points: readonly Point[]) => {
+      const error = score(points, distance, candidate);
+      if (!best || error < best.error) best = { ...candidate, error };
+    };
 
-  const COARSE_STEP = CELL * 3;
-  for (const mirror of mirrors) {
+    const COARSE_STEP = CELL * 3;
     for (let step = 0; step < 36; step += 1) {
       const angle = (step * Math.PI) / 18;
       for (let tx = minX - COARSE_STEP; tx <= maxX + COARSE_STEP; tx += COARSE_STEP)
         for (let tz = minZ - COARSE_STEP; tz <= maxZ + COARSE_STEP; tz += COARSE_STEP)
           consider({ mirror, angle, tx, tz, error: 0 }, coarse);
     }
-  }
-  if (!best) return undefined;
+    if (!best) return undefined;
 
-  // Refine rotation and slide around the winner, judging on every fourth point.
-  const fine = line.filter((_, index) => index % 4 === 0);
-  for (const [angleStep, slideStep] of [
-    [Math.PI / 90, COARSE_STEP / 2],
-    [Math.PI / 360, COARSE_STEP / 6]
-  ] as const) {
+    for (const [angleStep, slideStep] of [
+      [Math.PI / 90, COARSE_STEP / 2],
+      [Math.PI / 360, COARSE_STEP / 6]
+    ] as const) {
+      const from = best;
+      for (let da = -4; da <= 4; da += 1)
+        for (let dx = -3; dx <= 3; dx += 1)
+          for (let dz = -3; dz <= 3; dz += 1)
+            consider(
+              {
+                mirror: from.mirror,
+                angle: from.angle + da * angleStep,
+                tx: from.tx + dx * slideStep,
+                tz: from.tz + dz * slideStep,
+                error: 0
+              },
+              fine
+            );
+    }
+    return best;
+  };
+
+  const candidates = mirrors
+    .map((mirror) => search(mirror))
+    .filter((candidate): candidate is CourseTransform => candidate !== undefined);
+  if (candidates.length === 0) return undefined;
+
+  const closest = candidates.reduce((best, candidate) =>
+    candidate.error < best.error ? candidate : best
+  );
+  if (!options.anchor) return closest;
+
+  // A course finishes at the goal marker. Ovals are close to symmetric, so a mirrored or turned line can
+  // fit the track just as well while running it the wrong way round; the goal says which way is right.
+  // With it, the slide is not searched at all: for a given angle it follows from putting the line's last
+  // point on the marker.
+  const anchor = options.anchor;
+  const end = line[line.length - 1] as Point;
+  let best: CourseTransform | undefined;
+  for (const mirror of mirrors) {
+    for (let step = 0; step < 360; step += 1) {
+      const angle = (step * Math.PI) / 180;
+      const cos = Math.cos(angle);
+      const sin = Math.sin(angle);
+      const sourceX = mirror ? -end[0] : end[0];
+      const candidate: CourseTransform = {
+        mirror,
+        angle,
+        tx: anchor[0] - (sourceX * cos - end[1] * sin),
+        tz: anchor[1] - (sourceX * sin + end[1] * cos),
+        error: 0
+      };
+      const error = score(fine, distance, candidate);
+      if (!best || error < best.error) best = { ...candidate, error };
+    }
+  }
+  if (!best) return closest;
+
+  // Refine the angle, keeping the goal anchor.
+  for (const step of [Math.PI / 180 / 4, Math.PI / 180 / 20]) {
     const from = best;
-    for (let da = -4; da <= 4; da += 1)
-      for (let dx = -3; dx <= 3; dx += 1)
-        for (let dz = -3; dz <= 3; dz += 1)
-          consider(
-            {
-              mirror: from.mirror,
-              angle: from.angle + da * angleStep,
-              tx: from.tx + dx * slideStep,
-              tz: from.tz + dz * slideStep,
-              error: 0
-            },
-            fine
-          );
+    for (let da = -5; da <= 5; da += 1) {
+      const angle = from.angle + da * step;
+      const cos = Math.cos(angle);
+      const sin = Math.sin(angle);
+      const sourceX = from.mirror ? -end[0] : end[0];
+      const candidate: CourseTransform = {
+        mirror: from.mirror,
+        angle,
+        tx: anchor[0] - (sourceX * cos - end[1] * sin),
+        tz: anchor[1] - (sourceX * sin + end[1] * cos),
+        error: 0
+      };
+      const error = score(fine, distance, candidate);
+      if (error < best.error) best = { ...candidate, error };
+    }
   }
 
-  return best;
+  return best.error <= closest.error + ANCHOR_SLACK ? best : closest;
 }
