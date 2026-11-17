@@ -1,5 +1,6 @@
 <script lang="ts">
   import { onMount } from 'svelte';
+  import IconButton from '@/components/controls/IconButton.svelte';
   import Spinner from '@/components/feedback/Spinner.svelte';
   import {
     createRacecourseScene,
@@ -102,6 +103,30 @@
     </div>
   {:else}
     <p class="racecourse-stage-hint">Click to look · WASD to fly · Q/E down and up</p>
+  {/if}
+
+  {#if !unsupported && !failure}
+    <!-- Google-Maps style: a small stack in the corner for the two things a mouse-less reader needs. -->
+    <div class="racecourse-stage-controls">
+      <IconButton
+        icon="add"
+        label="Zoom in"
+        size="sm"
+        onclick={() => view?.zoom(1)}
+      />
+      <IconButton
+        icon="minus"
+        label="Zoom out"
+        size="sm"
+        onclick={() => view?.zoom(-1)}
+      />
+      <IconButton
+        icon="frame-back"
+        label="Reset the view"
+        size="sm"
+        onclick={() => view?.frame()}
+      />
+    </div>
   {/if}
 </div>
 
