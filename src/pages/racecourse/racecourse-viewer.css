@@ -31,6 +31,11 @@
   white-space: nowrap;
 }
 
+/* Track names are long, so the picker keeps a floor instead of hugging its label. */
+.racecourse-toolbar :global(.field) {
+  min-width: 200px;
+}
+
 /* The picker is the page's only control, so it carries the row: taller than a form field. */
 .racecourse-toolbar :global(.select-control) {
   min-height: 48px;
