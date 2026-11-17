@@ -4,18 +4,23 @@
   import Spinner from '@/components/feedback/Spinner.svelte';
   import {
     createRacecourseScene,
-    type RacecourseScene as RacecourseSceneView
+    type RacecourseScene as RacecourseSceneView,
+    type SurfaceKind
   } from './racecourse-scene';
   import { hasWebGL2 } from './webgl';
 
   interface Props {
     /** The files of the course to draw: one whole-course model, or the prefabs it is assembled from. */
     urls?: string[];
+    /** The racing line of the selected course, in simulator coordinates, to mark on the track. */
+    line?: readonly (readonly [number, number])[];
+    /** Which track that course is run on. */
+    surface?: SurfaceKind;
     /** What the model shows, for the stage's accessible name and the loading card. */
     label: string;
   }
 
-  let { urls = [], label }: Props = $props();
+  let { urls = [], line, surface, label }: Props = $props();
 
   let host: HTMLDivElement;
   let canvas: HTMLCanvasElement;
@@ -37,6 +42,8 @@
     percent = 0;
     try {
       await scene.load(targets);
+      // A new model drops the marked line; put back whatever course is selected.
+      scene.highlight(line, surface);
     } catch {
       failure = 'This course model could not be loaded. Check the connection and try again.';
     } finally {
@@ -61,6 +68,15 @@
     const targets = urls;
     if (!scene || targets.length === 0) return;
     void show(scene, targets);
+  });
+
+  // The marked line follows the course selection.
+  $effect(() => {
+    const scene = view;
+    const points = line;
+    const kind = surface;
+    if (!scene) return;
+    scene.highlight(points, kind);
   });
 </script>
 

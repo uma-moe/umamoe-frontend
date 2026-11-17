@@ -6,10 +6,15 @@
 
 import {
   Box3,
+  BufferGeometry,
   Color,
+  DoubleSide,
+  Float32BufferAttribute,
   Fog,
   Group,
   LoadingManager,
+  Mesh,
+  MeshBasicMaterial,
   PerspectiveCamera,
   Raycaster,
   Scene,
@@ -25,6 +30,7 @@ import { createFlyCamera } from './fly-camera';
 import { applyUnityMaterials } from './unity-materials';
 import { SKY_NODE } from './sky';
 import { infieldFootprint, type Footprint } from './infield';
+import { applyCourseTransform, fitCourseLine } from './course-fit';
 
 /** Close enough to the ground that the track surface stays in front of the near plane. */
 const NEAR_PLANE = 0.1;
@@ -42,6 +48,17 @@ const TREE_NODE = /^tree_/;
  */
 const TREE_SPAN = 40;
 const TRACK_PART = /_000[01]_/;
+/** The colour a marked course is drawn in: bright against turf and dirt alike. */
+const HIGHLIGHT = 0x5ad9ff;
+/**
+ * How far the fitted line may sit from the track, on average, before it is not drawn at all. A fit this
+ * loose means the model carries a layout the geometry does not describe, and a wrong line is worse than
+ * none.
+ */
+const MAX_FIT_ERROR = 10;
+/** Which track a course is run on, so a line is fitted to that surface and not the other one. */
+export type SurfaceKind = 'turf' | 'dirt';
+const DOWN = new Vector3(0, -1, 0);
 
 /** Leave the course inside the frame with a little air around it. */
 const FRAME_MARGIN = 1.12;
@@ -75,6 +92,8 @@ export interface RacecourseScene {
   frame(): void;
   /** Moves the camera along its line of sight: `1` closes in, `-1` pulls back. */
   zoom(direction: 1 | -1): void;
+  /** Marks a course's racing line on the track, in the simulator's coordinates, or clears it. */
+  highlight(points?: readonly (readonly [number, number])[], kind?: SurfaceKind): void;
   dispose(): void;
 }
 
@@ -92,6 +111,8 @@ export function createRacecourseScene({
   renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
 
   const scene = new Scene();
+  /** Finds the track's height under a point, for laying a marked course on it. */
+  const raycaster = new Raycaster();
   // The course has no ground beyond its apron, and the sky is a hemisphere, so below the horizon there
   // is nothing to draw: haze keeps that from reading as a hole in the world. Fog does the same for the
   // far scenery, which the game also fades out.
@@ -122,6 +143,12 @@ export function createRacecourseScene({
   let world: Sphere | undefined;
   /** Trees inside the oval. They are flat quads, so they only read as trees when they face the camera. */
   let billboards: { node: Object3D; x: number; z: number }[] = [];
+  /** The racing surface: the meshes a marked course is laid on, and their ground positions for fitting. */
+  let surfaces: Object3D[] = [];
+  let surfacePoints: [number, number][] = [];
+  /** The same ground positions, kept apart: a turf course must not be fitted to the dirt track. */
+  const surfacePointsByKind: Record<SurfaceKind, [number, number][]> = { turf: [], dirt: [] };
+  let courseLine: Mesh | undefined;
   let model: Object3D | undefined;
   let area: Box3 | undefined;
   let sceneRadius = 1000;
@@ -371,6 +398,105 @@ export function createRacecourseScene({
     }
   }
 
+  /** The racing surface meshes, and the ground positions their vertices give. */
+  function collectSurface(target: Object3D): void {
+    surfaces = [];
+    surfacePoints = [];
+    surfacePointsByKind.turf = [];
+    surfacePointsByKind.dirt = [];
+    const point = new Vector3();
+    target.traverse((child) => {
+      const mesh = child as Object3D & {
+        isMesh?: boolean;
+        geometry?: {
+          attributes: {
+            position?: { count: number; getX(i: number): number; getZ(i: number): number };
+          };
+        };
+      };
+      if (!SURFACE_MESH.test(child.name) || !mesh.isMesh || !mesh.geometry) return;
+      const position = mesh.geometry.attributes.position;
+      if (!position) return;
+      const kind: SurfaceKind = child.name.startsWith('dirt') ? 'dirt' : 'turf';
+      surfaces.push(child);
+      child.updateWorldMatrix(true, false);
+      for (let index = 0; index < position.count; index += 1) {
+        point.set(position.getX(index), 0, position.getZ(index)).applyMatrix4(child.matrixWorld);
+        surfacePoints.push([point.x, point.z]);
+        surfacePointsByKind[kind].push([point.x, point.z]);
+      }
+    });
+  }
+
+  /** Height of the track under a point, so a marked line sits on the surface rather than through it. */
+  function surfaceHeight(x: number, z: number): number {
+    if (surfaces.length === 0) return 0.5;
+    raycaster.set(new Vector3(x, (area?.max.y ?? 100) + 50, z), DOWN);
+    return (raycaster.intersectObjects(surfaces, false)[0]?.point.y ?? 0) + 0.6;
+  }
+
+  /**
+   * Marks a course's racing line. The simulator's course geometry is not in the model's frame, so the
+   * line is fitted onto the racing surface first: the transform that lays it on the track, rather than a
+   * hand-kept table of offsets per course.
+   */
+  function highlight(points?: readonly (readonly [number, number])[], kind?: SurfaceKind): void {
+    if (courseLine) {
+      courseLine.removeFromParent();
+      disposeModel(courseLine);
+      courseLine = undefined;
+    }
+    if (!points || points.length < 8 || !model) return;
+
+    // Fit against the surface the course is actually run on; the other track is a decoy.
+    const target =
+      kind && surfacePointsByKind[kind].length > 0 ? surfacePointsByKind[kind] : surfacePoints;
+    if (target.length === 0) return;
+    const fit = fitCourseLine(target, points);
+    if (!fit || fit.error > MAX_FIT_ERROR) return;
+    const placed = applyCourseTransform(points, fit);
+
+    const HALF_WIDTH = 2.5;
+    const positions: number[] = [];
+    const indices: number[] = [];
+    for (let index = 0; index < placed.length; index += 1) {
+      const [x, z] = placed[index] as readonly [number, number];
+      const before = placed[Math.max(0, index - 1)] as readonly [number, number];
+      const after = placed[Math.min(placed.length - 1, index + 1)] as readonly [number, number];
+      const dx = after[0] - before[0];
+      const dz = after[1] - before[1];
+      const length = Math.hypot(dx, dz) || 1;
+      const nx = (-dz / length) * HALF_WIDTH;
+      const nz = (dx / length) * HALF_WIDTH;
+      const y = surfaceHeight(x, z);
+      positions.push(x - nx, y, z - nz, x + nx, y, z + nz);
+      if (index > 0) {
+        const at = (index - 1) * 2;
+        indices.push(at, at + 1, at + 2, at + 1, at + 3, at + 2);
+      }
+    }
+
+    const geometry = new BufferGeometry();
+    geometry.setAttribute('position', new Float32BufferAttribute(positions, 3));
+    geometry.setIndex(indices);
+    geometry.computeBoundingSphere();
+
+    courseLine = new Mesh(
+      geometry,
+      new MeshBasicMaterial({
+        color: HIGHLIGHT,
+        transparent: true,
+        opacity: 0.9,
+        depthWrite: false,
+        side: DoubleSide,
+        polygonOffset: true,
+        polygonOffsetFactor: -4
+      })
+    );
+    courseLine.renderOrder = 2;
+    scene.add(courseLine);
+  }
+
   function release(material: Material): void {
     for (const value of Object.values(material)) if (value instanceof Texture) value.dispose();
     material.dispose();
@@ -483,6 +609,7 @@ export function createRacecourseScene({
     );
     area = courseBounds(loaded);
     billboards = collectBillboards(loaded);
+    collectSurface(loaded);
     // Fog starts past the course itself, so only the scenery and the horizon are hazed over.
     const reach = area.getSize(new Vector3()).length() / 2;
     fog.near = reach * 1.1;
@@ -560,5 +687,5 @@ export function createRacecourseScene({
   resize();
   render();
 
-  return { load, frame, zoom, dispose };
+  return { load, frame, zoom, highlight, dispose };
 }
