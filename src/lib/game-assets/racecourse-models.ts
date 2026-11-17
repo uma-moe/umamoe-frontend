@@ -144,7 +144,9 @@ function course(
   return {
     trackId: id,
     name: trackName(id) === `Track ${id}` ? (named ?? trackName(id)) : trackName(id),
-    slug: url ? file.replace(/\.glb$/, '') : `course-${id}`,
+    // The id is the only stable handle: a whole-course model is always called `model.glb`, so the
+    // file name cannot tell two courses apart.
+    slug: String(id),
     url,
     parts: url ? [] : selectVariants(parts)
   };

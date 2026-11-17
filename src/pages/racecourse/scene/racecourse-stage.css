@@ -2,7 +2,9 @@
 
 .racecourse-stage {
   position: relative;
-  height: clamp(320px, 62vh, 900px);
+  /* Fills what the page has left after the picker row, with a floor on short windows. */
+  flex: 1 1 auto;
+  min-height: clamp(320px, 45vh, 900px);
   overflow: hidden;
   border: 1px solid var(--color-border);
   border-radius: var(--radius-lg);
@@ -56,6 +58,6 @@
 
 @media (max-width: 767px) {
   .racecourse-stage {
-    height: clamp(260px, 52vh, 520px);
+    min-height: clamp(260px, 45vh, 520px);
   }
 }
