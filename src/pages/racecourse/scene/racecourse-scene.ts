@@ -9,9 +9,12 @@ import {
   BufferGeometry,
   Color,
   DoubleSide,
+  EdgesGeometry,
   Float32BufferAttribute,
   Fog,
   Group,
+  LineBasicMaterial,
+  LineSegments,
   LoadingManager,
   Mesh,
   MeshBasicMaterial,
@@ -30,7 +33,6 @@ import { createFlyCamera } from './fly-camera';
 import { applyUnityMaterials } from './unity-materials';
 import { SKY_NODE } from './sky';
 import { infieldFootprint, type Footprint } from './infield';
-import { applyCourseTransform, fitCourseLine } from './course-fit';
 
 /** Close enough to the ground that the track surface stays in front of the near plane. */
 const NEAR_PLANE = 0.1;
@@ -50,18 +52,23 @@ const TREE_SPAN = 40;
 const TRACK_PART = /_000[01]_/;
 /** The colour a marked course is drawn in: bright against turf and dirt alike. */
 const HIGHLIGHT = 0x5ad9ff;
-/** How wide the marked course is drawn: half-width in metres, so this is 5 m across. */
-const COURSE_LINE_HALF_WIDTH = 2.5;
-/** How solid the marked course is. */
-const COURSE_LINE_OPACITY = 0.9;
+/** How wide the band is, in metres: one lane, which the game puts at 11.25 m across the course. */
+const COURSE_LINE_WIDTH = 11.25;
+/** How far outside the rail the band starts, in metres: enough to clear the fence's own thickness. */
+const RAIL_CLEARANCE = 0.6;
+/** How many points either side the band's side and height are smoothed over. */
+const RAIL_SMOOTHING = 4;
+/** How close the line's two ends have to be for the lap to count as closed on itself, in metres. */
+const LAP_SEAM = 3;
+/** The colour the rail outline is drawn in: neither the band nor the track can hide it. */
+const RAIL_OUTLINE = 0xff3ea5;
 /**
- * How far the fitted line may sit from the track, on average, before it is not drawn at all. A fit this
- * loose means the model carries a layout the geometry does not describe, and a wrong line is worse than
- * none.
+ * How sharp a crease in the racing surface has to be to count as a rail, in degrees. The fence is a step
+ * in the mesh rather than a free edge, so this is what both the outline and the band go by.
  */
-const MAX_FIT_ERROR = 10;
-/** Which track a course is run on, so a line is fitted to that surface and not the other one. */
-export type SurfaceKind = 'turf' | 'dirt';
+const RAIL_EDGE_ANGLE = 20;
+/** How solid the marked course is. */
+const COURSE_LINE_OPACITY = 0.6;
 const DOWN = new Vector3(0, -1, 0);
 
 /** Leave the course inside the frame with a little air around it. */
@@ -74,12 +81,16 @@ const FRAME_MARGIN = 1.12;
 const OPENING_DIRECTION = new Vector3(0.4, 0.85, 0.45).normalize();
 /** A phone is taller than the course is wide: look down more so the ring uses the height. */
 const PORTRAIT_DIRECTION = new Vector3(0.25, 0.93, 0.28).normalize();
-/** How fast the opening view circles the course, in radians per second. */
-const INTRO_SPIN = 0.25;
+/** How fast the orbit circles the course, in radians per second. */
+const ORBIT_SPIN = 0.25;
+
+export type CameraMode = 'orbit' | 'fly' | 'topDown';
 
 export interface RacecourseSceneHandlers {
   onProgress?: (loaded: number, total: number) => void;
   onFailure?: (message: string) => void;
+  /** How the camera is driven now, so the controls and the hint can say what the reader can do. */
+  onViewChange?: (mode: CameraMode) => void;
 }
 
 export interface RacecourseSceneOptions {
@@ -92,12 +103,18 @@ export interface RacecourseSceneOptions {
 export interface RacecourseScene {
   /** Draws one course, from one whole-course file or the prefabs it is assembled from. */
   load(targets: string[]): Promise<void>;
-  /** Puts the camera back around the current model. */
-  frame(): void;
+  /** Puts the camera back around the current model; `circling` lets it arrive in a slow orbit. */
+  frame(circling?: boolean): void;
+  /** Circles the course on its own, or hands the camera back where it stopped. */
+  spin(on: boolean): void;
+  /** Looks straight down at the course, north up: the whole ring flat in the frame. */
+  topDown(): void;
   /** Moves the camera along its line of sight: `1` closes in, `-1` pulls back. */
   zoom(direction: 1 | -1): void;
-  /** Marks a course's racing line on the track, in the simulator's coordinates, or clears it. */
-  highlight(points?: readonly (readonly [number, number])[], kind?: SurfaceKind): void;
+  /** Marks a course's racing line on the track, in simulator coordinates, or clears it. */
+  highlight(points?: readonly (readonly [number, number])[]): void;
+  /** Draws the edges of the racing surface, so the rail a marked course should follow is visible. */
+  rails(on: boolean): void;
   dispose(): void;
 }
 
@@ -147,21 +164,32 @@ export function createRacecourseScene({
   let world: Sphere | undefined;
   /** Trees inside the oval. They are flat quads, so they only read as trees when they face the camera. */
   let billboards: { node: Object3D; x: number; z: number }[] = [];
-  /** The racing surface: the meshes a marked course is laid on, and their ground positions for fitting. */
+  /** The racing surface: the meshes a marked course is laid on. */
   let surfaces: Object3D[] = [];
-  let surfacePoints: [number, number][] = [];
-  /** The same ground positions, kept apart: a turf course must not be fitted to the dirt track. */
-  const surfacePointsByKind: Record<SurfaceKind, [number, number][]> = { turf: [], dirt: [] };
-  /** The finish line of each surface, taken from the model's own markers. */
-  const goals: Partial<Record<SurfaceKind, [number, number]>> = {};
+  /** What the oval encloses: the trees that live in there. */
+  let infield: Footprint | undefined;
   let courseLine: Mesh | undefined;
+  /** The rails drawn over the racing surface, when the reader asks to see them. */
+  let railOutline: Group | undefined;
+  let railsShown = false;
   let model: Object3D | undefined;
   let area: Box3 | undefined;
   let sceneRadius = 1000;
-  /** The framed view the opening orbit turns around, and how far it has turned. */
+  /** The framed view the orbit turns around, and how far it has turned. */
   let framed: { centre: Vector3; distance: number; polar: number } | undefined;
-  let introAngle = 0;
-  let intro = false;
+  let orbitAngle = 0;
+  /**
+   * How the camera is driven: the orbit moves it, the reader flies it, or the straight-down view holds
+   * still and only the buttons move it. A top-down shot has nowhere to look around from, so it takes
+   * no pointer and no movement keys.
+   */
+  let mode: CameraMode = 'orbit';
+
+  function setMode(next: CameraMode): void {
+    if (mode === next) return;
+    mode = next;
+    handlers.onViewChange?.(mode);
+  }
   let loading = false;
   let generation = 0;
   let stopped = false;
@@ -275,7 +303,7 @@ export function createRacecourseScene({
    * Frames the whole course in the stage from the opening direction: fits the box's silhouette the
    * way a model viewer does, rather than all eight corners, and never starts outside the sky dome.
    */
-  function frame(): void {
+  function frame(circling = true): void {
     if (!model) return;
     const box = area ?? courseBounds(model);
     if (box.isEmpty()) return;
@@ -302,24 +330,47 @@ export function createRacecourseScene({
     camera.lookAt(sphere.center);
 
     // Circle the course for a moment before handing over: the camera is already where it should be,
-    // and a slow orbit reads as the model arriving rather than a still frame appearing.
+    // and a slow orbit reads as the model arriving rather than a still frame appearing. The reader can
+    // ask for the same view without the arrival, which is the free camera.
     framed = {
       centre: sphere.center.clone(),
       distance,
       polar: Math.acos(direction.y)
     };
-    introAngle = Math.atan2(direction.x, direction.z);
-    intro = true;
-    fly.disable();
+    orbitAngle = Math.atan2(direction.x, direction.z);
+
+    if (circling) {
+      setSpinning(true);
+    } else {
+      setMode('fly');
+      fly.enable();
+    }
 
     // The fly camera starts looking wherever the camera points; it takes over on the first input.
   }
 
-  /** Ends the opening orbit and hands the camera to the reader. */
+  /**
+   * Starts or stops the orbit. Starting from a flown-away camera puts it back on the framed ring, at
+   * the bearing it is looking from now, so the course turns from where the reader is rather than
+   * jumping to an unrelated side.
+   */
+  function setSpinning(on: boolean): void {
+    if (on) {
+      if (!framed) return;
+      const offset = camera.position.clone().sub(framed.centre);
+      orbitAngle = Math.atan2(offset.x, offset.z);
+      // The orbit owns the camera while it runs, so the pointer hands back and the mouse stops nudging.
+      fly.disable();
+      setMode('orbit');
+    } else if (mode === 'orbit') {
+      setMode('fly');
+      fly.enable();
+    }
+  }
+
+  /** Ends the orbit and hands the camera to the reader; the buttons-only view keeps it. */
   function takeControl(): void {
-    if (!intro) return;
-    intro = false;
-    fly.enable();
+    setSpinning(false);
   }
 
   const MOVEMENT_KEYS = new Set(['KeyW', 'KeyA', 'KeyS', 'KeyD', 'KeyQ', 'KeyE', 'KeyR', 'KeyF']);
@@ -331,7 +382,8 @@ export function createRacecourseScene({
 
   /**
    * Zoom, Google-Maps style: a step along the line of sight, sized by how far the camera already is
-   * from what it is looking at. Any zoom is an interaction, so it takes the camera over.
+   * from what it is looking at. Zooming is an interaction, so it takes the camera over, except in the
+   * straight-down view, where the camera stays put until the reader picks another view.
    */
   function zoom(direction: 1 | -1): void {
     takeControl();
@@ -341,11 +393,41 @@ export function createRacecourseScene({
     camera.position.addScaledVector(camera.getWorldDirection(new Vector3()), step);
   }
 
-  function spin(deltaSeconds: number): void {
+  /**
+   * Looks straight down at the course from above its centre, north up, at the distance that fits the
+   * whole ring in the stage. A straight-down view has no bearing to circle from, so it stops the orbit
+   * rather than letting it spin the course out from under the shot.
+   */
+  function topDown(): void {
+    const box = area ?? (model ? courseBounds(model) : undefined);
+    if (!box || box.isEmpty()) return;
+    const centre = framed?.centre ?? box.getBoundingSphere(new Sphere()).center;
+    fly.disable();
+    setMode('topDown');
+
+    // Screen vertical is the course's north-south span, screen horizontal its east-west span.
+    const extent = box.getSize(new Vector3());
+    const tanVertical = Math.tan((camera.fov * Math.PI) / 360);
+    const tanHorizontal = tanVertical * camera.aspect;
+    const distance =
+      Math.max(extent.z / 2 / tanVertical, extent.x / 2 / tanHorizontal) * FRAME_MARGIN;
+
+    camera.far = distance + sceneRadius * 4;
+    camera.near = NEAR_PLANE;
+    camera.updateProjectionMatrix();
+
+    camera.position.set(centre.x, centre.y + distance, centre.z);
+    // Looking along the up vector leaves the roll undefined, so north is made the up of the shot.
+    camera.up.set(0, 0, -1);
+    camera.lookAt(centre);
+    camera.up.set(0, 1, 0);
+  }
+
+  function orbit(deltaSeconds: number): void {
     if (!framed) return;
-    introAngle += INTRO_SPIN * deltaSeconds;
+    orbitAngle += ORBIT_SPIN * deltaSeconds;
     camera.position
-      .setFromSphericalCoords(framed.distance, framed.polar, introAngle)
+      .setFromSphericalCoords(framed.distance, framed.polar, orbitAngle)
       .add(framed.centre);
     camera.lookAt(framed.centre);
   }
@@ -375,8 +457,10 @@ export function createRacecourseScene({
   }
 
   /** Collects the trees the oval encloses, with the position their quad turns around. */
-  function collectBillboards(target: Object3D): { node: Object3D; x: number; z: number }[] {
-    const { inside } = surfaceFootprint(target);
+  function collectBillboards(
+    target: Object3D,
+    inside: Footprint['inside']
+  ): { node: Object3D; x: number; z: number }[] {
     const trees: { node: Object3D; x: number; z: number }[] = [];
     const position = new Vector3();
     const box = new Box3();
@@ -404,25 +488,9 @@ export function createRacecourseScene({
     }
   }
 
-  /** The racing surface meshes, and the ground positions their vertices give. */
+  /** The racing surface meshes. */
   function collectSurface(target: Object3D): void {
     surfaces = [];
-    surfacePoints = [];
-    surfacePointsByKind.turf = [];
-    surfacePointsByKind.dirt = [];
-    goals.turf = undefined;
-    goals.dirt = undefined;
-    const point = new Vector3();
-    // The finish line of each surface, from the model's own markers.
-    target.traverse((child) => {
-      if (child.name === 'pos_goal_turf') {
-        child.getWorldPosition(point);
-        goals.turf = [point.x, point.z];
-      } else if (child.name === 'pos_goal_dirt') {
-        child.getWorldPosition(point);
-        goals.dirt = [point.x, point.z];
-      }
-    });
     target.traverse((child) => {
       const mesh = child as Object3D & {
         isMesh?: boolean;
@@ -433,32 +501,38 @@ export function createRacecourseScene({
         };
       };
       if (!SURFACE_MESH.test(child.name) || !mesh.isMesh || !mesh.geometry) return;
-      const position = mesh.geometry.attributes.position;
-      if (!position) return;
-      const kind: SurfaceKind = child.name.startsWith('dirt') ? 'dirt' : 'turf';
       surfaces.push(child);
-      child.updateWorldMatrix(true, false);
-      for (let index = 0; index < position.count; index += 1) {
-        point.set(position.getX(index), 0, position.getZ(index)).applyMatrix4(child.matrixWorld);
-        surfacePoints.push([point.x, point.z]);
-        surfacePointsByKind[kind].push([point.x, point.z]);
-      }
     });
   }
 
-  /** Height of the track under a point, so a marked line sits on the surface rather than through it. */
-  function surfaceHeight(x: number, z: number): number {
+  /**
+   * Height of the track under a point, so a marked line sits on the surface rather than through it. A
+   * point that misses the surface has no height, which is not the same as sitting at zero.
+   */
+  function surfaceHeight(x: number, z: number): number | undefined {
     if (surfaces.length === 0) return 0.5;
     raycaster.set(new Vector3(x, (area?.max.y ?? 100) + 50, z), DOWN);
-    return (raycaster.intersectObjects(surfaces, false)[0]?.point.y ?? 0) + 0.6;
+    const hit = raycaster.intersectObjects(surfaces, false)[0];
+    return hit ? hit.point.y + 0.6 : undefined;
+  }
+
+  /**
+   * How far a point on the line is from the rail, along `(ux, uz)` pointing away from the infield: the
+   * first step inward that the footprint calls inside. The footprint is a coarse grid, so this is coarse
+   * too; `highlight` takes the middle of all of them rather than trusting one point.
+   */
+  function median(values: number[]): number {
+    const sorted = [...values].sort((a, b) => a - b);
+    return sorted[Math.floor(sorted.length / 2)] as number;
   }
 
   /**
    * Marks a course's racing line. The simulator's course geometry is not in the model's frame, so the
    * line is fitted onto the racing surface first: the transform that lays it on the track, rather than a
-   * hand-kept table of offsets per course.
+   * hand-kept table of offsets per course. The band hangs off the rail rather than off the line, so its
+   * inner edge meets the fence on any course, whichever lane it runs in.
    */
-  function highlight(points?: readonly (readonly [number, number])[], kind?: SurfaceKind): void {
+  function highlight(points?: readonly (readonly [number, number])[]): void {
     if (courseLine) {
       courseLine.removeFromParent();
       disposeModel(courseLine);
@@ -466,34 +540,97 @@ export function createRacecourseScene({
     }
     if (!points || points.length < 8 || !model) return;
 
-    // Fit against the surface the course is actually run on; the other track is a decoy.
-    const target =
-      kind && surfacePointsByKind[kind].length > 0 ? surfacePointsByKind[kind] : surfacePoints;
-    if (target.length === 0) return;
-    // The goal marker says which straight is the home straight: the finish is on it.
-    const anchor = kind ? goals[kind] : undefined;
-    const fit = fitCourseLine(target, points, anchor ? { anchor } : {});
-    if (!fit || fit.error > MAX_FIT_ERROR) return;
-    const placed = applyCourseTransform(points, fit);
+    // The simulator's line is the game's own lane spline, authored in the course model's space; the model's
+    // X axis is the mirror of it, and that is the whole difference. No rotation, no slide, no fit: the
+    // polyline is the inner rail, and lane 0 is exactly where the horses run.
+    const placed = points.map(([x, z]) => [-x, z] as [number, number]);
 
-    const HALF_WIDTH = COURSE_LINE_HALF_WIDTH;
-    const positions: number[] = [];
-    const indices: number[] = [];
-    for (let index = 0; index < placed.length; index += 1) {
-      const [x, z] = placed[index] as readonly [number, number];
-      const before = placed[Math.max(0, index - 1)] as readonly [number, number];
-      const after = placed[Math.min(placed.length - 1, index + 1)] as readonly [number, number];
+    // A lap closes on itself at the finish, so its tail repeats its head and the tangent there spins until
+    // the ribbon pinches. Drop the repeat and treat the two ends as neighbours from then on.
+    const loop = [...placed];
+    const endsMeet = (points: readonly (readonly [number, number])[]) => {
+      const head = points[0] as readonly [number, number];
+      const tail = points[points.length - 1] as readonly [number, number];
+      return Math.hypot(head[0] - tail[0], head[1] - tail[1]) <= LAP_SEAM;
+    };
+    const seam = loop.length > 8 && endsMeet(loop);
+    if (seam) while (loop.length > 8 && endsMeet(loop)) loop.pop();
+    const at = (index: number) =>
+      seam
+        ? ((index % loop.length) + loop.length) % loop.length
+        : Math.min(Math.max(index, 0), loop.length - 1);
+
+    // One normal per point, and one side for the whole line: the shape's middle is the infield, so a
+    // normal that has to turn toward it is the inward one. Both are smoothed, because a single point
+    // disagreeing with its neighbours is what folds the band over itself.
+    const normals: [number, number][] = [];
+    for (let index = 0; index < loop.length; index += 1) {
+      const before = loop[at(index - 1)] as readonly [number, number];
+      const after = loop[at(index + 1)] as readonly [number, number];
       const dx = after[0] - before[0];
       const dz = after[1] - before[1];
       const length = Math.hypot(dx, dz) || 1;
-      const nx = (-dz / length) * HALF_WIDTH;
-      const nz = (dx / length) * HALF_WIDTH;
-      const y = surfaceHeight(x, z);
-      positions.push(x - nx, y, z - nz, x + nx, y, z + nz);
+      normals.push([-dz / length, dx / length]);
+    }
+    const centre = (area ?? courseBounds(model)).getBoundingSphere(new Sphere()).center;
+    const inwardOf = (index: number): number => {
+      const [x, z] = loop[index] as readonly [number, number];
+      const [nx, nz] = normals[index] as readonly [number, number];
+      return (centre.x - x) * nx + (centre.z - z) * nz > 0 ? 1 : -1;
+    };
+    const inwards = loop.map((_, index) => {
+      let vote = 0;
+      for (let offset = -RAIL_SMOOTHING; offset <= RAIL_SMOOTHING; offset += 1)
+        vote += inwardOf(at(index + offset));
+      return vote >= 0 ? 1 : -1;
+    });
+
+    // The band's height: the track steps from facet to facet, and a point the ray misses has no height at
+    // all, which used to drop the band onto the model's floor for a stretch.
+    const raw = loop.map(([x, z]) => surfaceHeight(x, z));
+    const known = raw.filter((value): value is number => value !== undefined);
+    const floor = known.length > 0 ? median(known) : 0.5;
+    const heights = raw.map((value) => value ?? floor);
+    const flattened = heights.map((_, index) => {
+      const nearby: number[] = [];
+      for (let offset = -RAIL_SMOOTHING; offset <= RAIL_SMOOTHING; offset += 1)
+        nearby.push(heights[at(index + offset)] as number);
+      return nearby.reduce((total, value) => total + value, 0) / nearby.length;
+    });
+
+    const positions: number[] = [];
+    const indices: number[] = [];
+    for (let index = 0; index < loop.length; index += 1) {
+      const [x, z] = loop[index] as readonly [number, number];
+      const [nx, nz] = normals[index] as readonly [number, number];
+      const inward = inwards[index] as number;
+      const ix = nx * inward;
+      const iz = nz * inward;
+      const y = flattened[index] as number;
+      // The band starts just outside the rail the line already is, and reaches a lane out into the track.
+      positions.push(
+        x - ix * RAIL_CLEARANCE,
+        y,
+        z - iz * RAIL_CLEARANCE,
+        x - ix * COURSE_LINE_WIDTH,
+        y,
+        z - iz * COURSE_LINE_WIDTH
+      );
       if (index > 0) {
-        const at = (index - 1) * 2;
-        indices.push(at, at + 1, at + 2, at + 1, at + 3, at + 2);
+        const previous = (index - 1) * 2;
+        indices.push(
+          previous,
+          previous + 1,
+          previous + 2,
+          previous + 1,
+          previous + 3,
+          previous + 2
+        );
       }
+    }
+    if (seam) {
+      const last = (loop.length - 1) * 2;
+      indices.push(last, last + 1, 0, last + 1, 1, 0);
     }
 
     const geometry = new BufferGeometry();
@@ -515,6 +652,50 @@ export function createRacecourseScene({
     );
     courseLine.renderOrder = 2;
     scene.add(courseLine);
+  }
+
+  /**
+   * Draws the racing surface's own edges: the two rails, and the ends of the ribbon. A marked course is
+   * laid against one of them, so seeing them is how that fit gets checked.
+   */
+  function buildRailOutline(): void {
+    if (railOutline) {
+      railOutline.removeFromParent();
+      railOutline.traverse((child) => {
+        const line = child as LineSegments;
+        line.geometry?.dispose();
+        (line.material as Material | undefined)?.dispose();
+      });
+      railOutline = undefined;
+    }
+    if (!railsShown || surfaces.length === 0) return;
+
+    const group = new Group();
+    for (const child of surfaces) {
+      const mesh = child as Mesh;
+      if (!mesh.geometry) continue;
+      const edges = new LineSegments(
+        new EdgesGeometry(mesh.geometry, RAIL_EDGE_ANGLE),
+        new LineBasicMaterial({
+          color: RAIL_OUTLINE,
+          depthWrite: false,
+          polygonOffset: true,
+          polygonOffsetFactor: -4
+        })
+      );
+      // The geometry is in the mesh's own frame, so the line takes the mesh's place in the world.
+      mesh.updateWorldMatrix(true, false);
+      edges.applyMatrix4(mesh.matrixWorld);
+      edges.renderOrder = 3;
+      group.add(edges);
+    }
+    railOutline = group;
+    scene.add(group);
+  }
+
+  function showRails(on: boolean): void {
+    railsShown = on;
+    buildRailOutline();
   }
 
   function release(material: Material): void {
@@ -628,8 +809,10 @@ export function createRacecourseScene({
       Math.max((sky?.radius ?? 1000) * 2.5, sceneRadius * 2)
     );
     area = courseBounds(loaded);
-    billboards = collectBillboards(loaded);
+    infield = surfaceFootprint(loaded);
+    billboards = collectBillboards(loaded, infield.inside);
     collectSurface(loaded);
+    buildRailOutline();
     // Fog starts past the course itself, so only the scenery and the horizon are hazed over.
     const reach = area.getSize(new Vector3()).length() / 2;
     fog.near = reach * 1.1;
@@ -661,8 +844,8 @@ export function createRacecourseScene({
     if (stopped) return;
     const delta = (now - lastFrame) / 1000;
     lastFrame = now;
-    if (intro || loading) spin(delta);
-    else fly.update(delta);
+    if (mode === 'orbit' || loading) orbit(delta);
+    else if (mode === 'fly') fly.update(delta);
     faceBillboards();
     followSky();
     renderer.render(scene, camera);
@@ -687,6 +870,8 @@ export function createRacecourseScene({
     canvas.removeEventListener('pointerdown', takeControl);
     window.removeEventListener('keydown', onMovementKey);
     fly.dispose();
+    railsShown = false;
+    buildRailOutline();
     clear();
     renderer.dispose();
     renderer.forceContextLoss();
@@ -707,5 +892,5 @@ export function createRacecourseScene({
   resize();
   render();
 
-  return { load, frame, zoom, highlight, dispose };
+  return { load, frame, spin: setSpinning, topDown, zoom, highlight, rails: showRails, dispose };
 }
