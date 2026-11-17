@@ -6,6 +6,8 @@
 
 import {
   Box3,
+  Color,
+  Fog,
   Group,
   LoadingManager,
   PerspectiveCamera,
@@ -82,6 +84,13 @@ export function createRacecourseScene({
   renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
 
   const scene = new Scene();
+  // The course has no ground beyond its apron, and the sky is a hemisphere, so below the horizon there
+  // is nothing to draw: haze keeps that from reading as a hole in the world. Fog does the same for the
+  // far scenery, which the game also fades out.
+  const HAZE = 0xa8c4dd;
+  scene.background = new Color(HAZE);
+  const fog = new Fog(HAZE, 1200, 4200);
+  scene.fog = fog;
   const camera = new PerspectiveCamera(50, 1, NEAR_PLANE, 20000);
   camera.position.copy(OPENING_DIRECTION).multiplyScalar(1200);
 
@@ -89,7 +98,9 @@ export function createRacecourseScene({
   // read that instead of shading a normal.
 
   const fly = createFlyCamera({ camera, canvas, bounds: () => world });
-  let skyDome: Sphere | undefined;
+  /** The course's sky dome, which follows the camera so the reader is always inside it. */
+  let sky:
+    { node: Object3D; centre: Vector3; radius: number; base: Vector3; scale: number } | undefined;
   /** How far the reader may fly from the course: well past the dome, so the opening frame fits. */
   let world: Sphere | undefined;
   let model: Object3D | undefined;
@@ -127,10 +138,64 @@ export function createRacecourseScene({
     return parts.isEmpty() ? new Box3().setFromObject(target) : parts;
   }
 
-  /** The sky is drawn from inside it: it appears once the camera is close enough to be under it. */
-  function setSkyVisible(visible: boolean): void {
-    if (!model) return;
-    for (const child of model.children) if (SKY_NODE.test(child.name)) child.visible = visible;
+  /**
+   * Keeps the sky around the reader. The dome is painted on its inside, so from above the course it
+   * reads as a bowl; sliding it under the camera and growing it to stay outside the camera means the
+   * reader is always inside it and sees sky rather than the shape of the dome.
+   */
+  function followSky(): void {
+    if (!sky) return;
+    const distance = camera.position.distanceTo(sky.centre);
+    // Just far enough that the camera is inside it, so the dome keeps its painted detail: growing it
+    // more pushes the clouds into a thin band at the top of the frame.
+    const scale = Math.max(1, (distance * 1.3) / sky.radius);
+    sky.node.position.set(
+      sky.base.x + (camera.position.x - sky.centre.x),
+      sky.base.y,
+      sky.base.z + (camera.position.z - sky.centre.z)
+    );
+    sky.node.scale.setScalar(sky.scale * scale);
+  }
+
+  /**
+   * Takes the haze colour from the sky texture's own horizon, so the edge of the dome and the empty
+   * space below it meet in the same tone instead of showing a seam.
+   */
+  function hazeFromSky(node: Object3D): void {
+    let map: Texture | undefined;
+    node.traverse((child) => {
+      const mesh = child as Object3D & { material?: Material | Material[] };
+      const materials = Array.isArray(mesh.material) ? mesh.material : [mesh.material];
+      for (const material of materials) {
+        const texture = (material as { map?: Texture } | undefined)?.map;
+        if (texture) map = texture;
+      }
+    });
+
+    const image = map?.image as (CanvasImageSource & { height?: number }) | undefined;
+    if (!image || typeof document === 'undefined') return;
+    try {
+      const canvas = document.createElement('canvas');
+      canvas.width = 1;
+      canvas.height = 1;
+      const context = canvas.getContext('2d');
+      if (!context) return;
+
+      const height = image.height ?? 1;
+      const edge = (from: number) => {
+        context.clearRect(0, 0, 1, 1);
+        context.drawImage(image, 0, from, 1, Math.max(1, height * 0.02), 0, 0, 1, 1);
+        const [red = 0, green = 0, blue = 0] = context.getImageData(0, 0, 1, 1).data;
+        return new Color(red / 255, green / 255, blue / 255);
+      };
+
+      // glTF textures are not flipped, so the image's bottom row is the dome's rim: the horizon.
+      const horizon = edge(height * 0.98).lerp(new Color(0xffffff), 0.35);
+      scene.background = horizon;
+      fog.color.copy(horizon);
+    } catch {
+      // A texture the browser will not let us read keeps the default haze.
+    }
   }
 
   function resize(): void {
@@ -319,14 +384,39 @@ export function createRacecourseScene({
     scene.add(loaded);
     sceneRadius = new Box3().setFromObject(loaded).getBoundingSphere(new Sphere()).radius;
     for (const child of loaded.children)
-      if (SKY_NODE.test(child.name))
-        skyDome = new Box3().setFromObject(child).getBoundingSphere(new Sphere());
+      if (SKY_NODE.test(child.name)) {
+        const bounds = new Box3().setFromObject(child).getBoundingSphere(new Sphere());
+        sky = {
+          node: child,
+          centre: bounds.center.clone(),
+          radius: bounds.radius,
+          base: child.position.clone(),
+          scale: child.scale.x
+        };
+      }
     world = new Sphere(
-      skyDome?.center.clone() ?? new Vector3(),
-      Math.max((skyDome?.radius ?? 1000) * 2.5, sceneRadius * 2)
+      sky?.centre.clone() ?? new Vector3(),
+      Math.max((sky?.radius ?? 1000) * 2.5, sceneRadius * 2)
     );
     area = courseBounds(loaded);
+    // Fog starts past the course itself, so only the scenery and the horizon are hazed over.
+    const reach = area.getSize(new Vector3()).length() / 2;
+    fog.near = reach * 1.1;
+    fog.far = reach * 4;
+    // The dome is unlit and painted: fogging it would wash the sky out.
+    for (const child of loaded.children)
+      if (SKY_NODE.test(child.name)) {
+        child.traverse((node) => {
+          const mesh = node as Object3D & {
+            material?: Material | Material[];
+          };
+          const materials = Array.isArray(mesh.material) ? mesh.material : [mesh.material];
+          for (const material of materials) if (material && 'fog' in material) material.fog = false;
+        });
+        hazeFromSky(child);
+      }
     frame();
+    followSky();
     if (previous) {
       previous.removeFromParent();
       disposeModel(previous);
@@ -341,9 +431,7 @@ export function createRacecourseScene({
     lastFrame = now;
     if (intro || loading) spin(delta);
     else fly.update(delta);
-    // The dome is drawn from inside: seen from above the course it is a hollow shell that reads as a
-    // bowl, so it only appears once the camera has flown down under its rim.
-    if (skyDome) setSkyVisible(camera.position.y < skyDome.center.y + skyDome.radius * 0.25);
+    followSky();
     renderer.render(scene, camera);
     frameHandle = requestAnimationFrame(render);
   }
