@@ -36,6 +36,11 @@ const NEAR_PLANE = 0.1;
 const SURFACE_MESH = /^(turf|dirt)_lm/;
 /** The trees: flat quads the game turns towards the camera. */
 const TREE_NODE = /^tree_/;
+/**
+ * The widest a single tree quad gets, in metres. Some courses also bake a whole tree line into one mesh
+ * (`tree_alpha` on Longchamp is 1.5 km across); turning that would swing every tree at once.
+ */
+const TREE_SPAN = 40;
 const TRACK_PART = /_000[01]_/;
 
 /** Leave the course inside the frame with a little air around it. */
@@ -341,8 +346,12 @@ export function createRacecourseScene({
     const { inside } = surfaceFootprint(target);
     const trees: { node: Object3D; x: number; z: number }[] = [];
     const position = new Vector3();
+    const box = new Box3();
     target.traverse((child) => {
       if (!TREE_NODE.test(child.name)) return;
+      // One tree, not a merged layer of them: those have no single angle to turn to.
+      box.setFromObject(child);
+      if (Math.max(box.max.x - box.min.x, box.max.z - box.min.z) > TREE_SPAN) return;
       child.getWorldPosition(position);
       if (inside(position.x, position.z)) trees.push({ node: child, x: position.x, z: position.z });
     });
