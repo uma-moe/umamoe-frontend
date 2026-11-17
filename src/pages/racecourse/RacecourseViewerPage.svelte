@@ -52,9 +52,6 @@
   const files = $derived(current ? (current.url ? [current.url] : current.parts) : []);
   /** The racing line to mark on the model, once its geometry is in. */
   const line = $derived(shapes[Number(courseId)]?.points as [number, number][] | undefined);
-  const currentCourse = $derived(
-    trackCourses.find((course) => String(course.course_id) === courseId)
-  );
 
   /** The course geometry is 16 MB, so it is fetched the first time a course is asked for. */
   async function ensureGeometry(): Promise<void> {
@@ -172,7 +169,6 @@
       <RacecourseScene
         urls={files}
         {line}
-        surface={currentCourse?.surface === 2 ? 'dirt' : 'turf'}
         label={current?.name ?? 'Racecourse'}
       />
     {/if}

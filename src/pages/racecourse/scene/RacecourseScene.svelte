@@ -4,8 +4,8 @@
   import Spinner from '@/components/feedback/Spinner.svelte';
   import {
     createRacecourseScene,
-    type RacecourseScene as RacecourseSceneView,
-    type SurfaceKind
+    type CameraMode,
+    type RacecourseScene as RacecourseSceneView
   } from './racecourse-scene';
   import { hasWebGL2 } from './webgl';
 
@@ -14,13 +14,11 @@
     urls?: string[];
     /** The racing line of the selected course, in simulator coordinates, to mark on the track. */
     line?: readonly (readonly [number, number])[];
-    /** Which track that course is run on. */
-    surface?: SurfaceKind;
     /** What the model shows, for the stage's accessible name and the loading card. */
     label: string;
   }
 
-  let { urls = [], line, surface, label }: Props = $props();
+  let { urls = [], line, label }: Props = $props();
 
   let host: HTMLDivElement;
   let canvas: HTMLCanvasElement;
@@ -28,6 +26,10 @@
   let unsupported = $state(false);
   let failure = $state('');
   let percent = $state<number | null>(null);
+  /** How the camera is driven, which decides what the controls and the hint offer. */
+  let mode = $state<CameraMode>('orbit');
+  /** Whether the racing surface's edges are drawn over the course. */
+  let rails = $state(false);
 
   function onProgress(loaded: number, total: number) {
     percent = total > 0 ? Math.round((loaded / total) * 100) : null;
@@ -43,7 +45,7 @@
     try {
       await scene.load(targets);
       // A new model drops the marked line; put back whatever course is selected.
-      scene.highlight(line, surface);
+      scene.highlight(line);
     } catch {
       failure = 'This course model could not be loaded. Check the connection and try again.';
     } finally {
@@ -56,7 +58,15 @@
       unsupported = true;
       return;
     }
-    view = createRacecourseScene({ canvas, host, handlers: { onProgress, onFailure } });
+    view = createRacecourseScene({
+      canvas,
+      host,
+      handlers: {
+        onProgress,
+        onFailure,
+        onViewChange: (next) => (mode = next)
+      }
+    });
     return () => {
       view?.dispose();
       view = undefined;
@@ -74,9 +84,16 @@
   $effect(() => {
     const scene = view;
     const points = line;
-    const kind = surface;
     if (!scene) return;
-    scene.highlight(points, kind);
+    scene.highlight(points);
+  });
+
+  // The rail outline follows the toggle; a new course redraws it from the scene itself.
+  $effect(() => {
+    const scene = view;
+    const on = rails;
+    if (!scene) return;
+    scene.rails(on);
   });
 </script>
 
@@ -86,7 +103,8 @@
 >
   <p class="sr-only">
     Interactive 3D view of the {label} course. Click to capture the pointer, then move the mouse to look
-    and use W, A, S, D to fly, Q and E to drop and rise.
+    and use W, A, S, D to fly, Q and E to drop and rise. The buttons zoom, spin the course, take the camera
+    over freely, and look straight down at it.
   </p>
 
   <canvas
@@ -128,11 +146,19 @@
       </div>
     </div>
   {:else}
-    <p class="racecourse-stage-hint">Click to look · WASD to fly · Q/E down and up</p>
+    <p class="racecourse-stage-hint">
+      {#if mode === 'topDown'}
+        Straight down · the buttons zoom
+      {:else if mode === 'orbit'}
+        Circling the course · click to take the camera
+      {:else}
+        Click to look · WASD to fly · Q/E down and up
+      {/if}
+    </p>
   {/if}
 
   {#if !unsupported && !failure}
-    <!-- Google-Maps style: a small stack in the corner for the two things a mouse-less reader needs. -->
+    <!-- Google-Maps style: a small stack in the corner for the things a mouse-less reader needs. -->
     <div class="racecourse-stage-controls">
       <IconButton
         icon="add"
@@ -147,10 +173,29 @@
         onclick={() => view?.zoom(-1)}
       />
       <IconButton
-        icon="frame-back"
-        label="Reset the view"
+        icon={mode === 'orbit' ? 'pause' : 'restart'}
+        label={mode === 'orbit' ? 'Stop the spin' : 'Spin the course'}
         size="sm"
-        onclick={() => view?.frame()}
+        onclick={() => view?.spin(mode !== 'orbit')}
+      />
+      <IconButton
+        icon="compass"
+        label="Free camera"
+        size="sm"
+        onclick={() => view?.frame(false)}
+      />
+      <IconButton
+        icon="grid"
+        label="Look straight down"
+        size="sm"
+        onclick={() => view?.topDown()}
+      />
+      <IconButton
+        icon="eye"
+        label="Show the rails"
+        selected={rails}
+        size="sm"
+        onclick={() => (rails = !rails)}
       />
     </div>
   {/if}
