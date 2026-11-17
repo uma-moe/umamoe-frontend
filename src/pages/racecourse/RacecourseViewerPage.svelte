@@ -98,7 +98,7 @@
 
       <RacecourseScene
         urls={files}
-        label={`${current?.name ?? 'Racecourse'} in 3D`}
+        label={current?.name ?? 'Racecourse'}
       />
     {/if}
   </div>
