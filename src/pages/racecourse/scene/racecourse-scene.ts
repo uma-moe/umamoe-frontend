@@ -14,8 +14,6 @@ import {
   Raycaster,
   Scene,
   Sphere,
-  DoubleSide,
-  MeshBasicMaterial,
   Texture,
   Vector3,
   WebGLRenderer,
@@ -26,6 +24,7 @@ import { GLTFLoader, type GLTF } from 'three/addons/loaders/GLTFLoader.js';
 import { createFlyCamera } from './fly-camera';
 import { applyUnityMaterials } from './unity-materials';
 import { SKY_NODE } from './sky';
+import { infieldFootprint, type Footprint } from './infield';
 
 /** Close enough to the ground that the track surface stays in front of the near plane. */
 const NEAR_PLANE = 0.1;
@@ -35,6 +34,8 @@ const NEAR_PLANE = 0.1;
  * track part also carries the far scenery and the cloud ring, so framing its whole box opens too wide.
  */
 const SURFACE_MESH = /^(turf|dirt)_lm/;
+/** The trees: flat quads the game turns towards the camera. */
+const TREE_NODE = /^tree_/;
 const TRACK_PART = /_000[01]_/;
 
 /** Leave the course inside the frame with a little air around it. */
@@ -114,6 +115,8 @@ export function createRacecourseScene({
     | undefined;
   /** How far the reader may fly from the course: well past the dome, so the opening frame fits. */
   let world: Sphere | undefined;
+  /** Trees inside the oval. They are flat quads, so they only read as trees when they face the camera. */
+  let billboards: { node: Object3D; x: number; z: number }[] = [];
   let model: Object3D | undefined;
   let area: Box3 | undefined;
   let sceneRadius = 1000;
@@ -157,9 +160,12 @@ export function createRacecourseScene({
   function followSky(): void {
     if (!sky) return;
     const distance = camera.position.distanceTo(sky.centre);
-    // Just far enough that the camera is inside it, so the dome keeps its painted detail: growing it
-    // more pushes the clouds into a thin band at the top of the frame.
-    const factor = Math.max(1, (distance * 1.3) / sky.radius);
+    // Two floors on the size: big enough to stay outside the camera, and big enough that the dome's rim
+    // falls outside the vertical field of view. A rim crossing the frame reads as a band of sky laid
+    // over the course instead of as the sky behind it.
+    const above = Math.max(camera.position.y - sky.centre.y, 0);
+    const halfFov = Math.tan((camera.fov * Math.PI) / 360) * 0.95;
+    const factor = Math.max(1, (distance * 1.3) / sky.radius, above / halfFov / sky.radius);
     for (const { node, base, scale } of sky.nodes) {
       node.position.set(
         base.x + (camera.position.x - sky.centre.x),
@@ -306,6 +312,56 @@ export function createRacecourseScene({
     camera.lookAt(framed.centre);
   }
 
+  /** The racing surface's footprint, from its vertices: what the oval encloses is the infield. */
+  function surfaceFootprint(target: Object3D): Footprint {
+    const points: [number, number][] = [];
+    const point = new Vector3();
+    target.traverse((child) => {
+      const mesh = child as Object3D & {
+        geometry?: {
+          attributes: {
+            position?: { count: number; getX(i: number): number; getZ(i: number): number };
+          };
+        };
+      };
+      if (!SURFACE_MESH.test(child.name) || !mesh.geometry) return;
+      const position = mesh.geometry.attributes.position;
+      if (!position) return;
+      child.updateWorldMatrix(true, false);
+      for (let index = 0; index < position.count; index += 1) {
+        point.set(position.getX(index), 0, position.getZ(index)).applyMatrix4(child.matrixWorld);
+        points.push([point.x, point.z]);
+      }
+    });
+    return infieldFootprint(points);
+  }
+
+  /** Collects the trees the oval encloses, with the position their quad turns around. */
+  function collectBillboards(target: Object3D): { node: Object3D; x: number; z: number }[] {
+    const { inside } = surfaceFootprint(target);
+    const trees: { node: Object3D; x: number; z: number }[] = [];
+    const position = new Vector3();
+    target.traverse((child) => {
+      if (!TREE_NODE.test(child.name)) return;
+      child.getWorldPosition(position);
+      if (inside(position.x, position.z)) trees.push({ node: child, x: position.x, z: position.z });
+    });
+    return trees;
+  }
+
+  /**
+   * Turns each infield tree to face the camera, keeping it upright the way the game draws them. Looking
+   * straight down gives no direction to turn to, so the last angle is kept rather than jittering.
+   */
+  function faceBillboards(): void {
+    for (const tree of billboards) {
+      const dx = camera.position.x - tree.x;
+      const dz = camera.position.z - tree.z;
+      if (dx * dx + dz * dz < 1) continue;
+      tree.node.rotation.y = Math.atan2(dx, dz);
+    }
+  }
+
   function release(material: Material): void {
     for (const value of Object.values(material)) if (value instanceof Texture) value.dispose();
     material.dispose();
@@ -417,6 +473,7 @@ export function createRacecourseScene({
       Math.max((sky?.radius ?? 1000) * 2.5, sceneRadius * 2)
     );
     area = courseBounds(loaded);
+    billboards = collectBillboards(loaded);
     // Fog starts past the course itself, so only the scenery and the horizon are hazed over.
     const reach = area.getSize(new Vector3()).length() / 2;
     fog.near = reach * 1.1;
@@ -432,19 +489,7 @@ export function createRacecourseScene({
           const materials = Array.isArray(mesh.material) ? mesh.material : [mesh.material];
           for (const material of materials) if (material && 'fog' in material) material.fog = false;
         });
-        const haze = hazeFromSky(child);
-        // The dome is only its upper half, so a view from above its rim looked into nothing. A mirrored
-        // copy closes it into a sphere, painted flat in the horizon haze: below the skyline the world is
-        // distance, not more sky.
-        const below = new MeshBasicMaterial({ color: haze, side: DoubleSide, fog: false });
-        const lower = child.clone(true);
-        lower.scale.y *= -1;
-        lower.traverse((node) => {
-          const mesh = node as Object3D & { material?: Material | Material[] };
-          if (mesh.material) mesh.material = below;
-        });
-        loaded.add(lower);
-        sky?.nodes.push({ node: lower, base: lower.position.clone(), scale: lower.scale.clone() });
+        hazeFromSky(child);
       }
     frame();
     followSky();
@@ -462,6 +507,7 @@ export function createRacecourseScene({
     lastFrame = now;
     if (intro || loading) spin(delta);
     else fly.update(delta);
+    faceBillboards();
     followSky();
     renderer.render(scene, camera);
     frameHandle = requestAnimationFrame(render);
