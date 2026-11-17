@@ -83,8 +83,10 @@ export function createRacecourseScene({
   // No lights: the game bakes its lighting into the course's lightmap, and the rebuilt materials
   // read that instead of shading a normal.
 
-  const fly = createFlyCamera({ camera, canvas, bounds: () => skyDome });
+  const fly = createFlyCamera({ camera, canvas, bounds: () => world });
   let skyDome: Sphere | undefined;
+  /** How far the reader may fly from the course: well past the dome, so the opening frame fits. */
+  let world: Sphere | undefined;
   let model: Object3D | undefined;
   let area: Box3 | undefined;
   let sceneRadius = 1000;
@@ -150,10 +152,8 @@ export function createRacecourseScene({
     const halfLateral = (Math.abs(extent.x * right.x) + Math.abs(extent.z * right.z)) / 2;
     const halfVertical =
       (Math.abs(extent.x * up.x) + Math.abs(extent.y * up.y) + Math.abs(extent.z * up.z)) / 2;
-    const distance = Math.min(
-      Math.max(halfLateral / tanHorizontal, halfVertical / tanVertical) * FRAME_MARGIN,
-      skyDome ? skyDome.radius * 0.9 : Number.POSITIVE_INFINITY
-    );
+    const distance =
+      Math.max(halfLateral / tanHorizontal, halfVertical / tanVertical) * FRAME_MARGIN;
 
     camera.far = distance + sceneRadius * 4;
     camera.near = NEAR_PLANE;
@@ -269,6 +269,10 @@ export function createRacecourseScene({
     for (const child of loaded.children)
       if (SKY_NODE.test(child.name))
         skyDome = new Box3().setFromObject(child).getBoundingSphere(new Sphere());
+    world = new Sphere(
+      skyDome?.center.clone() ?? new Vector3(),
+      Math.max((skyDome?.radius ?? 1000) * 2.5, sceneRadius * 2)
+    );
     area = courseBounds(loaded);
     frame();
     if (previous) {
