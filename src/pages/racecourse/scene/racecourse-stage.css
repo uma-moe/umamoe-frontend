@@ -86,6 +86,21 @@
   pointer-events: none;
 }
 
+/* Where the camera is, so a view can be quoted and brought back. */
+.racecourse-stage-spot {
+  position: absolute;
+  inset: auto var(--space-3) var(--space-2) auto;
+  padding: 2px var(--space-2);
+  border-radius: var(--radius-sm);
+  background: var(--color-overlay);
+  color: var(--color-text-muted);
+  font-family: var(--font-mono);
+  font-size: var(--font-xs);
+  font-variant-numeric: tabular-nums;
+  pointer-events: none;
+  white-space: pre;
+}
+
 /* A corner stack, the way a map puts its zoom controls. */
 .racecourse-stage-controls {
   position: absolute;

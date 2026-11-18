@@ -33,6 +33,8 @@ import {
   type Side
 } from 'three';
 import type { GLTF } from 'three/addons/loaders/GLTFLoader.js';
+import { retain } from './dispose';
+import { isMesh } from './three-guards';
 
 interface UnitySlot {
   index: number;
@@ -60,8 +62,8 @@ function solidTexture(rgba: [number, number, number, number]): DataTexture {
   return texture;
 }
 
-/** Unity's declared defaults: `_MainTex` is white and `_LightTex` is grey. */
-const WHITE = solidTexture([255, 255, 255, 255]);
+/** Unity's declared defaults: `_MainTex` is white and `_LightTex` is grey. Shared by every rebuilt material, so no course frees it. */
+const WHITE = retain(solidTexture([255, 255, 255, 255]));
 
 /**
  * Softens a lightmap, because its resolution is that of the whole course packed into one atlas: up close
@@ -156,13 +158,25 @@ function sideFor(cull: number | undefined): Side {
 
 /** Material colours are serialized in sRGB, so they are converted into the renderer's linear space. */
 function linearColor(value: number[] | undefined, fallback: Color): Color {
-  if (!value || value.length < 3) return fallback.clone();
-  return new Color().setRGB(value[0]!, value[1]!, value[2]!, SRGBColorSpace);
+  const [red, green, blue] = value ?? [];
+  if (red === undefined || green === undefined || blue === undefined) return fallback.clone();
+  return new Color().setRGB(red, green, blue, SRGBColorSpace);
 }
 
 /** Lifts a baked shadow off black, so the ramp's dark end shades rather than cuts. */
 function softShadow(shadow: Color, light: Color): Color {
   return shadow.lerp(light, SHADOW_LIFT);
+}
+
+/** `_MulColor0`: the shader's overall tint, white when the material does not override it. */
+function tintOf(value: number[] | undefined): Vector4 {
+  const [red = 1, green = 1, blue = 1, alpha = 1] = value ?? [];
+  return new Vector4(red, green, blue, alpha);
+}
+
+/** The map a loaded material carries; the base `Material` type does not declare one. */
+function mapOf(material: Material): Texture | null {
+  return (material as { map?: Texture | null }).map ?? null;
 }
 
 /** The shader declares the game's own vertex-colour attribute under a name three will not touch. */
@@ -191,8 +205,7 @@ function ensureLightmapUv(geometry: BufferGeometry): void {
 export async function applyUnityMaterials(gltf: GLTF): Promise<void> {
   const meshes: Mesh[] = [];
   gltf.scene.traverse((child: Object3D) => {
-    const mesh = child as Mesh;
-    if (mesh.isMesh) meshes.push(mesh);
+    if (isMesh(child)) meshes.push(child);
   });
 
   const wanted = new Set<number>();
@@ -209,10 +222,17 @@ export async function applyUnityMaterials(gltf: GLTF): Promise<void> {
   const textures = new Map<number, Texture>();
   await Promise.all(
     [...wanted].map(async (index) => {
-      const texture = (await gltf.parser.getDependency('texture', index)) as Texture;
+      const texture: Texture = await gltf.parser.getDependency('texture', index);
       texture.colorSpace = SRGBColorSpace;
-      // Only the lightmap is softened: it is the one that carries the baked shadows.
-      textures.set(index, lightmaps.has(index) ? softenLightmap(texture) : texture);
+      if (!lightmaps.has(index)) {
+        textures.set(index, texture);
+        return;
+      }
+      // Only the lightmap is softened: it is the one that carries the baked shadows. The softened copy
+      // replaces the atlas everywhere it is drawn, so the one it replaced is freed here.
+      const softened = softenLightmap(texture);
+      if (softened !== texture) texture.dispose();
+      textures.set(index, softened);
     })
   );
 
@@ -249,15 +269,11 @@ export async function applyUnityMaterials(gltf: GLTF): Promise<void> {
               linearColor(unity?.colors?._LightmapColor, new Color(1, 1, 1))
             )
           },
-          uMulColor0: {
-            value: new Vector4(
-              ...((unity?.colors?._MulColor0 ?? [1, 1, 1, 1]) as [number, number, number, number])
-            )
-          }
+          uMulColor0: { value: tintOf(unity?.colors?._MulColor0) }
         }
       });
     } else {
-      const map = slot('_MainTex') ?? slot('_FilmGrainTex') ?? (source as MeshBasicMaterial).map;
+      const map = slot('_MainTex') ?? slot('_FilmGrainTex') ?? mapOf(source);
       material = new MeshBasicMaterial({
         map: map ?? null,
         color: map ? 0xffffff : 0x808080,

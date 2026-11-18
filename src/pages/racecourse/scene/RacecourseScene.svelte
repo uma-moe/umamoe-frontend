@@ -27,9 +27,11 @@
   let failure = $state('');
   let percent = $state<number | null>(null);
   /** How the camera is driven, which decides what the controls and the hint offer. */
-  let mode = $state<CameraMode>('orbit');
+  let mode = $state<CameraMode>('fly');
   /** Whether the racing surface's edges are drawn over the course. */
   let rails = $state(false);
+  /** Where the fly camera is, shown so a view can be quoted and reproduced. */
+  let spot = $state<{ x: number; y: number; z: number }>();
 
   function onProgress(loaded: number, total: number) {
     percent = total > 0 ? Math.round((loaded / total) * 100) : null;
@@ -64,7 +66,8 @@
       handlers: {
         onProgress,
         onFailure,
-        onViewChange: (next) => (mode = next)
+        onViewChange: (next) => (mode = next),
+        onCameraMove: (x, y, z) => (spot = { x, y, z })
       }
     });
     return () => {
@@ -103,8 +106,8 @@
 >
   <p class="sr-only">
     Interactive 3D view of the {label} course. Click to capture the pointer, then move the mouse to look
-    and use W, A, S, D to fly, Q and E to drop and rise. The buttons zoom, spin the course, take the camera
-    over freely, and look straight down at it.
+    and use W, A, S, D to fly, Q and E to drop and rise. The buttons zoom, frame the course again, and
+    look straight down at it.
   </p>
 
   <canvas
@@ -149,12 +152,15 @@
     <p class="racecourse-stage-hint">
       {#if mode === 'topDown'}
         Straight down · the buttons zoom
-      {:else if mode === 'orbit'}
-        Circling the course · click to take the camera
       {:else}
         Click to look · WASD to fly · Q/E down and up
       {/if}
     </p>
+    {#if mode === 'fly' && spot}
+      <p class="racecourse-stage-spot">
+        {spot.x.toFixed(0)} · {spot.y.toFixed(0)} · {spot.z.toFixed(0)}
+      </p>
+    {/if}
   {/if}
 
   {#if !unsupported && !failure}
@@ -173,16 +179,10 @@
         onclick={() => view?.zoom(-1)}
       />
       <IconButton
-        icon={mode === 'orbit' ? 'pause' : 'restart'}
-        label={mode === 'orbit' ? 'Stop the spin' : 'Spin the course'}
-        size="sm"
-        onclick={() => view?.spin(mode !== 'orbit')}
-      />
-      <IconButton
         icon="compass"
         label="Free camera"
         size="sm"
-        onclick={() => view?.frame(false)}
+        onclick={() => view?.freeCamera()}
       />
       <IconButton
         icon="grid"
