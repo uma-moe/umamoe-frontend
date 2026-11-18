@@ -32,7 +32,6 @@ import { GLTFLoader, type GLTF } from 'three/addons/loaders/GLTFLoader.js';
 import { createFlyCamera } from './fly-camera';
 import { applyUnityMaterials } from './unity-materials';
 import { SKY_NODE } from './sky';
-import { infieldFootprint, type Footprint } from './infield';
 
 /** Close enough to the ground that the track surface stays in front of the near plane. */
 const NEAR_PLANE = 0.1;
@@ -42,13 +41,19 @@ const NEAR_PLANE = 0.1;
  * track part also carries the far scenery and the cloud ring, so framing its whole box opens too wide.
  */
 const SURFACE_MESH = /^(turf|dirt)_lm/;
-/** The trees: flat quads the game turns towards the camera. */
-const TREE_NODE = /^tree_/;
+/**
+ * The trees: flat quads the game turns towards the camera. Courses name them by tree type (`tree_`,
+ * `treeA018`, `treeE_1_23`, and Hanshin's `_tree_H_39`), and the infield adds `sotetsu` palms and a
+ * planted `center_tree`.
+ */
+const TREE_NODE = /^_?(tree|sotetsu|center_tree)/i;
 /**
  * The widest a single tree quad gets, in metres. Some courses also bake a whole tree line into one mesh
  * (`tree_alpha` on Longchamp is 1.5 km across); turning that would swing every tree at once.
  */
 const TREE_SPAN = 40;
+/** How far past the course box a tree still counts as part of the course, in metres. */
+const TREE_REACH = 20;
 const TRACK_PART = /_000[01]_/;
 /** The colour a marked course is drawn in: bright against turf and dirt alike. */
 const HIGHLIGHT = 0x5ad9ff;
@@ -166,8 +171,6 @@ export function createRacecourseScene({
   let billboards: { node: Object3D; x: number; z: number }[] = [];
   /** The racing surface: the meshes a marked course is laid on. */
   let surfaces: Object3D[] = [];
-  /** What the oval encloses: the trees that live in there. */
-  let infield: Footprint | undefined;
   let courseLine: Mesh | undefined;
   /** The rails drawn over the racing surface, when the reader asks to see them. */
   let railOutline: Group | undefined;
@@ -432,36 +435,15 @@ export function createRacecourseScene({
     camera.lookAt(framed.centre);
   }
 
-  /** The racing surface's footprint, from its vertices: what the oval encloses is the infield. */
-  function surfaceFootprint(target: Object3D): Footprint {
-    const points: [number, number][] = [];
-    const point = new Vector3();
-    target.traverse((child) => {
-      const mesh = child as Object3D & {
-        geometry?: {
-          attributes: {
-            position?: { count: number; getX(i: number): number; getZ(i: number): number };
-          };
-        };
-      };
-      if (!SURFACE_MESH.test(child.name) || !mesh.geometry) return;
-      const position = mesh.geometry.attributes.position;
-      if (!position) return;
-      child.updateWorldMatrix(true, false);
-      for (let index = 0; index < position.count; index += 1) {
-        point.set(position.getX(index), 0, position.getZ(index)).applyMatrix4(child.matrixWorld);
-        points.push([point.x, point.z]);
-      }
-    });
-    return infieldFootprint(points);
-  }
-
-  /** Collects the trees the oval encloses, with the position their quad turns around. */
-  function collectBillboards(
-    target: Object3D,
-    inside: Footprint['inside']
-  ): { node: Object3D; x: number; z: number }[] {
+  /**
+   * Collects the trees standing in the course, with the position their quad turns around. The course box
+   * decides that, not the infield footprint: the footprint floods through gaps in the surface and calls
+   * most of the infield outside, so nothing in there would ever be turned.
+   */
+  function collectBillboards(target: Object3D): { node: Object3D; x: number; z: number }[] {
     const trees: { node: Object3D; x: number; z: number }[] = [];
+    if (!area) return trees;
+    const reach = area.clone().expandByScalar(TREE_REACH);
     const position = new Vector3();
     const box = new Box3();
     target.traverse((child) => {
@@ -470,7 +452,9 @@ export function createRacecourseScene({
       box.setFromObject(child);
       if (Math.max(box.max.x - box.min.x, box.max.z - box.min.z) > TREE_SPAN) return;
       child.getWorldPosition(position);
-      if (inside(position.x, position.z)) trees.push({ node: child, x: position.x, z: position.z });
+      if (position.x < reach.min.x || position.x > reach.max.x) return;
+      if (position.z < reach.min.z || position.z > reach.max.z) return;
+      trees.push({ node: child, x: position.x, z: position.z });
     });
     return trees;
   }
@@ -809,8 +793,7 @@ export function createRacecourseScene({
       Math.max((sky?.radius ?? 1000) * 2.5, sceneRadius * 2)
     );
     area = courseBounds(loaded);
-    infield = surfaceFootprint(loaded);
-    billboards = collectBillboards(loaded, infield.inside);
+    billboards = collectBillboards(loaded);
     collectSurface(loaded);
     buildRailOutline();
     // Fog starts past the course itself, so only the scenery and the horizon are hazed over.
