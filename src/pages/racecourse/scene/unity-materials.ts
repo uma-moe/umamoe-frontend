@@ -24,13 +24,13 @@ import {
   MeshBasicMaterial,
   ShaderMaterial,
   SRGBColorSpace,
+  Texture,
   Vector4,
   type BufferGeometry,
   type Material,
   type Mesh,
   type Object3D,
-  type Side,
-  type Texture
+  type Side
 } from 'three';
 import type { GLTF } from 'three/addons/loaders/GLTFLoader.js';
 
@@ -46,6 +46,13 @@ interface UnityMaterial {
 
 /** The lightmap is scaled before it indexes the ramp, per the shader's `mul r0.x, r0.x, l(4)`. */
 const RAMP_GAIN = 4;
+/**
+ * How far a baked shadow sits from the lit colour, toward the light end of the ramp. The atlas paints a
+ * shadow as one flat colour, so up close its floor would read as a hole rather than a shade.
+ */
+const SHADOW_LIFT = 0.3;
+/** How far the lightmap is blurred on load, in texels: one texel covers about a metre of track. */
+const LIGHTMAP_BLUR = 2;
 
 function solidTexture(rgba: [number, number, number, number]): DataTexture {
   const texture = new DataTexture(new Uint8Array(rgba), 1, 1);
@@ -55,6 +62,38 @@ function solidTexture(rgba: [number, number, number, number]): DataTexture {
 
 /** Unity's declared defaults: `_MainTex` is white and `_LightTex` is grey. */
 const WHITE = solidTexture([255, 255, 255, 255]);
+
+/**
+ * Softens a lightmap, because its resolution is that of the whole course packed into one atlas: up close
+ * a baked shadow edge is a texel wide and reads as a cut-out. The result keeps the source's addressing,
+ * orientation and colour space, and is skipped for anything a canvas cannot draw (compressed texturing).
+ */
+function softenLightmap(texture: Texture): Texture {
+  if (typeof document === 'undefined') return texture;
+  const image = texture.image as { width?: number; height?: number } | undefined;
+  if (!image?.width || !image.height) return texture;
+
+  const canvas = document.createElement('canvas');
+  canvas.width = image.width;
+  canvas.height = image.height;
+  const context = canvas.getContext('2d');
+  if (!context) return texture;
+
+  try {
+    context.filter = `blur(${LIGHTMAP_BLUR}px)`;
+    context.drawImage(image as CanvasImageSource, 0, 0);
+  } catch {
+    return texture;
+  }
+
+  const softened = new Texture(canvas);
+  softened.flipY = texture.flipY;
+  softened.wrapS = texture.wrapS;
+  softened.wrapT = texture.wrapT;
+  softened.colorSpace = texture.colorSpace;
+  softened.needsUpdate = true;
+  return softened;
+}
 
 const vertexShader = /* glsl */ `
   attribute vec2 uv1;
@@ -121,6 +160,11 @@ function linearColor(value: number[] | undefined, fallback: Color): Color {
   return new Color().setRGB(value[0]!, value[1]!, value[2]!, SRGBColorSpace);
 }
 
+/** Lifts a baked shadow off black, so the ramp's dark end shades rather than cuts. */
+function softShadow(shadow: Color, light: Color): Color {
+  return shadow.lerp(light, SHADOW_LIFT);
+}
+
 /** The shader declares the game's own vertex-colour attribute under a name three will not touch. */
 function ensureVertexColor(geometry: BufferGeometry): void {
   if (geometry.getAttribute('aUnityColor')) return;
@@ -152,16 +196,23 @@ export async function applyUnityMaterials(gltf: GLTF): Promise<void> {
   });
 
   const wanted = new Set<number>();
-  for (const mesh of meshes)
-    for (const material of [mesh.material].flat())
-      for (const slot of Object.values(unityOf(material)?.textures ?? {})) wanted.add(slot.index);
+  const lightmaps = new Set<number>();
+  for (const mesh of meshes) {
+    for (const material of [mesh.material].flat()) {
+      const unity = unityOf(material);
+      for (const slot of Object.values(unity?.textures ?? {})) wanted.add(slot.index);
+      const lightmap = unity?.textures?._LightTex?.index;
+      if (lightmap !== undefined) lightmaps.add(lightmap);
+    }
+  }
 
   const textures = new Map<number, Texture>();
   await Promise.all(
     [...wanted].map(async (index) => {
       const texture = (await gltf.parser.getDependency('texture', index)) as Texture;
       texture.colorSpace = SRGBColorSpace;
-      textures.set(index, texture);
+      // Only the lightmap is softened: it is the one that carries the baked shadows.
+      textures.set(index, lightmaps.has(index) ? softenLightmap(texture) : texture);
     })
   );
 
@@ -193,7 +244,10 @@ export async function applyUnityMaterials(gltf: GLTF): Promise<void> {
           uCutoff: { value: cutoff },
           uLightmapColor: { value: linearColor(unity?.colors?._LightmapColor, new Color(1, 1, 1)) },
           uLightmapShadowColor: {
-            value: linearColor(unity?.colors?._LightmapShadowColor, new Color(0.25, 0.25, 0.25))
+            value: softShadow(
+              linearColor(unity?.colors?._LightmapShadowColor, new Color(0.25, 0.25, 0.25)),
+              linearColor(unity?.colors?._LightmapColor, new Color(1, 1, 1))
+            )
           },
           uMulColor0: {
             value: new Vector4(
@@ -218,6 +272,12 @@ export async function applyUnityMaterials(gltf: GLTF): Promise<void> {
   };
 
   for (const mesh of meshes) {
+    // Rails and marker posts carry their shadow as a decal quad whose texture is a solid near-black patch:
+    // drawn at all it is a black box on the ground, and the ground has the shadow baked into its lightmap.
+    if (/shadow$/i.test(mesh.name)) {
+      mesh.visible = false;
+      continue;
+    }
     const geometry = mesh.geometry;
     ensureVertexColor(geometry);
     ensureLightmapUv(geometry);
