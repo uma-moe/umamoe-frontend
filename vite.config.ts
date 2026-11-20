@@ -3,6 +3,7 @@ import { sentryVitePlugin } from '@sentry/vite-plugin';
 import legacy, { type Options as LegacyOptions } from '@vitejs/plugin-legacy';
 import { fileURLToPath } from 'node:url';
 import { defineConfig, loadEnv } from 'vite';
+import { bucketAssets } from './scripts/bucket-assets';
 import { demoData } from './scripts/demo-data';
 import { companionStylesheetReload } from './scripts/companion-stylesheet-reload';
 import { skipModernPolyfillScan } from './scripts/modern-polyfill-scan';
@@ -95,6 +96,9 @@ export default defineConfig(async ({ mode, command }) => {
       companionStylesheetReload(),
       seoPagesPlugin(),
       ...(mode === 'demo' ? [await demoData()] : []),
+      ...(variables.VITE_ASSET_ORIGIN
+        ? [bucketAssets({ origin: variables.VITE_ASSET_ORIGIN, rootDirectory })]
+        : []),
       sentryVitePlugin({
         org: process.env.SENTRY_ORG,
         project: 'umamoe-frontend',
