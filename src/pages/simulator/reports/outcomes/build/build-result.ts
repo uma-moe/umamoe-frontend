@@ -210,6 +210,26 @@ export interface HeldSkill {
   cost: number;
 }
 
+/**
+ * What a build's chain is worth: every rank it holds, added up the way `heldSkill` adds their SP. A part the report does
+ * not value adds nothing, and a chain it values nowhere is undefined.
+ */
+function chainValue<T>(
+  held: number[],
+  worth: Map<number, T>,
+  pick: (part: T) => number | undefined
+): number | undefined {
+  let total: number | undefined;
+  for (const index of held) {
+    const part = worth.get(index);
+    const value = part === undefined ? undefined : pick(part);
+    if (value === undefined) continue;
+    total = (total ?? 0) + value;
+  }
+
+  return total;
+}
+
 function heldSkill(offers: PricedOffer[], key: number, held: number[]): HeldSkill {
   return {
     key,
@@ -350,8 +370,8 @@ export function theorizedResult({
         return [
           {
             skill: heldSkill(offers, row.chain[0]!, held),
-            value: part?.lengths ?? 0,
-            win: part?.win,
+            value: chainValue(held, worth, (part) => part.lengths) ?? 0,
+            win: chainValue(held, worth, (part) => part.win),
             fire: part?.fire ?? { rate: 0, mean_m: null },
             valuation: valuationOf(held[0]!),
             locked: held.some((index) => offers[index]?.locked === true),
@@ -633,8 +653,8 @@ function v5Result(result: OptimizeResult, offers: PricedOffer[]): TheorizedResul
         return [
           {
             skill: heldSkill(offers, row.chain[0]!, held),
-            value: part?.score,
-            win: part?.win,
+            value: chainValue(held, worth, (part) => part.score),
+            win: chainValue(held, worth, (part) => part.win),
             fire: part?.fire ?? { races: 0, rate: 0, mean_m: null },
             measurement: part?.measured,
             valuation: { source: part?.source ?? 'unknown', countGated: false },
@@ -722,7 +742,7 @@ function racedResult(result: OptimizeResult, offers: PricedOffer[]): TheorizedRe
         return [
           {
             skill: heldSkill(offers, row.chain[0]!, held),
-            value: worth.get(held[0]!),
+            value: chainValue(held, worth, (gain) => gain),
             fire: untimed,
             valuation: raced,
             locked: held.some((p) => offers[p]?.locked === true),
