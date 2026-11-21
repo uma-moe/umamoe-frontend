@@ -7,6 +7,7 @@ declare const __APP_CONFIG__: {
   measurementId: string;
   providersEnabled: boolean;
   statusApiUrl: string;
+  assetOrigin: string;
   fuseSlots: Record<string, string>;
 };
 

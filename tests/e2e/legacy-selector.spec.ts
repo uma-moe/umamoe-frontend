@@ -1,5 +1,12 @@
 import { expect, test } from './fixtures/test';
-import { mockDatabase, mockAffinity, mockVeteranProfile, profile, veteran } from './fixtures/api';
+import {
+  mockDatabase,
+  mockAffinity,
+  mockVeteranProfile,
+  profile,
+  veteran,
+  gameArt
+} from './fixtures/api';
 
 for (const source of ['device', 'account'] as const)
   test(`${source} veteran details choose a database legacy and ace affinities follow it`, async ({
@@ -220,7 +227,7 @@ test('legacy selector keeps full-width results with compact chips and a two-step
 
     await expect(
       addFilter.getByRole('button', { name: 'Add Shooting Star spark', exact: true }).locator('img')
-    ).toHaveAttribute('src', '/assets/images/skills/utx_ico_skill_20013.webp');
+    ).toHaveAttribute('src', gameArt('skills/icons/20013.webp'));
 
     const options = (await addFilter.locator('.unique-options').boundingBox())!;
     expect(options.x).toBeGreaterThanOrEqual(0);

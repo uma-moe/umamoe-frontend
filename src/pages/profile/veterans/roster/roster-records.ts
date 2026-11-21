@@ -1,4 +1,5 @@
-import { characterImagePath, type CharacterData } from '@/lib/game-data/characters';
+import { umaPortrait } from '@/lib/game-assets/art-links';
+import { type CharacterData } from '@/lib/game-data/characters';
 import type { SkillData } from '@/lib/game-data/skills/skills';
 import { aptitudeGrade } from '@/lib/profile/profile-display';
 import {
@@ -17,7 +18,7 @@ import type { ProfileVeteran, StadiumMember, SuccessionChara } from '../../profi
 import {
   aptitudeFields,
   statFields,
-  statIcon,
+  statFieldIcon,
   type AptitudeField,
   type StatField
 } from './roster-options';
@@ -68,7 +69,7 @@ export function veteranStatTiles(v: Pick<StadiumMember, StatField>): StatStripIt
     label: field.label,
     value: (v[field.id] ?? 0).toLocaleString(),
     tone: field.id === 'wiz' ? 'wit' : field.id,
-    icon: statIcon(field.id)
+    icon: statFieldIcon(field.id)
   }));
 }
 
@@ -106,7 +107,7 @@ export function veteranSummary(
         id: String(parent.position_id),
         position: parent.position_id === 10 ? ('P1' as const) : ('P2' as const),
         name: characters.get(parent.card_id)?.name ?? 'Parent',
-        image: characterImagePath(parent.card_id),
+        image: umaPortrait(parent.card_id),
         affinity: (parent.position_id === 10 ? affinity?.p1 : affinity?.p2) ?? Number.NaN,
         sparks: factorGroups(resolveVeteranFactors(parent))
       }))
@@ -127,7 +128,7 @@ export function veteranLineage(
   ): LineageNodeData => ({
     id: `${v.trained_chara_id}:${item.position_id}`,
     name: characters.get(item.card_id)?.name ?? `Character ${item.card_id}`,
-    image: characterImagePath(item.card_id),
+    image: umaPortrait(item.card_id),
     role,
     roleLabel: label,
     sparks: factorGroups(resolveVeteranFactors(item))

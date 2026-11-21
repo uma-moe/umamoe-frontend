@@ -4,7 +4,8 @@ import {
   mockDatabase,
   mockVeteranProfile,
   mockParentRowProfile,
-  record
+  record,
+  gameArt
 } from './fixtures/api';
 
 test('Shared legacy context survives URLs and presets without silently persisting in preferences', async ({
@@ -324,7 +325,7 @@ test('Veterans without an outfit ID retain the Angular name, portrait, search an
   await expect(dialog.locator('.summary-head h3')).toHaveText('Mejiro McQueen');
   await expect(dialog.locator('.summary-head .art img')).toHaveAttribute(
     'src',
-    '/game-assets/character_thumbs/chara_stand_1013_101301.webp'
+    gameArt('umas/101301/portrait.webp')
   );
   await dialog.getByRole('button', { name: 'Select Mejiro McQueen', exact: true }).press('Enter');
   await expect(dialog).not.toBeVisible();
@@ -616,7 +617,7 @@ test('Manual parent entries retain Angular storage, editing, selection, cancella
   const character = page.getByRole('dialog', { name: 'Select Character', exact: true });
   await expect(character.getByRole('radio').first().locator('img')).toHaveAttribute(
     'src',
-    /100101\.webp$/
+    gameArt('umas/100101/portrait.webp')
   );
   await expect(character.getByRole('radio', { name: /Chrono Genesis/ })).toHaveCount(0);
   await character.getByRole('searchbox', { name: 'Search characters' }).fill('Mejiro McQueen');
@@ -813,7 +814,7 @@ test('Manual node changes preserve their sparks and races, removal clears only t
   await character.getByRole('searchbox', { name: 'Search characters' }).fill('Mejiro McQueen');
   await character
     .getByRole('radio', { name: 'Mejiro McQueen', exact: true })
-    .filter({ has: page.locator('img[src$="101301.webp"]') })
+    .filter({ has: page.locator('img[src$="/umas/101301/portrait.webp"]') })
     .click();
 
   await expect(gp1.locator('.spark')).toHaveCount(0);

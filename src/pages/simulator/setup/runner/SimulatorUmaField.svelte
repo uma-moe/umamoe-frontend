@@ -10,11 +10,11 @@
   import StatStrip from '@/components/game/StatStrip.svelte';
   import InspectPopover from '@/components/overlays/InspectPopover.svelte';
   import { loadCharacters, type CharacterData } from '@/lib/game-data/characters';
+  import { skillIcon } from '@/lib/game-assets/art-links';
   import {
     loadSkills,
     resolveEncodedSkill,
     skillPointTotal,
-    skillImage,
     skillRarity,
     type SkillData
   } from '@/lib/game-data/skills/skills';
@@ -200,7 +200,7 @@
             >
               <SkillChip
                 name={resolved.skill?.name ?? 'Skill ' + Math.floor(item.encoded / 10)}
-                icon={skillImage(resolved.skill?.icon)}
+                icon={skillIcon(resolved.skill?.icon)}
                 rarity={skillRarity(resolved.skill, resolved.inherited)}
                 level={item.unique || resolved.level > 1 ? 'Lv ' + resolved.level : undefined}
                 compact

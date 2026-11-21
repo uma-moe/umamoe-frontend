@@ -2568,7 +2568,7 @@ test('CM uses Hakuraku charts and captured teams without inventing a replay cata
   );
   await expect(umaDialog.locator('.inspection img')).toHaveAttribute(
     'src',
-    /\/game-assets\/character_thumbs\//
+    /\/art\/umas\/\d+\/portrait\.webp$/
   );
   await page.screenshot({ path: info.outputPath('cm-uma-expanded.png') });
   await page.keyboard.press('Escape');

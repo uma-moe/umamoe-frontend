@@ -1,3 +1,4 @@
+import { savedTimelineImage } from '@/lib/game-assets/timeline-artwork';
 import {
   plannerRewardAvailabilityWindow,
   timelineEventIndex
@@ -485,6 +486,7 @@ function target(value: unknown): PlannerTarget | null {
 
   const desiredCopies = pickupGoals[0]?.desiredCopies ?? legacyDesiredCopies;
   const notes = typeof item.notes === 'string' ? item.notes.slice(0, 2000) : '';
+  const imagePath = text(item.imagePath, '', 500);
   return {
     id: text(item.id, id('target')),
     eventId,
@@ -493,7 +495,7 @@ function target(value: unknown): PlannerTarget | null {
     gachaIds: numberArray(item.gachaIds),
     title,
     bannerKind: kind,
-    imagePath: text(item.imagePath, '', 500) || undefined,
+    imagePath: imagePath ? savedTimelineImage(imagePath) : undefined,
     bannerStart: validPlannerDateKey(item.bannerStart) || undefined,
     bannerEnd: validPlannerDateKey(item.bannerEnd) || undefined,
     pullTiming: timing,

@@ -1,5 +1,6 @@
 <script lang="ts">
-  import { characterImagePath, type CharacterData } from '@/lib/game-data/characters';
+  import { umaPortrait } from '@/lib/game-assets/art-links';
+  import { type CharacterData } from '@/lib/game-data/characters';
   import { factorLoadingState, factorOptions } from '@/lib/game-data/factors/factors';
   import AffinityPicker from '@/components/pickers/AffinityPicker.svelte';
   import ResourceLoadStatus from '@/components/feedback/ResourceLoadStatus.svelte';
@@ -86,7 +87,7 @@
     <AffinityPicker
       targetOnly
       target={picks.target
-        ? { ...picks.target, image: characterImagePath(Number(picks.target.id)) }
+        ? { ...picks.target, image: umaPortrait(Number(picks.target.id)) }
         : undefined}
       ontargetpick={() => picks.pickTarget()}
       ontargetclear={() => picks.selectTarget('')}

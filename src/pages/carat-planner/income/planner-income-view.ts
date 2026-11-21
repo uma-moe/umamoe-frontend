@@ -23,7 +23,7 @@ import {
 } from '@/lib/carat-planner/income/planner-competition-assumptions';
 import type { TimelineRecord } from '@/pages/timeline/timeline-repository';
 import type { IconName } from '@/components/icon-types';
-import { clubRankIcon } from '@/lib/clubs/club-display';
+import { circleRankIcon } from '@/lib/game-assets/art-links';
 import {
   MONTHLY_SHOP_EXCHANGES,
   monthlyShopExchange
@@ -152,7 +152,7 @@ export function buildPlannerIncomeGroups(
                     number(value) - 1
                   ] ?? humanize(value))
                 : humanize(value),
-          image: id === 'club_rank' ? clubRankIcon(number(value)) : undefined,
+          image: id === 'club_rank' ? circleRankIcon(number(value)) : undefined,
           amountLabel: scenarioAmountLabel(rules, id, value)
         }))
     };

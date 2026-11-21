@@ -1,11 +1,8 @@
 <script lang="ts">
   import { onMount, untrack, type Snippet } from 'svelte';
   import { watchFactors } from '@/lib/game-data/factors/factors';
-  import {
-    characterImagePath,
-    loadCharacters,
-    type CharacterData
-  } from '@/lib/game-data/characters';
+  import { umaPortrait } from '@/lib/game-assets/art-links';
+  import { loadCharacters, type CharacterData } from '@/lib/game-data/characters';
   import { authRepository } from '@/services/auth/auth-repository';
   import { authReady, authUser } from '@/services/auth/auth-state';
   import { getAuthToken } from '@/services/auth/auth-token';
@@ -121,7 +118,7 @@
   }
 
   function image(id: number): string | undefined {
-    return id ? characterImagePath(id) : undefined;
+    return id ? umaPortrait(id) : undefined;
   }
 
   function sectionVisible(section: string): boolean {

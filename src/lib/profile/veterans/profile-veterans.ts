@@ -3,7 +3,8 @@ import {
   decodeFactorEntry,
   type FactorCategory
 } from '@/lib/game-data/factors/factors';
-import { characterImagePath, type CharacterData } from '@/lib/game-data/characters';
+import { umaPortrait } from '@/lib/game-assets/art-links';
+import { type CharacterData } from '@/lib/game-data/characters';
 import type {
   FactorInfoEntry,
   ProfileVeteran,
@@ -354,7 +355,7 @@ export function veteranDisplay(
   return {
     veteran,
     name: entry?.name ?? `Character ${veteran.card_id ?? 'Unknown'}`,
-    image: veteran.card_id ? characterImagePath(veteran.card_id) : undefined,
+    image: veteran.card_id ? umaPortrait(veteran.card_id) : undefined,
     scenario: scenarioName(veteran.scenario_id),
     distance: distanceName(veteran.distance_type),
     style: runningStyleName(veteran.running_style),

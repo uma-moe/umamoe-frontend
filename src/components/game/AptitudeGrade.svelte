@@ -1,5 +1,6 @@
 <script lang="ts">
-  import { getRankInfoFromLabel, rankIconPath } from '@/lib/rank';
+  import { statusRankIcon } from '@/lib/game-assets/art-links';
+  import { getRankInfoFromLabel } from '@/lib/rank';
 
   export type AptitudeGradeValue = 'S' | 'A' | 'B' | 'C' | 'D' | 'E' | 'F' | 'G';
 
@@ -13,7 +14,7 @@
 
   let failed = $state('');
 
-  const image = $derived(rankIconPath(getRankInfoFromLabel(grade).iconIndex));
+  const image = $derived(statusRankIcon(getRankInfoFromLabel(grade).iconIndex));
 </script>
 
 <span

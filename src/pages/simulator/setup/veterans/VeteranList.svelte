@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { statIcon } from '@/lib/game-assets/art-links';
   import AptitudeGrade from '@/components/game/AptitudeGrade.svelte';
   import Button from '@/components/controls/Button.svelte';
   import Checkbox from '@/components/controls/Checkbox.svelte';
@@ -70,7 +71,7 @@
         label,
         value: entry.uma.trainee[key].toLocaleString(),
         tone: icon,
-        icon: '/assets/images/icon/stats/' + icon + '.webp'
+        icon: statIcon(icon)
       })),
       { id: 'total', label: 'Total', value: entry.total.toLocaleString() }
     ];

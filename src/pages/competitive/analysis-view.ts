@@ -1,13 +1,12 @@
 import type { ParsedRaceCapture, RaceRunner } from '@/lib/race/capture/race-capture-parser';
-import { characterImagePath } from '@/lib/game-data/characters';
-import { SKILL_POINTS_ICON } from '@/lib/game-assets/skill-points-icon';
+import { umaPortrait, SKILL_POINTS_ICON, statIcon } from '@/lib/game-assets/art-links';
 import type { StatStripItem } from '@/components/game/StatStrip.svelte';
 import { runningStyleName } from '@/lib/race/replay/race-display';
 
 export const styleColors = ['#929bad', '#e8ad63', '#69b7ee', '#d194df', '#7bc8a0', '#f08383'];
 export const statKeys = ['speed', 'stamina', 'power', 'guts', 'wit'] as const;
 export const portrait = (card?: number) =>
-  card && Number.isFinite(card) ? characterImagePath(card) : undefined;
+  card && Number.isFinite(card) ? umaPortrait(card) : undefined;
 
 export const score = (runner: RaceRunner) =>
   Number(runner.raw.rank_score ?? runner.raw.rankScore ?? 0);
@@ -20,7 +19,7 @@ export const stats = (runner: RaceRunner) =>
     label: id,
     value: runner.stats[id] ?? '—',
     tone: id,
-    icon: `/assets/images/icon/stats/${id}.webp`
+    icon: statIcon(id)
   }));
 
 /** Skill points as a stat beside the five; a dash until the skills can be priced. */

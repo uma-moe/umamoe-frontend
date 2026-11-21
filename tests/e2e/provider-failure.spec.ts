@@ -1,17 +1,6 @@
 import { expect, test } from './fixtures/test';
 import { mockAffinity } from './fixtures/api';
 
-test('newer skill icons return images instead of the application shell', async ({ request }) => {
-  for (const icon of ['20151', '20201']) {
-    const response = await request.get(`/assets/images/skills/utx_ico_skill_${icon}.webp`);
-    expect(response.ok()).toBe(true);
-    expect(response.headers()['content-type']).toContain('image/webp');
-    const body = await response.body();
-    expect(body.subarray(0, 4).toString()).toBe('RIFF');
-    expect(body.subarray(8, 12).toString()).toBe('WEBP');
-  }
-});
-
 test('blocked advertising does not prevent editing and saving a lineage', async ({ page }) => {
   await mockAffinity(page);
   let adRequests = 0;

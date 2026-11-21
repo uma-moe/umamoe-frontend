@@ -1,12 +1,8 @@
-import {
-  characterImagePath,
-  loadReleasedCharacters,
-  type CharacterData
-} from '@/lib/game-data/characters';
+import { umaPortrait, supportCardHalf } from '@/lib/game-assets/art-links';
+import { loadReleasedCharacters, type CharacterData } from '@/lib/game-data/characters';
 import {
   loadSupportCards,
   readCachedSupportCards,
-  supportCardImagePath,
   type SupportCardData
 } from '@/lib/game-data/support-cards/support-cards';
 import { resourceCache } from '@/services/resources/resource-cache';
@@ -38,7 +34,7 @@ export class DatabaseGameData {
       id: entry.id,
       name: entry.name,
       subtitle: entry.subtitle,
-      image: characterImagePath(Number(entry.id))
+      image: umaPortrait(Number(entry.id))
     }))
   );
 
@@ -46,7 +42,7 @@ export class DatabaseGameData {
     releasedSupportCards(this.selectableSupports).map((entry) => ({
       id: entry.id,
       ...supportCardDisplay(entry),
-      image: supportCardImagePath(entry.id),
+      image: supportCardHalf(entry.id),
       type: supportTypeName(entry.type),
       rarity: entry.rarity === 3 ? 'SSR' : entry.rarity === 2 ? 'SR' : 'R'
     }))

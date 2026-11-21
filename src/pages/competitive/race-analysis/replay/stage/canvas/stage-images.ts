@@ -31,6 +31,8 @@ export class StageImages {
 
     const image = new Image();
     image.decoding = 'async';
+    // Portraits come from the asset bucket; without CORS they taint the canvas and clips can't export.
+    image.crossOrigin = 'anonymous';
     image.src = url;
     this.#images.set(url, image);
     image

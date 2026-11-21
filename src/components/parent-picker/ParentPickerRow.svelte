@@ -2,7 +2,8 @@
   import VeteranSummary from '@/components/game/VeteranSummary.svelte';
   import IconButton from '@/components/controls/IconButton.svelte';
   import type { VeteranUiRecord } from '@/components/game/veteran-ui-types';
-  import { characterImagePath, type CharacterData } from '@/lib/game-data/characters';
+  import { umaPortrait } from '@/lib/game-assets/art-links';
+  import { type CharacterData } from '@/lib/game-data/characters';
   import { factorLoadingState } from '@/lib/game-data/factors/factors';
   import {
     parentCharacter,
@@ -65,7 +66,7 @@
     return {
       id: parent.pickerId,
       name: character.name,
-      image: character.cardId ? characterImagePath(character.cardId) : undefined,
+      image: character.cardId ? umaPortrait(character.cardId) : undefined,
       rank: '',
       scenario: parent.scenario_id
         ? (scenarioLabel(parent.scenario_id) ?? `Scenario ${parent.scenario_id}`)
@@ -95,7 +96,7 @@
           id: String(node.position_id),
           position: node.position_id === 10 ? 'P1' : 'P2',
           name: characters.get(node.card_id)?.name ?? `Character ${node.card_id}`,
-          image: characterImagePath(node.card_id),
+          image: umaPortrait(node.card_id),
           affinity: parentAffinity,
           sparks: sparkGroups(`${parent.pickerId}:${node.position_id}`, node.sparks, 'parent')
         };

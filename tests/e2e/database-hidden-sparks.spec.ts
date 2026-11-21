@@ -37,11 +37,11 @@ test('Hide Sparks stages type-picker changes, saves to the legacy key, and updat
   await expect(search).toBeVisible();
   await expect(
     dialog.getByRole('button', { name: 'Race', exact: true }).locator('img')
-  ).toHaveAttribute('src', /\/race_banners\/thum_race_/);
+  ).toHaveAttribute('src', /\/art\/races\/banners\/\d{4}\.webp$/);
 
   await expect(
     dialog.getByRole('button', { name: 'Scenario', exact: true }).locator('img')
-  ).toHaveAttribute('src', /ura_finals_logo/);
+  ).toHaveAttribute('src', /\/art\/scenarios\/1\/logo\.webp$/);
 
   await expect(dialog.getByRole('button', { name: 'Find white factors', exact: true })).toHaveCount(
     0
@@ -52,10 +52,10 @@ test('Hide Sparks stages type-picker changes, saves to the legacy key, and updat
   await search.fill('February');
   await factor.click();
   await expect(choice).toHaveAttribute('aria-pressed', 'true');
-  await expect(choice.locator('img')).toHaveAttribute('src', /\/race_banners\/thum_race_/);
+  await expect(choice.locator('img')).toHaveAttribute('src', /\/art\/races\/banners\/\d{4}\.webp$/);
   await expect(
     dialog.getByRole('button', { name: 'Show February S.', exact: true }).locator('img')
-  ).toHaveAttribute('src', /\/race_banners\/thum_race_/);
+  ).toHaveAttribute('src', /\/art\/races\/banners\/\d{4}\.webp$/);
 
   await expect(dialog.getByRole('button', { name: 'Save 1 hidden', exact: true })).toBeVisible();
   expect(await page.evaluate((key) => localStorage.getItem(key), storageKey)).toBeNull();

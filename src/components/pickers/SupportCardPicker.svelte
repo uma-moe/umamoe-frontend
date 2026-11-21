@@ -1,4 +1,10 @@
 <script lang="ts">
+  import {
+    statIcon,
+    statIconByName,
+    supportRarityIcon,
+    type SupportRarity
+  } from '@/lib/game-assets/art-links';
   import Icon from '../Icon.svelte';
   import Dialog from '../overlays/Dialog.svelte';
   import Artwork from '../game/Artwork.svelte';
@@ -57,16 +63,16 @@
       return {
         value,
         label: value,
-        image: `/assets/images/icon/stats/${value.toLowerCase()}.webp`
+        image: statIconByName(value)
       };
     }
   );
 
-  const rarities = ['All', 'R', 'SR', 'SSR'].map((value) => ({
-    value,
-    label: value === 'All' ? 'All rarities' : value,
-    ...(value === 'All' ? {} : { image: `/game-assets/support-rarity/${value.toLowerCase()}.png` })
-  }));
+  const rarityChoices: SupportRarity[] = ['R', 'SR', 'SSR'];
+  const rarities = [
+    { value: 'All', label: 'All rarities' },
+    ...rarityChoices.map((value) => ({ value, label: value, image: supportRarityIcon(value) }))
+  ];
 
   const filtered = $derived(
     options.filter((option) => {
@@ -213,14 +219,14 @@
           {/if}
           <span class="meta">
             <img
-              src={`/game-assets/support-rarity/${option.rarity.toLowerCase()}.png`}
+              src={supportRarityIcon(option.rarity)}
               alt={option.rarity}
               title={option.rarity}
               width="22"
               height="22"
             />
             <img
-              src={`/assets/images/icon/stats/${option.type.toLowerCase()}.webp`}
+              src={statIcon(option.type)}
               alt={`${option.type} support`}
               title={`${option.type} support`}
               width="18"

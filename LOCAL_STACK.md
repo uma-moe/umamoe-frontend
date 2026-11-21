@@ -61,6 +61,11 @@ The simulator uses four workers/four CPUs by default; adjust `.env.stack.local`.
 | Search (`--app`) | http://127.0.0.1:3302/search/health |
 | Ingest (`--app`) | http://127.0.0.1:3303/health |
 
+## Game art
+
+Portraits, icons and banners load from the asset bucket (`assetOrigin` in `src/config/environment.*.ts`), so no local art
+is needed. `VITE_ASSET_ORIGIN` points a dev server at another copy of the bucket's `art/` tree.
+
 ## A simulator without Docker
 
 To try a simulator build directly (the V5 optimizer, the Skill Explorer files), run it natively and point Vite at it.

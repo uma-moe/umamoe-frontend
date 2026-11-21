@@ -1,4 +1,5 @@
-import { loadSkills, skillImage } from '../skills/skills';
+import { skillIcon } from '@/lib/game-assets/art-links';
+import { loadSkills } from '../skills/skills';
 import { SvelteMap } from 'svelte/reactivity';
 import { loadRaceFactorImages, normalizeRaceName } from '../racing/races';
 import { scenarios } from '../scenarios';
@@ -219,13 +220,16 @@ export function factorImage(id: number): string | undefined {
     if (image) return image;
   }
 
-  const icon = skillImage(
-    skillIcons.get(factor?.text.normalize('NFKC').toLowerCase().trim() ?? '')
-  );
+  return skillIcon(factorSkillIcon(id));
+}
 
-  if (icon != null) return icon;
-  if (factor?.type === 3)
-    return skillImage(`utx_ico_skill_${id === 202160 ? '10051' : '10011'}.webp`);
-  if (factor?.type === 5) return skillImage('utx_ico_skill_20011.webp');
+/** The game's name of the skill icon a factor shows: its skill's own, else a generic one for its kind. */
+export function factorSkillIcon(id: number): string | undefined {
+  const factor = metadata.get(id);
+  const icon = skillIcons.get(factor?.text.normalize('NFKC').toLowerCase().trim() ?? '');
+
+  if (icon !== undefined) return icon;
+  if (factor?.type === 3) return `utx_ico_skill_${id === 202160 ? '10051' : '10011'}`;
+  if (factor?.type === 5) return 'utx_ico_skill_20011';
   return undefined;
 }

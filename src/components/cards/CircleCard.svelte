@@ -25,7 +25,8 @@
   import type { Snippet } from 'svelte';
   import Icon from '../Icon.svelte';
   import DiscordText from '../DiscordText.svelte';
-  import { clubRankIcon, clubPolicyLabels as policyLabels } from '@/lib/clubs/club-display';
+  import { circleRankIcon } from '@/lib/game-assets/art-links';
+  import { clubPolicyLabels as policyLabels } from '@/lib/clubs/club-display';
 
   export interface CircleCardData {
     circleId: number;
@@ -50,7 +51,7 @@
     layout = 'row'
   }: { circle: CircleCardData; children?: Snippet; layout?: 'row' | 'summary' } = $props();
 
-  const rankIcon = $derived(clubRankIcon(club.clubRank));
+  const rankIcon = $derived(circleRankIcon(club.clubRank));
   const gain = $derived(
     club.liveFans == null || club.monthlyFans == null || club.liveFans < club.monthlyFans
       ? undefined

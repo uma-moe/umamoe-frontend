@@ -1,6 +1,6 @@
 import { test as base, expect, type Locator } from '@playwright/test';
 import { writeFile } from 'node:fs/promises';
-import { mockAdvertising, mockResources } from './api';
+import { mockAdvertising, mockGameArt, mockResources } from './api';
 import { auditInteractions, throttleAuditPage } from './interaction-audit';
 export { expect } from '@playwright/test';
 export type { Page, Locator } from '@playwright/test';
@@ -115,6 +115,7 @@ export const test = base.extend<{
   runtimeErrors: [
     async ({ context, allowPageLoadFailure, expectedPageErrors, cachedBrowserProof }, use) => {
       await mockAdvertising(context);
+      await mockGameArt(context);
       await context.route('https://status.uma.moe/api/v1/endpoints/statuses', (route) =>
         route.fulfill({ json: [{ name: 'API', group: 'uma.moe', results: [{ success: true }] }] })
       );

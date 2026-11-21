@@ -1,7 +1,7 @@
 <script lang="ts">
   import { virtualScroll } from '@/lib/virtual-scroll';
   import type { CharacterData } from '@/lib/game-data/characters';
-  import { SKILL_POINTS_ICON } from '@/lib/game-assets/skill-points-icon';
+  import { SKILL_POINTS_ICON } from '@/lib/game-assets/art-links';
   import {
     veteranFactorTotals,
     type VeteranDisplayRecord
@@ -17,7 +17,7 @@
   import ProfileVeteranQueryMatches from '../../ProfileVeteranQueryMatches.svelte';
   import ProfileVeteranSparks from '../../ProfileVeteranSparks.svelte';
   import type { ProfileVeteran } from '../../../profile-repository';
-  import { statFields, statIcon } from '../roster-options';
+  import { statFields, statFieldIcon } from '../roster-options';
   import { veteranAptitudes } from '../roster-records';
   import type { RosterFilters } from '../filters/roster-filters.svelte';
 
@@ -144,7 +144,7 @@
                   id: field.id,
                   label: field.label,
                   value: (item.veteran[field.id] ?? 0).toLocaleString(),
-                  icon: statIcon(field.id)
+                  icon: statFieldIcon(field.id)
                 })),
                 {
                   id: 'sp',

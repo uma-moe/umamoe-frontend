@@ -2,7 +2,8 @@ import { getAuthToken } from '@/services/auth/auth-token';
 import type { AptitudeGradeValue } from '@/components/game/AptitudeGrade.svelte';
 import type { AptitudeItem } from '@/components/game/AptitudeGrid.svelte';
 import type { VeteranUiRecord } from '@/components/game/veteran-ui-types';
-import { characterImagePath, loadCharacters, type CharacterData } from '@/lib/game-data/characters';
+import { umaPortrait } from '@/lib/game-assets/art-links';
+import { loadCharacters, type CharacterData } from '@/lib/game-data/characters';
 import { loadSkills, skillPointTotal, type SkillData } from '@/lib/game-data/skills/skills';
 import { DISTANCE_NAMES, SURFACE_NAMES, type RaceCourse } from '@/lib/game-data/racing/courses';
 import { getRankInfoFromScore } from '@/lib/rank';
@@ -98,7 +99,7 @@ export function veteranEntries(
       summary: {
         id: key,
         name,
-        image: veteran.card_id ? characterImagePath(veteran.card_id) : undefined,
+        image: veteran.card_id ? umaPortrait(veteran.card_id) : undefined,
         rank: rank ?? '',
         scenario: veteran.scenario_id
           ? (scenarioLabel(veteran.scenario_id) ?? 'Scenario ' + veteran.scenario_id)

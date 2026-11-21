@@ -1,3 +1,4 @@
+import { raceBanner } from '@/lib/game-assets/art-links';
 import { resourceCache } from '@/services/resources/resource-cache';
 import type { RaceBadgeData, RaceGrade, RaceScheduleYear } from '@/components/game/race-types';
 
@@ -95,7 +96,7 @@ function years(permission: number): RaceYear[] {
 }
 
 function raceImage(race: Pick<RaceMapping, 'thumbnail_id'>): string {
-  return `/game-assets/textures/race_banners/thum_race_rt_000_${String(race.thumbnail_id).padStart(4, '0')}_00.webp`;
+  return raceBanner(race.thumbnail_id);
 }
 
 function turnLabel(month: number, half: number): string {

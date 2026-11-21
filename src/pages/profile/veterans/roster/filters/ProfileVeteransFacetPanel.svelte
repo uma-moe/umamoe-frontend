@@ -1,6 +1,7 @@
 <script lang="ts">
-  import { characterImagePath, type CharacterData } from '@/lib/game-data/characters';
-  import { skillImage, skillRarity } from '@/lib/game-data/skills/skills';
+  import { umaPortrait, skillIcon } from '@/lib/game-assets/art-links';
+  import { type CharacterData } from '@/lib/game-data/characters';
+  import { skillRarity } from '@/lib/game-data/skills/skills';
   import { veteranDisplay } from '@/lib/profile/veterans/profile-veterans';
   import IncludeExcludePicker from '@/components/pickers/IncludeExcludePicker.svelte';
   import Banner from '@/components/feedback/Banner.svelte';
@@ -19,7 +20,7 @@
     gradeOptions,
     rangeMarks,
     statFields,
-    statIcon,
+    statFieldIcon,
     type FilterTab
   } from '../roster-options';
   import type { RosterCharacters } from '../roster-characters.svelte';
@@ -42,7 +43,7 @@
       .map((skill) => ({
         value: String(skill.skill_id),
         label: skill.name,
-        image: skillImage(skill.icon)
+        image: skillIcon(skill.icon)
       }))
   );
 
@@ -50,7 +51,7 @@
     return ids.map((id) => ({
       id: String(id),
       label: characters.get(id)?.name ?? String(id),
-      image: characterImagePath(id)
+      image: umaPortrait(id)
     }));
   }
 </script>
@@ -72,7 +73,7 @@
         <div class="stat-limit">
           <img
             class="stat-icon"
-            src={statIcon(field.id)}
+            src={statFieldIcon(field.id)}
             alt={field.label}
             title={field.label}
           />
@@ -189,7 +190,7 @@
         {#each filters.selectedSkills as skillId}
           {@const skill = collection.skillCatalog.get(skillId)}<SkillChip
             name={skill?.name ?? `Skill ${skillId}`}
-            icon={skillImage(skill?.icon)}
+            icon={skillIcon(skill?.icon)}
             rarity={skillRarity(skill, Boolean(skill?.inherited))}
             compact
             onremove={() => filters.removeSkill(skillId)}

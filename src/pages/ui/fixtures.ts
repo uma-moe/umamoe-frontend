@@ -1,3 +1,4 @@
+import { raceBanner, statIcon } from '@/lib/game-assets/art-links';
 import type { OptimalRaceRecommendation } from '@/lib/game-data/racing/races';
 import type { VeteranUiRecord } from '@/components/game/veteran-ui-types';
 import type { LineageBranch, LineageNodeData } from '@/components/lineage/lineage-types';
@@ -9,13 +10,14 @@ import kitasanBlackSupportImage from './fixtures/kitasan-black-support.webp';
 import skillSpeedIcon from './fixtures/skill-speed.webp';
 import skillRecoveryIcon from './fixtures/skill-recovery.webp';
 import caratIcon from './fixtures/item-carats.webp';
-import raceImageG1 from '@/assets/images/race-thumbnails/thum_race_rt_000_1001_00.webp';
-import raceImageG2 from '@/assets/images/race-thumbnails/thum_race_rt_000_2001_00.webp';
-import raceImageG3 from '@/assets/images/race-thumbnails/thum_race_rt_000_3001_00.webp';
 import supportCardSpeed from './fixtures/support-card-speed.webp';
 import supportCardStamina from './fixtures/support-card-stamina.webp';
 import supportCardPower from './fixtures/support-card-power.webp';
 import timelineBanner from './fixtures/timeline-support-banner.webp';
+
+const raceImageG1 = raceBanner(1001);
+const raceImageG2 = raceBanner(2001);
+const raceImageG3 = raceBanner(3001);
 export {
   oguriCapImage,
   mejiroMcQueenImage,
@@ -62,35 +64,35 @@ export const statFixtures = [
     label: 'Speed',
     value: 1542,
     tone: 'speed' as const,
-    icon: '/assets/images/icon/stats/speed.webp'
+    icon: statIcon('speed')
   },
   {
     id: 'stamina',
     label: 'Stamina',
     value: 1312,
     tone: 'stamina' as const,
-    icon: '/assets/images/icon/stats/stamina.webp'
+    icon: statIcon('stamina')
   },
   {
     id: 'power',
     label: 'Power',
     value: 1184,
     tone: 'power' as const,
-    icon: '/assets/images/icon/stats/power.webp'
+    icon: statIcon('power')
   },
   {
     id: 'guts',
     label: 'Guts',
     value: 702,
     tone: 'guts' as const,
-    icon: '/assets/images/icon/stats/guts.webp'
+    icon: statIcon('guts')
   },
   {
     id: 'wit',
     label: 'Wit',
     value: 1138,
     tone: 'wit' as const,
-    icon: '/assets/images/icon/stats/wit.webp'
+    icon: statIcon('wit')
   }
 ];
 

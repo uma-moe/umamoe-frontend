@@ -2,9 +2,9 @@
   import { onMount } from 'svelte';
   import type { RaceRunner } from '@/lib/race/capture/race-capture-parser';
   import type { HorseDiagnostics } from '@/lib/race/capture/race-diagnostics';
+  import { moodIcon } from '@/lib/game-assets/art-links';
   import {
     formatRaceTime,
-    moodIcon,
     moodName,
     ordinalPlace,
     runningStyleIcon,

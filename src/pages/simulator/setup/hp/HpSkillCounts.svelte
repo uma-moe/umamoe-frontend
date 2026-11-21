@@ -2,7 +2,7 @@
   import Button from '@/components/controls/Button.svelte';
   import IconButton from '@/components/controls/IconButton.svelte';
   import SelectFieldSlim from '@/components/controls/SelectFieldSlim.svelte';
-  import { skillImage } from '@/lib/game-data/skills/skills';
+  import { skillIcon } from '@/lib/game-assets/art-links';
   import HpCounter from './HpCounter.svelte';
   import SimSection from '../../shell/SimSection.svelte';
   import { hpCalculator } from './hp-calculator.svelte';
@@ -49,7 +49,6 @@
     );
   }
 
-  const iconUrl = (code: string) => skillImage(code + '.webp');
   // What one unique heals at its level.
   const uniqueHeal = $derived(Math.round(uniqueRecovery(plan) * 100) / 100);
 
@@ -147,7 +146,7 @@
         <HpCounter
           compact
           {tier}
-          icon={iconUrl(SKILL_ICONS[key][tier])}
+          icon={skillIcon(SKILL_ICONS[key][tier])}
           label={tier}
           name={tier[0]!.toUpperCase() +
             tier.slice(1) +
@@ -203,7 +202,7 @@
           {@const name = STAT_LABELS[green.stat] + (green.tier === 'gold' ? ' ◎' : ' ○')}
           <span class="green">
             <img
-              src={iconUrl(SKILL_ICONS.green[green.stat])}
+              src={skillIcon(SKILL_ICONS.green[green.stat])}
               alt=""
               width="18"
               height="18"

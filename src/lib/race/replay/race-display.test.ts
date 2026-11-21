@@ -1,8 +1,8 @@
+import { runningStyleBadge } from '@/lib/game-assets/art-links';
 import { describe, expect, it } from 'vitest';
 import {
   formatPercentage,
   formatRaceTime,
-  moodIcon,
   moodName,
   ordinalPlace,
   runningStyleIcon,
@@ -56,17 +56,16 @@ describe('shared race display semantics', () => {
 
     expect(moods).toEqual(['Awful', 'Bad', 'Normal', 'Good', 'Great']);
     expect(moodName('5')).toBe('Great');
-    expect(moodIcon('Great')).toBe('/game-assets/textures/great.webp');
   });
 
   it('uses the game badge for each basic running style', () => {
     const icons = [1, 2, 3, 4].map(runningStyleIcon);
 
     expect(icons).toEqual([
-      '/game-assets/textures/front.webp',
-      '/game-assets/textures/pace.webp',
-      '/game-assets/textures/late.webp',
-      '/game-assets/textures/end.webp'
+      runningStyleBadge('front'),
+      runningStyleBadge('pace'),
+      runningStyleBadge('late'),
+      runningStyleBadge('end')
     ]);
   });
 

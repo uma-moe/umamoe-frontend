@@ -1,5 +1,5 @@
 import { expect, test } from './fixtures/test';
-import { mockStatistics } from './fixtures/api';
+import { mockStatistics, gameArt } from './fixtures/api';
 
 test('distance overview shares, training means and deck slots follow the same quick filters', async ({
   page
@@ -94,7 +94,7 @@ test('overview rankings retain portraits, readable themes, class charts and empt
   await page.goto('/tools/statistics');
   const popular = page.getByRole('list', { name: 'Most Popular Uma Musume', exact: true });
   const portrait = popular.locator('img');
-  await expect(portrait).toHaveAttribute('src', /character_thumbs\/chara_stand_1001_100101.webp/);
+  await expect(portrait).toHaveAttribute('src', /\/art\/umas\/100101\/portrait\.webp$/);
   expect(
     await portrait.evaluate(async (image: HTMLImageElement) => {
       await image.decode();
@@ -202,7 +202,7 @@ test('statistics resolves character names, outfits, cards and skills from the re
 
   await expect(
     page.getByRole('list', { name: 'Common skills', exact: true }).locator('img')
-  ).toHaveAttribute('src', '/assets/images/skills/utx_ico_skill_20013.webp');
+  ).toHaveAttribute('src', gameArt('skills/icons/20013.webp'));
 
   await page.getByRole('tab', { name: 'Characters', exact: true }).click();
   await expect(page.getByRole('list', { name: 'Character Analysis', exact: true })).toContainText(
@@ -274,7 +274,7 @@ test('legacy distance names, flat class scopes and name-keyed Uma rankings retai
   await expect(page.getByTestId('selected-samples')).toHaveText('10');
   await expect(
     page.getByRole('list', { name: 'Most Popular Uma Musume', exact: true }).locator('img')
-  ).toHaveAttribute('src', /chara_stand_1001_100101.webp/);
+  ).toHaveAttribute('src', /\/art\/umas\/100101\/portrait\.webp$/);
 
   await page.getByRole('button', { name: 'Analyze Special Week', exact: true }).click();
   await expect(

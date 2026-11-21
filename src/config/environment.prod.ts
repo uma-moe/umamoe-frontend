@@ -3,6 +3,8 @@ export const environment = {
   apiUrl: 'https://uma.moe',
   resourceUrl: 'https://uma.moe/resources',
   statusApiUrl: 'https://status.uma.moe/api/v1/endpoints/statuses',
+  /** The bucket the game art is served from. */
+  assetOrigin: 'https://assets.uma.moe',
   enableSearchV3: true, // Enable V3 unified search API
   christmasTheme: false,
   googleAnalytics: {

@@ -1,4 +1,4 @@
-import { itemIconPath } from '@/lib/game-assets/item-icons';
+import { itemIcon } from '@/lib/game-assets/art-links';
 import { activePlan, type CaratPlanCollection } from '@/lib/carat-planner/carat-planner';
 import type { TimelineEventData } from '@/components/cards/timeline-types';
 import { timelineDisplayTitle } from '@/lib/timeline/events/timeline-pickups';
@@ -82,7 +82,7 @@ export function timelineCardView(
           freePulls: item.kind === 'free_pulls',
           icon:
             item.kind === 'free_pulls' && event.eventType === 'support_card_banner'
-              ? itemIconPath(111)
+              ? itemIcon(111)
               : item.iconPath
         }))
   };

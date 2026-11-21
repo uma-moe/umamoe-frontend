@@ -20,12 +20,6 @@ export const clubPolicyLabels: Record<number, string> = {
   17: 'Active at Night'
 };
 
-export function clubRankIcon(rank?: number): string | undefined {
-  return rank && Number.isInteger(rank) && rank >= 1 && rank <= 11
-    ? `/assets/images/icon/circle_rank/utx_ico_circle_rank_${String(rank).padStart(2, '0')}.webp`
-    : undefined;
-}
-
 export function clubInitialPeriod(
   query: { year?: string; month?: string },
   fallback: { year: number; month: number }

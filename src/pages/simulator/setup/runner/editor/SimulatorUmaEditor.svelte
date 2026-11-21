@@ -2,15 +2,15 @@
   import Dialog from '@/components/overlays/Dialog.svelte';
   import Button from '@/components/controls/Button.svelte';
   import Icon from '@/components/Icon.svelte';
-  import { runningStyleName } from '@/lib/race/replay/race-display';
-  import { getRankInfoFromLabel, getStatRankInfo, rankIconPath } from '@/lib/rank';
+  import { runningStyleName, type MoodName } from '@/lib/race/replay/race-display';
+  import { getRankInfoFromLabel, getStatRankInfo } from '@/lib/rank';
   import { loadSkills } from '@/lib/game-data/skills/skills';
   import Artwork from '@/components/game/Artwork.svelte';
   import SelectField from '@/components/controls/SelectField.svelte';
   import TextField from '@/components/controls/TextField.svelte';
   import CharacterSelectDialog from '@/components/pickers/CharacterSelectDialog.svelte';
+  import { umaPortrait, statusRankIcon, moodIcon, statIcon } from '@/lib/game-assets/art-links';
   import {
-    characterImagePath,
     loadCharacters,
     loadReleasedCharacters,
     type CharacterData
@@ -61,16 +61,17 @@
   }));
 
   // Mood and grades with their in-game icons.
-  const MOOD_OPTIONS = ['Great', 'Good', 'Normal', 'Bad', 'Awful'].map((label, index) => ({
+  const MOOD_LABELS: MoodName[] = ['Great', 'Good', 'Normal', 'Bad', 'Awful'];
+  const MOOD_OPTIONS = MOOD_LABELS.map((label, index) => ({
     value: String(5 - index),
     label,
-    image: '/game-assets/textures/' + label.toLowerCase() + '.webp'
+    image: moodIcon(label)
   }));
 
   const GRADE_OPTIONS = APTITUDE_GRADES.map((grade) => ({
     value: grade,
     label: grade,
-    image: rankIconPath(getRankInfoFromLabel(grade).iconIndex)
+    image: statusRankIcon(getRankInfoFromLabel(grade).iconIndex)
   }));
 
   const SURFACES = ['Turf', 'Dirt'];
@@ -106,7 +107,7 @@
       id: character.id,
       name: character.name,
       subtitle: character.subtitle,
-      image: characterImagePath(Number(character.id)),
+      image: umaPortrait(Number(character.id)),
       rarity: character.rarity
     }))
   );
@@ -262,7 +263,7 @@
             <span class="portrait">
               {#if editing.cardId}
                 <Artwork
-                  src={characterImagePath(editing.cardId)}
+                  src={umaPortrait(editing.cardId)}
                   alt=""
                   size="sm"
                 />
@@ -328,8 +329,8 @@
             type="number"
             min={1}
             max={3000}
-            labelImage="/assets/images/icon/stats/{stat.icon}.webp"
-            prefixImage={rankIconPath(rank.iconIndex)}
+            labelImage={statIcon(stat.icon)}
+            prefixImage={statusRankIcon(rank.iconIndex)}
             bind:value={editing.trainee[stat.key]}
           />
         {/each}

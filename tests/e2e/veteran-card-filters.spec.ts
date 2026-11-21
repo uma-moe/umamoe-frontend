@@ -1,5 +1,11 @@
 import { expect, test, replaceQuery, setSliderValue } from './fixtures/test';
-import { mockVeteranProfile, mockCharacterCatalog, profile, veteran } from './fixtures/api';
+import {
+  mockVeteranProfile,
+  mockCharacterCatalog,
+  profile,
+  veteran,
+  gameArt
+} from './fixtures/api';
 import factorLoadingState from '../fixtures/resources/factors.json' with { type: 'json' };
 
 test('cards show compact affinity above combined sparks and retain inline stats and skills', async ({
@@ -259,10 +265,7 @@ test('spark browsing keeps optional settings in one menu and retains range editi
   await uniqueSearch.fill('special WEEK');
   const shooting = matcher.getByRole('button', { name: 'Add Shooting Star spark', exact: true });
   await expect(shooting).toContainText('Shooting Star');
-  await expect(shooting.locator('img')).toHaveAttribute(
-    'src',
-    '/assets/images/skills/utx_ico_skill_20013.webp'
-  );
+  await expect(shooting.locator('img')).toHaveAttribute('src', gameArt('skills/icons/20013.webp'));
   await uniqueSearch.fill('not a real unique');
   await expect(
     matcher.getByText('No characters or unique skills match.', { exact: true })

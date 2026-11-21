@@ -4,8 +4,9 @@
   import type { AptitudeGradeValue } from '@/components/game/AptitudeGrade.svelte';
   import Menu, { type MenuItem } from '@/components/navigation/Menu.svelte';
   import type { RaceCourse } from '@/lib/game-data/racing/courses';
-  import { moodIcon, runningStyleName } from '@/lib/race/replay/race-display';
-  import { getRankInfoFromLabel, getStatRankInfo, rankIconPath } from '@/lib/rank';
+  import { runningStyleName } from '@/lib/race/replay/race-display';
+  import { statusRankIcon, moodIcon, statIcon } from '@/lib/game-assets/art-links';
+  import { getRankInfoFromLabel, getStatRankInfo } from '@/lib/rank';
   import { APTITUDE_GRADES } from '../../requests/stamina-request';
   import type { SimulatorUma } from '../../simulator-uma';
   import SimSection from '../../shell/SimSection.svelte';
@@ -74,7 +75,7 @@
   const GRADE_OPTIONS = APTITUDE_GRADES.map((grade) => ({
     value: grade,
     label: grade,
-    image: rankIconPath(getRankInfoFromLabel(grade).iconIndex)
+    image: statusRankIcon(getRankInfoFromLabel(grade).iconIndex)
   }));
 
   const styleIndex = $derived(
@@ -181,8 +182,8 @@
             type="number"
             min={1}
             max={3000}
-            labelImage="/assets/images/icon/stats/{icon}.webp"
-            prefixImage={rankIconPath(rank.iconIndex)}
+            labelImage={statIcon(icon)}
+            prefixImage={statusRankIcon(rank.iconIndex)}
             bind:value={uma.trainee[key]}
           />
           <span class="sr-only">{label} rank {rank.label}</span>

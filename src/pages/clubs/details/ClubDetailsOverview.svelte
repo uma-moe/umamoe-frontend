@@ -3,10 +3,10 @@
   import {
     type clubDataStatus,
     clubPolicyLabels,
-    clubRankIcon as rankIcon,
     formatClubTimeAgo
   } from '@/lib/clubs/club-display';
   import DiscordText from '@/components/DiscordText.svelte';
+  import { circleRankIcon } from '@/lib/game-assets/art-links';
   import Icon from '@/components/Icon.svelte';
   import LazyEChartsSurface from '@/components/charts/LazyEChartsSurface.svelte';
   import { compactNumber, number, signed } from '../club-format';
@@ -91,10 +91,10 @@
           >
             {#if details.fansToLowerTier != null}
               <div class="tier-side lower">
-                {#if rankIcon(details.clubRank - 1)}
+                {#if circleRankIcon(details.clubRank - 1)}
                   <img
                     class="tier-icon"
-                    src={rankIcon(details.clubRank - 1)}
+                    src={circleRankIcon(details.clubRank - 1)}
                     alt="Lower Tier"
                   />
                 {/if}
@@ -129,10 +129,10 @@
               </div>
             {/if}
             <div class="rank-center">
-              {#if rankIcon(details.clubRank)}
+              {#if circleRankIcon(details.clubRank)}
                 <img
                   class="club-rank-icon"
-                  src={rankIcon(details.clubRank)}
+                  src={circleRankIcon(details.clubRank)}
                   alt="Club Rank"
                 />
               {/if}{#if displayedRank !== undefined}
@@ -171,10 +171,10 @@
                     </span>
                   {/if}
                 </div>
-                {#if rankIcon(details.clubRank + 1)}
+                {#if circleRankIcon(details.clubRank + 1)}
                   <img
                     class="tier-icon"
-                    src={rankIcon(details.clubRank + 1)}
+                    src={circleRankIcon(details.clubRank + 1)}
                     alt="Next Tier"
                   />
                 {/if}

@@ -1,4 +1,4 @@
-import { skillImage, type SkillData } from '@/lib/game-data/skills/skills';
+import { type SkillData } from '@/lib/game-data/skills/skills';
 import type { ParsedRaceCapture } from '@/lib/race/capture/race-capture-parser';
 
 export function skillName(skillId: number, skills: Map<number, SkillData>): string {
@@ -7,11 +7,6 @@ export function skillName(skillId: number, skills: Map<number, SkillData>): stri
 
 export function skillEffect(skillId: number, skills: Map<number, SkillData>): string {
   return skills.get(skillId)?.effect || skills.get(skillId)?.description || 'See skill details';
-}
-
-export function skillIcon(skillId: number, skills: Map<number, SkillData>): string | undefined {
-  const icon = skills.get(skillId)?.icon;
-  return skillImage(icon);
 }
 
 export function activatedSkills(

@@ -3,7 +3,6 @@ import { sentryVitePlugin } from '@sentry/vite-plugin';
 import legacy, { type Options as LegacyOptions } from '@vitejs/plugin-legacy';
 import { fileURLToPath } from 'node:url';
 import { defineConfig, loadEnv } from 'vite';
-import { bucketAssets } from './scripts/bucket-assets';
 import { demoData } from './scripts/demo-data';
 import { companionStylesheetReload } from './scripts/companion-stylesheet-reload';
 import { skipModernPolyfillScan } from './scripts/modern-polyfill-scan';
@@ -25,6 +24,7 @@ export default defineConfig(async ({ mode, command }) => {
   // Keep the existing CI-injected public provider IDs during the framework migration.
   const environment = mode === 'production' ? production : beta;
   const variables = loadEnv(mode, rootDirectory, 'VITE_');
+  const assetOrigin = variables.VITE_ASSET_ORIGIN ?? environment.assetOrigin;
   const uploadSourceMaps =
     Boolean(process.env.SENTRY_AUTH_TOKEN && process.env.SENTRY_ORG) &&
     ['production', 'beta'].includes(mode);
@@ -96,9 +96,12 @@ export default defineConfig(async ({ mode, command }) => {
       companionStylesheetReload(),
       seoPagesPlugin(),
       ...(mode === 'demo' ? [await demoData()] : []),
-      ...(variables.VITE_ASSET_ORIGIN
-        ? [bucketAssets({ origin: variables.VITE_ASSET_ORIGIN, rootDirectory })]
-        : []),
+      {
+        name: 'asset-origin-preconnect',
+        transformIndexHtml: () => [
+          { tag: 'link', attrs: { rel: 'preconnect', href: assetOrigin }, injectTo: 'head' }
+        ]
+      },
       sentryVitePlugin({
         org: process.env.SENTRY_ORG,
         project: 'umamoe-frontend',
@@ -130,7 +133,8 @@ export default defineConfig(async ({ mode, command }) => {
           variables.VITE_GOOGLE_ANALYTICS_ID ?? environment.googleAnalytics.measurementId,
         providersEnabled: mode === 'production' || mode === 'beta',
         fuseSlots: environment.fuse.slots,
-        statusApiUrl: environment.statusApiUrl
+        statusApiUrl: environment.statusApiUrl,
+        assetOrigin
       }),
       __UI_LAB_ENABLED__: JSON.stringify(mode !== 'production')
     },
@@ -191,10 +195,7 @@ export default defineConfig(async ({ mode, command }) => {
           target: variables.VITE_RESOURCE_PROXY_TARGET ?? 'http://127.0.0.1:3004',
           changeOrigin: true
         },
-        '/assets/data': { target: 'https://uma.moe', changeOrigin: true },
-        // Skill art lives in the separately deployed /assets bundle, so it has no
-        // local copy to serve. Dev-only; production loads it from its own origin.
-        '/assets/images/skills': { target: 'https://uma.moe', changeOrigin: true }
+        '/assets/data': { target: 'https://uma.moe', changeOrigin: true }
       }
     },
     test: {

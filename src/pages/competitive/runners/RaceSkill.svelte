@@ -1,10 +1,10 @@
 <script lang="ts">
   import { onMount } from 'svelte';
   import SkillChip from '@/components/game/SkillChip.svelte';
+  import { skillIcon } from '@/lib/game-assets/art-links';
   import {
     loadSkills,
     resolveEncodedSkill,
-    skillImage,
     skillRarity,
     type SkillData
   } from '@/lib/game-data/skills/skills';
@@ -44,7 +44,7 @@
 
 <SkillChip
   name={skill?.name ?? name ?? 'Skill ' + id}
-  icon={withIcon ? skillImage(skill?.icon) : undefined}
+  icon={withIcon ? skillIcon(skill?.icon) : undefined}
   rarity={skillRarity(skill, resolved.inherited)}
   compact
   {iconOnly}

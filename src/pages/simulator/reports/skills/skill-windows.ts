@@ -1,4 +1,5 @@
-import { resolveEncodedSkill, skillImage, type SkillData } from '@/lib/game-data/skills/skills';
+import { skillIcon } from '@/lib/game-assets/art-links';
+import { resolveEncodedSkill, type SkillData } from '@/lib/game-data/skills/skills';
 import { formatRaceTime } from '@/lib/race/replay/race-display';
 import {
   courseSegments,
@@ -203,7 +204,7 @@ export function windowSkills(
     return {
       id: row.id,
       name,
-      icon: skillImage(resolved.skill?.icon),
+      icon: skillIcon(resolved.skill?.icon),
       rate: row.rate,
       passive,
       summary,

@@ -1,5 +1,5 @@
 import { expect, test, setSliderValue } from './fixtures/test';
-import { mockVeteranProfile as mockProfile, profile, veteran } from './fixtures/api';
+import { mockVeteranProfile as mockProfile, profile, veteran, gameArt } from './fixtures/api';
 import { completion } from '../performance/completion';
 import factorLoadingState from '../fixtures/resources/factors.json' with { type: 'json' };
 
@@ -351,10 +351,7 @@ test('Veterans race filters select and clear races instead of rendering a read-o
   await page.getByRole('button', { name: 'Race wins', exact: true }).click();
   await page.getByRole('combobox', { name: 'Find a race win', exact: true }).fill('Arima');
   const arima = page.getByRole('option', { name: 'Arima Kinen', exact: true });
-  await expect(arima.locator('img')).toHaveAttribute(
-    'src',
-    '/game-assets/textures/race_banners/thum_race_rt_000_1023_00.webp'
-  );
+  await expect(arima.locator('img')).toHaveAttribute('src', gameArt('races/banners/1023.webp'));
   await expect
     .poll(() =>
       arima
@@ -495,7 +492,7 @@ test('Veteran details retain support deck, stats, aptitudes, races, sparks, skil
   ).toEqual(['SSR', 'SSR', 'SSR', 'SSR', 'SR']);
   await expect(deck.locator('.support-rarity').first()).toHaveAttribute(
     'src',
-    '/game-assets/support-rarity/ssr.png'
+    gameArt('ui/support-rarities/ssr.webp')
   );
   await expect
     .poll(() =>
@@ -510,7 +507,7 @@ test('Veteran details retain support deck, stats, aptitudes, races, sparks, skil
     .toBe(true);
   await expect(deck.locator('li').first().locator('img.support-type')).toHaveAttribute(
     'src',
-    '/assets/images/icon/stats/speed.webp'
+    gameArt('ui/stats/speed.webp')
   );
   await expect(deck.locator('li').nth(1).locator('img.support-type')).toHaveAttribute(
     'alt',
@@ -520,7 +517,7 @@ test('Veteran details retain support deck, stats, aptitudes, races, sparks, skil
   await expect(deck.getByLabel('Limit break not recorded', { exact: true })).toBeVisible();
   await expect(
     deck.locator('li').first().getByRole('img', { name: 'Kitasan Black', exact: true })
-  ).toHaveAttribute('src', /support_card_s_30028.webp$/);
+  ).toHaveAttribute('src', gameArt('support-cards/30028/half.webp'));
 
   await expect(dialog.locator('.aptitude-item>span').first()).toHaveCSS(
     'color',

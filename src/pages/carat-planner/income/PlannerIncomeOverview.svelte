@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { itemIconPath } from '@/lib/game-assets/item-icons';
+  import { itemIcon } from '@/lib/game-assets/art-links';
   import type { PlannerIncomeProjection } from './planner-income-edits';
   import Icon from '@/components/Icon.svelte';
 
@@ -48,7 +48,7 @@
         {#each income.resources as item (item.currency)}
           <div data-currency={item.currency}>
             <img
-              src={itemIconPath(item.itemId)}
+              src={itemIcon(item.itemId)}
               width="24"
               height="24"
               alt=""

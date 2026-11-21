@@ -9,7 +9,7 @@ import {
   scopedUqlFactors
 } from '@/lib/inheritance/uql/uql-fields';
 import { factorOptions, factorImage } from '@/lib/game-data/factors/factors';
-import { characterImagePath } from '@/lib/game-data/characters';
+import { umaPortrait, rankTextIcon } from '@/lib/game-assets/art-links';
 import type {
   UqlSuggestion,
   UqlValueContext,
@@ -917,7 +917,7 @@ export function createDatabaseUqlLanguage(
     valueContext: 'rank',
     priority: 4,
     backendValue: String(i + 1),
-    imageUrl: '/assets/images/icon/ranks/utx_txt_rank_' + String(i + 1).padStart(2, '0') + '.webp'
+    imageUrl: rankTextIcon(i + 1)
   }));
 
   return new UqlEditorLanguage([
@@ -933,7 +933,7 @@ export function createDatabaseUqlLanguage(
         `${parent.trainer_id}:${parent.member_id}`
       ],
       backendValue: String(parent.id),
-      imageUrl: parent.card_id ? characterImagePath(parent.card_id) : undefined
+      imageUrl: parent.card_id ? umaPortrait(parent.card_id) : undefined
     })),
     ...friendlyFieldSuggestions,
     ...syntaxSuggestions.map((s) => ({

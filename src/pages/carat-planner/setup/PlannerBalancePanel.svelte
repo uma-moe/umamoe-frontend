@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { itemIconPath } from '@/lib/game-assets/item-icons';
+  import { itemIcon } from '@/lib/game-assets/art-links';
   import type { CaratPlan, PlannerBalances } from '@/lib/carat-planner/carat-planner';
   import { validPlannerDateKey } from '@/lib/carat-planner/planner-calendar';
   import TextField from '@/components/controls/TextField.svelte';
@@ -27,7 +27,7 @@
     step={1}
     value={String(plan.balances[key])}
     prefixIcon={icon}
-    prefixImage={itemId ? itemIconPath(itemId) : undefined}
+    prefixImage={itemId ? itemIcon(itemId) : undefined}
     oninput={(event) => updateBalance(key, event)}
   />
 {/snippet}

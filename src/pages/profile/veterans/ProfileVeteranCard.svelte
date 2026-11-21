@@ -10,10 +10,10 @@
     veteranFactorTotals,
     type VeteranFactorFilter
   } from '@/lib/profile/veterans/profile-veterans';
+  import { skillIcon } from '@/lib/game-assets/art-links';
   import {
     resolveEncodedSkill,
     skillPointTotal,
-    skillImage,
     skillRarity,
     sortEncodedSkills,
     type SkillData
@@ -233,7 +233,7 @@
               <!-- Only the trainee's own unique levels up; every other skill stays at Lv.1. -->
               <SkillChip
                 name={resolved.skill?.name ?? `Skill ${id}`}
-                icon={skillImage(resolved.skill?.icon)}
+                icon={skillIcon(resolved.skill?.icon)}
                 level={rarity === 'unique-main' ? `Lv.${resolved.level}` : undefined}
                 {rarity}
                 compact

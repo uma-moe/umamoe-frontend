@@ -3,10 +3,10 @@
   import { onMount } from 'svelte';
   import type { ParsedRaceCapture } from '@/lib/race/capture/race-capture-parser';
   import { lastSpurtResult, raceMetricHelp } from '@/lib/race/capture/race-diagnostics';
+  import { moodIcon } from '@/lib/game-assets/art-links';
   import {
     formatRaceTime,
     hpRemainingColor,
-    moodIcon,
     moodName,
     runningStyleIcon,
     runningStyleName

@@ -1,5 +1,5 @@
 import { test, expect, type Page } from './fixtures/test';
-import { mockTimeline } from './fixtures/api';
+import { mockTimeline, GAME_ART_ORIGIN } from './fixtures/api';
 import { detailTimeline, mockTimelineDetails } from './fixtures/timeline-details';
 
 const settle = (page: Page) =>
@@ -34,7 +34,7 @@ async function largeTimeline(page: Page, now = new Date('2026-08-29T12:00:00Z'))
 test.beforeEach(async ({ page, isMobile }) => {
   test.skip(isMobile, 'Desktop timeline gestures');
   await page.setViewportSize({ width: 1920, height: 1080 });
-  await page.route(/\/assets\/.*\.(webp|png)(\?.*)?$/, (route) =>
+  await page.route(`${GAME_ART_ORIGIN}/art/**`, (route) =>
     route.request().resourceType() !== 'image'
       ? route.fallback()
       : route.fulfill({

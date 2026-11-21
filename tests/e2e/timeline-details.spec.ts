@@ -1,6 +1,5 @@
 import { expect, test } from './fixtures/test';
-import { readFile } from 'node:fs/promises';
-import { createHash } from 'node:crypto';
+import { gameArt } from './fixtures/api';
 import {
   detailGachas,
   detailRewards,
@@ -180,23 +179,10 @@ test('Timeline detail retries retain the selected event and support banner rates
   await expect(dialog.locator('.rates a').first()).toContainText('0.75% per pull');
   await expect(dialog.locator('.rates a').last()).toContainText('2.25% per pull');
   await expect(dialog.getByLabel('20 free pulls')).toBeVisible();
-  const expectedIcon = createHash('sha256')
-    .update(
-      await readFile(new URL('../../src/assets/images/item/item_icon_00111.webp', import.meta.url))
-    )
-    .digest('hex');
-
-  const actualIcon = await dialog
-    .getByLabel('20 free pulls')
-    .locator('img')
-    .evaluate(async (image) => {
-      const bytes = await (await fetch((image as HTMLImageElement).src)).arrayBuffer();
-      return Array.from(new Uint8Array(await crypto.subtle.digest('SHA-256', bytes)), (byte) =>
-        byte.toString(16).padStart(2, '0')
-      ).join('');
-    });
-
-  expect(actualIcon).toBe(expectedIcon);
+  await expect(dialog.getByLabel('20 free pulls').locator('img')).toHaveAttribute(
+    'src',
+    gameArt('items/00111.webp')
+  );
 });
 
 test('A late banner-rate response cannot replace a different event in the desktop vertical or mobile feed', async ({

@@ -1,8 +1,8 @@
 <script lang="ts">
   import { onMount } from 'svelte';
+  import { supportCardHalf, statIcon, supportRarityIcon } from '@/lib/game-assets/art-links';
   import {
     loadSupportCards,
-    supportCardImagePath,
     type SupportCardData
   } from '@/lib/game-data/support-cards/support-cards';
   import { supportTypeName } from '@/lib/game-data/support-cards/support-card-details';
@@ -56,7 +56,7 @@
           : undefined}
         <li title={card ? `${card.name}, ${supportTypeName(card.type)}` : `Support card ${id}`}>
           <Artwork
-            src={supportCardImagePath(id)}
+            src={supportCardHalf(id)}
             fallbackSrc="/assets/images/placeholder-card.webp"
             alt={card?.name ?? `Support card ${id}`}
             kind="card"
@@ -66,7 +66,7 @@
             {#if type}
               <img
                 class="support-type"
-                src={'/assets/images/icon/stats/' + type.toLowerCase() + '.webp'}
+                src={statIcon(type)}
                 alt={type + ' support'}
                 title={type + ' support'}
                 width="16"
@@ -79,7 +79,7 @@
               {@const rarity = card.rarity === 3 ? 'SSR' : card.rarity === 2 ? 'SR' : 'R'}
               <img
                 class="support-rarity"
-                src={'/game-assets/support-rarity/' + rarity.toLowerCase() + '.png'}
+                src={supportRarityIcon(rarity)}
                 alt={rarity}
                 width="18"
                 height="18"

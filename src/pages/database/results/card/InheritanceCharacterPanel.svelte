@@ -8,7 +8,7 @@
     inheritanceAffinity
   } from '@/lib/inheritance/sparks/inheritance-factors';
   import type { InheritanceRecord } from '@/lib/inheritance/search/inheritance-search';
-  import { supportCardImagePath } from '@/lib/game-data/support-cards/support-cards';
+  import { supportCardHalf } from '@/lib/game-assets/art-links';
   import type { GameDataEntry } from '@/lib/game-data/display-records';
 
   interface Props {
@@ -115,7 +115,7 @@
   {#if record.supportCardId}
     <div class="support-card-section">
       <Artwork
-        src={supportCardImagePath(String(record.supportCardId))}
+        src={supportCardHalf(String(record.supportCardId))}
         fallbackSrc={support?.image}
         alt={support?.title ?? `Support card ${record.supportCardId}`}
         kind="card"

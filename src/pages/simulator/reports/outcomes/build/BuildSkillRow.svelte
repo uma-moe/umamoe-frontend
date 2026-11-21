@@ -1,6 +1,6 @@
 <script lang="ts">
   import Icon from '@/components/Icon.svelte';
-  import { skillImage } from '@/lib/game-data/skills/skills';
+  import { skillIcon } from '@/lib/game-assets/art-links';
   import type { TheoryFire, V5PurchaseValue } from '../../../simulator-repository';
   import { skillTier, type PricedOffer } from '../../../setup/build/skill-offers';
   import { fireText, valueText, winText, worthState, type SkillUnit } from './build-result';
@@ -114,7 +114,7 @@
     ></span>
   {/if}
   <img
-    src={skillImage(offer.skill.icon)}
+    src={skillIcon(offer.skill.icon)}
     alt=""
     width="16"
     height="16"

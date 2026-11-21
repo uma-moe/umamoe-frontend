@@ -1,5 +1,6 @@
 import { factorMetadata } from '@/lib/game-data/factors/factors';
-import { characterImagePath, type CharacterData } from '@/lib/game-data/characters';
+import { umaPortrait } from '@/lib/game-assets/art-links';
+import { type CharacterData } from '@/lib/game-data/characters';
 import {
   BTREE_ORDER,
   emptyPlannerNodes,
@@ -13,7 +14,7 @@ import type { ProfileVeteran, SuccessionChara } from '@/pages/profile/profile-re
 export type PlannerNodes = Record<PlannerPosition, PlannerNode>;
 
 export function characterImage(entry: CharacterData | undefined): string | undefined {
-  return entry ? characterImagePath(Number(entry.id)) : undefined;
+  return entry ? umaPortrait(Number(entry.id)) : undefined;
 }
 
 export function characterEntry(

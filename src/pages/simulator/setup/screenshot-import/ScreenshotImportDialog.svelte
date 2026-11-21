@@ -6,7 +6,8 @@
   import TextField from '@/components/controls/TextField.svelte';
   import Banner from '@/components/feedback/Banner.svelte';
   import Dialog from '@/components/overlays/Dialog.svelte';
-  import { loadReleasedSkillIds, skillImage } from '@/lib/game-data/skills/skills';
+  import { skillIcon } from '@/lib/game-assets/art-links';
+  import { loadReleasedSkillIds } from '@/lib/game-data/skills/skills';
   import DialogStatus from '../../shell/DialogStatus.svelte';
   import type { BuildCodeTab } from '../build/code/build-code';
   import { BuildCodeReview, type BuildCodeHandlers } from '../build/code/build-code-review.svelte';
@@ -190,7 +191,7 @@
         return {
           value: String(skillId),
           label: skill?.name ?? 'Skill ' + skillId,
-          image: skillImage(skill?.icon)
+          image: skillIcon(skill?.icon)
         };
       }),
       { value: LEAVE_OUT, label: 'Leave out' }

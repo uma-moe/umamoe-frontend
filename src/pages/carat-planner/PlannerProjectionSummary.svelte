@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { itemIconPath } from '@/lib/game-assets/item-icons';
+  import { itemIcon } from '@/lib/game-assets/art-links';
   import { availableCrystals, type PlanProjection } from '@/lib/carat-planner/carat-planner';
   import Icon from '@/components/Icon.svelte';
 
@@ -68,11 +68,11 @@
       aria-hidden="true"
     >
       <img
-        src={itemIconPath(144)}
+        src={itemIcon(144)}
         alt=""
       />
       <img
-        src={itemIconPath(145)}
+        src={itemIcon(145)}
         alt=""
       />
     </span>

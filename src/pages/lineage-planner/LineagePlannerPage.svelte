@@ -37,7 +37,8 @@
   import LineageInheritance from './tree/LineageInheritance.svelte';
   import LineageTree from './tree/LineageTree.svelte';
   import LineageSaves from './LineageSaves.svelte';
-  import { loadSkills, skillImage } from '@/lib/game-data/skills/skills';
+  import { skillIcon } from '@/lib/game-assets/art-links';
+  import { loadSkills } from '@/lib/game-data/skills/skills';
   import { characterImage } from './lineage-planner-nodes';
   import { LineagePlannerTree } from './lineage-planner-tree.svelte';
 
@@ -69,8 +70,10 @@
       .then((catalog) => {
         if (!current) return;
         const icons = new Map<string, string>();
-        for (const skill of catalog.values())
-          if (skill.icon && !icons.has(skill.name)) icons.set(skill.name, skillImage(skill.icon)!);
+        for (const skill of catalog.values()) {
+          const icon = skillIcon(skill.icon);
+          if (icon !== undefined && !icons.has(skill.name)) icons.set(skill.name, icon);
+        }
         skillIcons = icons;
       })
       .catch(() => {

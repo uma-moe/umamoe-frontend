@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { rankTextIcon } from '@/lib/game-assets/art-links';
   import type { Snippet } from 'svelte';
   import Icon from '@/components/Icon.svelte';
   import TextField from '@/components/controls/TextField.svelte';
@@ -39,7 +40,7 @@
   const rankOptions = Array.from({ length: 20 }, (_, index) => ({
     value: String(index + 1),
     label: `Rank ${index + 1}`,
-    image: `/assets/images/icon/ranks/utx_txt_rank_${String(index + 1).padStart(2, '0')}.webp`
+    image: rankTextIcon(index + 1)
   }));
 
   const lineageWhiteCategories = $derived<WhiteCategoryValues>({

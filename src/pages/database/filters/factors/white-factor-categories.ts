@@ -1,4 +1,10 @@
-import { factorImage, factorOptions, type FactorMetadata } from '@/lib/game-data/factors/factors';
+import { skillIcon } from '@/lib/game-assets/art-links';
+import {
+  factorImage,
+  factorOptions,
+  factorSkillIcon,
+  type FactorMetadata
+} from '@/lib/game-data/factors/factors';
 
 export type CategoryTone = 'benefit' | 'debuff' | 'penalty' | 'neutral';
 
@@ -192,28 +198,29 @@ export const categoryMetadata: Record<string, CategoryMetadata> = {
   }
 };
 
-const categoryIcons: Partial<Record<string, string>> = {
-  'passive-speed': '/assets/images/skills/utx_ico_skill_10011.webp',
-  'passive-stamina': '/assets/images/skills/utx_ico_skill_10021.webp',
-  'passive-power': '/assets/images/skills/utx_ico_skill_10031.webp',
-  'passive-guts': '/assets/images/skills/utx_ico_skill_10041.webp',
-  'passive-wit': '/assets/images/skills/utx_ico_skill_10051.webp',
-  'passive-other': '/assets/images/skills/utx_ico_skill_10061.webp',
-  speed: '/assets/images/skills/utx_ico_skill_20011.webp',
-  recovery: '/assets/images/skills/utx_ico_skill_20021.webp',
-  acceleration: '/assets/images/skills/utx_ico_skill_20041.webp',
-  position: '/assets/images/skills/utx_ico_skill_20051.webp',
-  start: '/assets/images/skills/utx_ico_skill_20061.webp',
-  vision: '/assets/images/skills/utx_ico_skill_20091.webp',
-  special: '/assets/images/skills/utx_ico_skill_20101.webp',
-  'special-upgraded': '/assets/images/skills/utx_ico_skill_20201.webp',
-  'speed-debuff': '/assets/images/skills/utx_ico_skill_30011.webp',
-  'acceleration-debuff': '/assets/images/skills/utx_ico_skill_30021.webp',
-  'rush-debuff': '/assets/images/skills/utx_ico_skill_30041.webp',
-  'stamina-debuff': '/assets/images/skills/utx_ico_skill_30051.webp',
-  'vision-debuff': '/assets/images/skills/utx_ico_skill_30071.webp',
-  'other-debuff': '/assets/images/skills/utx_ico_skill_30061.webp',
-  penalty: '/assets/images/skills/utx_ico_skill_10014.webp'
+/** The skill icon, by its game name, that stands for each category. */
+const categoryIconNames: Partial<Record<string, string>> = {
+  'passive-speed': 'utx_ico_skill_10011',
+  'passive-stamina': 'utx_ico_skill_10021',
+  'passive-power': 'utx_ico_skill_10031',
+  'passive-guts': 'utx_ico_skill_10041',
+  'passive-wit': 'utx_ico_skill_10051',
+  'passive-other': 'utx_ico_skill_10061',
+  speed: 'utx_ico_skill_20011',
+  recovery: 'utx_ico_skill_20021',
+  acceleration: 'utx_ico_skill_20041',
+  position: 'utx_ico_skill_20051',
+  start: 'utx_ico_skill_20061',
+  vision: 'utx_ico_skill_20091',
+  special: 'utx_ico_skill_20101',
+  'special-upgraded': 'utx_ico_skill_20201',
+  'speed-debuff': 'utx_ico_skill_30011',
+  'acceleration-debuff': 'utx_ico_skill_30021',
+  'rush-debuff': 'utx_ico_skill_30041',
+  'stamina-debuff': 'utx_ico_skill_30051',
+  'vision-debuff': 'utx_ico_skill_30071',
+  'other-debuff': 'utx_ico_skill_30061',
+  penalty: 'utx_ico_skill_10014'
 };
 
 export const familyLabels: Record<CategoryFamily, string> = {
@@ -232,14 +239,14 @@ export function normalize(value: string): string {
     .trim();
 }
 
-function iconCode(icon?: string): string {
-  return icon?.match(/utx_ico_skill_(\d{5})/i)?.[1] ?? '';
+function iconCode(iconName?: string): string {
+  return iconName?.match(/utx_ico_skill_(\d{5})/i)?.[1] ?? '';
 }
 
-function categoryKey(factor: FactorMetadata, icon?: string): string {
+function categoryKey(factor: FactorMetadata, iconName?: string): string {
   if (factor.type === 2) return 'race';
   if (factor.type === 4) return 'scenario';
-  const code = iconCode(icon);
+  const code = iconCode(iconName);
   if (!code) return 'special-upgraded';
   if (/^1001[12]$/.test(code)) return 'passive-speed';
   if (/^1002[12]$/.test(code)) return 'passive-stamina';
@@ -274,7 +281,7 @@ export function buildWhiteFactorCatalog(): {
   for (const factor of factorOptions('skills-races')) {
     const id = Number(factor.id);
     const icon = factorImage(id);
-    const key = categoryKey(factor, icon);
+    const key = categoryKey(factor, factorSkillIcon(id));
     const metadata = categoryMetadata[key] ?? categoryMetadata['special-upgraded']!;
     const existing = categoryMap.get(key);
     if (existing) existing.factorCount += 1;
@@ -282,7 +289,7 @@ export function buildWhiteFactorCatalog(): {
       categoryMap.set(key, {
         key,
         ...metadata,
-        icon: categoryIcons[key] ?? icon,
+        icon: skillIcon(categoryIconNames[key]) ?? icon,
         factorCount: 1
       });
     factors.push({

@@ -1,3 +1,4 @@
+import { savedTimelineImage } from '@/lib/game-assets/timeline-artwork';
 import type {
   CaratPlan,
   PlannerCurrency,
@@ -306,7 +307,7 @@ function expandPlan(raw: unknown): CaratPlan | null {
       ...(target[2].length ? { gachaIds: target[2] } : {}),
       title: target[3],
       bannerKind: valueOf(BANNER_KINDS, target[4], 'other'),
-      ...(target[5] ? { imagePath: target[5] } : {}),
+      ...(target[5] ? { imagePath: savedTimelineImage(target[5]) } : {}),
       pullTiming: valueOf(PULL_TIMINGS, target[6], 'end'),
       ...(target[7] ? { customPullDate: target[7] } : {}),
       plannedPulls: target[8],

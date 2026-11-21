@@ -3,7 +3,7 @@
   import Artwork from '@/components/game/Artwork.svelte';
   import CharacterSelectDialog from '@/components/pickers/CharacterSelectDialog.svelte';
   import type { CharacterPickerOption } from '@/components/pickers/picker-types';
-  import { characterImagePath } from '@/lib/game-data/characters';
+  import { umaPortrait } from '@/lib/game-assets/art-links';
   import type { ExplorerUma, UmaRelease } from './uma-skills';
 
   interface Props {
@@ -29,7 +29,7 @@
       id: String(uma.cardId),
       name: uma.name,
       subtitle: subtitleOf(uma),
-      image: characterImagePath(uma.cardId)
+      image: umaPortrait(uma.cardId)
     }))
   );
 
@@ -83,7 +83,7 @@
       <span class="portrait">
         {#if selected}
           <Artwork
-            src={characterImagePath(selected.cardId)}
+            src={umaPortrait(selected.cardId)}
             alt=""
             size="xs"
             shape="circle"

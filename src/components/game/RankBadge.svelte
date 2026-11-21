@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { rankTextIcon } from '@/lib/game-assets/art-links';
   import { getRankInfo, getRankInfoFromLabel, getRankInfoFromScore } from '@/lib/rank';
 
   interface Props {
@@ -20,9 +21,7 @@
     return getRankInfo(rarity ?? 1);
   });
 
-  const iconPath = $derived(
-    icon ?? `/assets/images/icon/ranks/utx_txt_rank_${String(rank.iconIndex).padStart(2, '0')}.webp`
-  );
+  const iconPath = $derived(icon ?? rankTextIcon(rank.iconIndex));
 </script>
 
 <span

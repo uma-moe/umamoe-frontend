@@ -16,7 +16,7 @@
     paidBannerSteps,
     plannerCardKind
   } from '@/lib/carat-planner/gacha/planner-paid-banners';
-  import { itemIconPath } from '@/lib/game-assets/item-icons';
+  import { itemIcon } from '@/lib/game-assets/art-links';
   import type { TimelineRecord } from '@/pages/timeline/timeline-repository';
   import {
     findGacha,
@@ -244,7 +244,7 @@
             <div class="crystal-control">
               <span>
                 <img
-                  src={itemIconPath(kind === 'rainbow' ? 144 : 145)}
+                  src={itemIcon(kind === 'rainbow' ? 144 : 145)}
                   width="24"
                   height="24"
                   alt=""

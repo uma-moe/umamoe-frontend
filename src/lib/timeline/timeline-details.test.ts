@@ -1,3 +1,4 @@
+import { itemIcon, umaPortrait } from '@/lib/game-assets/art-links';
 import { describe, expect, it } from 'vitest';
 import type { TimelineRecord } from '@/pages/timeline/timeline-repository';
 import { buildTimelinePrediction } from './prediction/timeline-prediction';
@@ -304,7 +305,7 @@ describe('Angular Timeline detail parity', () => {
     ).toBe(false);
 
     expect(withTimelineRewardFallbacks(filled, events)).toEqual(filled);
-    expect(summaries.get('fixed')!.items[0]?.iconPath).toContain('item_icon_00043');
+    expect(summaries.get('fixed')!.items[0]?.iconPath).toBe(itemIcon(43));
   });
 
   it('resolves variants and legacy Legend Race image references through the shared catalog', () => {
@@ -327,7 +328,7 @@ describe('Angular Timeline detail parity', () => {
       ['101301', 'Mejiro McQueen', 'Legend Race participant'],
       ['100601', 'Oguri Cap', 'Legend Race participant']
     ]);
-    expect(pickups[0]?.image).toBe('/game-assets/character_thumbs/chara_stand_1013_101301.webp');
+    expect(pickups[0]?.image).toBe(umaPortrait(101301));
     expect(pickups[0]?.gametoraUrl).toBe(
       'https://gametora.com/umamusume/characters/101301-mejiro-mcqueen'
     );

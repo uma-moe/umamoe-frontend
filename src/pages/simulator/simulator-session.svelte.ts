@@ -1,5 +1,6 @@
 /** Course and race conditions shared by the simulator pages. */
 
+import { seasonIcon, timeOfDayIcon, weatherIcon } from '@/lib/game-assets/art-links';
 import {
   SURFACE_NAMES,
   TURN_NAMES,
@@ -40,8 +41,6 @@ export interface ImageConditionOption extends ConditionOption {
  * `utx_ico_*` are the raw game textures; the English season tiles live beside
  * the other track details, already lettered for an English UI.
  */
-const conditionIcon = (file: string): string => `/game-assets/textures/${file}`;
-const seasonIcon = (file: string): string => `/game-assets/track_details/${file}`;
 
 /** The going by the English game's names, as the schedule and recorded races say them. */
 export const GROUND_OPTIONS: Array<ConditionOption> = [
@@ -57,9 +56,9 @@ export const GROUND_OPTIONS: Array<ConditionOption> = [
  */
 export const TIME_OPTIONS: Array<ImageConditionOption> = [
   { value: '1', label: 'Morning', image: morningIcon },
-  { value: '2', label: 'Midday', image: conditionIcon('utx_ico_timezone_00.png') },
-  { value: '3', label: 'Evening', image: conditionIcon('utx_ico_timezone_01.png') },
-  { value: '4', label: 'Night', image: conditionIcon('utx_ico_timezone_02.png') }
+  { value: '2', label: 'Midday', image: timeOfDayIcon('midday') },
+  { value: '3', label: 'Evening', image: timeOfDayIcon('evening') },
+  { value: '4', label: 'Night', image: timeOfDayIcon('night') }
 ];
 
 /**
@@ -68,17 +67,17 @@ export const TIME_OPTIONS: Array<ImageConditionOption> = [
  * picker leaves it out rather than mixing the two.
  */
 export const SEASON_OPTIONS: Array<ImageConditionOption> = [
-  { value: '1', label: 'Spring', image: seasonIcon('Spring.webp') },
-  { value: '2', label: 'Summer', image: seasonIcon('Summer.webp') },
-  { value: '3', label: 'Autumn', image: seasonIcon('Fall.webp') },
-  { value: '4', label: 'Winter', image: seasonIcon('Winter.webp') }
+  { value: '1', label: 'Spring', image: seasonIcon('spring') },
+  { value: '2', label: 'Summer', image: seasonIcon('summer') },
+  { value: '3', label: 'Autumn', image: seasonIcon('fall') },
+  { value: '4', label: 'Winter', image: seasonIcon('winter') }
 ];
 
 export const WEATHER_OPTIONS: Array<ImageConditionOption> = [
-  { value: '1', label: 'Sunny', image: conditionIcon('utx_ico_weather_00.png') },
-  { value: '2', label: 'Cloudy', image: conditionIcon('utx_ico_weather_01.png') },
-  { value: '3', label: 'Rainy', image: conditionIcon('utx_ico_weather_02.png') },
-  { value: '4', label: 'Snowy', image: conditionIcon('utx_ico_weather_03.png') }
+  { value: '1', label: 'Sunny', image: weatherIcon('sunny') },
+  { value: '2', label: 'Cloudy', image: weatherIcon('cloudy') },
+  { value: '3', label: 'Rainy', image: weatherIcon('rainy') },
+  { value: '4', label: 'Snowy', image: weatherIcon('snowy') }
 ];
 
 /** Race conditions the simulator takes as `setup`; strings because every field binds a string. */

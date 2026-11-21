@@ -1,4 +1,5 @@
 import { expect, test } from './fixtures/test';
+import { gameArt } from './fixtures/api';
 import { detailTimeline, mockTimelineDetails } from './fixtures/timeline-details';
 
 test('confirmed story and campaign artwork matches the linked English news posts', async ({
@@ -15,7 +16,7 @@ test('confirmed story and campaign artwork matches the linked English news posts
       image: 'https://prd-info-umamusume.akamaized.net/announce/1002/Thumbnail/banner_25800002.png',
       image_path: 'assets/timeline-images/events/campaign/1002.webp',
       umapyoi_url: 'https://umapyoi.net/en/news/1002',
-      expectedImage: '/assets/timeline-images/en/events/campaign/1002.webp'
+      expectedImage: gameArt('timeline/events/campaign/1002.webp')
     },
     {
       ...detailTimeline.events[3],
@@ -23,7 +24,7 @@ test('confirmed story and campaign artwork matches the linked English news posts
       title: 'Intertwined Memories, Galloping Thoughts',
       image_path: 'assets/images/story/10_intertwined_memories_banner.webp',
       umapyoi_url: 'https://umapyoi.net/en/news/1023',
-      expectedImage: '/assets/timeline-images/en/images/story/10_intertwined_memories_banner.webp'
+      expectedImage: gameArt('timeline/story/10_intertwined_memories_banner.webp')
     },
     {
       ...detailTimeline.events[2],
@@ -32,7 +33,7 @@ test('confirmed story and campaign artwork matches the linked English news posts
       title: 'Fall G1 Celebration Missions, Part 2: JBC Series',
       image_path: 'assets/images/campaign/199.webp',
       umapyoi_url: 'https://umapyoi.net/en/news/1001',
-      expectedImage: '/assets/timeline-images/en/images/campaign/199.webp'
+      expectedImage: gameArt('timeline/campaign/199.webp')
     }
   ];
 
@@ -165,8 +166,8 @@ test('each Aries Cup retains the artwork and news source for its own edition', a
     await expect(dialog.locator('img.banner')).toHaveAttribute(
       'src',
       index === 0
-        ? '/assets/timeline-images/en/events/champions-meeting/global-747.webp'
-        : '/assets/timeline-images/jp/events/champions-meeting/1271.webp'
+        ? gameArt('timeline/events/champions-meeting/global-747.webp')
+        : gameArt('timeline/events/champions-meeting/1271.webp')
     );
     await expect
       .poll(() =>

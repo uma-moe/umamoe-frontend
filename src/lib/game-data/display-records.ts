@@ -1,7 +1,8 @@
 import { get } from 'svelte/store';
 import { loadSupportCards } from '@/lib/game-data/support-cards/support-cards';
-import { characterImagePath, loadCharacters } from '@/lib/game-data/characters';
-import { loadSkills, skillImage } from '@/lib/game-data/skills/skills';
+import { umaPortrait, skillIcon, supportCardFull } from '@/lib/game-assets/art-links';
+import { loadCharacters } from '@/lib/game-data/characters';
+import { loadSkills } from '@/lib/game-data/skills/skills';
 
 export type GameDataKind = 'characters' | 'supports' | 'skills' | 'factors';
 export interface GameDataEntry {
@@ -54,7 +55,7 @@ async function characters(): Promise<GameDataEntry[]> {
       tags: [`${entry.rarity}★`],
       rarity: entry.rarity,
       releaseDate: entry.release_date,
-      image: characterImagePath(Number(entry.id))
+      image: umaPortrait(Number(entry.id))
     })
   );
 }
@@ -73,7 +74,7 @@ async function supports(): Promise<GameDataEntry[]> {
       ],
       rarity: entry.rarity,
       releaseDate: entry.release_date,
-      image: `/game-assets/umamusume_cards/tex_support_card_${entry.id}.webp`
+      image: supportCardFull(entry.id)
     })
   );
 }
@@ -88,7 +89,7 @@ async function skills(): Promise<GameDataEntry[]> {
       detail: entry.effect || entry.conditions || 'Skill effect unavailable',
       tags: [entry.rarity >= 2 ? 'Rare' : 'Normal'],
       rarity: entry.rarity,
-      image: skillImage(entry.icon)
+      image: skillIcon(entry.icon)
     })
   );
 }

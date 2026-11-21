@@ -34,7 +34,7 @@
     selectPlannerCampaign,
     type PlannerCampaign
   } from '@/lib/carat-planner/rewards/planner-campaigns';
-  import { itemIconPath } from '@/lib/game-assets/item-icons';
+  import { itemIcon } from '@/lib/game-assets/art-links';
   import { timelineImage } from '@/lib/game-assets/timeline-artwork';
   import Button from '@/components/controls/Button.svelte';
   import Icon from '@/components/Icon.svelte';
@@ -351,7 +351,7 @@
                   <span data-kind={benefit.kind}>
                     {#if benefit.itemId}
                       <img
-                        src={itemIconPath(benefit.itemId)}
+                        src={itemIcon(benefit.itemId)}
                         alt=""
                       />
                     {/if}{benefit.text}

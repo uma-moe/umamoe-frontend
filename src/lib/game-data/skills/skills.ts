@@ -45,10 +45,6 @@ export function loadReleasedSkillIds(): Promise<Set<number>> {
   return releasedPromise;
 }
 
-export function skillImage(icon: string | undefined): string | undefined {
-  return icon ? `/assets/images/skills/${icon.replace(/\.png$/i, '.webp')}` : undefined;
-}
-
 export function normalizeSkill(entry: Record<string, unknown>): SkillData {
   const description = typeof entry.description === 'string' ? entry.description : '';
   return {

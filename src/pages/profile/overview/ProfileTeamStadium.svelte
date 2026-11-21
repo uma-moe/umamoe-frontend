@@ -1,5 +1,6 @@
 <script lang="ts">
-  import { characterImagePath, type CharacterData } from '@/lib/game-data/characters';
+  import { umaPortrait } from '@/lib/game-assets/art-links';
+  import { type CharacterData } from '@/lib/game-data/characters';
   import { loadSkills, type SkillData } from '@/lib/game-data/skills/skills';
   import {
     groupStadiumMembers,
@@ -54,7 +55,7 @@
     return {
       id: String(member.id),
       name: characters.get(member.card_id ?? 0)?.name ?? 'Unknown',
-      image: member.card_id ? characterImagePath(member.card_id) : undefined,
+      image: member.card_id ? umaPortrait(member.card_id) : undefined,
       rank: '',
       score: member.rank_score ?? undefined,
       scenario: scenarioName(member.scenario_id),

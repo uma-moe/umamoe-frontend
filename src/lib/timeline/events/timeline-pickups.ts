@@ -1,8 +1,6 @@
-import { characterImagePath, type CharacterNames } from '@/lib/game-data/characters';
-import {
-  supportCardImagePath,
-  type SupportCardData
-} from '@/lib/game-data/support-cards/support-cards';
+import { umaPortrait, supportCardHalf } from '@/lib/game-assets/art-links';
+import { type CharacterNames } from '@/lib/game-data/characters';
+import { type SupportCardData } from '@/lib/game-data/support-cards/support-cards';
 import type { TimelineRecord } from '@/pages/timeline/timeline-repository';
 import type { TimelinePickup } from '@/components/cards/timeline-types';
 
@@ -46,7 +44,7 @@ export function timelinePickup(
       id: String(id),
       kind,
       gametoraUrl: gametoraUrl(id, kind, card?.name ?? publicName(label, '')),
-      image: supportCardImagePath(id),
+      image: supportCardHalf(id),
       name: publicName(label, card?.name ?? `Support ${id}`),
       subLabel: [
         [null, 'R', 'SR', 'SSR'][card?.rarity ?? 0],
@@ -72,7 +70,7 @@ export function timelinePickup(
     gametoraUrl: gametoraUrl(id, kind, base),
     name: variant ? `${base} [${variant}]` : base,
     subLabel: variant ? `${variant} variant` : 'Character',
-    image: characterImagePath(id),
+    image: umaPortrait(id),
     searchTerms: [base, ...(variant ? [variant, `${base} ${variant}`] : [])]
   };
 }

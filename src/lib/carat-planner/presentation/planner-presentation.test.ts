@@ -1,3 +1,4 @@
+import { timelineBanner, umaPortrait } from '@/lib/game-assets/art-links';
 import { describe, expect, it } from 'vitest';
 import type { TimelineRecord } from '@/pages/timeline/timeline-repository';
 import {
@@ -161,7 +162,7 @@ describe('Angular Planner search and pull-plan presentation', () => {
     expect(options).toHaveLength(20);
     expect(options[0]).toMatchObject({
       name: 'Mejiro McQueen',
-      image: '/game-assets/character_thumbs/chara_stand_1013_101301.webp',
+      image: umaPortrait(101301),
       rate: 0.75
     });
 
@@ -199,6 +200,21 @@ describe('Angular Planner search and pull-plan presentation', () => {
       ['Mr. C.B.', 0.0075],
       ['Twin Turbo', 0.0225]
     ]);
+  });
+
+  it('links banners that older saved plans kept as site files to the bucket', () => {
+    const plan = createPlan();
+    plan.targets = [
+      target('character-1', '2026-09-01', '2026-10-01', {
+        imagePath: '/assets/timeline-images/jp/events/champions-meeting/1271.webp'
+      })
+    ];
+
+    const saved = sanitizePlan(plan)?.targets[0];
+
+    expect(saved?.imagePath).toBe(
+      timelineBanner('assets/timeline-images/events/champions-meeting/1271.webp')
+    );
   });
 
   it('refreshes resource-owned metadata, including disabled targets, without changing user choices or timestamps', () => {

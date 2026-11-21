@@ -1,6 +1,7 @@
 <script lang="ts">
   import { tick } from 'svelte';
-  import { characterImagePath, type CharacterData } from '@/lib/game-data/characters';
+  import { umaPortrait } from '@/lib/game-assets/art-links';
+  import { type CharacterData } from '@/lib/game-data/characters';
   import { decodeFactor, factorOptions, factorLoadingState } from '@/lib/game-data/factors/factors';
   import { manualBestFits, type ManualParent } from '@/lib/veterans/parents/parent-picker';
   import type { VeteranAffinityEngine } from '@/lib/veterans/affinity/affinity-engine';
@@ -70,7 +71,7 @@
     selectableCharacters.map((character) => ({
       id: String(character.id),
       name: character.name,
-      image: characterImagePath(Number(character.id))
+      image: umaPortrait(Number(character.id))
     }))
   );
 
@@ -257,7 +258,7 @@
           {#if node.cardId}
             <header class="identity">
               <Artwork
-                src={characterImagePath(node.cardId)}
+                src={umaPortrait(node.cardId)}
                 alt=""
                 size="sm"
               />
@@ -381,7 +382,7 @@
                   >
                     <span class="best-rank">{rank + 1}</span>
                     <Artwork
-                      src={characterImagePath(Number(choice.character.id))}
+                      src={umaPortrait(Number(choice.character.id))}
                       alt=""
                       size="sm"
                     />

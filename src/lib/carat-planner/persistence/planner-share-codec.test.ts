@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+import { timelineBanner } from '@/lib/game-assets/art-links';
 import { createPlan } from '../carat-planner';
 import {
   decodeCompactPlannerShare,
@@ -50,6 +51,28 @@ describe('Angular-compatible planner share codec', () => {
       scenarioSelections: { champions_meeting_result: 'second' },
       targets: [{ pickupGoals: [{ pickupId: 30001, desiredCopies: 2 }] }]
     });
+  });
+
+  it('links banners that older shares saved as site files to the bucket', () => {
+    const plan = createPlan('Old share');
+    plan.targets.push({
+      id: 'target',
+      eventId: 'banner',
+      title: 'Banner',
+      bannerKind: 'character',
+      imagePath: '/assets/timeline-images/en/images/character/banner/2022_30124.webp',
+      pullTiming: 'end',
+      plannedPulls: 200,
+      desiredCopies: 1,
+      useTickets: false,
+      allowPaidJewels: false
+    });
+
+    const expanded = expandCompactPlannerPlanData(compactPlannerPlanData(plan));
+
+    expect(expanded?.targets[0]?.imagePath).toBe(
+      timelineBanner('assets/images/character/banner/2022_30124.webp')
+    );
   });
 
   it('uses the Angular v2 tuple representation for cloud and short-link interoperability', () => {

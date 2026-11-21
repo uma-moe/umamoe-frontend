@@ -1,6 +1,7 @@
 <script lang="ts">
   import { ordinalPlace } from '@/lib/race/replay/race-display';
-  import { skillImage, type SkillData } from '@/lib/game-data/skills/skills';
+  import { skillIcon } from '@/lib/game-assets/art-links';
+  import { type SkillData } from '@/lib/game-data/skills/skills';
   import Dialog from '@/components/overlays/Dialog.svelte';
   import { identity, portrait } from '@/pages/competitive/analysis-view';
   import type { MonteCarloResult } from '@/pages/simulator/simulator-repository';
@@ -176,7 +177,7 @@
         <ul class="skills">
           {#each skills as skill (skill.skillId)}
             {@const data = catalog.get(skill.skillId)}
-            {@const icon = skillImage(data?.icon)}
+            {@const icon = skillIcon(data?.icon)}
             <li>
               {#if icon}
                 <img

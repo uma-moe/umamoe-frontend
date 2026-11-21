@@ -269,7 +269,7 @@ test('Every club tier and join style retains complete labels and boundary values
     await page.goto(`/circles/7?year=2026&month=9&tier=${rank}`);
     await expect(page.locator('.rank-center img')).toHaveAttribute(
       'src',
-      new RegExp(`circle_rank_${String(rank).padStart(2, '0')}\\.webp$`)
+      new RegExp(`/circle-ranks/${String(rank).padStart(2, '0')}\\.webp$`)
     );
     await expect(page.locator('.heading-meta')).toContainText(
       ['Open', 'Approval', 'Closed'][rank % 3]

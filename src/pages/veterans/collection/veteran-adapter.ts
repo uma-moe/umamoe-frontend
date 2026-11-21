@@ -1,4 +1,4 @@
-import { characterImagePath } from '@/lib/game-data/characters';
+import { umaPortrait, statIcon } from '@/lib/game-assets/art-links';
 import { factorMetadata } from '@/lib/game-data/factors/factors';
 import { getRankInfoFromScore } from '@/lib/rank';
 import { scenarioLabel } from '@/lib/game-data/scenarios';
@@ -75,7 +75,7 @@ export function veteranToUi(
   return {
     id: record.recordId,
     name: record.name || character?.name || `Character ${record.cardId}`,
-    image: characterImagePath(record.cardId),
+    image: umaPortrait(record.cardId),
     rank,
     score: record.rankScore ?? undefined,
     scenario: record.scenarioId
@@ -91,35 +91,35 @@ export function veteranToUi(
         label: 'Speed',
         value: record.stats.speed,
         tone: 'speed',
-        icon: '/assets/images/icon/stats/speed.webp'
+        icon: statIcon('speed')
       },
       {
         id: 'stamina',
         label: 'Stamina',
         value: record.stats.stamina,
         tone: 'stamina',
-        icon: '/assets/images/icon/stats/stamina.webp'
+        icon: statIcon('stamina')
       },
       {
         id: 'power',
         label: 'Power',
         value: record.stats.power,
         tone: 'power',
-        icon: '/assets/images/icon/stats/power.webp'
+        icon: statIcon('power')
       },
       {
         id: 'guts',
         label: 'Guts',
         value: record.stats.guts,
         tone: 'guts',
-        icon: '/assets/images/icon/stats/guts.webp'
+        icon: statIcon('guts')
       },
       {
         id: 'wit',
         label: 'Wit',
         value: record.stats.wisdom,
         tone: 'wit',
-        icon: '/assets/images/icon/stats/wit.webp'
+        icon: statIcon('wit')
       }
     ],
     combinedSparks: sparkGroups(
@@ -131,7 +131,7 @@ export function veteranToUi(
       id: `${record.recordId}:parent:${parent.positionId}`,
       position: parent.positionId === 10 ? 'P1' : 'P2',
       name: characters.get(parent.cardId)?.name ?? `Character ${parent.cardId}`,
-      image: characterImagePath(parent.cardId),
+      image: umaPortrait(parent.cardId),
       affinity: 0,
       sparks: sparkGroups(
         `${record.recordId}:parent:${parent.positionId}`,

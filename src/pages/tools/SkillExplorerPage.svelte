@@ -5,8 +5,8 @@
   import EmptyState from '@/components/feedback/EmptyState.svelte';
   import Spinner from '@/components/feedback/Spinner.svelte';
   import type { SelectOption } from '@/components/controls/SelectField.svelte';
+  import { umaPortrait, skillIcon } from '@/lib/game-assets/art-links';
   import {
-    characterImagePath,
     loadCharacterNames,
     loadReleasedCharacters,
     type CharacterNames
@@ -19,12 +19,7 @@
     trackName,
     type RaceCourse
   } from '@/lib/game-data/racing/courses';
-  import {
-    loadSkills,
-    skillImage,
-    skillRarity,
-    type SkillData
-  } from '@/lib/game-data/skills/skills';
+  import { loadSkills, skillRarity, type SkillData } from '@/lib/game-data/skills/skills';
   import {
     loadSupportCards,
     type SupportCardData
@@ -388,7 +383,7 @@
     return {
       skillId,
       name: skill?.name ?? `Skill ${skillId}`,
-      image: card === undefined ? skillImage(skill?.icon) : characterImagePath(card),
+      image: card === undefined ? skillIcon(skill?.icon) : umaPortrait(card),
       rarity: skillRarity(skill, Boolean(skill?.inherited))
     };
   }
@@ -724,8 +719,8 @@
     <SkillCard
       point={dayFromMeeting ? { ...point, forced: 0 } : point}
       name={skill.name}
-      image={card === undefined ? skillImage(skill.icon) : characterImagePath(card)}
-      badge={card === undefined ? undefined : skillImage(skill.icon)}
+      image={card === undefined ? skillIcon(skill.icon) : umaPortrait(card)}
+      badge={card === undefined ? undefined : skillIcon(skill.icon)}
       description={skill.description}
       effects={skillEffectDetails(skillEffects.get(skillId), selectedCourse?.distance)}
       spCost={skill.baseCost}

@@ -3,7 +3,8 @@
   import Button from '@/components/controls/Button.svelte';
   import IconButton from '@/components/controls/IconButton.svelte';
   import Combobox, { type ComboboxOption } from '@/components/controls/Combobox.svelte';
-  import { skillImage, type SkillData } from '@/lib/game-data/skills/skills';
+  import { skillIcon } from '@/lib/game-assets/art-links';
+  import { type SkillData } from '@/lib/game-data/skills/skills';
   import { sortByGameOrder } from '@/lib/game-data/skills/skill-order';
   import SimSection from '../../shell/SimSection.svelte';
   import BuildBudget from './BuildBudget.svelte';
@@ -68,7 +69,7 @@
         value: String(skill.skill_id),
         label: skill.name,
         keywords: 'skill ' + skill.skill_id,
-        image: skillImage(skill.icon)
+        image: skillIcon(skill.icon)
       }))
   );
 
@@ -193,7 +194,7 @@
           class:locked={offer.locked}
         >
           <img
-            src={skillImage(offer.skill.icon)}
+            src={skillIcon(offer.skill.icon)}
             alt=""
             width="22"
             height="22"

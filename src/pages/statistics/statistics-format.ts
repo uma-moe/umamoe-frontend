@@ -1,3 +1,4 @@
+import { statIconByName } from '@/lib/game-assets/art-links';
 import type { StatStripItem } from '@/components/game/StatStrip.svelte';
 import type { ChartDatum } from '@/lib/statistics/statistics';
 import { scenarioName } from '@/lib/profile/profile-display';
@@ -93,6 +94,6 @@ export function statStrip(values: Record<string, number>): StatStripItem[] {
     label: statName(id),
     value: values[id] ?? '-',
     tone: (id === 'wiz' ? 'wit' : id) as StatStripItem['tone'],
-    icon: '/assets/images/icon/stats/' + (id === 'wiz' ? 'wit' : id) + '.webp'
+    icon: statIconByName(id)
   }));
 }

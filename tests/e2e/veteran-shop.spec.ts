@@ -1,5 +1,5 @@
 import { expect, test, setSliderValue } from './fixtures/test';
-import { mockVeteranProfile, mockCharacterCatalog, veteran } from './fixtures/api';
+import { mockVeteranProfile, mockCharacterCatalog, veteran, gameArt } from './fixtures/api';
 
 test('shop sidebar and mobile sheet filter the same collection', async ({ page }, testInfo) => {
   const mobile = page.viewportSize()!.width < 1024;
@@ -286,7 +286,7 @@ test('compact stat sliders, aptitude grades and section resets work together', a
 
   await expect(
     page.getByRole('combobox', { name: 'Turf minimum grade', exact: true }).locator('img')
-  ).toHaveAttribute('src', '/game-assets/textures/uma_ranks/utx_ico_statusrank_12.webp');
+  ).toHaveAttribute('src', gameArt('ui/status-ranks/12.webp'));
 
   await expect(
     page.getByRole('combobox', { name: 'Dirt minimum grade', exact: true })

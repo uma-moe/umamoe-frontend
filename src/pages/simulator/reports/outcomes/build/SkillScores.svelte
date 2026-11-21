@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { skillImage } from '@/lib/game-data/skills/skills';
+  import { skillIcon } from '@/lib/game-assets/art-links';
   import { sortByGameOrder } from '@/lib/game-data/skills/skill-order';
   import BuildSkillRow from './BuildSkillRow.svelte';
   import {
@@ -78,7 +78,7 @@
         {#each items as item (item.purchase)}
           <li title={'Needs ' + item.needs}>
             <img
-              src={skillImage(item.offer.skill.icon)}
+              src={skillIcon(item.offer.skill.icon)}
               alt=""
               width="16"
               height="16"

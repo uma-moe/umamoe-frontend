@@ -19,6 +19,26 @@ export async function mockAdvertising(target: Page | BrowserContext): Promise<vo
   );
 }
 
+export const GAME_ART_ORIGIN = 'https://assets.uma.moe';
+
+/** A link below the bucket's game art tree, as the site builds it. */
+export function gameArt(key: string): string {
+  return `${GAME_ART_ORIGIN}/art/${key}`;
+}
+
+const blankWebp = Buffer.from('UklGRhoAAABXRUJQVlA4TA0AAAAvAAAAEAcQERGIiP4HAA==', 'base64');
+
+// Runs stay offline; the CORS header lets the replay canvas read portraits as the bucket allows.
+export async function mockGameArt(target: Page | BrowserContext): Promise<void> {
+  await target.route(`${GAME_ART_ORIGIN}/**`, (route) =>
+    route.fulfill({
+      contentType: 'image/webp',
+      headers: { 'access-control-allow-origin': '*' },
+      body: blankWebp
+    })
+  );
+}
+
 export const homeStats = {
   today: { tasks_24h: 4521 },
   freshness: { accounts_24h: 8123, accounts_7d: 34567, umas_tracked: 2456789 }

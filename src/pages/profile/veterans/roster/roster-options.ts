@@ -1,4 +1,5 @@
-import { getRankInfoFromLabel, rankIconPath } from '@/lib/rank';
+import { statusRankIcon, statIcon } from '@/lib/game-assets/art-links';
+import { getRankInfoFromLabel } from '@/lib/rank';
 import type { AncestorScope, VeteranSortField } from '@/lib/profile/veterans/profile-veterans';
 
 export type StatField = 'speed' | 'stamina' | 'power' | 'guts' | 'wiz';
@@ -60,7 +61,7 @@ export const gradeOptions = [
   ...['S', 'A', 'B', 'C', 'D', 'E', 'F', 'G'].map((value) => ({
     value,
     label: value === 'S' ? 'S' : `${value}+`,
-    image: rankIconPath(getRankInfoFromLabel(value).iconIndex)
+    image: statusRankIcon(getRankInfoFromLabel(value).iconIndex)
   }))
 ];
 
@@ -184,6 +185,6 @@ export const rangeMarks = (low: number, high: number) => [
   ...new Set([low, Math.round((low + high) / 100) * 50, high])
 ];
 
-export function statIcon(field: StatField): string {
-  return '/assets/images/icon/stats/' + (field === 'wiz' ? 'wit' : field) + '.webp';
+export function statFieldIcon(field: StatField): string {
+  return statIcon(field === 'wiz' ? 'wit' : field);
 }

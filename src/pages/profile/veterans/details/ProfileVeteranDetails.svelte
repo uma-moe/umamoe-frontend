@@ -5,9 +5,9 @@
   import type { LineageBranch, LineageNodeData } from '@/components/lineage/lineage-types';
   import type { RaceHistoryEntry } from '@/lib/game-data/racing/races';
   import { encodedSkills, veteranCreationTime } from '@/lib/profile/veterans/profile-veterans';
+  import { skillIcon } from '@/lib/game-assets/art-links';
   import {
     resolveEncodedSkill,
-    skillImage,
     skillRarity,
     skillPointTotal,
     sortEncodedSkills,
@@ -167,7 +167,7 @@
         >
           <SkillChip
             name={resolved.skill?.name ?? 'Skill ' + resolved.id}
-            icon={skillImage(resolved.skill?.icon)}
+            icon={skillIcon(resolved.skill?.icon)}
             level={'Lv.' + resolved.level}
             rarity={skillRarity(resolved.skill, resolved.inherited)}
             compact

@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { statIcon } from '@/lib/game-assets/art-links';
   import { traineeStats } from '../setup/trainee';
   import type { SimulatorUma } from '../simulator-uma';
 
@@ -46,7 +47,7 @@
         (change ? ' (' + (change > 0 ? '+' : '') + change + ' vs the current build)' : '')}
     >
       <img
-        src={'/assets/images/icon/stats/' + stat.icon + '.webp'}
+        src={statIcon(stat.icon)}
         alt=""
         decoding="async"
       />

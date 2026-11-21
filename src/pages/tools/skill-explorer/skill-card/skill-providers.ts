@@ -1,8 +1,6 @@
-import { characterImagePath, type CharacterNames } from '@/lib/game-data/characters';
-import {
-  supportCardImagePath,
-  type SupportCardData
-} from '@/lib/game-data/support-cards/support-cards';
+import { umaPortrait, supportCardHalf } from '@/lib/game-assets/art-links';
+import { type CharacterNames } from '@/lib/game-data/characters';
+import { type SupportCardData } from '@/lib/game-data/support-cards/support-cards';
 import {
   supportCardDisplay,
   supportTypeName
@@ -97,7 +95,7 @@ export function skillProviders({
       id: card.cardId,
       name: character.name,
       detail: character.skins?.[String(card.cardId).slice(-2)] ?? 'Original outfit',
-      image: characterImagePath(card.cardId),
+      image: umaPortrait(card.cardId),
       href: card.href
     };
     for (const skillId of card.skills) add(skillId, 'umas', provider);
@@ -116,7 +114,7 @@ export function skillProviders({
       id: source.cardId,
       name: display.character,
       detail: `${rarity} ${supportTypeName(card.type)}, ${display.title}`,
-      image: supportCardImagePath(card.id),
+      image: supportCardHalf(card.id),
       href: source.href
     };
     for (const skillId of source.skills) add(skillId, 'supports', provider);

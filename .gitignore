@@ -88,8 +88,6 @@ scripts/*
 !scripts/prepare-assets.mjs
 !scripts/check-demo.mjs
 !scripts/demo-data.ts
-!scripts/bucket-assets.ts
-!scripts/bucket-assets.test.ts
 !scripts/demo-clubs.ts
 !scripts/demo-clubs.test.ts
 !scripts/seo-pages.ts

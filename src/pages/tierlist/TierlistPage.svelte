@@ -11,7 +11,7 @@
   import Spinner from '@/components/feedback/Spinner.svelte';
   import Tabs from '@/components/navigation/Tabs.svelte';
   import Icon from '@/components/Icon.svelte';
-  import { supportCardImagePath } from '@/lib/game-data/support-cards/support-cards';
+  import { supportCardHalf } from '@/lib/game-assets/art-links';
   import {
     cardsForType,
     chartAxisBounds,
@@ -226,7 +226,7 @@
                 onclick={() => inspect(point.card)}
               >
                 <img
-                  src={supportCardImagePath(point.card.id)}
+                  src={supportCardHalf(point.card.id)}
                   alt={point.card.name}
                   loading="lazy"
                   decoding="async"
@@ -267,7 +267,7 @@
                       onclick={() => inspect(card)}
                     >
                       <img
-                        src={supportCardImagePath(card.id)}
+                        src={supportCardHalf(card.id)}
                         alt={card.name}
                         loading="lazy"
                       />

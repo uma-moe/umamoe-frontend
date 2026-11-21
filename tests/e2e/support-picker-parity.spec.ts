@@ -4,7 +4,8 @@ import {
   mockAdvertising,
   mockAffinity,
   mockDatabase,
-  supportCards
+  supportCards,
+  gameArt
 } from './fixtures/api';
 import { mkdtemp } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
@@ -55,7 +56,7 @@ test('Live support cards preserve released choices, titles, search, sorting and 
   await expect(dialog.getByRole('radio')).toHaveCount(1);
   await expect(dialog.locator('.art img')).toHaveAttribute(
     'src',
-    '/assets/images/support_card/half/support_card_s_30028.webp'
+    gameArt('support-cards/30028/half.webp')
   );
   await search.fill('30189');
   await expect(dialog.getByRole('radio')).toHaveCount(1);

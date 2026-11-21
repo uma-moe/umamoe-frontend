@@ -3,8 +3,8 @@
   import type { Build } from '../hakuraku-types';
   import Artwork from '@/components/game/Artwork.svelte';
   import LimitBreak from '@/components/game/LimitBreak.svelte';
+  import { supportCardHalf, statIcon, supportRarityIcon } from '@/lib/game-assets/art-links';
   import {
-    supportCardImagePath,
     loadSupportCards,
     type SupportCardData
   } from '@/lib/game-data/support-cards/support-cards';
@@ -53,7 +53,7 @@
         >
           <span class="support-art">
             <Artwork
-              src={supportCardImagePath(card.id)}
+              src={supportCardHalf(card.id)}
               fallbackSrc="/assets/images/placeholder-card.webp"
               alt={display?.character ?? 'Support ' + card.id}
               kind="card"
@@ -62,7 +62,7 @@
             {#if type}
               <img
                 class="support-type"
-                src={'/assets/images/icon/stats/' + type.toLowerCase() + '.webp'}
+                src={statIcon(type)}
                 alt={type + ' support'}
                 title={type + ' support'}
                 width="16"
@@ -77,7 +77,7 @@
                 {@const rarity = resource.rarity === 3 ? 'SSR' : resource.rarity === 2 ? 'SR' : 'R'}
                 <img
                   class="support-rarity"
-                  src={'/game-assets/support-rarity/' + rarity.toLowerCase() + '.png'}
+                  src={supportRarityIcon(rarity)}
                   alt={rarity}
                   width="22"
                   height="22"

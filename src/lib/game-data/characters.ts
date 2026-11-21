@@ -1,3 +1,4 @@
+import { umaPortrait } from '@/lib/game-assets/art-links';
 import { resourceCache } from '@/services/resources/resource-cache';
 
 export interface CharacterData {
@@ -64,14 +65,9 @@ export async function loadReleasedCharacters(): Promise<CharacterData[]> {
   );
 }
 
-/** Canonical path for optimized character thumbnails. */
-export function characterImagePath(cardId: number): string {
-  return `/game-assets/character_thumbs/chara_stand_${Math.floor(cardId / 100)}_${cardId}.webp`;
-}
-
 /** Demand-loaded lookup so character data never enters the base shell chunk. */
 export function loadCharacterImages(): Promise<Map<number, string>> {
   return loadCharacters().then(
-    (entries) => new Map([...entries].map(([id]) => [id, characterImagePath(id)]))
+    (entries) => new Map([...entries].map(([id]) => [id, umaPortrait(id)]))
   );
 }

@@ -1,5 +1,6 @@
 <script lang="ts">
-  import { skillImage, type SkillData } from '@/lib/game-data/skills/skills';
+  import { skillIcon, statIcon } from '@/lib/game-assets/art-links';
+  import { type SkillData } from '@/lib/game-data/skills/skills';
   import { runningStyleName } from '@/lib/race/replay/race-display';
   import SimulatorRunnerFace from '../../../reports/SimulatorRunnerFace.svelte';
   import type { SimulatorUma } from '../../../simulator-uma';
@@ -50,7 +51,7 @@
     {#each STATS as [key, icon]}
       <li>
         <img
-          src="/assets/images/icon/stats/{icon}.webp"
+          src={statIcon(icon)}
           alt={key}
           width="14"
           height="14"
@@ -67,7 +68,7 @@
       {@const entry = skills.get(skill.skillId)}
       <li title={entry?.name ?? 'Skill ' + skill.skillId}>
         {#if entry?.icon}<img
-            src={skillImage(entry.icon)}
+            src={skillIcon(entry.icon)}
             alt={entry.name}
             width="20"
             height="20"

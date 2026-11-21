@@ -229,13 +229,7 @@ export const timelineRepository = {
                   '',
                 context,
                 image: contentUrl(
-                  timelineImage(
-                    event.image_path,
-                    event.type,
-                    event.id,
-                    contentUrl(event.image),
-                    event.type !== 'champions_meeting' || event.is_confirmed === true
-                  )
+                  timelineImage(event.image_path, event.type, event.id, contentUrl(event.image))
                 ),
                 predicted: !event.is_confirmed,
                 canPlan:

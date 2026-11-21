@@ -33,7 +33,7 @@ Shared game resources have separate owners:
 - `services/resources/`: fetching, JSON/gzip decoding, manifest checks, persistent resource caching, and refresh notifications. `resourceCache` is the shared entry point.
 - `services/cache/`: the general request cache for concurrent requests and time-limited results.
 - `lib/game-data/`: character, skill, factor, race, course, support-card, and scenario data. Loaders have direct names such as `loadCharacters` and `loadSkills`; display records are shared here too.
-- `lib/game-assets/`: bundled item icons and timeline artwork lookups.
+- `lib/game-assets/`: links to game art in the asset bucket (`art-links.ts`, one function per art family) and timeline banner lookups.
 - `lib/inheritance/uql/query-data.ts`: preparation of game data for query names and completion.
 - `pages/database/data/`: the database page's reactive game-data loading state.
 

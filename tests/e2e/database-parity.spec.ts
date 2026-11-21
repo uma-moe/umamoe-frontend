@@ -1,13 +1,13 @@
 import { expect, test, replaceQuery, type Page } from './fixtures/test';
 
-import { mockDatabase, mockAffinity, record } from './fixtures/api';
+import { mockDatabase, mockAffinity, record, gameArt } from './fixtures/api';
 
 test('Database keeps populated Angular results, filter modes, sharing, and Trainer submission', async ({
   page,
   isMobile
 }) => {
   await mockDatabase(page);
-  await page.route('**/support_card_s_30189.webp', (route) =>
+  await page.route(gameArt('support-cards/30189/half.webp'), (route) =>
     route.fulfill({ status: 404, body: '' })
   );
 
@@ -24,7 +24,7 @@ test('Database keeps populated Angular results, filter modes, sharing, and Train
   await page.locator('.support-card-section').scrollIntoViewIfNeeded();
   await expect(page.locator('.support-card-section img')).toHaveAttribute(
     'src',
-    '/game-assets/umamusume_cards/tex_support_card_30189.webp'
+    gameArt('support-cards/30189/card.webp')
   );
   await page.getByRole('button', { name: /Filters/ }).click();
   await page.getByRole('radio', { name: 'Advanced' }).click();
@@ -620,7 +620,7 @@ test('Database synchronizes result display controls and exposes source affinity 
   const first = cards.first();
   await expect(first.locator('.support-card-section img')).toHaveAttribute(
     'src',
-    '/assets/images/support_card/half/support_card_s_30189.webp'
+    gameArt('support-cards/30189/half.webp')
   );
   await expect(first.locator('.record-footer')).toContainText('Verified');
   await expect(first.locator('.record-footer time')).toHaveAttribute(

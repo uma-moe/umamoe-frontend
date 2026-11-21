@@ -8,16 +8,10 @@ import type {
 import { RequestCache } from '@/services/cache/request-cache';
 import { statisticsDistanceId } from '@/lib/statistics/statistics';
 import { resourceCache } from '@/services/resources/resource-cache';
-import {
-  characterImagePath,
-  type CharacterData,
-  type CharacterNames
-} from '@/lib/game-data/characters';
-import {
-  loadSupportCards,
-  supportCardImagePath
-} from '@/lib/game-data/support-cards/support-cards';
-import { normalizeSkill, skillImage } from '@/lib/game-data/skills/skills';
+import { umaPortrait, supportCardHalf, skillIcon } from '@/lib/game-assets/art-links';
+import { type CharacterData, type CharacterNames } from '@/lib/game-data/characters';
+import { loadSupportCards } from '@/lib/game-data/support-cards/support-cards';
+import { normalizeSkill } from '@/lib/game-data/skills/skills';
 import { supportTypeName } from '@/lib/game-data/support-cards/support-card-details';
 
 export interface StatisticsCatalogEntry {
@@ -80,14 +74,14 @@ export const statisticsRepository = {
             id,
             title: localized?.name || character.name,
             detail: localized?.skins?.[id.slice(-2)] || character.subtitle,
-            image: characterImagePath(Number(id)),
+            image: umaPortrait(Number(id)),
             tags: []
           };
         }),
         supports: supports.map((card) => ({
           id: card.id,
           title: card.name,
-          image: supportCardImagePath(card.id),
+          image: supportCardHalf(card.id),
           tags: [
             card.type === 'group' ? 'Group' : supportTypeName(card.type),
             card.rarity === 3 ? 'SSR' : card.rarity === 2 ? 'SR' : 'R'
@@ -96,7 +90,7 @@ export const statisticsRepository = {
         skills: skills.map((skill) => ({
           id: String(skill.skill_id),
           title: skill.name,
-          image: skillImage(skill.icon),
+          image: skillIcon(skill.icon),
           tags: []
         }))
       };

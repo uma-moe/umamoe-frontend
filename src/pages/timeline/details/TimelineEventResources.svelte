@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { itemIconPath } from '@/lib/game-assets/item-icons';
+  import { itemIcon } from '@/lib/game-assets/art-links';
   import Button from '@/components/controls/Button.svelte';
   import Banner from '@/components/feedback/Banner.svelte';
   import Icon from '@/components/Icon.svelte';
@@ -96,7 +96,7 @@
         amount: free,
         label: `${free} free pulls`,
         countLabel: String(free),
-        iconPath: itemIconPath(41)
+        iconPath: itemIcon(41)
       });
     return items;
   });
@@ -246,7 +246,7 @@
         >
           <img
             src={reward.kind === 'free_pulls' && event.eventType === 'support_card_banner'
-              ? itemIconPath(111)
+              ? itemIcon(111)
               : reward.iconPath}
             alt=""
             width="30"

@@ -1,3 +1,5 @@
+import { runningStyleBadge, type RunningStyleBadge } from '@/lib/game-assets/art-links';
+
 const fullStyleNames: Record<number, string> = {
   1: 'Front Runner',
   2: 'Pace Chaser',
@@ -46,7 +48,7 @@ export function runningStyleName(value?: number, compact = false): string {
 }
 
 /** The game has style badges for the four basic styles only; Runaway has none. */
-const styleIconNames: Record<number, string> = {
+const styleIconNames: Record<number, RunningStyleBadge> = {
   1: 'front',
   2: 'pace',
   3: 'late',
@@ -58,7 +60,7 @@ export function runningStyleIcon(value?: number): string | undefined {
   const name = styleIconNames[value ?? 0];
   if (name === undefined) return undefined;
 
-  return '/game-assets/textures/' + name + '.webp';
+  return runningStyleBadge(name);
 }
 
 const moodNames = ['Awful', 'Bad', 'Normal', 'Good', 'Great'] as const;
@@ -71,10 +73,6 @@ export function moodName(motivation: unknown): MoodName | undefined {
   if (!Number.isInteger(value) || value < 1 || value > moodNames.length) return undefined;
 
   return moodNames[value - 1];
-}
-
-export function moodIcon(mood: MoodName): string {
-  return '/game-assets/textures/' + mood.toLowerCase() + '.webp';
 }
 
 /** A finishing place as read aloud: 1st, 2nd, 11th, 23rd. */

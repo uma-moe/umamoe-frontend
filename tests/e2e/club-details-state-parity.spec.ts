@@ -54,9 +54,12 @@ test('Club information retains live freshness, timestamp precedence, tier change
 
   await expect(info.locator('img[alt="Lower Tier"]')).toHaveAttribute(
     'src',
-    /circle_rank_04.webp$/
+    /\/circle-ranks\/04\.webp$/
   );
-  await expect(info.locator('img[alt="Next Tier"]')).toHaveAttribute('src', /circle_rank_06.webp$/);
+  await expect(info.locator('img[alt="Next Tier"]')).toHaveAttribute(
+    'src',
+    /\/circle-ranks\/06\.webp$/
+  );
   await info.screenshot({ path: testInfo.outputPath('club-information.png') });
   await expect(page.getByRole('region', { name: 'Club members', exact: true })).toBeVisible();
   await expect(page.locator('.club-chart')).toHaveCount(1);

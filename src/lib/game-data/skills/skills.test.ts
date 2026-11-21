@@ -5,7 +5,6 @@ import {
   loadSkills,
   normalizeSkill,
   resolveEncodedSkill,
-  skillImage,
   skillRarity,
   skillPointTotal,
   sortEncodedSkills,
@@ -85,7 +84,5 @@ it('normalizes legacy boolean flags and metadata-derived unique skills like Angu
   expect(skillLookup.get(100011)).toMatchObject({ name: 'Shooting Star', unique: true });
   expect(skillRarity(skillLookup.get(100011), false)).toBe('unique-main');
   expect(sortEncodedSkills(skillLookup, [200011, 100011])).toEqual([100011, 200011]);
-  expect(skillImage(skillLookup.get(100011)?.icon)).toBe(
-    '/assets/images/skills/utx_ico_skill_20013.webp'
-  );
+  expect(skillLookup.get(100011)?.icon).toBe('utx_ico_skill_20013.png');
 });

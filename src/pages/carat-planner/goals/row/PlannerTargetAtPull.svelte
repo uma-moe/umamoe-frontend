@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { itemIconPath } from '@/lib/game-assets/item-icons';
+  import { itemIcon } from '@/lib/game-assets/art-links';
   import {
     availableCrystals,
     type PlannerGachaEntry,
@@ -56,7 +56,7 @@
     title={caratLabel}
   >
     <img
-      src={itemIconPath(43)}
+      src={itemIcon(43)}
       width="18"
       height="18"
       alt="Carats"
@@ -67,7 +67,7 @@
   {#if !paidOnly}
     <span title={ticketLabel}>
       <img
-        src={itemIconPath(ticketKind === 'support' ? 111 : 41)}
+        src={itemIcon(ticketKind === 'support' ? 111 : 41)}
         width="18"
         height="18"
         alt=""
@@ -81,7 +81,7 @@
       {#each ['rainbow', 'gold'] as kind}
         <span title={`${kind === 'rainbow' ? 'Rainbow' : 'Gold'} Uncap Crystals available at pull`}>
           <img
-            src={itemIconPath(kind === 'rainbow' ? 144 : 145)}
+            src={itemIcon(kind === 'rainbow' ? 144 : 145)}
             width="18"
             height="18"
             alt=""

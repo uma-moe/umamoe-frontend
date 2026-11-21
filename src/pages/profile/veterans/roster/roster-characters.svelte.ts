@@ -1,8 +1,5 @@
-import {
-  characterImagePath,
-  loadReleasedCharacters,
-  type CharacterData
-} from '@/lib/game-data/characters';
+import { umaPortrait } from '@/lib/game-assets/art-links';
+import { loadReleasedCharacters, type CharacterData } from '@/lib/game-data/characters';
 import type { CharacterPickerSort } from '@/components/pickers/CharacterPicker.svelte';
 import type { AncestorScope } from '@/lib/profile/veterans/profile-veterans';
 
@@ -29,7 +26,7 @@ export class RosterCharacters {
   options = $derived(
     (this.choices.length ? this.choices : this.target ? [this.target] : []).map((character) => ({
       ...character,
-      image: characterImagePath(Number(character.id))
+      image: umaPortrait(Number(character.id))
     }))
   );
 

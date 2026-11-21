@@ -141,10 +141,7 @@ test('Lineage odds retain Angular source ordering, combined rolls and separate s
   await expect(skillRow).toHaveCount(1);
   await expect(skillRow.locator('img')).toHaveCount(1);
   await skillRow.scrollIntoViewIfNeeded();
-  await expect(skillRow.locator('img')).toHaveAttribute(
-    'src',
-    /\/assets\/images\/skills\/.*\.webp$/
-  );
+  await expect(skillRow.locator('img')).toHaveAttribute('src', /\/art\/skills\/icons\/\d+\.webp$/);
   await expect
     .poll(() =>
       skillRow

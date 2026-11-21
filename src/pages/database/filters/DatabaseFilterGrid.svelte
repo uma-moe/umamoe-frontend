@@ -10,7 +10,7 @@
     SupportCardPickerOption
   } from '@/components/pickers/picker-types';
   import type { VeteranUiRecord } from '@/components/game/veteran-ui-types';
-  import { supportCardImagePath } from '@/lib/game-data/support-cards/support-cards';
+  import { supportCardHalf, statIcon, supportRarityIcon } from '@/lib/game-assets/art-links';
   import type {
     InheritanceFilterMode,
     InheritanceSearchFilters
@@ -99,7 +99,7 @@
       ? {
           id: entry.id,
           title: entry.title,
-          image: supportCardImagePath(entry.id),
+          image: supportCardHalf(entry.id),
           type: supportType(entry),
           rarity: supportRarity(entry)
         }
@@ -243,7 +243,7 @@
     <div class="support-identity">
       <img
         class="support-rarity"
-        src={`/game-assets/support-rarity/${option.rarity.toLowerCase()}.png`}
+        src={supportRarityIcon(option.rarity)}
         alt={option.rarity}
       />
       <strong>{option.character || option.title}</strong>
@@ -261,7 +261,7 @@
         </span>
       {:else}
         <img
-          src={`/assets/images/icon/stats/${option.type.toLowerCase()}.webp`}
+          src={statIcon(option.type)}
           alt={option.type}
           title={option.type}
         />

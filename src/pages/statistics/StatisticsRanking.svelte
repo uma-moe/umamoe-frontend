@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { statIconByName } from '@/lib/game-assets/art-links';
   import InfoIcon from '@/components/feedback/InfoIcon.svelte';
   import type { ChartDatum } from '@/lib/statistics/statistics';
   import ChartFrame from '@/components/charts/ChartFrame.svelte';
@@ -55,9 +56,6 @@
   const listed = $derived(searchable ? matching : matching.slice(0, limit));
   const largestShare = $derived(Math.max(1, ...items.map((item) => item.percentage ?? 0)));
   const help = $derived(description + ' Bar lengths are relative to the leading result.');
-
-  const statIcon = (type: string) =>
-    ['wiz', 'wisdom', 'intelligence'].includes(type) ? 'wit' : type;
 </script>
 
 <div
@@ -180,7 +178,7 @@
                           </span>
                         {:else}
                           <img
-                            src={'/assets/images/icon/stats/' + statIcon(type) + '.webp'}
+                            src={statIconByName(type)}
                             alt={type}
                             width="24"
                             height="24"

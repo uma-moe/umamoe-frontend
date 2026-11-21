@@ -7,11 +7,6 @@ test('Timeline keeps compact artwork cards and Carat Planner preserves banner al
   isMobile
 }, info) => {
   await mockTimeline(page);
-  const artworkModules: string[] = [];
-  page.on('request', (request) => {
-    if (request.resourceType() === 'script' && /\/timeline-images\/.*\.webp/.test(request.url()))
-      artworkModules.push(request.url());
-  });
 
   await page.route('**/resources/test/banner_timeline.json*', (route) =>
     route.fulfill({
@@ -46,7 +41,6 @@ test('Timeline keeps compact artwork cards and Carat Planner preserves banner al
   await expect
     .poll(() => art.evaluate((node: HTMLImageElement) => node.complete && node.naturalWidth > 0))
     .toBe(true);
-  expect(artworkModules).toEqual([]);
   const card = page.locator('[data-event-id="artwork-entry"]');
   expect((await card.boundingBox())!.height).toBeLessThanOrEqual(isMobile ? 200 : 195);
   if (!isMobile) expect((await card.boundingBox())!.width).toBe(285);

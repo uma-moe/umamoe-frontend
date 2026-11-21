@@ -3,10 +3,10 @@
   import Banner from '@/components/feedback/Banner.svelte';
   import SelectFieldSlim from '@/components/controls/SelectFieldSlim.svelte';
   import SkillChip from '@/components/game/SkillChip.svelte';
+  import { skillIcon } from '@/lib/game-assets/art-links';
   import {
     loadSkills,
     skillPointTotal,
-    skillImage,
     skillRarity,
     type SkillData
   } from '@/lib/game-data/skills/skills';
@@ -62,7 +62,7 @@
         value: String(skill.skill_id),
         label: skill.name,
         keywords: `skill ${skill.skill_id}`,
-        image: skillImage(skill.icon)
+        image: skillIcon(skill.icon)
       }))
   );
 
@@ -130,7 +130,7 @@
           <div class="chip">
             <SkillChip
               {name}
-              icon={skillImage(skill?.icon)}
+              icon={skillIcon(skill?.icon)}
               rarity={skillRarity(skill, Boolean(skill?.inherited))}
               compact
               fill

@@ -1,6 +1,6 @@
 import type { PlannerRewardEntry, PlannerRewardResource } from '../../carat-planner/carat-planner';
 import { plannerRewardBundles } from '../../carat-planner/rewards/planner-reward-currencies';
-import { itemIconPath } from '@/lib/game-assets/item-icons';
+import { itemIcon } from '@/lib/game-assets/art-links';
 import { plannerTimestampDateKey as rewardDateKey } from '../../carat-planner/planner-calendar';
 
 export interface TimelineRewardSummary {
@@ -161,7 +161,7 @@ function rewardItem(
     amount,
     label: `${INTEGER_FORMATTER.format(amount)} ${name}`,
     countLabel,
-    iconPath: itemIconPath(iconItemId)
+    iconPath: itemIcon(iconItemId)
   };
 }
 
@@ -747,26 +747,20 @@ function competitivePresentation(
       mode: 'placement',
       previewLabel: 'Finals',
       previewItems: [
-        previewItem(
-          'carats',
-          'Carats',
-          '500–2,500',
-          'diamond',
-          itemIconPath(REWARD_ITEM_IDS.carats)
-        ),
+        previewItem('carats', 'Carats', '500–2,500', 'diamond', itemIcon(REWARD_ITEM_IDS.carats)),
         previewItem(
           'uma-ticket',
           'Trainee tickets',
           '1–5',
           'confirmation_number',
-          itemIconPath(REWARD_ITEM_IDS.uma_ticket)
+          itemIcon(REWARD_ITEM_IDS.uma_ticket)
         ),
         previewItem(
           'support-ticket',
           'Support tickets',
           'up to 5',
           'confirmation_number',
-          itemIconPath(REWARD_ITEM_IDS.support_ticket)
+          itemIcon(REWARD_ITEM_IDS.support_ticket)
         )
       ],
       outcomeHeading: 'Final placement rewards',
@@ -881,13 +875,13 @@ function championsFinalOutcome(
   supportPoints: number
 ): TimelineRewardOutcome {
   const items = [
-    outcomeItem('carats', 'Carats', carats, 'diamond', itemIconPath(REWARD_ITEM_IDS.carats)),
+    outcomeItem('carats', 'Carats', carats, 'diamond', itemIcon(REWARD_ITEM_IDS.carats)),
     outcomeItem(
       'uma-ticket',
       'Trainee tickets',
       umaTickets,
       'confirmation_number',
-      itemIconPath(REWARD_ITEM_IDS.uma_ticket)
+      itemIcon(REWARD_ITEM_IDS.uma_ticket)
     )
   ];
 
@@ -898,7 +892,7 @@ function championsFinalOutcome(
         'Support tickets',
         supportTickets,
         'confirmation_number',
-        itemIconPath(REWARD_ITEM_IDS.support_ticket)
+        itemIcon(REWARD_ITEM_IDS.support_ticket)
       )
     );
   }
@@ -909,15 +903,15 @@ function championsFinalOutcome(
       'Goddess statues',
       goddessStatues,
       'favorite',
-      itemIconPath(REWARD_ITEM_IDS.goddess_statues)
+      itemIcon(REWARD_ITEM_IDS.goddess_statues)
     ),
-    outcomeItem('money', 'Money', money, 'paid', itemIconPath(REWARD_ITEM_IDS.money)),
+    outcomeItem('money', 'Money', money, 'paid', itemIcon(REWARD_ITEM_IDS.money)),
     outcomeItem(
       'support-points',
       'Support points',
       supportPoints,
       'trending_up',
-      itemIconPath(REWARD_ITEM_IDS.support_points)
+      itemIcon(REWARD_ITEM_IDS.support_points)
     )
   );
   return { key: `cm-${label}`, label, items };
@@ -1036,7 +1030,7 @@ function competitiveItemDescriptor(
       key: 'carats',
       label: 'Carats',
       icon: 'diamond',
-      iconPath: itemIconPath(REWARD_ITEM_IDS.carats)
+      iconPath: itemIcon(REWARD_ITEM_IDS.carats)
     };
   }
 
@@ -1045,7 +1039,7 @@ function competitiveItemDescriptor(
       key: 'uma-ticket',
       label: 'Trainee ticket',
       icon: 'confirmation_number',
-      iconPath: itemIconPath(REWARD_ITEM_IDS.uma_ticket)
+      iconPath: itemIcon(REWARD_ITEM_IDS.uma_ticket)
     };
   }
 
@@ -1054,7 +1048,7 @@ function competitiveItemDescriptor(
       key: 'support-ticket',
       label: 'Support ticket',
       icon: 'confirmation_number',
-      iconPath: itemIconPath(REWARD_ITEM_IDS.support_ticket)
+      iconPath: itemIcon(REWARD_ITEM_IDS.support_ticket)
     };
   }
 
@@ -1063,7 +1057,7 @@ function competitiveItemDescriptor(
       key: 'rainbow-full-crystal',
       label: 'Rainbow Uncap Crystal',
       icon: 'auto_awesome',
-      iconPath: itemIconPath(REWARD_ITEM_IDS.rainbow_full_crystal)
+      iconPath: itemIcon(REWARD_ITEM_IDS.rainbow_full_crystal)
     };
   }
 
@@ -1072,7 +1066,7 @@ function competitiveItemDescriptor(
       key: 'gold-full-crystal',
       label: 'Gold Uncap Crystal',
       icon: 'auto_awesome',
-      iconPath: itemIconPath(REWARD_ITEM_IDS.gold_full_crystal)
+      iconPath: itemIcon(REWARD_ITEM_IDS.gold_full_crystal)
     };
   }
 
@@ -1081,7 +1075,7 @@ function competitiveItemDescriptor(
       key: 'rainbow-crystal',
       label: 'Rainbow Crystal Shard',
       icon: 'auto_awesome',
-      iconPath: itemIconPath(REWARD_ITEM_IDS.rainbow_crystal)
+      iconPath: itemIcon(REWARD_ITEM_IDS.rainbow_crystal)
     };
   }
 
@@ -1090,7 +1084,7 @@ function competitiveItemDescriptor(
       key: 'gold-crystal',
       label: 'Gold Crystal Shard',
       icon: 'auto_awesome',
-      iconPath: itemIconPath(REWARD_ITEM_IDS.gold_crystal)
+      iconPath: itemIcon(REWARD_ITEM_IDS.gold_crystal)
     };
   }
 
@@ -1102,7 +1096,7 @@ function competitiveItemDescriptor(
       key: 'money',
       label: 'Money',
       icon: 'paid',
-      iconPath: itemIconPath(REWARD_ITEM_IDS.money)
+      iconPath: itemIcon(REWARD_ITEM_IDS.money)
     };
   }
 
@@ -1111,7 +1105,7 @@ function competitiveItemDescriptor(
       key: 'goddess-statues',
       label: 'Goddess statues',
       icon: 'favorite',
-      iconPath: itemIconPath(REWARD_ITEM_IDS.goddess_statues)
+      iconPath: itemIcon(REWARD_ITEM_IDS.goddess_statues)
     };
   }
 
@@ -1120,7 +1114,7 @@ function competitiveItemDescriptor(
       key: 'support-points',
       label: 'Support points',
       icon: 'trending_up',
-      iconPath: itemIconPath(REWARD_ITEM_IDS.support_points)
+      iconPath: itemIcon(REWARD_ITEM_IDS.support_points)
     };
   }
 
@@ -1129,7 +1123,7 @@ function competitiveItemDescriptor(
       key: 'dream-glimmer',
       label: 'Dream Glimmer',
       icon: 'auto_awesome',
-      iconPath: itemIconPath(REWARD_ITEM_IDS.dream_glimmer)
+      iconPath: itemIcon(REWARD_ITEM_IDS.dream_glimmer)
     };
   }
 

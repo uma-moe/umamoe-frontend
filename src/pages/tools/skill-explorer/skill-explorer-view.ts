@@ -1,5 +1,5 @@
-import { characterImagePath } from '@/lib/game-data/characters';
-import { skillImage, type SkillData } from '@/lib/game-data/skills/skills';
+import { umaPortrait, skillIcon } from '@/lib/game-assets/art-links';
+import { type SkillData } from '@/lib/game-data/skills/skills';
 import { finalSpurtSection } from '@/lib/race/final-spurt';
 import type { LinearAxis } from './scatter/scatter-scale';
 import { dayAllows, type RaceDay } from './cm/race-day';
@@ -179,8 +179,8 @@ const TIERS: Record<SkillRarity, PlottedSkill['tier']> = {
 
 /** A unique shows its character; any other skill its icon. */
 function imageOf(skill: SkillData, facts: SkillFacts | undefined): string | undefined {
-  if (facts?.card !== undefined) return characterImagePath(facts.card);
-  return skillImage(skill.icon);
+  if (facts?.card !== undefined) return umaPortrait(facts.card);
+  return skillIcon(skill.icon);
 }
 
 function positionLabel(share: number, courseDistance: number | undefined): string {

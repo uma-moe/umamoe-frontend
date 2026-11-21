@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { statIconByName } from '@/lib/game-assets/art-links';
   import { virtualScroll, type VirtualRange } from '@/lib/virtual-scroll';
   import { factorImage, factorOptions, type FactorMetadata } from '@/lib/game-data/factors/factors';
   import type { CharacterData } from '@/lib/game-data/characters';
@@ -57,7 +58,7 @@
       <span class="choice-copy">
         {#if stat}
           <img
-            src={'/assets/images/icon/stats/' + factor.text.toLowerCase() + '.webp'}
+            src={statIconByName(factor.text)}
             alt=""
           />
         {/if}

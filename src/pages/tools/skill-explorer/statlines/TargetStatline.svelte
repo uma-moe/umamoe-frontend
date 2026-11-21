@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { statIcon } from '@/lib/game-assets/art-links';
   import Icon from '@/components/Icon.svelte';
   import InspectPopover from '@/components/overlays/InspectPopover.svelte';
   import { STYLE_NAMES, type StyleKey } from '../skill-explorer-data';
@@ -19,7 +20,7 @@
   const STAT_COLUMNS = STAT_INDICES.map((index) => ({
     index,
     name: STAT_NAMES[index],
-    icon: `/assets/images/icon/stats/${STAT_ICONS[index]}.webp`
+    icon: statIcon(STAT_ICONS[index])
   }));
 
   const groups = $derived(groupStatlines(target));

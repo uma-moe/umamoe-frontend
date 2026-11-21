@@ -1,11 +1,8 @@
 <script lang="ts">
   import Icon from '@/components/Icon.svelte';
   import CharacterSelectDialog from '@/components/pickers/CharacterSelectDialog.svelte';
-  import {
-    characterImagePath,
-    loadReleasedCharacters,
-    type CharacterData
-  } from '@/lib/game-data/characters';
+  import { umaPortrait } from '@/lib/game-assets/art-links';
+  import { loadReleasedCharacters, type CharacterData } from '@/lib/game-data/characters';
   import { loadSkills } from '@/lib/game-data/skills/skills';
   import SimulatorRunnerFace from '../../reports/SimulatorRunnerFace.svelte';
   import type { SimulatorUma } from '../../simulator-uma';
@@ -30,7 +27,7 @@
       id: character.id,
       name: character.name,
       subtitle: character.subtitle,
-      image: characterImagePath(Number(character.id)),
+      image: umaPortrait(Number(character.id)),
       rarity: character.rarity
     }))
   );

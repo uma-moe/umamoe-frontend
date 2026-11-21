@@ -4,7 +4,8 @@ import {
   mockOwnerProfile,
   mockProfilePresentation,
   profile,
-  veteran
+  veteran,
+  gameArt
 } from './fixtures/api';
 
 test('Team Stadium decodes packed support cards into artwork, names and limit breaks', async ({
@@ -44,7 +45,7 @@ test('Team Stadium decodes packed support cards into artwork, names and limit br
     const card = deck.locator('li').nth(index);
     await expect(card.locator('.art img')).toHaveAttribute(
       'src',
-      `/assets/images/support_card/half/support_card_s_${id}.webp`
+      gameArt(`support-cards/${id}/half.webp`)
     );
     await expect(
       card.getByRole('img', { name: `Limit break ${lb} of 4`, exact: true })

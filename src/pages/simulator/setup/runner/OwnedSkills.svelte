@@ -2,12 +2,8 @@
   import { onMount } from 'svelte';
   import Icon from '@/components/Icon.svelte';
   import SkillChip from '@/components/game/SkillChip.svelte';
-  import {
-    loadSkills,
-    skillImage,
-    skillRarity,
-    type SkillData
-  } from '@/lib/game-data/skills/skills';
+  import { skillIcon } from '@/lib/game-assets/art-links';
+  import { loadSkills, skillRarity, type SkillData } from '@/lib/game-data/skills/skills';
   import type { SimulatorUma } from '../../simulator-uma';
   import { missingCharacterUnique } from './editor/uma-draft';
 
@@ -61,7 +57,7 @@
         <li>
           <SkillChip
             name={skill?.name ?? 'Skill ' + learned.skillId}
-            icon={skillImage(skill?.icon)}
+            icon={skillIcon(skill?.icon)}
             rarity={skillRarity(skill, Boolean(skill?.inherited))}
             compact
           />
@@ -80,7 +76,7 @@
       onclick={addUnique}
     >
       <img
-        src={skillImage(unique.icon)}
+        src={skillIcon(unique.icon)}
         alt=""
         loading="lazy"
       />
