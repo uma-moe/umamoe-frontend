@@ -1,3 +1,5 @@
+import type { SupportTypeName } from '@/lib/game-data/support-cards/support-card-details';
+
 export interface CharacterPickerOption {
   id: string;
   name: string;
@@ -13,7 +15,7 @@ export interface SupportCardPickerOption {
   character?: string;
   searchText?: string;
   image?: string;
-  type: 'Speed' | 'Stamina' | 'Power' | 'Guts' | 'Wit' | 'Friend';
+  type: SupportTypeName;
   rarity: 'R' | 'SR' | 'SSR';
   disabled?: boolean;
 }

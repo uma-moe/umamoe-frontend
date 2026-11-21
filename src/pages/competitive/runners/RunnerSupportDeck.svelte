@@ -24,7 +24,7 @@
   let supports = $state.raw(new Map<string, SupportCardData>());
 
   function supportType(card: SupportCardData) {
-    return card.type === 'group' ? 'Group' : supportTypeName(card.type);
+    return supportTypeName(card.type);
   }
 
   onMount(() => {

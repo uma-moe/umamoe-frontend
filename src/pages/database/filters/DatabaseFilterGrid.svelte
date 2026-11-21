@@ -11,6 +11,7 @@
   } from '@/components/pickers/picker-types';
   import type { VeteranUiRecord } from '@/components/game/veteran-ui-types';
   import { supportCardImagePath } from '@/lib/game-data/support-cards/support-cards';
+  import type { SupportTypeName } from '@/lib/game-data/support-cards/support-card-details';
   import type {
     InheritanceFilterMode,
     InheritanceSearchFilters
@@ -151,9 +152,7 @@
     onchange();
   }
 
-  function supportType(
-    entry: GameDataEntry
-  ): 'Speed' | 'Stamina' | 'Power' | 'Guts' | 'Wit' | 'Friend' {
+  function supportType(entry: GameDataEntry): SupportTypeName {
     const type = entry.tags[0];
     switch (type) {
       case 'Speed':
@@ -161,6 +160,7 @@
       case 'Power':
       case 'Guts':
       case 'Wit':
+      case 'Group':
         return type;
       default:
         return 'Friend';

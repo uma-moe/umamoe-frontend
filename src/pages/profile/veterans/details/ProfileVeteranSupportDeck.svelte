@@ -49,11 +49,7 @@
       {#each supportDeck as support}
         {@const id = support.support_card_id}
         {@const card = supportCatalog.find((card) => Number(card.id) === id)}
-        {@const type = card
-          ? card.type === 'group'
-            ? 'Group'
-            : supportTypeName(card.type)
-          : undefined}
+        {@const type = card ? supportTypeName(card.type) : undefined}
         <li title={card ? `${card.name}, ${supportTypeName(card.type)}` : `Support card ${id}`}>
           <Artwork
             src={supportCardImagePath(id)}
