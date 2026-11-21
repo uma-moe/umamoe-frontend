@@ -1,4 +1,4 @@
-import { jpArtLink } from './art-links';
+import { jpArtLink } from './art-trees';
 
 /**
  * Stopping the event keeps the image's own error handler from replacing it with a placeholder;

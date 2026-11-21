@@ -1,5 +1,5 @@
 import type { MoodName } from '@/lib/race/replay/race-display';
-import { runtimeConfig } from '@/services/runtime-config';
+import { TIMELINE_FOLDER, artLink } from './art-trees';
 
 /** Stats and support types by the names of their icons. */
 export type StatIcon = 'speed' | 'stamina' | 'power' | 'guts' | 'wit' | 'friend' | 'group';
@@ -16,35 +16,6 @@ export type Season = 'spring' | 'summer' | 'fall' | 'winter';
 export type SupportRarity = 'R' | 'SR' | 'SSR';
 
 const TIMES_OF_DAY: readonly TimeOfDay[] = ['midday', 'evening', 'night'];
-
-/** Each region publishes its own tree in the bucket; the site shows Global's. */
-const GLOBAL_ART_TREE = 'en';
-
-/** JP's tree files the cards, outfits and skills Global has not released under the same keys. */
-const JP_ART_TREE = 'jp';
-
-/** Timeline banners are published in Global's tree only. */
-const TIMELINE_FOLDER = 'timeline/';
-
-function artFolder(tree: string): string {
-  return `${runtimeConfig.assetOrigin}/${tree}/art/`;
-}
-
-/** A file below Global's `art/` tree. */
-function artLink(key: string): string {
-  return `${artFolder(GLOBAL_ART_TREE)}${key}`;
-}
-
-/** The same game-art file in JP's tree for a link into Global's; undefined for any other link. */
-export function jpArtLink(link: string): string | undefined {
-  const globalFolder = artFolder(GLOBAL_ART_TREE);
-  if (!link.startsWith(globalFolder)) return undefined;
-
-  const key = link.slice(globalFolder.length);
-  if (key.startsWith(TIMELINE_FOLDER)) return undefined;
-
-  return `${artFolder(JP_ART_TREE)}${key}`;
-}
 
 function twoDigits(value: number): string {
   return String(value).padStart(2, '0');
