@@ -151,7 +151,7 @@
   {:else}
     <p class="racecourse-stage-hint">
       {#if mode === 'topDown'}
-        Straight down · the buttons zoom
+        Straight down
       {:else}
         Click to look · WASD to fly · Q/E down and up
       {/if}
