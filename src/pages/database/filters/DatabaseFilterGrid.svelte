@@ -3,6 +3,7 @@
   import { completeTourInteraction } from '@/components/tours/tour-state';
   import Icon from '@/components/Icon.svelte';
   import Slider from '@/components/controls/Slider.svelte';
+  import SelectField from '@/components/controls/SelectField.svelte';
   import SupportCardPicker from '@/components/pickers/SupportCardPicker.svelte';
   import TextField from '@/components/controls/TextField.svelte';
   import type {
@@ -13,7 +14,8 @@
   import { supportCardImagePath } from '@/lib/game-data/support-cards/support-cards';
   import type {
     InheritanceFilterMode,
-    InheritanceSearchFilters
+    InheritanceSearchFilters,
+    TrainerNameMatch
   } from '@/lib/inheritance/search/inheritance-search';
   import type { SelectableParent } from '@/lib/veterans/parents/parent-picker';
   import type { GameDataEntry } from '@/lib/game-data/display-records';
@@ -75,6 +77,12 @@
   }: Props = $props();
 
   const compactFilters = new MediaQuery('(max-width:900px)');
+
+  const trainerNameMatchOptions = [
+    { value: 'contains', label: 'Contains' },
+    { value: 'exact', label: 'Exact' },
+    { value: 'exact_case', label: 'Exact, case-sensitive' }
+  ] satisfies { value: TrainerNameMatch; label: string }[];
 
   const characterFilterCount = $derived(
     filters.mainParentIds.length +
@@ -173,11 +181,23 @@
     return 'R';
   }
 
-  function setScalar<Key extends 'trainerId' | 'trainerName'>(
-    key: Key,
-    value: InheritanceSearchFilters[Key]
-  ): void {
-    filters[key] = value;
+  function changeTrainerId(value: string): void {
+    filters.trainerId = value;
+    onchange();
+  }
+
+  function changeTrainerName(value: string): void {
+    filters.trainerName = value;
+
+    // A match mode without a name would silently apply to the next search.
+    if (!value.trim()) filters.trainerNameMatch = 'contains';
+
+    onchange();
+  }
+
+  function changeTrainerNameMatch(value: string): void {
+    if (value !== 'contains' && value !== 'exact' && value !== 'exact_case') return;
+    filters.trainerNameMatch = value;
     onchange();
   }
 
@@ -309,16 +329,24 @@
         label="Trainer ID"
         placeholder="123 456 789"
         value={filters.trainerId ?? ''}
-        oninput={(event) => setScalar('trainerId', (event.currentTarget as HTMLInputElement).value)}
+        oninput={(event) => changeTrainerId((event.currentTarget as HTMLInputElement).value)}
       /><TextField
         id="trainer-name"
         label="Username"
         type="search"
         placeholder="Trainer Name"
         value={filters.trainerName ?? ''}
-        oninput={(event) =>
-          setScalar('trainerName', (event.currentTarget as HTMLInputElement).value)}
+        oninput={(event) => changeTrainerName((event.currentTarget as HTMLInputElement).value)}
       />
+      {#if filters.trainerName?.trim()}
+        <SelectField
+          id="trainer-name-match"
+          label="Name match"
+          options={trainerNameMatchOptions}
+          value={filters.trainerNameMatch ?? 'contains'}
+          onchange={changeTrainerNameMatch}
+        />
+      {/if}
     </div>
   </section>
 {/snippet}

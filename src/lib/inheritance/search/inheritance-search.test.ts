@@ -192,4 +192,17 @@ describe('inheritance search contract', () => {
     filters.pink = [{ factorId: 340, minimumStars: 2 }];
     expect(activeInheritanceFilterCount(filters)).toBe(2);
   });
+
+  it('sends the trainer name match mode only when it is not the substring default', () => {
+    const filters = emptyInheritanceFilters();
+    filters.trainerName = 'neb';
+
+    expect(inheritanceSearchQuery(filters, 0, 12).get('trainer_name_mode')).toBeNull();
+
+    filters.trainerNameMatch = 'exact';
+    expect(inheritanceSearchQuery(filters, 0, 12).get('trainer_name_mode')).toBe('exact');
+
+    filters.trainerNameMatch = 'exact_case';
+    expect(inheritanceSearchQuery(filters, 0, 12).get('trainer_name_mode')).toBe('exact_case');
+  });
 });

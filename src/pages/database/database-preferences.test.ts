@@ -237,4 +237,30 @@ describe('Angular-compatible database preferences', () => {
     expect(result.importedCount).toBe(1);
     expect(result.presets).toEqual([{ ...incoming, id: 'kept-id', createdAt: 1, updatedAt: 100 }]);
   });
+
+  it('keeps the trainer name match mode in the shared filter state', () => {
+    const filters = emptyInheritanceFilters();
+    filters.trainerName = 'neb';
+    filters.trainerNameMatch = 'exact_case';
+
+    const compact = compactStateFromFilters(filters);
+    expect(compact.unm).toBe('exact_case');
+    expect(filtersFromCompactState(compact, 'advanced').trainerNameMatch).toBe('exact_case');
+  });
+
+  it('drops the trainer name match mode when it is the substring default', () => {
+    const filters = emptyInheritanceFilters();
+    filters.trainerName = 'neb';
+
+    const compact = compactStateFromFilters(filters);
+    expect(compact.unm).toBeUndefined();
+    expect(filtersFromCompactState(compact, 'advanced').trainerNameMatch).toBe('contains');
+  });
+
+  it('drops the trainer name match mode when no name is set', () => {
+    const filters = emptyInheritanceFilters();
+    filters.trainerNameMatch = 'exact';
+
+    expect(compactStateFromFilters(filters).unm).toBeUndefined();
+  });
 });
