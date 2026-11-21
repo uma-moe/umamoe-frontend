@@ -20,9 +20,30 @@ const TIMES_OF_DAY: readonly TimeOfDay[] = ['midday', 'evening', 'night'];
 /** Each region publishes its own tree in the bucket; the site shows Global's. */
 const GLOBAL_ART_TREE = 'en';
 
+/** JP's tree files the cards, outfits and skills Global has not released under the same keys. */
+const JP_ART_TREE = 'jp';
+
+/** Timeline banners are published in Global's tree only. */
+const TIMELINE_FOLDER = 'timeline/';
+
+function artFolder(tree: string): string {
+  return `${runtimeConfig.assetOrigin}/${tree}/art/`;
+}
+
 /** A file below Global's `art/` tree. */
 function artLink(key: string): string {
-  return `${runtimeConfig.assetOrigin}/${GLOBAL_ART_TREE}/art/${key}`;
+  return `${artFolder(GLOBAL_ART_TREE)}${key}`;
+}
+
+/** The same game-art file in JP's tree for a link into Global's; undefined for any other link. */
+export function jpArtLink(link: string): string | undefined {
+  const globalFolder = artFolder(GLOBAL_ART_TREE);
+  if (!link.startsWith(globalFolder)) return undefined;
+
+  const key = link.slice(globalFolder.length);
+  if (key.startsWith(TIMELINE_FOLDER)) return undefined;
+
+  return `${artFolder(JP_ART_TREE)}${key}`;
 }
 
 function twoDigits(value: number): string {
@@ -136,5 +157,5 @@ export function timelineBanner(imagePath: string): string | undefined {
   const path = imagePath
     .replace(/^\//, '')
     .match(/^assets\/(?:images|timeline-images)\/(.+)$/)?.[1];
-  return path === undefined ? undefined : artLink(`timeline/${path}`);
+  return path === undefined ? undefined : artLink(`${TIMELINE_FOLDER}${path}`);
 }
