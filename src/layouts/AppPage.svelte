@@ -24,6 +24,8 @@
     adsActive?: boolean;
     /** Ad placements to use when the route is not in the feature manifest, such as "tools". */
     adSurface?: string;
+    /** A page that shows its own heading, such as an immersive viewer, passes `false`. */
+    heading?: boolean;
     fill?: boolean;
     mobileHeading?: 'default' | 'actions-only';
     compactHeading?: boolean;
@@ -47,7 +49,8 @@
     adSurface: adSurfaceOverride,
     fill = false,
     mobileHeading = 'default',
-    compactHeading = false
+    compactHeading = false,
+    heading = true
   }: Props = $props();
 
   const adSurface = $derived(adSurfaceOverride ?? adSurfaceForRoute(routeId));
@@ -62,7 +65,7 @@
   {fill}
   adsEnabled={adsEnabled &&
     Boolean(adSurface && fuseIdForPlacement(`${adSurface}_sticky_vrec_right`))}
-  labelledby={`${routeId}-title`}
+  labelledby={heading ? `${routeId}-title` : undefined}
 >
   {#snippet leftAd()}
     <AdRegion
@@ -89,19 +92,21 @@
       ? 'var(--page-content-wide)'
       : 'var(--page-content-normal)'}
   >
-    <PageHeading
-      {title}
-      id={`${routeId}-title`}
-      {description}
-      {metadata}
-      {eyebrow}
-      {badge}
-      {tone}
-      {actions}
-      {flush}
-      {mobileHeading}
-      compact={compactHeading}
-    />
+    {#if heading}
+      <PageHeading
+        {title}
+        id={`${routeId}-title`}
+        {description}
+        {metadata}
+        {eyebrow}
+        {badge}
+        {tone}
+        {actions}
+        {flush}
+        {mobileHeading}
+        compact={compactHeading}
+      />
+    {/if}
     <div class="page-sections">{@render children()}</div>
   </main>
 </PageFrame>

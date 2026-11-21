@@ -228,6 +228,21 @@
       "source": "hakuraku"
     },
     {
+      "id": "racecourse-viewer",
+      "title": "Racecourse Viewer",
+      "description": "Explore the Umamusume racecourses in 3D: orbit the track, zoom into the corners and stands, and switch between the courses the game races on.",
+      "path": "/tools/racecourse-viewer",
+      "group": "tools",
+      "icon": "stadium",
+      "navigation": "secondary",
+      "width": "wide",
+      "status": "available",
+      "dataOwnership": "public",
+      "indexable": true,
+      "adSurface": null,
+      "source": "moe"
+    },
+    {
       "id": "research",
       "title": "Research",
       "description": "Read Hakuraku research notes on Uma Musume racing, skills, simulation, and game mechanics.",

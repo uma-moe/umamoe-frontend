@@ -303,6 +303,21 @@
       "source": "hakuraku"
     },
     {
+      "id": "racecourse-viewer",
+      "title": "Racecourse Viewer",
+      "description": "The game's racecourse models in 3D, to orbit and zoom.",
+      "path": "/tools/racecourse-viewer",
+      "group": "tools",
+      "icon": "stadium",
+      "navigation": "secondary",
+      "width": "wide",
+      "status": "available",
+      "dataOwnership": "public",
+      "indexable": true,
+      "adSurface": null,
+      "source": "moe"
+    },
+    {
       "id": "race-simulator",
       "title": "Race Simulator",
       "description": "Simulate race outcomes.",

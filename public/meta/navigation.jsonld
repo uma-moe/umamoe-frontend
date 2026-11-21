@@ -96,6 +96,12 @@
     {
       "@type": "ListItem",
       "position": 16,
+      "name": "Racecourse Viewer",
+      "url": "https://uma.moe/tools/racecourse-viewer"
+    },
+    {
+      "@type": "ListItem",
+      "position": 17,
       "name": "Research",
       "url": "https://uma.moe/research"
     }

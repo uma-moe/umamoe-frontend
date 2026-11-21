@@ -1,0 +1,130 @@
+/* The canvas fills the stage; the overlays sit on its bottom edge. */
+
+.racecourse-stage {
+  position: relative;
+  /* Fills what the page has left after the picker row, with a floor on short windows. */
+  flex: 1 1 auto;
+  min-height: clamp(320px, 45vh, 900px);
+  overflow: hidden;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  background: var(--color-surface-1);
+  touch-action: none;
+}
+
+.racecourse-stage canvas {
+  display: block;
+  width: 100%;
+  height: 100%;
+  cursor: grab;
+}
+
+.racecourse-stage canvas:active {
+  cursor: grabbing;
+}
+
+.racecourse-stage-loading {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  /* The course being replaced stays visible, dimmed, behind the card. */
+  background: color-mix(in srgb, var(--bg-primary) 55%, transparent);
+  backdrop-filter: blur(2px);
+}
+
+.racecourse-stage-loading-card {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-3) var(--space-4);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  background: var(--color-surface-1);
+  box-shadow: var(--shadow-md);
+  font-size: var(--font-sm);
+}
+
+.racecourse-stage-loading-label {
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.racecourse-stage-loading-bar {
+  width: 120px;
+  height: 4px;
+  overflow: hidden;
+  border-radius: 999px;
+  background: var(--color-surface-3);
+}
+
+.racecourse-stage-loading-fill {
+  display: block;
+  height: 100%;
+  border-radius: inherit;
+  background: var(--color-accent);
+  transition: width 120ms linear;
+}
+
+.racecourse-stage-message {
+  inset: 0;
+  justify-content: center;
+  padding: var(--space-6);
+  border-top: none;
+  text-align: center;
+  color: var(--color-text-muted);
+}
+
+.racecourse-stage-hint {
+  position: absolute;
+  inset: auto auto var(--space-2) var(--space-3);
+  padding: 2px var(--space-2);
+  border-radius: var(--radius-sm);
+  background: var(--color-overlay);
+  color: var(--color-text-muted);
+  font-size: var(--font-xs);
+  pointer-events: none;
+}
+
+/* Where the camera is, so a view can be quoted and brought back. */
+.racecourse-stage-spot {
+  position: absolute;
+  inset: auto var(--space-3) var(--space-2) auto;
+  padding: 2px var(--space-2);
+  border-radius: var(--radius-sm);
+  background: var(--color-overlay);
+  color: var(--color-text-muted);
+  font-family: var(--font-mono);
+  font-size: var(--font-xs);
+  font-variant-numeric: tabular-nums;
+  pointer-events: none;
+  white-space: pre;
+}
+
+/* A corner stack, the way a map puts its zoom controls. */
+.racecourse-stage-controls {
+  position: absolute;
+  inset: var(--space-3) var(--space-3) auto auto;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 2px;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  background: var(--color-surface-1);
+}
+
+.racecourse-stage-controls :global(.icon-button) {
+  border: none;
+  background: transparent;
+}
+
+.racecourse-stage-controls :global(.icon-button:hover) {
+  background: var(--color-surface-2);
+}
+
+@media (max-width: 767px) {
+  .racecourse-stage {
+    min-height: clamp(260px, 45vh, 520px);
+  }
+}
