@@ -12,7 +12,7 @@ test('cards show compact affinity above combined sparks and retain inline stats 
   page
 }, testInfo) => {
   await mockVeteranProfile(page);
-  await page.route('**/resources/*/affinity.json*', (route) =>
+  await page.route('**/resources/**/affinity.json*', (route) =>
     route.fulfill({
       json: {
         chars: [1011, 1067, 1088],
@@ -617,7 +617,7 @@ test('UQL accepts typing while name catalogs load and applies it when ready', as
   await mockVeteranProfile(page);
   let releaseNames!: () => void;
   const namesReady = new Promise<void>((resolve) => (releaseNames = resolve));
-  await page.route('**/resources/*/support-cards-db.json*', async (route) => {
+  await page.route('**/resources/**/support-cards-db.json*', async (route) => {
     await namesReady;
     await route.fallback();
   });
@@ -654,7 +654,7 @@ test('target Uma updates affinity, sorting, filters and planner transfer and can
 }, testInfo) => {
   await mockVeteranProfile(page);
   await mockCharacterCatalog(page);
-  await page.route('**/resources/*/affinity.json*', (route) =>
+  await page.route('**/resources/**/affinity.json*', (route) =>
     route.fulfill({
       json: {
         chars: [1011, 1067, 1088],

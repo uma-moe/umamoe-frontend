@@ -36,7 +36,7 @@ test('session resimulation requires browser verification when signed in and repo
   );
 
   for (const [name, json] of Object.entries(replayCourses))
-    await page.route(`**/resources/*/${name}.json*`, (route) => route.fulfill({ json }));
+    await page.route(`**/resources/**/${name}.json*`, (route) => route.fulfill({ json }));
   const raw = JSON.parse(captureFile('first.json').buffer.toString());
   raw.jwt = 'redact-original-credential';
   const bytes = inflateSync(Buffer.from(raw.race_scenario, 'base64'));
@@ -462,7 +462,7 @@ test('race field follows live positions and locks individual finishes with trimm
   page
 }, info) => {
   for (const [name, json] of Object.entries(replayCourses))
-    await page.route(`**/resources/*/${name}.json*`, (route) => route.fulfill({ json }));
+    await page.route(`**/resources/**/${name}.json*`, (route) => route.fulfill({ json }));
   await page.goto('/competitive/race-analysis');
   await page.getByRole('button', { name: 'Try one demo race', exact: true }).click();
   const demo = makeDemoRaces(1)[0]!,
@@ -612,7 +612,7 @@ test('race field keeps nine runners visible when blocking and activation details
   page
 }, info) => {
   for (const [name, json] of Object.entries(replayCourses))
-    await page.route(`**/resources/*/${name}.json*`, (route) => route.fulfill({ json }));
+    await page.route(`**/resources/**/${name}.json*`, (route) => route.fulfill({ json }));
   // A recorded-format fixture includes post-finish HP recovery and simultaneous activations.
   const count = 9,
     frameSize = 4 + count * 12,
@@ -808,7 +808,7 @@ test('lane range follows playback continuously and eases the axis and runners af
   page
 }) => {
   for (const [name, json] of Object.entries(replayCourses))
-    await page.route(`**/resources/*/${name}.json*`, (route) => route.fulfill({ json }));
+    await page.route(`**/resources/**/${name}.json*`, (route) => route.fulfill({ json }));
   await page.emulateMedia({ reducedMotion: 'no-preference' });
   await page.addInitScript(() =>
     localStorage.setItem('replay_settings', JSON.stringify({ laneScaleMode: 'automatic' }))
@@ -951,7 +951,7 @@ test('course map centers the finish and removes portraits when runners leave the
   page
 }, info) => {
   for (const [name, json] of Object.entries(replayCourses))
-    await page.route(`**/resources/*/${name}.json*`, (route) => route.fulfill({ json }));
+    await page.route(`**/resources/**/${name}.json*`, (route) => route.fulfill({ json }));
   const file = captureFile('past-finish.json'),
     raw = JSON.parse(file.buffer.toString());
 
@@ -1054,7 +1054,7 @@ test('course map portraits sit on runner positions with gate numbers and the sha
   page
 }, info) => {
   for (const [name, json] of Object.entries(replayCourses))
-    await page.route(`**/resources/*/${name}.json*`, (route) => route.fulfill({ json }));
+    await page.route(`**/resources/**/${name}.json*`, (route) => route.fulfill({ json }));
   await page.emulateMedia({ reducedMotion: 'no-preference' });
   await page.goto('/competitive/race-analysis');
   await page.getByRole('button', { name: 'Try one demo race', exact: true }).click();
@@ -1170,8 +1170,8 @@ test('race uploads keep replay and session sections together, retaining valid fi
   page
 }, info) => {
   for (const [name, json] of Object.entries(replayCourses))
-    await page.route(`**/resources/*/${name}.json*`, (route) => route.fulfill({ json }));
-  await page.route('**/resources/*/room_match_races.json*', (route) =>
+    await page.route(`**/resources/**/${name}.json*`, (route) => route.fulfill({ json }));
+  await page.route('**/resources/**/room_match_races.json*', (route) =>
     route.fulfill({ json: { races: [{ race_instance_id: 800023, course_set_id: 10506 }] } })
   );
 
@@ -1849,7 +1849,7 @@ test('race analysis is one continuous report with preserved selection and compac
   page
 }) => {
   for (const [name, json] of Object.entries(replayCourses))
-    await page.route(`**/resources/*/${name}.json*`, (route) => route.fulfill({ json }));
+    await page.route(`**/resources/**/${name}.json*`, (route) => route.fulfill({ json }));
   await page.goto('/competitive/race-analysis');
   await page.getByRole('button', { name: 'Try one demo race', exact: true }).click();
   await page.getByRole('radio', { name: 'Course map', exact: true }).click();
@@ -2315,11 +2315,11 @@ test('CM uses Hakuraku charts and captured teams without inventing a replay cata
 
   const teamsReady = new Promise<void>((resolve) => (releaseTeams = resolve));
   const skillsReady = new Promise<void>((resolve) => (releaseSkills = resolve));
-  await page.route('**/resources/*/simulator_courses.json*', (route) =>
+  await page.route('**/resources/**/simulator_courses.json*', (route) =>
     route.fulfill({ json: replayCourses.simulator_courses })
   );
 
-  await page.route('**/resources/*/room_match_races.json*', (route) =>
+  await page.route('**/resources/**/room_match_races.json*', (route) =>
     route.fulfill({ json: { races: [{ race_instance_id: 800023, course_set_id: 10506 }] } })
   );
 
@@ -3200,7 +3200,7 @@ async function routeMasterDatabase(page: Page): Promise<void> {
   const archive = gzipSync(database.export());
   database.close();
 
-  await page.route('**/resources/manifest.json*', (route) =>
+  await page.route('**/resources/en/manifest.json*', (route) =>
     route.fulfill({
       json: {
         version: 'test',
@@ -3517,7 +3517,7 @@ test('automatic resimulation falls back on failure and exposes simulator decisio
     .map((skill) => skill.skill_id);
 
   for (const [name, json] of Object.entries(replayCourses))
-    await page.route(`**/resources/*/${name}.json*`, (route) =>
+    await page.route(`**/resources/**/${name}.json*`, (route) =>
       route.fulfill({
         json:
           name === 'simulator_courses'

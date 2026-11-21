@@ -54,7 +54,7 @@ The simulator uses four workers/four CPUs by default; adjust `.env.stack.local`.
 
 | Service | Default local address |
 | --- | --- |
-| Resources | http://127.0.0.1:3304/resources/manifest.json |
+| Resources | http://127.0.0.1:3304/resources/en/manifest.json |
 | Simulator | http://127.0.0.1:3309/sim/ |
 | Frontend (`--app`) | http://127.0.0.1:5275/simulator/race |
 | Backend (`--app`) | http://127.0.0.1:3301/api/health |
@@ -64,7 +64,7 @@ The simulator uses four workers/four CPUs by default; adjust `.env.stack.local`.
 ## Game art
 
 Portraits, icons and banners load from the asset bucket (`assetOrigin` in `src/config/environment.*.ts`), so no local art
-is needed. `VITE_ASSET_ORIGIN` points a dev server at another copy of the bucket's `art/` tree.
+is needed. The site reads Global's tree, `en/art/`; `VITE_ASSET_ORIGIN` points a dev server at another copy of the bucket.
 
 ## A simulator without Docker
 

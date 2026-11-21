@@ -157,7 +157,7 @@ export async function demoData(): Promise<Plugin> {
   );
 
   // Merge manifests used independently by the workflow fixtures.
-  await page.route('**/resources/manifest.json*', (route) =>
+  await page.route('**/resources/en/manifest.json*', (route) =>
     route.fulfill({
       json: {
         version: 'demo',

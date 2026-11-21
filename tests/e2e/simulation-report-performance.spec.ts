@@ -33,8 +33,8 @@ for (const runners of [9, 18])
       await mockAffinity(page);
       await mockVeteranProfile(page);
       for (const [name, json] of Object.entries(resources))
-        await page.route('**/resources/*/' + name + '.json*', (route) => route.fulfill({ json }));
-      await page.route('**/resources/*/room_match_races.json*', (route) =>
+        await page.route('**/resources/**/' + name + '.json*', (route) => route.fulfill({ json }));
+      await page.route('**/resources/**/room_match_races.json*', (route) =>
         route.fulfill({ json: { races: [{ race_instance_id: 800023, course_set_id: 10506 }] } })
       );
 

@@ -100,7 +100,7 @@ it('matches exact artifact names instead of confusing skills with simulator_skil
   await resourceCache.load('skills');
   await resourceCache.load('character_names');
   expect(fetch.mock.calls.map(([url]) => url)).toEqual([
-    '/resources/manifest.json',
+    '/resources/en/manifest.json',
     '/resources/test/skills.json.gz',
     '/resources/test/character_names.json?locale=en'
   ]);
@@ -279,7 +279,7 @@ it('renders a persisted Angular resource before a slow manifest and reuses a mat
   await resourceCache.revalidate();
   expect(fetch.mock.calls).toHaveLength(1);
   expect(await resourceCache.load('example', true)).toEqual({ value: 'cached' });
-  expect(fetch.mock.calls.every(([url]) => url === '/resources/manifest.json')).toBe(true);
+  expect(fetch.mock.calls.every(([url]) => url === '/resources/en/manifest.json')).toBe(true);
 });
 
 it('shares manifest requests and keeps resources across reloads without downloading unchanged files', async () => {
@@ -311,7 +311,7 @@ it('shares manifest requests and keeps resources across reloads without download
   await Promise.all([resourceCache.load('example'), resourceCache.load('other')]);
   await resourceCache.revalidate();
   await resourceCache.load('example');
-  expect(fetch.mock.calls.map(([url]) => url)).toEqual(['/resources/manifest.json']);
+  expect(fetch.mock.calls.map(([url]) => url)).toEqual(['/resources/en/manifest.json']);
 });
 
 it('refreshes only changed hashes in the background and removes the superseded disk entry', async () => {
@@ -348,7 +348,7 @@ it('refreshes only changed hashes in the background and removes the superseded d
     });
 
     expect(fetch.mock.calls.map(([url]) => url)).toEqual([
-      '/resources/manifest.json',
+      '/resources/en/manifest.json',
       '/resources/example.json?v=b'
     ]);
     expect(updated).toHaveBeenCalledExactlyOnceWith('example');
@@ -424,7 +424,7 @@ it('rehashes persisted JSON in the background and repairs only a corrupt resourc
   vi.stubGlobal('fetch', fetch);
   expect(await resourceCache.load('example')).toEqual({ value: 'original', count: 7 });
   await resourceCache.revalidate();
-  expect(fetch.mock.calls.map(([path]) => path)).toEqual(['/resources/manifest.json']);
+  expect(fetch.mock.calls.map(([path]) => path)).toEqual(['/resources/en/manifest.json']);
 
   // Valid JSON and valid metadata can still contain damaged data.
   responses.set(key, new Response(new Uint8Array(gzipSync(good.replace('7', '8'))).buffer));
@@ -436,7 +436,7 @@ it('rehashes persisted JSON in the background and repairs only a corrupt resourc
     expect(await resourceCache.load('example')).toEqual({ value: 'original', count: 8 });
     await resourceCache.revalidate();
     expect(await resourceCache.readCached('example')).toEqual({ value: 'original', count: 7 });
-    expect(fetch.mock.calls.map(([path]) => path)).toEqual(['/resources/manifest.json', url]);
+    expect(fetch.mock.calls.map(([path]) => path)).toEqual(['/resources/en/manifest.json', url]);
     expect(updated).toHaveBeenCalledExactlyOnceWith('example');
     await vi.waitFor(() =>
       expect(JSON.parse(localStorage.getItem('umamoe_resource_meta_v1:example')!).checksum).toBe(

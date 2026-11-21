@@ -23,7 +23,7 @@ import {
   weatherIcon
 } from './art-links';
 
-const art = (key: string) => `${runtimeConfig.assetOrigin}/art/${key}`;
+const art = (key: string) => `${runtimeConfig.assetOrigin}/en/art/${key}`;
 
 describe('game art links', () => {
   it('names each family by its key in the bucket art tree', () => {

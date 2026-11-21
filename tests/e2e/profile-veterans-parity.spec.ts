@@ -126,7 +126,7 @@ test('Veteran comparison table keeps aptitudes readable, sorts stats and opens d
   page
 }, testInfo) => {
   await mockProfile(page);
-  await page.route('**/resources/*/affinity.json*', (route) =>
+  await page.route('**/resources/**/affinity.json*', (route) =>
     route.fulfill({
       json: { chars: [1011, 1013, 1067, 1088], aff2: Array(16).fill(2), aff3: Array(64).fill(3) }
     })

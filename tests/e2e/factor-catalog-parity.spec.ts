@@ -22,7 +22,7 @@ test('failed factor loads show retryable controls and readable error details in 
   await mockDatabase(page);
   await mockAffinity(page);
   let failed = true;
-  await page.route('**/resources/*/factors.json*', (route) =>
+  await page.route('**/resources/**/factors.json*', (route) =>
     route.fulfill(failed ? { status: 503, body: 'Unavailable' } : { json: liveFactors })
   );
 
@@ -59,7 +59,7 @@ test('late catalog refresh updates an open manual editor and Veteran factor filt
     release = resolve;
   });
 
-  await page.route('**/resources/*/factors.json*', async (route) => {
+  await page.route('**/resources/**/factors.json*', async (route) => {
     requests++;
     await pending;
     await route.fulfill({ json: liveFactors });
@@ -123,7 +123,7 @@ test('database basic and UQL controls resolve live factors, including a query en
     release = resolve;
   });
 
-  await page.route('**/resources/*/factors.json*', async (route) => {
+  await page.route('**/resources/**/factors.json*', async (route) => {
     await pending;
     await route.fulfill({ json: liveFactors });
   });
@@ -219,7 +219,7 @@ test('cached factors remain usable through failed refreshes and replace live in 
       release = resolve;
     });
 
-    await page.route('**/resources/*/factors.json*', async (route) => {
+    await page.route('**/resources/**/factors.json*', async (route) => {
       requests++;
       if (fail) {
         await route.fulfill({ status: 503, body: 'Unavailable' });

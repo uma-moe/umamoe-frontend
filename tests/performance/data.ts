@@ -58,7 +58,7 @@ export async function stressCatalogs(page: Page) {
     skills,
     factors: expandedFactors
   }))
-    await page.route(`**/resources/*/${name}.json*`, (route) => route.fulfill({ json }));
+    await page.route(`**/resources/**/${name}.json*`, (route) => route.fulfill({ json }));
 }
 
 export async function stressData(page: Page) {

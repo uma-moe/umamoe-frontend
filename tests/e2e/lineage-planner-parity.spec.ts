@@ -349,7 +349,7 @@ test('Lineage character resource errors remain in the dialog and retry without l
 }) => {
   await mockAffinity(page);
   let fail = true;
-  await page.route('**/resources/*/character.json*', (route) =>
+  await page.route('**/resources/**/character.json*', (route) =>
     fail ? route.fulfill({ status: 503, json: { error: 'Unavailable' } }) : route.fallback()
   );
 

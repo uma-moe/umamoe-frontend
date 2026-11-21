@@ -29,7 +29,7 @@ const [jpMasterPath, outDir = 'public/game-data'] = process.argv.slice(2);
 
 /** The Global master the beta resources publish, and its game version marker. */
 async function betaGlobalMaster(): Promise<{ bytes: Uint8Array; marker: string }> {
-  const manifestResponse = await fetch(`${BETA_RESOURCES}/resources/manifest.json`);
+  const manifestResponse = await fetch(`${BETA_RESOURCES}/resources/en/manifest.json`);
   if (!manifestResponse.ok)
     throw new Error(`The beta resources manifest returned ${manifestResponse.status}.`);
 

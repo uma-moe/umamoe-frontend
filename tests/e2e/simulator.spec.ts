@@ -123,11 +123,11 @@ test.beforeEach(async ({ page }) => {
   );
 
   for (const [name, json] of Object.entries(resources))
-    await page.route('**/resources/*/' + name + '.json*', (route) => route.fulfill({ json }));
-  await page.route('**/resources/*/room_match_races.json*', (route) =>
+    await page.route('**/resources/**/' + name + '.json*', (route) => route.fulfill({ json }));
+  await page.route('**/resources/**/room_match_races.json*', (route) =>
     route.fulfill({ json: { races: [{ race_instance_id: 800023, course_set_id: 10506 }] } })
   );
-  await page.route('**/resources/*/simulator_skills.json*', (route) =>
+  await page.route('**/resources/**/simulator_skills.json*', (route) =>
     route.fulfill({ json: simulatorSkills })
   );
   await page.route('**/api/sim/field', (route) => route.fulfill({ json: generatedField() }));
@@ -221,7 +221,7 @@ test('Course setup preserves every searchable resource option and its breakdown'
     course.race_track_id === 10009 ? { ...course, race_track_id: 10006 } : course
   );
 
-  await page.route('**/resources/*/simulator_courses.json*', (route) =>
+  await page.route('**/resources/**/simulator_courses.json*', (route) =>
     route.fulfill({ json: { courses } })
   );
 
@@ -1408,7 +1408,7 @@ test('CM builds from the captured teams page can be assigned to teams', async ({
     )
   ];
 
-  await page.route('**/resources/*/skills.json*', (route) =>
+  await page.route('**/resources/**/skills.json*', (route) =>
     route.fulfill({
       json: ids.map((id) => ({
         skill_id: id,
@@ -1591,7 +1591,7 @@ test('Setup shows a compact card per runner with her stats, skill points, skill 
     200921, 200941, 201152, 201601, 201621, 201641, 202051
   ];
 
-  await page.route('**/resources/*/skills.json*', (route) =>
+  await page.route('**/resources/**/skills.json*', (route) =>
     route.fulfill({
       json: [
         ...JSON.parse(readFileSync('tests/fixtures/resources/skills.json', 'utf8')),
@@ -1606,7 +1606,7 @@ test('Setup shows a compact card per runner with her stats, skill points, skill 
     })
   );
 
-  await page.route('**/resources/*/character.json*', (route) =>
+  await page.route('**/resources/**/character.json*', (route) =>
     route.fulfill({
       json: [{ id: '100201', name: 'Silence Suzuka', subtitle: 'Original', isReleased_en: true }]
     })

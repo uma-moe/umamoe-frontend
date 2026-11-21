@@ -373,7 +373,7 @@ test('a failed character resource stays inside the picker and can be retried wit
   const fail = (route: import('@playwright/test').Route) =>
     route.fulfill({ status: 503, json: { error: 'Catalog offline' } });
 
-  await page.route('**/resources/*/character.json*', fail);
+  await page.route('**/resources/**/character.json*', fail);
   // This case exercises a cold catalog failure, not a working persisted fallback.
   await page.addInitScript(() => localStorage.removeItem('umamoe_resource_meta_v1:character'));
   await page.reload();
@@ -384,7 +384,7 @@ test('a failed character resource stays inside the picker and can be retried wit
   await expect(dialog.getByText('Character data unavailable', { exact: true })).toBeVisible();
   await expect(dialog.getByRole('link', { name: 'Report on Discord' })).toBeVisible();
   await expect(dialog.getByText('No characters available.', { exact: true })).toBeHidden();
-  await page.unroute('**/resources/*/character.json*', fail);
+  await page.unroute('**/resources/**/character.json*', fail);
   await dialog.getByRole('button', { name: 'Retry character data', exact: true }).click();
   await expect(dialog.getByRole('radio')).toHaveCount(9);
   await dialog

@@ -39,7 +39,9 @@ interface ResourceManifest {
 }
 
 const requestCache = new RequestCache();
-const baseUrl = '/resources';
+const resourceRoot = '/resources';
+/** Each region's resource set has its own path; the site reads Global's. */
+const globalResources = `${resourceRoot}/en`;
 const cachePrefix = 'umamoe-resource-data-';
 const metaPrefix = 'umamoe_resource_meta_v1:';
 const latestRequests = new Map<string, symbol>();
@@ -135,7 +137,11 @@ function parseManifest(value: unknown): ResourceManifest {
 
 // Only Master Data reads this entry, so a malformed one must not block every other resource.
 function parseMasterDatabase(value: unknown): MasterDatabaseLocation | undefined {
-  if (!isRecord(value) || typeof value.path !== 'string' || !value.path.startsWith(baseUrl + '/'))
+  if (
+    !isRecord(value) ||
+    typeof value.path !== 'string' ||
+    !value.path.startsWith(resourceRoot + '/')
+  )
     return undefined;
 
   const location: MasterDatabaseLocation = { path: value.path };
@@ -227,7 +233,7 @@ function loadManifest(refresh: boolean): Promise<ResourceManifest> {
     'manifest',
     manifestInterval,
     async () => {
-      const response = await pageFetch(`${baseUrl}/manifest.json`, {
+      const response = await pageFetch(`${globalResources}/manifest.json`, {
         cache: 'no-cache',
         credentials: 'omit'
       });
@@ -300,12 +306,12 @@ function resolveResource(
 
   if (!version && allowUnpublished) return undefined;
   if (!version) throw new Error(`Resource ${name} is absent from the manifest.`);
-  return { url: `${baseUrl}/${version}/${name}.json.gz` };
+  return { url: `${globalResources}/${version}/${name}.json.gz` };
 }
 
 function resourceUrl(path: string): string {
   if (/^https?:\/\//i.test(path) || path.startsWith('/')) return path;
-  return `${baseUrl}/${path.replace(/^\/+/, '')}`;
+  return `${globalResources}/${path.replace(/^\/+/, '')}`;
 }
 
 function revalidate(

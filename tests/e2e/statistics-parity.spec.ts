@@ -155,7 +155,7 @@ test('statistics resolves character names, outfits, cards and skills from the re
     if (request.url().includes('/resources/')) resources.push(new URL(request.url()).pathname);
   });
 
-  await page.route('**/resources/manifest.json*', (route) =>
+  await page.route('**/resources/en/manifest.json*', (route) =>
     route.fulfill({
       json: {
         version: 'catalog-check',
@@ -169,17 +169,17 @@ test('statistics resolves character names, outfits, cards and skills from the re
     })
   );
 
-  await page.route('**/resources/*/character_names.json*', (route) =>
+  await page.route('**/resources/**/character_names.json*', (route) =>
     route.fulfill({
       json: { '1001': { name: 'Resource Week', skins: { '01': 'Resource outfit' } } }
     })
   );
 
-  await page.route('**/resources/*/support-cards-db.json*', (route) =>
+  await page.route('**/resources/**/support-cards-db.json*', (route) =>
     route.fulfill({ json: [{ id: '10001', name: 'Resource support', rarity: 3, type: 'stamina' }] })
   );
 
-  await page.route('**/resources/*/skills.json*', (route) =>
+  await page.route('**/resources/**/skills.json*', (route) =>
     route.fulfill({
       json: [
         { skill_id: 200132, name: 'Resource skill', rarity: 2, icon: 'utx_ico_skill_20013.webp' }

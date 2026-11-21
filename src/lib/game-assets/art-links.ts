@@ -17,9 +17,12 @@ export type SupportRarity = 'R' | 'SR' | 'SSR';
 
 const TIMES_OF_DAY: readonly TimeOfDay[] = ['midday', 'evening', 'night'];
 
-/** A file below the bucket's `art/` tree. */
+/** Each region publishes its own tree in the bucket; the site shows Global's. */
+const GLOBAL_ART_TREE = 'en';
+
+/** A file below Global's `art/` tree. */
 function artLink(key: string): string {
-  return `${runtimeConfig.assetOrigin}/art/${key}`;
+  return `${runtimeConfig.assetOrigin}/${GLOBAL_ART_TREE}/art/${key}`;
 }
 
 function twoDigits(value: number): string {

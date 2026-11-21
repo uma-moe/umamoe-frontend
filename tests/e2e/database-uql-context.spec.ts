@@ -66,11 +66,11 @@ test('empty UQL filters reopen after reload, clearing, and loading a preset', as
 async function prepare(page: Page) {
   await mockDatabase(page);
   await mockAffinity(page);
-  await page.route('**/resources/*/character.json*', (route) =>
+  await page.route('**/resources/**/character.json*', (route) =>
     route.fulfill({ json: resourceFixtures.character })
   );
 
-  await page.route('**/resources/*/character_names.json*', (route) =>
+  await page.route('**/resources/**/character_names.json*', (route) =>
     route.fulfill({ json: resourceFixtures.character_names })
   );
 

@@ -23,7 +23,7 @@ export const GAME_ART_ORIGIN = 'https://assets.uma.moe';
 
 /** A link below the bucket's game art tree, as the site builds it. */
 export function gameArt(key: string): string {
-  return `${GAME_ART_ORIGIN}/art/${key}`;
+  return `${GAME_ART_ORIGIN}/en/art/${key}`;
 }
 
 const blankWebp = Buffer.from('UklGRhoAAABXRUJQVlA4TA0AAAAvAAAAEAcQERGIiP4HAA==', 'base64');
@@ -161,14 +161,14 @@ export const supportCards = [
 ];
 
 export async function mockSupportCatalog(page: Page): Promise<void> {
-  await page.route('**/resources/*/support-cards-db.json*', (route) =>
+  await page.route('**/resources/**/support-cards-db.json*', (route) =>
     route.fulfill({ json: supportCards })
   );
 }
 
 export async function mockAffinity(page: Page): Promise<void> {
   await mockCharacterCatalog(page);
-  await page.route('**/resources/manifest.json*', (route) =>
+  await page.route('**/resources/en/manifest.json*', (route) =>
     route.fulfill({
       json: {
         version: 'test',
@@ -221,13 +221,13 @@ export async function mockCharacterCatalog(page: Page): Promise<void> {
     ])
   );
 
-  await page.route('**/resources/*/character.json*', (route) =>
+  await page.route('**/resources/**/character.json*', (route) =>
     route.fulfill({
       json: [...characters, { id: '113301', name: 'Chrono Genesis', isReleased_en: false }]
     })
   );
 
-  await page.route('**/resources/*/character_names.json*', (route) =>
+  await page.route('**/resources/**/character_names.json*', (route) =>
     route.fulfill({ json: names })
   );
 }
@@ -407,7 +407,7 @@ const characterStats = {
 
 export async function mockStatistics(page: Page, formatVersion = 4) {
   await mockCharacterCatalog(page);
-  await page.route('**/resources/*/support-cards-db.json*', (route) =>
+  await page.route('**/resources/**/support-cards-db.json*', (route) =>
     route.fulfill({
       json: [
         ...supportCards,
@@ -416,7 +416,7 @@ export async function mockStatistics(page: Page, formatVersion = 4) {
     })
   );
 
-  await page.route('**/resources/*/skills.json*', (route) =>
+  await page.route('**/resources/**/skills.json*', (route) =>
     route.fulfill({
       json: [
         ...(resourceFixtures.skills as object[]),
@@ -986,7 +986,7 @@ const events = [
 
 export async function mockTimeline(page: Page, freezeTime = true): Promise<void> {
   if (freezeTime) await page.clock.setFixedTime(new Date('2026-08-29T12:00:00Z'));
-  await page.route('**/resources/manifest.json*', (route) =>
+  await page.route('**/resources/en/manifest.json*', (route) =>
     route.fulfill({
       json: {
         version: 'test',
@@ -1336,11 +1336,11 @@ export async function mockResources(target: Page | BrowserContext): Promise<void
     route.fulfill({ json: tierlist })
   );
 
-  await target.route('**/resources/manifest.json*', (route) =>
+  await target.route('**/resources/en/manifest.json*', (route) =>
     route.fulfill({ json: { version: 'test' } })
   );
 
   for (const [name, json] of Object.entries(resourceFixtures)) {
-    await target.route(`**/resources/*/${name}.json*`, (route) => route.fulfill({ json }));
+    await target.route(`**/resources/**/${name}.json*`, (route) => route.fulfill({ json }));
   }
 }

@@ -137,7 +137,7 @@ test('team details keep the summary compact and align support cards with long or
     release_date: ''
   }));
 
-  await page.route('**/resources/*/support-cards-db.json*', (route) =>
+  await page.route('**/resources/**/support-cards-db.json*', (route) =>
     route.fulfill({ json: supports })
   );
   await page.goto('/competitive/cm-data?tab=archetypes', { waitUntil: 'domcontentloaded' });

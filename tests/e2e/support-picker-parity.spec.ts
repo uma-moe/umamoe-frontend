@@ -85,7 +85,7 @@ test('Support failures stay in the dialog, retry preserves filters and cannot tu
     release!: () => void;
 
   const pending = new Promise<void>((resolve) => (release = resolve));
-  await page.route('**/resources/*/support-cards-db.json*', async (route) => {
+  await page.route('**/resources/**/support-cards-db.json*', async (route) => {
     await pending;
     await route.fulfill(
       failed ? { status: 503, json: { error: 'Offline' } } : { json: supportCards }
@@ -197,7 +197,7 @@ test('persistent resources render before the manifest, survive navigation, and r
     const resourcesReady = () => expect.poll(() => pendingRequests.size).toBe(0);
     const pendingManifest = new Promise<void>((resolve) => (releaseManifest = resolve));
     const pendingResource = new Promise<void>((resolve) => (releaseResource = resolve));
-    await page.route('**/resources/manifest.json*', async (route) => {
+    await page.route('**/resources/en/manifest.json*', async (route) => {
       manifests++;
       await pendingManifest;
       await route.fulfill({
@@ -211,7 +211,7 @@ test('persistent resources render before the manifest, survive navigation, and r
       });
     });
 
-    await page.route('**/resources/*/support-cards-db.json*', async (route) => {
+    await page.route('**/resources/**/support-cards-db.json*', async (route) => {
       downloads++;
       if (failed) {
         await route.fulfill({ status: 500, json: { error: 'Offline' } });

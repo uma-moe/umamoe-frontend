@@ -45,7 +45,7 @@ it('loads published course metadata and full geometry by course ID through resou
   const points = replayTrack(shapes['10606']!);
   expect(trackPointAtDistance(points, 2500)).toEqual(points.at(-1));
   expect(fetch).toHaveBeenCalledWith(
-    '/resources/test/simulator_course_geometry.json.gz',
+    '/resources/en/test/simulator_course_geometry.json.gz',
     expect.anything()
   );
 

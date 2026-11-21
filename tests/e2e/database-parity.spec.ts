@@ -729,7 +729,7 @@ test('Database keeps records usable when affinity resources fail and can retry w
   await mockDatabase(page);
   await mockAffinity(page);
   let fail = true;
-  await page.route('**/resources/manifest.json*', (route) =>
+  await page.route('**/resources/en/manifest.json*', (route) =>
     fail ? route.fulfill({ status: 503, body: 'Resource service unavailable' }) : route.fallback()
   );
 
