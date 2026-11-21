@@ -79,6 +79,50 @@ export function gapText({ behind, error }: RacedGap): string {
   return sign + Math.abs(points).toFixed(digits) + ' ± ' + (error * 100).toFixed(digits) + ' pts';
 }
 
+/** Standard errors on each side of a gap within which chance alone explains it. */
+const CHANCE_ERRORS = 1.96;
+
+/** A build's win rate against the pick's in the races that checked them both, paired race by race (0–1). */
+export interface PickGap {
+  ahead: number;
+  /** The largest gap chance alone explains. */
+  chance: number;
+  races: number;
+}
+
+/** A finalist's gap to the pick as the check measured it; the pick has none, nor does an older simulator's reply. */
+export function pickGap(finalist: OptimizeFinalist): PickGap | undefined {
+  const gap = finalist.win_rate_vs_pick;
+  if (!gap || gap.samples <= 0) return undefined;
+
+  return {
+    ahead: gap.mean,
+    chance: CHANCE_ERRORS * gap.standard_error,
+    races: gap.samples
+  };
+}
+
+/** The check cannot tell a build from the pick while chance alone explains their gap. */
+export function tiedWithPick({ ahead, chance }: PickGap): boolean {
+  return Math.abs(ahead) <= chance;
+}
+
+/** `7 more wins in 128 test races`, a build's wins against the pick's in words anyone can read. */
+export function winsGapText({ ahead, races }: PickGap): string {
+  const wins = Math.round(ahead * races);
+  const over = ' in ' + races.toLocaleString('en-US') + ' test races';
+  if (wins === 0) return 'as many wins' + over;
+
+  const count = Math.abs(wins);
+  return count + (wins > 0 ? ' more ' : ' fewer ') + (count === 1 ? 'win' : 'wins') + over;
+}
+
+/** What a tied build's card says under its verdict: its wins against the pick's, and why they do not settle it. */
+export function tiedText(gap: PickGap): string {
+  const wins = winsGapText(gap);
+  return wins.startsWith('as many') ? wins : wins + ', too few to tell them apart';
+}
+
 /** `+0.62 L`, a skill's worth; builds read to one decimal, and a column that says its unit drops it. */
 export function lengthsText(lengths: number, digits = 2, unit = true): string {
   const suffix = unit ? ' L' : '';
@@ -245,6 +289,8 @@ export interface TheorizedBuild {
   /** Whole-build gain is lengths for theory, measured seconds saved for V5. */
   unit?: 'seconds';
   winRate?: number;
+  /** Her win rate with it against the pick's in the check races; absent for the pick. */
+  pickGap?: PickGap;
   /** Team Trials points per race, shown in place of a win rate against the optimizer's pack. */
   teamTrialsScore?: TeamTrialsScore;
   finalist: OptimizeFinalist;
@@ -651,6 +697,7 @@ function v5Result(result: OptimizeResult, offers: PricedOffer[]): TheorizedResul
       unit: 'seconds',
       value: baseline !== undefined && seconds !== undefined ? baseline - seconds : undefined,
       winRate: measuredMean(evaluated, 'win_rate'),
+      pickGap: index > 0 ? pickGap(finalist) : undefined,
       teamTrialsScore: teamTrialsScore(evaluated),
       count: cells.length,
       cells,
@@ -736,6 +783,7 @@ function racedResult(result: OptimizeResult, offers: PricedOffer[]): TheorizedRe
       unit: 'seconds',
       value: (finalist.validation_gain ?? finalist.gain)?.mean,
       winRate: measuredMean(finalist.validation ?? finalist.search, 'win_rate'),
+      pickGap: index > 0 ? pickGap(finalist) : undefined,
       teamTrialsScore: teamTrialsScore(finalist.validation ?? finalist.search),
       count: cells.length,
       cells,
@@ -821,7 +869,7 @@ export function v5Tally(result: OptimizeResult, model: OptimizeModel): string {
     '-race budget and may finish earlier. ' +
     'Bars show V5 objective scores using the same model, ranker and paired race feedback as the search. ' +
     'A held skill is valued by removing it and the purchases that depend on it, and an unbought skill by adding it with its prerequisites, ignoring SP. ' +
-    'Model win-rate changes are internal comparisons from the V5 skill model. Card win rates and time differences come from internal validation races. They do not predict in-game results or reorder V5’s picks. ' +
+    'Model win-rate changes are internal comparisons from the V5 skill model. Card win rates and time differences come from internal validation races. They do not predict in-game results or reorder V5’s picks. When those races cannot tell the runner-up from the recommended build, its card says so instead of showing a win rate that only looks different. ' +
     'Activation timing is observed during search, in course sections. A paired measurement is shown only when that exact change was raced against that exact build.'
   );
 }
