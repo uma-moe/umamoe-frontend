@@ -5,7 +5,8 @@ import {
   mockAffinity,
   mockDatabase,
   supportCards,
-  gameArt
+  gameArt,
+  GAME_ART_ORIGIN
 } from './fixtures/api';
 import { mkdtemp } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
@@ -74,6 +75,28 @@ test('Live support cards preserve released choices, titles, search, sorting and 
   await expect(
     page.getByRole('button', { name: 'Change support card [Wave of Gratitude]', exact: true })
   ).toBeFocused();
+});
+
+test('A card whose picture Global lacks shows the JP picture, not the placeholder', async ({
+  page
+}) => {
+  await mockDatabase(page);
+  await mockAffinity(page);
+  await page.route(gameArt('support-cards/30028/half.webp'), (route) =>
+    route.fulfill({ status: 404 })
+  );
+
+  const dialog = await openPicker(page);
+  await dialog.getByRole('searchbox', { name: 'Search support cards' }).fill('BLACK, FIRE');
+
+  const picture = dialog.locator('.art img');
+  await expect(picture).toHaveAttribute(
+    'src',
+    `${GAME_ART_ORIGIN}/jp/art/support-cards/30028/half.webp`
+  );
+  await expect
+    .poll(() => picture.evaluate((image: HTMLImageElement) => image.naturalWidth))
+    .toBeGreaterThan(0);
 });
 
 test('Support failures stay in the dialog, retry preserves filters and cannot turn into an empty result', async ({

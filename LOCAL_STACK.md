@@ -65,6 +65,8 @@ The simulator uses four workers/four CPUs by default; adjust `.env.stack.local`.
 
 Portraits, icons and banners load from the asset bucket (`assetOrigin` in `src/config/environment.*.ts`), so no local art
 is needed. The site reads Global's tree, `en/art/`; `VITE_ASSET_ORIGIN` points a dev server at another copy of the bucket.
+A game-art picture Global's tree lacks, such as a card only JP has released, is loaded from the same key in JP's tree,
+`jp/art/`. Timeline banners exist in Global's tree only.
 
 ## A simulator without Docker
 

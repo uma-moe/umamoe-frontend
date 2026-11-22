@@ -1,5 +1,5 @@
 import type { MoodName } from '@/lib/race/replay/race-display';
-import { runtimeConfig } from '@/services/runtime-config';
+import { TIMELINE_FOLDER, artLink } from './art-trees';
 
 /** Stats and support types by the names of their icons. */
 export type StatIcon = 'speed' | 'stamina' | 'power' | 'guts' | 'wit' | 'friend' | 'group';
@@ -16,14 +16,6 @@ export type Season = 'spring' | 'summer' | 'fall' | 'winter';
 export type SupportRarity = 'R' | 'SR' | 'SSR';
 
 const TIMES_OF_DAY: readonly TimeOfDay[] = ['midday', 'evening', 'night'];
-
-/** Each region publishes its own tree in the bucket; the site shows Global's. */
-const GLOBAL_ART_TREE = 'en';
-
-/** A file below Global's `art/` tree. */
-function artLink(key: string): string {
-  return `${runtimeConfig.assetOrigin}/${GLOBAL_ART_TREE}/art/${key}`;
-}
 
 function twoDigits(value: number): string {
   return String(value).padStart(2, '0');
@@ -136,5 +128,5 @@ export function timelineBanner(imagePath: string): string | undefined {
   const path = imagePath
     .replace(/^\//, '')
     .match(/^assets\/(?:images|timeline-images)\/(.+)$/)?.[1];
-  return path === undefined ? undefined : artLink(`timeline/${path}`);
+  return path === undefined ? undefined : artLink(`${TIMELINE_FOLDER}${path}`);
 }
