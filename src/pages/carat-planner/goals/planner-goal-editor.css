@@ -98,6 +98,11 @@
 .pickup-picker button:hover {
   background: var(--factor-option-hover);
 }
+.pickup-picker button:disabled {
+  background: transparent;
+  cursor: not-allowed;
+  opacity: 0.42;
+}
 .pickup-picker button:focus-visible,
 .pickup-search:focus-visible {
   outline: 2px solid var(--accent-primary);

@@ -36,4 +36,31 @@ describe('planner gacha rate policy parity', () => {
     expect(result.pickups?.some((item) => item.pickup_id === 9999)).toBe(false);
     expect(result.pickups?.find((item) => item.pickup_id === 1001)?.rate).toBe(0.0075);
   });
+
+  it('leaves published select banners alone when the timeline lists the same candidates', () => {
+    const candidateIds = Array.from({ length: 10 }, (_, index) => 30100 + index);
+    const candidates = candidateIds.map((pickup_id) => ({ pickup_id, rate: 0.0075 }));
+
+    for (const gachaType of [12, 15]) {
+      const entry = {
+        gacha_id: 30500,
+        gacha_type: gachaType,
+        banner_kind: 'support' as const,
+        start_date: '2026-01-01',
+        end_date: '2026-01-10',
+        select_count: gachaType === 12 ? 2 : 3,
+        pickups: candidates,
+        featured_pickups: candidates,
+        rarity_rates: [{ rarity: 3, rate: 0.03 }]
+      };
+
+      const result = resolvePlannerGachaRates(entry, {
+        featuredPickupIds: candidateIds,
+        gachaType,
+        eventType: 'support_card_banner'
+      });
+
+      expect(result).toBe(entry);
+    }
+  });
 });

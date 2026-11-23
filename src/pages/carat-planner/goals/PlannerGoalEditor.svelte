@@ -22,6 +22,7 @@
     options: PlannerGoalOption[];
     goals: PlannerGoalView[];
     stepUp?: PlannerStepUp;
+    pickLimit?: number;
     cardKind: 'support' | 'character';
     inferred: boolean;
     hasResults: boolean;
@@ -35,6 +36,7 @@
     options,
     goals,
     stepUp,
+    pickLimit,
     cardKind,
     inferred,
     hasResults,
@@ -50,6 +52,8 @@
         .includes(pickupSearch.trim().toLocaleLowerCase())
     )
   );
+
+  const picksFull = $derived(pickLimit !== undefined && goals.length >= pickLimit);
 
   function editGoal(pickupId: number, change?: number): void {
     onupdate((value) => {
@@ -117,7 +121,11 @@
         <div class="pickup-picker">
           <header>
             <strong>Featured on this banner</strong>
-            <small>Select one or more pickups.</small>
+            <small>
+              {pickLimit === undefined
+                ? 'Select one or more pickups.'
+                : `Pick ${pickLimit} of these ${options.length}.`}
+            </small>
           </header>
           {#if options.length > 6}
             <input
@@ -136,6 +144,7 @@
                 class:selected
                 aria-pressed={selected}
                 aria-label={`${selected ? 'Remove' : 'Select'} ${option.name}`}
+                disabled={picksFull && !selected}
                 onclick={() => editGoal(option.pickupId)}
               >
                 <PlannerPickupArt

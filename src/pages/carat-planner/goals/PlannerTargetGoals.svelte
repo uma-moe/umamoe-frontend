@@ -1,5 +1,6 @@
 <script lang="ts">
   import { isPaidBanner, plannerCardKind } from '@/lib/carat-planner/gacha/planner-paid-banners';
+  import { selectBannerPickLimit } from '@/lib/carat-planner/gacha/planner-select-banners';
   import {
     findGacha,
     type PlannerDataBundle,
@@ -42,6 +43,7 @@
   const paidOnly = $derived(isPaidBanner(target, gacha));
   const cardKind = $derived(plannerCardKind(target, gacha));
   const stepUp = $derived(gacha?.step_up);
+  const pickLimit = $derived(selectBannerPickLimit(gacha));
   const options = $derived(plannerGoalOptions(target, gacha, cardKind, events, catalog));
   const goals = $derived(plannerGoalViews(target, stepUp, options, projection));
   const hasResults = $derived(target.actualPulls !== undefined || Boolean(target.actualCopies));
@@ -221,6 +223,7 @@
         {options}
         {goals}
         {stepUp}
+        {pickLimit}
         {cardKind}
         {inferred}
         {hasResults}
