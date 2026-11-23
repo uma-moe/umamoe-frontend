@@ -1,5 +1,6 @@
 <script lang="ts">
   import { paidBannerSteps } from '@/lib/carat-planner/gacha/planner-paid-banners';
+  import { rateUpPoolRates } from '@/lib/carat-planner/gacha/planner-select-banners';
   import type {
     PlannerDataBundle,
     PlannerGachaEntry,
@@ -46,12 +47,14 @@
   );
 
   const inferred = $derived(gacha?.rates_confidence === 'inferred_standard');
-  const source = $derived(gacha?.pickups ?? gacha?.featured_pickups ?? []);
   const distribution = $derived(
     calculatePullDistribution({
       pulls: projection.fundedPulls,
       rateUpRates: goals.map((goal) => goal.odds?.pickupRate ?? Number.NaN),
-      allRateUpRates: source.map((pickup) => pickup.rate),
+      allRateUpRates: rateUpPoolRates(
+        gacha,
+        goals.map((goal) => goal.pickupId)
+      ),
       topRarityRate: gacha?.rarity_rates?.find((rate) => rate.rarity === 3)?.rate,
       sparkPulls: gacha?.spark_pulls ?? resources.core.default_spark_pulls ?? 200,
       sparkExchangeable: goals.some((goal) => goal.option.exchangeable)

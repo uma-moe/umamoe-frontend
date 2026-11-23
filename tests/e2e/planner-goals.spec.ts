@@ -62,6 +62,70 @@ test('Large pickup lists stay bounded, searchable and selectable without hiding 
   await picker.screenshot({ path: info.outputPath('large-pickup-picker.png') });
 });
 
+test('Select banners cap rate-up picks and count only the picks in the pool', async ({
+  page,
+  isMobile
+}) => {
+  await mockPlannerGoals(page);
+  const ids = [30028, 30001, ...Array.from({ length: 8 }, (_, i) => 31001 + i)];
+  await page.route('**/resources/test/banner_timeline.json*', (route) =>
+    route.fulfill({
+      json: {
+        events: detailTimeline.events.map((event) =>
+          event.id === 'detail-support'
+            ? {
+                ...event,
+                pickup_card_ids: ids,
+                related_support_cards: [
+                  'Kitasan Black',
+                  'Special Week',
+                  ...ids.slice(2).map((_, i) => `Candidate ${i + 1}`)
+                ]
+              }
+            : event
+        )
+      }
+    })
+  );
+
+  await page.route('**/resources/test/planner_gacha_2026.json*', (route) =>
+    route.fulfill({
+      json: {
+        gachas: [
+          {
+            ...detailGachas.gachas[1],
+            gacha_type: 12,
+            select_count: 2,
+            spark_pulls: 200,
+            pickups: ids.map((pickup_id) => ({ pickup_id, rate: 0.0075 })),
+            rarity_rates: [{ rarity: 3, rate: 0.03 }]
+          }
+        ]
+      }
+    })
+  );
+
+  await page.goto('/timeline?tab=carat-planner');
+  const target = page.locator('[data-target-id="support-goals"]');
+  await target.locator('.pickup-summary').click();
+  await target.getByRole('button', { name: 'Choose rate-ups', exact: true }).click();
+  const picker = page.getByRole('dialog', { name: 'Choose rate-ups', exact: true });
+  await expect(picker.getByText('Pick 2 of these 10.', { exact: true })).toBeVisible();
+  const candidate = picker.getByRole('button', { name: 'Select Candidate 1', exact: true });
+  await expect(candidate).toBeDisabled();
+  await picker.getByRole('button', { name: 'Remove Special Week', exact: true }).click();
+  await expect(candidate).toBeEnabled();
+  await picker.getByRole('button', { name: 'Close Choose rate-ups', exact: true }).click();
+
+  const detailed = target.locator('.advanced-odds');
+  if (isMobile) await detailed.locator('summary').click();
+  // The open pick is still a rate-up; unpicked candidates are ordinary SSRs.
+  await expect(target.locator('.pool-stack')).toHaveAttribute(
+    'aria-label',
+    'SSR pool: selected 0.75%, other featured 0.75%, off-banner 1.50%'
+  );
+});
+
 test('Planner rate-up goals preserve copies, crystal details and shared odds across picker changes and reload', async ({
   page,
   isMobile

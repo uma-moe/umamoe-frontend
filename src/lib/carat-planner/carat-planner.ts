@@ -13,6 +13,7 @@ import {
   plannerCardKind
 } from './gacha/planner-paid-banners';
 import { calculateMultiPickupProbability } from './gacha/planner-pull-probability';
+import { selectBannerGoals } from './gacha/planner-select-banners';
 import { plannerRewardBundles, plannerSourceItemTotals } from './rewards/planner-reward-currencies';
 import {
   CONDITIONAL_REWARD_DEFAULT_SELECTIONS,
@@ -192,6 +193,8 @@ export interface PlannerGachaEntry {
   /** Top-rarity rate-ups only; lower-rarity featured cards appear only in `featured_pickups`. */
   pickups?: PlannerPickupRate[];
   featured_pickups?: PlannerPickupRate[];
+  /** Select banners list every candidate in `pickups`; only this many picked cards become rate-ups. */
+  select_count?: number;
   rarity_rates?: PlannerRarityRate[];
   provenance?: string;
   confidence?: string;
@@ -940,6 +943,9 @@ export function synchronizePlannerTargets(
     }
 
     const gacha = findGacha(next, { gachas });
+    // Plans saved before a banner published its pick limit can hold more goals than it allows.
+    if (next.pickupGoals) next.pickupGoals = selectBannerGoals(next.pickupGoals, gacha);
+
     const resourceStart =
       event?.date?.toISOString().slice(0, 10) ??
       parseResourceDate(gacha?.start_date)?.toISOString().slice(0, 10);
@@ -1571,9 +1577,12 @@ export function projectPlan(
             )
           }
         ]
-      : plannerPickupGoals(
-          { ...target, bannerKind: cardKind },
-          target.pickupId ?? gacha?.pickups?.[0]?.pickup_id
+      : selectBannerGoals(
+          plannerPickupGoals(
+            { ...target, bannerKind: cardKind },
+            target.pickupId ?? gacha?.pickups?.[0]?.pickup_id
+          ),
+          gacha
         );
 
     let rainbowCrystalsUsed = 0;
