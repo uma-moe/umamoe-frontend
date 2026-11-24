@@ -2,6 +2,7 @@
   import type { TimelineRecord } from '@/pages/timeline/timeline-repository';
   import { filterPlannerBanners } from '@/lib/carat-planner/presentation/planner-presentation';
   import { timelineDisplayTitle } from '@/lib/timeline/events/timeline-pickups';
+  import Badge from '@/components/Badge.svelte';
   import Combobox from '@/components/controls/Combobox.svelte';
   import Icon from '@/components/Icon.svelte';
 
@@ -70,7 +71,12 @@
           {/if}
         </span>
         <span class="banner-copy">
-          <strong>{option.label}</strong>
+          <strong>
+            {option.label}
+            {#if event.preliminary}
+              <Badge tone="warning">Preliminary</Badge>
+            {/if}
+          </strong>
           <time>{event.dateLabel}</time>
         </span>
         <span class="banner-action">

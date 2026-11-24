@@ -21,6 +21,22 @@ export interface MasterRelease {
   previousHash: string | null;
   /** Absent for the first release and when the previous database was unavailable. */
   summary: MasterDiffSummary | null;
+  resourceVersion?: string;
+  isPreliminary?: boolean;
+  detectedAt?: string;
+  cdnLastModified?: string;
+}
+
+/** One unreleased Global CDN resource version observed ahead of the live app version. */
+export interface PreliminaryResourceVersion {
+  resourceVersion: string;
+  liveResourceVersion: string;
+  masterSha256: string;
+  masterShortHash: string;
+  masterChangedFromLive: boolean;
+  detectedAt: string;
+  cdnLastModified?: string;
+  promotedAt?: string;
 }
 
 export interface MasterModifiedRow {
@@ -58,6 +74,24 @@ export function loadMasterReleases(signal?: AbortSignal): Promise<MasterRelease[
 
     return parseMasterReleases(
       await readJsonResponse<unknown>(response, 'The master release history')
+    );
+  });
+}
+
+/** Every observed preliminary Global CDN resource version, oldest first. */
+export function loadPreliminaryResourceVersions(
+  signal?: AbortSignal
+): Promise<PreliminaryResourceVersion[]> {
+  return withPageRequest(async () => {
+    const response = await pageFetch(`${historyPath}/preliminary-versions.json`, {
+      cache: 'no-cache',
+      credentials: 'omit',
+      signal
+    });
+
+    if (response.status === 404) return [];
+    return parsePreliminaryResourceVersions(
+      await readJsonResponse<unknown>(response, 'Preliminary CDN versions')
     );
   });
 }
@@ -129,13 +163,55 @@ function parseRelease(value: unknown): MasterRelease | undefined {
     summary = parsed;
   }
 
-  return {
+  const release: MasterRelease = {
     hash: value.hash,
     shortHash: value.short_hash,
     date: value.date,
     previousHash,
     summary
   };
+
+  if (typeof value.resource_version === 'string' && value.resource_version)
+    release.resourceVersion = value.resource_version;
+  if (value.is_preliminary === true) release.isPreliminary = true;
+  if (typeof value.detected_at === 'string' && value.detected_at)
+    release.detectedAt = value.detected_at;
+  if (typeof value.cdn_last_modified === 'string' && value.cdn_last_modified)
+    release.cdnLastModified = value.cdn_last_modified;
+
+  return release;
+}
+
+export function parsePreliminaryResourceVersions(value: unknown): PreliminaryResourceVersion[] {
+  if (!Array.isArray(value)) throw new Error('Invalid preliminary CDN version history.');
+
+  return value.map((entry) => {
+    if (
+      !isRecord(entry) ||
+      typeof entry.resource_version !== 'string' ||
+      typeof entry.live_resource_version !== 'string' ||
+      typeof entry.master_sha256 !== 'string' ||
+      typeof entry.master_short_hash !== 'string' ||
+      typeof entry.master_changed_from_live !== 'boolean' ||
+      typeof entry.detected_at !== 'string'
+    )
+      throw new Error('Invalid preliminary CDN version history.');
+
+    const parsed: PreliminaryResourceVersion = {
+      resourceVersion: entry.resource_version,
+      liveResourceVersion: entry.live_resource_version,
+      masterSha256: entry.master_sha256,
+      masterShortHash: entry.master_short_hash,
+      masterChangedFromLive: entry.master_changed_from_live,
+      detectedAt: entry.detected_at
+    };
+
+    if (typeof entry.cdn_last_modified === 'string' && entry.cdn_last_modified)
+      parsed.cdnLastModified = entry.cdn_last_modified;
+    if (typeof entry.promoted_at === 'string' && entry.promoted_at)
+      parsed.promotedAt = entry.promoted_at;
+    return parsed;
+  });
 }
 
 function parseSummary(value: unknown): MasterDiffSummary | undefined {

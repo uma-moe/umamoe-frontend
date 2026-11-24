@@ -25,6 +25,7 @@
     pickLimit?: number;
     cardKind: 'support' | 'character';
     inferred: boolean;
+    preliminary?: boolean;
     hasResults: boolean;
     pickupCopyMemory: Map<string, number>;
     pickupSearch: string;
@@ -39,6 +40,7 @@
     pickLimit,
     cardKind,
     inferred,
+    preliminary = false,
     hasResults,
     pickupCopyMemory,
     pickupSearch = $bindable(),
@@ -154,9 +156,32 @@
                 />
                 <span>
                   <strong>{option.name}</strong>
-                  <small>
-                    {option.subLabel}, {percent(option.rate, 2)}
-                    {inferred ? 'estimated ' : ''}per pull
+                  <small class="option-meta">
+                    {#if option.rarityIcon}
+                      <img
+                        class="meta-rarity-icon"
+                        src={option.rarityIcon}
+                        alt={option.rarityLabel ?? ''}
+                        width="18"
+                        height="14"
+                      />
+                    {/if}
+                    {#if option.typeIcon}
+                      <img
+                        class="meta-type-icon"
+                        src={option.typeIcon}
+                        alt={option.supportType ? `${option.supportType} support` : ''}
+                        width="14"
+                        height="14"
+                      />
+                    {/if}
+                    <span>
+                      {option.rarityIcon || option.typeIcon ? '' : `${option.subLabel}, `}{percent(
+                        option.rate,
+                        2
+                      )}
+                      {inferred ? 'estimated ' : preliminary ? 'preliminary ' : ''}per pull
+                    </span>
                   </small>
                 </span>
                 <Icon
@@ -192,14 +217,42 @@
         />
         <span class="goal-name">
           <strong title={goal.option.name}>{goal.option.name}</strong>
-          <small>
+          <small class="option-meta">
             {#if hasResults}
               {goal.actualCopies === undefined
                 ? 'Copies not recorded'
                 : `${goal.actualCopies} actual`}, {requirement(goal)}
             {:else}
-              {goal.option.subLabel}, {percent(goal.odds?.pickupRate, 2)}
-              {stepUp ? 'per random pull' : inferred ? 'estimated per pull' : 'per pull'}
+              {#if goal.option.rarityIcon}
+                <img
+                  class="meta-rarity-icon"
+                  src={goal.option.rarityIcon}
+                  alt={goal.option.rarityLabel ?? ''}
+                  width="18"
+                  height="14"
+                />
+              {/if}
+              {#if goal.option.typeIcon}
+                <img
+                  class="meta-type-icon"
+                  src={goal.option.typeIcon}
+                  alt={goal.option.supportType ? `${goal.option.supportType} support` : ''}
+                  width="14"
+                  height="14"
+                />
+              {/if}
+              <span>
+                {goal.option.rarityIcon || goal.option.typeIcon
+                  ? ''
+                  : `${goal.option.subLabel}, `}{percent(goal.odds?.pickupRate, 2)}
+                {stepUp
+                  ? 'per random pull'
+                  : inferred
+                    ? 'estimated per pull'
+                    : preliminary
+                      ? 'preliminary per pull'
+                      : 'per pull'}
+              </span>
             {/if}
           </small>
         </span>

@@ -1,4 +1,7 @@
-import { resourceCache } from '@/services/resources/resource-cache';
+import {
+  resourceCache,
+  type PreliminaryMasterDatabaseLocation
+} from '@/services/resources/resource-cache';
 import MasterWorker from '../master-data.worker?worker';
 import type {
   MasterDatabaseSource,
@@ -11,7 +14,16 @@ import type {
 const QUERY_TIMEOUT_MS = 20_000;
 
 /** What the open database is, as shown to the visitor. */
-export type OpenDatabase = { kind: 'published'; marker: string } | { kind: 'file'; name: string };
+export type OpenDatabase =
+  | { kind: 'published'; marker: string }
+  | {
+      kind: 'preliminary';
+      marker: string;
+      resourceVersion: string;
+      cdnLastModified?: string;
+      detectedAt?: string;
+    }
+  | { kind: 'file'; name: string };
 
 interface DatabaseChoice {
   source: MasterDatabaseSource;
@@ -32,6 +44,7 @@ interface PendingRequest {
 export class MasterDataSession {
   tables = $state.raw<MasterTable[]>([]);
   database = $state.raw<OpenDatabase>();
+  preliminaryAvailable = $state.raw<PreliminaryMasterDatabaseLocation>();
   result = $state.raw<QueryResult>();
   opening = $state(false);
   querying = $state(false);
@@ -51,14 +64,46 @@ export class MasterDataSession {
   #latestOpen = 0;
   #latestQuery = 0;
 
+  async checkPreliminary(): Promise<PreliminaryMasterDatabaseLocation | undefined> {
+    try {
+      this.preliminaryAvailable = await resourceCache.preliminaryMasterDatabase();
+    } catch {
+      // Failing to check preliminary metadata must not block the live database.
+    }
+    return this.preliminaryAvailable;
+  }
+
   openPublished(): Promise<boolean> {
     return this.#open(async () => {
-      const location = await resourceCache.masterDatabase();
+      const [location, preliminary] = await Promise.all([
+        resourceCache.masterDatabase(),
+        resourceCache.preliminaryMasterDatabase().catch(() => undefined)
+      ]);
+      this.preliminaryAvailable = preliminary;
       if (!location) throw new Error('The game database is not published yet.');
 
       return {
         source: { kind: 'published', url: location.path },
         database: { kind: 'published', marker: location.marker ?? 'current' }
+      };
+    });
+  }
+
+  openPreliminary(): Promise<boolean> {
+    return this.#open(async () => {
+      const location = await resourceCache.preliminaryMasterDatabase();
+      this.preliminaryAvailable = location;
+      if (!location) throw new Error('No preliminary CDN database is currently available.');
+
+      return {
+        source: { kind: 'published', url: location.path },
+        database: {
+          kind: 'preliminary',
+          marker: location.marker ?? `preliminary:${location.resourceVersion}`,
+          resourceVersion: location.resourceVersion,
+          cdnLastModified: location.cdnLastModified,
+          detectedAt: location.detectedAt
+        }
       };
     });
   }

@@ -10,6 +10,7 @@
   } from '@/lib/carat-planner/carat-planner';
   import { plannerPullPlanItems } from '@/lib/carat-planner/presentation/planner-presentation';
   import type { TimelinePickupCatalog } from '@/lib/timeline/events/timeline-pickups';
+  import type { TimelinePreliminarySummary } from '@/lib/timeline/prediction/timeline-prediction-types';
   import PlannerTargetRow from './row/PlannerTargetRow.svelte';
   import Icon from '@/components/Icon.svelte';
   import SelectField from '@/components/controls/SelectField.svelte';
@@ -21,6 +22,8 @@
     resources: PlannerDataBundle;
     events: TimelineRecord[];
     catalog: TimelinePickupCatalog;
+    preliminary?: TimelinePreliminarySummary | null;
+    onopenpreliminary?: () => void;
     oncommit: (mutator: (plan: CaratPlan) => void) => void;
     onremove: (id: string) => void;
   }
@@ -32,6 +35,8 @@
     resources,
     events,
     catalog,
+    preliminary = null,
+    onopenpreliminary,
     oncommit,
     onremove
   }: Props = $props();
@@ -179,6 +184,8 @@
               {resources}
               {events}
               {catalog}
+              {preliminary}
+              {onopenpreliminary}
               {pickupCopyMemory}
               onupdate={(mutator) => updateTarget(target.id, mutator)}
               onremove={() => onremove(target.id)}
@@ -188,8 +195,9 @@
       {/each}
     </div>
     <p class="disclaimer">
-      <Icon name="info" /> Each pickup uses its published rate. Uncap Crystals replace copies after the
-      first. Available exchange copies are shared across selected goals after the pulls.
+      <Icon name="info" /> Each pickup uses its published or preliminary rate. Preliminary confirmed banners
+      are still subject to change by Cygames before official release. Uncap Crystals replace copies after
+      the first. Available exchange copies are shared across selected goals after the pulls.
     </p>
   {/if}
 </section>

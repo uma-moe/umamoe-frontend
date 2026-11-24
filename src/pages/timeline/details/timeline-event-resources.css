@@ -9,20 +9,57 @@
 }
 .pickups em {
   font-size: 11px;
-  line-height: 12px;
+  line-height: 14px;
   font-style: normal;
   color: var(--accent-primary);
   font-weight: 700;
+  white-space: nowrap;
 }
 .pickups.rates {
-  grid-template-columns: repeat(auto-fill, minmax(164px, 180px));
-  max-height: 224px;
-  overflow: auto;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 6px;
+  max-height: 236px;
+  overflow-y: auto;
+  padding-right: 2px;
 }
 .rates a {
-  min-height: 46px;
-  padding: 2px 5px 2px 2px;
-  gap: 6px;
+  min-height: 48px;
+  padding: 4px 8px 4px 5px;
+  gap: 8px;
+}
+.rates .pickup-info {
+  min-width: 0;
+  flex: 1;
+  display: grid;
+  gap: 3px;
+}
+.rates .pickup-info strong {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.pickup-meta {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 4px 6px;
+  min-width: 0;
+}
+.pickup-icons {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  flex: none;
+}
+.pickup-rarity-icon {
+  width: 20px;
+  height: 16px;
+  object-fit: contain;
+}
+.pickup-type-icon {
+  width: 16px;
+  height: 16px;
+  object-fit: contain;
 }
 .reward-list,
 .reward-preview {

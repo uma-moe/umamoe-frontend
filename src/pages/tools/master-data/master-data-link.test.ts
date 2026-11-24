@@ -14,3 +14,11 @@ it('leaves blank queries and filters out of the address', () => {
   expect(masterDataSearch({ sql: '  ', filter: '' })).toBe('');
   expect(readMasterDataLink('')).toEqual({ sql: '', filter: '' });
 });
+
+it('round-trips the preliminary source parameter when selected', () => {
+  const link = { sql: 'SELECT * FROM gacha_data', filter: '', source: 'preliminary' as const };
+  const search = masterDataSearch(link);
+
+  expect(search).toBe('?q=SELECT+*+FROM+gacha_data&source=preliminary');
+  expect(readMasterDataLink(search)).toEqual(link);
+});

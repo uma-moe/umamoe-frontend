@@ -6,10 +6,11 @@
   interface Props {
     prediction: TimelinePredictionInsight;
     predicted?: boolean;
+    preliminary?: boolean;
     dateLabel: string;
   }
 
-  let { prediction, predicted, dateLabel }: Props = $props();
+  let { prediction, predicted, preliminary = false, dateLabel }: Props = $props();
 
   const groups = $derived(
     [
@@ -47,16 +48,16 @@
       <Icon
         name="calendar"
         size={16}
-      />{predicted ? 'Date prediction' : 'Date source'}
+      />{preliminary ? 'Preliminary date' : predicted ? 'Date prediction' : 'Date source'}
     </h3>
   </div>
   <p>{prediction.subtitle}</p>
   <div class="current-prediction">
     <span>
-      <small>Current estimate</small>
+      <small>{preliminary ? 'Preliminary confirmed date' : 'Current estimate'}</small>
       <strong>{dateLabel}</strong>
     </span>
-    <b>{prediction.fitLabel || 'Estimated'}</b>
+    <b>{preliminary ? 'Preliminary' : prediction.fitLabel || 'Estimated'}</b>
   </div>
   <div class="prediction-factors">
     {#each groups as group}

@@ -20,17 +20,24 @@
   import type { TimelineRecord } from '@/pages/timeline/timeline-repository';
   import {
     findGacha,
+    findPlannerEvent,
     type PlannerDataBundle,
     type PlannerTarget,
     type TargetProjection
   } from '@/lib/carat-planner/carat-planner';
   import { plannerPickupOptions } from '@/lib/carat-planner/presentation/planner-presentation';
-  import type { TimelinePickupCatalog } from '@/lib/timeline/events/timeline-pickups';
+  import { buildPreliminaryEventSummary } from '@/lib/timeline/events/timeline-preliminary';
+  import {
+    timelineDisplayTitle,
+    type TimelinePickupCatalog
+  } from '@/lib/timeline/events/timeline-pickups';
+  import type { TimelinePreliminarySummary } from '@/lib/timeline/prediction/timeline-prediction-types';
   import { plannerStepOptions } from './planner-target-steps';
   import PlannerTargetGoals from '../PlannerTargetGoals.svelte';
   import PlannerTargetActions from './PlannerTargetActions.svelte';
   import PlannerTargetAtPull from './PlannerTargetAtPull.svelte';
   import PlannerTargetRecords from './PlannerTargetRecords.svelte';
+  import Badge from '@/components/Badge.svelte';
   import Button from '@/components/controls/Button.svelte';
   import Icon from '@/components/Icon.svelte';
   import SelectField from '@/components/controls/SelectField.svelte';
@@ -43,6 +50,8 @@
     resources: PlannerDataBundle;
     events: TimelineRecord[];
     catalog: TimelinePickupCatalog;
+    preliminary?: TimelinePreliminarySummary | null;
+    onopenpreliminary?: () => void;
     pickupCopyMemory: Map<string, number>;
     onupdate: (mutator: (target: PlannerTarget) => void) => void;
     onremove: () => void;
@@ -55,12 +64,31 @@
     resources,
     events,
     catalog,
+    preliminary = null,
+    onopenpreliminary,
     pickupCopyMemory,
     onupdate,
     onremove
   }: Props = $props();
 
+  const event = $derived(findPlannerEvent(target.eventId, events));
+  const mergedInto = $derived(
+    events.find((candidate) =>
+      candidate.preliminaryChanges?.mergedEvents.some((merged) => merged.eventId === target.eventId)
+    )
+  );
   const gacha = $derived(findGacha(target, resources));
+  const isPreliminary = $derived(
+    Boolean(
+      event?.preliminary ||
+      gacha?.provenance === 'global_early_master' ||
+      gacha?.confidence === 'preliminary'
+    )
+  );
+  const displayTitle = $derived(event ? timelineDisplayTitle(event) : target.title);
+  const preliminarySummary = $derived(
+    event?.preliminary ? buildPreliminaryEventSummary(event, catalog) : null
+  );
   const paidOnly = $derived(isPaidBanner(target, gacha));
   const cardKind = $derived(plannerCardKind(target, gacha));
   const maxPulls = $derived(
@@ -90,6 +118,7 @@
 <article
   class="target"
   class:past
+  class:is-preliminary={isPreliminary || Boolean(mergedInto)}
   data-target-id={target.id}
 >
   <div
@@ -106,28 +135,69 @@
           alt=""
         />
       {/if}
+      {#if isPreliminary}
+        <span class="preliminary-media-pill">PRELIMINARY</span>
+      {/if}
     </div>
     <div class="target-info">
       <div class="banner-identity">
-        <strong class:paid={paidOnly}>
-          {#if paidOnly}
-            <span
-              aria-label="Paid banner"
-              title="Paid banner"
-            >
-              <Icon
-                name="paid"
-                size={17}
-              />
-            </span>
-          {/if}{target.title}
-        </strong>
+        <div class="banner-heading">
+          <strong class:paid={paidOnly}>
+            {#if paidOnly}
+              <span
+                aria-label="Paid banner"
+                title="Paid banner"
+              >
+                <Icon
+                  name="paid"
+                  size={17}
+                />
+              </span>
+            {/if}{displayTitle}
+          </strong>
+          {#if isPreliminary}
+            <Badge tone="warning">Preliminary confirmed</Badge>
+          {:else if mergedInto}
+            <Badge tone="warning">Merged in preliminary data</Badge>
+          {/if}
+        </div>
         <small class="date">
           <Icon
             name="calendar"
             size={13}
           />{dateLabel(target.bannerStart)} – {dateLabel(target.bannerEnd ?? target.bannerStart)}
         </small>
+        {#if preliminarySummary}
+          <div class="preliminary-row-note">
+            <Icon
+              name="warning"
+              size={13}
+            />
+            <span>
+              Preliminary confirmed. Dates, pickups, and free pulls are still subject to change by
+              Cygames before official release.
+            </span>
+            {#if onopenpreliminary}
+              <button
+                type="button"
+                class="preliminary-row-link"
+                onclick={onopenpreliminary}
+              >
+                View changes
+              </button>
+            {/if}
+          </div>
+        {:else if mergedInto}
+          <div class="preliminary-row-note">
+            <Icon
+              name="warning"
+              size={13}
+            />
+            <span>
+              {`Absorbed into ${timelineDisplayTitle(mergedInto)} in preliminary data. Subject to change by Cygames.`}
+            </span>
+          </div>
+        {/if}
       </div>
       <PlannerTargetRecords
         {target}

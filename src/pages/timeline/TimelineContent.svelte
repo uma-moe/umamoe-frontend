@@ -21,18 +21,24 @@
   import Button from '@/components/controls/Button.svelte';
   import Banner from '@/components/feedback/Banner.svelte';
   import EmptyState from '@/components/feedback/EmptyState.svelte';
+  import Icon from '@/components/Icon.svelte';
   import Spinner from '@/components/feedback/Spinner.svelte';
   import TimelineEventCard from '@/components/cards/TimelineEventCard.svelte';
   import type { TimelineEventData } from '@/components/cards/timeline-types';
   import { timelineRepository, type TimelineRecord } from './timeline-repository';
+  import { resourceCache } from '@/services/resources/resource-cache';
   import { plannerResourceRepository } from '@/pages/carat-planner/planner-resource-repository';
   import type { PlannerRewardResource } from '@/lib/carat-planner/carat-planner';
-  import type { TimelineCalculation } from '@/lib/timeline/prediction/timeline-prediction-types';
+  import type {
+    TimelineCalculation,
+    TimelinePreliminarySummary
+  } from '@/lib/timeline/prediction/timeline-prediction-types';
   import type { TimelinePickupCatalog } from '@/lib/timeline/events/timeline-pickups';
   import { buildTimelineRewardSummaries } from '@/lib/timeline/events/timeline-reward-summary';
   import { searchKey } from '@/lib/timeline/board/timeline-search';
   import type { FilterType, TimelineStatus } from './timeline-controls';
   import { filterTimelineEvents, plannedEventIds, timelineCardView } from './timeline-events';
+  import TimelinePreliminaryDialog from './controls/TimelinePreliminaryDialog.svelte';
   import TimelineEventDialog from './details/TimelineEventDialog.svelte';
   import TimelineLoading from './TimelineLoading.svelte';
 
@@ -67,6 +73,9 @@
   let currentSearchIndex = $state(-1);
   let collection = $state.raw(get(plannerCollection));
   let calculation = $state<TimelineCalculation | null>(null);
+  let preliminary = $state<TimelinePreliminarySummary | null>(null);
+  let preliminaryOpen = $state(false);
+  let mobileStickyTop = $state('var(--utility-height)');
   let catalog = $state.raw<TimelinePickupCatalog>({ characters: {}, supports: new Map() });
   let rewardResource = $state.raw<PlannerRewardResource>({ rewards: [] });
   let rewardsLoading = $state(false);
@@ -77,6 +86,7 @@
 
   let detailDialog = $state<TimelineEventDialog>();
 
+  const preliminaryEvents = $derived(events.filter((event) => event.preliminary));
   const rewardSummaries = $derived(buildTimelineRewardSummaries(rewardResource, events));
   const plannedIds = $derived(plannedEventIds(collection));
   const plannerEventCount = $derived(enabledPlannerTargets(activePlan(collection)).length);
@@ -198,20 +208,27 @@
     void timelineBoard?.scrollToDate(date);
   }
 
-  async function load(refresh = false): Promise<void> {
-    loading = true;
+  export function openPreliminary(): void {
+    if (preliminary && preliminaryEvents.length) preliminaryOpen = true;
+  }
+
+  async function load(refresh = false, silent = false): Promise<void> {
+    if (!silent) loading = true;
     error = '';
     try {
       const loaded = await timelineRepository.load(refresh);
       events = loaded.events;
       anniversaries = loaded.anniversaries;
       calculation = loaded.calculation;
+      preliminary = loaded.preliminary;
       catalog = loaded.catalog;
-      void loadRewards(refresh);
+      if (!silent) void loadRewards(refresh);
     } catch (reason) {
-      error = reason instanceof Error ? reason.message : 'Timeline resources could not be loaded.';
+      if (!silent)
+        error =
+          reason instanceof Error ? reason.message : 'Timeline resources could not be loaded.';
     } finally {
-      loading = false;
+      if (!silent) loading = false;
     }
   }
 
@@ -225,9 +242,29 @@
       rewardResource = rewards;
       rewardsReady = true;
     });
+    const stopResources = resourceCache.onUpdate((name) => {
+      if (['banner_timeline', 'character_names', 'support-cards-db'].includes(name))
+        void load(false, true);
+    });
 
     void load();
+    const heading = document.querySelector<HTMLElement>('.page-heading.actions-only');
+    const updateStickyTop = () => {
+      if (heading && getComputedStyle(heading).position === 'sticky') {
+        mobileStickyTop = `calc(var(--utility-height) + ${heading.offsetHeight}px)`;
+      } else {
+        mobileStickyTop = 'var(--utility-height)';
+      }
+    };
+    updateStickyTop();
+    const headingObserver =
+      heading && typeof ResizeObserver !== 'undefined' ? new ResizeObserver(updateStickyTop) : null;
+    if (heading && headingObserver) headingObserver.observe(heading);
+    window.addEventListener('resize', updateStickyTop);
     return () => {
+      headingObserver?.disconnect();
+      window.removeEventListener('resize', updateStickyTop);
+      stopResources();
       stopRewards();
       clearInterval(todayTimer);
       unsubscribe();
@@ -252,6 +289,8 @@
       total: events.length,
       searchPosition,
       plannerEventCount,
+      preliminaryCount: preliminaryEvents.length,
+      preliminaryVersion: preliminary?.resourceVersion,
       loading,
       rewardsLoading
     };
@@ -286,6 +325,9 @@
         active={tab === 'carat-planner'}
         {events}
         {catalog}
+        {preliminary}
+        {preliminaryEvents}
+        onopenpreliminary={preliminary && preliminaryEvents.length ? openPreliminary : undefined}
         bind:collection
         onchange={savePlanner}
         saveError={$plannerSaveError}
@@ -338,6 +380,31 @@
         description="Enable another event type or clear the search."
       />
     {:else if !error}
+      {#if mobile && preliminary && preliminaryEvents.length}
+        <div
+          class="preliminary-mobile-bar"
+          style:--preliminary-sticky-top={mobileStickyTop}
+        >
+          <button
+            type="button"
+            class="preliminary-mobile-button"
+            onclick={openPreliminary}
+          >
+            <Icon
+              name="warning"
+              size={14}
+            />
+            <span>
+              <strong>Preliminary confirmed</strong>
+              ({preliminaryEvents.length}) · subject to change
+            </span>
+            <Icon
+              name="arrow-right"
+              size={13}
+            />
+          </button>
+        </div>
+      {/if}
       <div class="timeline-viewport">
         <TimelineBoard
           bind:this={timelineBoard}
@@ -391,9 +458,52 @@
   {plannedIds}
   onplan={plan}
   onretryrewards={() => void loadRewards(true)}
+  onopenpreliminary={preliminary && preliminaryEvents.length ? openPreliminary : undefined}
 />
+{#if preliminary && preliminaryEvents.length}
+  <TimelinePreliminaryDialog
+    open={preliminaryOpen}
+    summary={preliminary}
+    events={preliminaryEvents}
+    {catalog}
+    onclose={() => (preliminaryOpen = false)}
+    onjump={(event) => scrollToDate(event.date)}
+    onopen={openDetails}
+  />
+{/if}
 
 <style>
+  .preliminary-mobile-bar {
+    position: sticky;
+    top: var(--preliminary-sticky-top, var(--utility-height));
+    z-index: calc(var(--z-header) - 2);
+    padding: 6px;
+    border-bottom: 1px solid var(--border-primary);
+    background: var(--bg-secondary);
+    box-shadow: 0 5px 14px rgb(0 0 0 / 0.18);
+  }
+  .preliminary-mobile-button {
+    width: 100%;
+    display: flex;
+    align-items: center;
+    gap: 7px;
+    padding: 7px 10px;
+    border: 1px solid color-mix(in srgb, var(--accent-warning) 45%, var(--border-primary));
+    border-radius: var(--radius-md);
+    background: color-mix(in srgb, var(--accent-warning) 10%, var(--surface-1));
+    color: var(--text-primary);
+    font: inherit;
+    font-size: 12px;
+    text-align: left;
+    cursor: pointer;
+  }
+  .preliminary-mobile-button > :global(svg) {
+    color: var(--accent-warning);
+    flex: none;
+  }
+  .preliminary-mobile-button > span {
+    flex: 1;
+  }
   .timeline-content {
     position: relative;
     min-width: 0;

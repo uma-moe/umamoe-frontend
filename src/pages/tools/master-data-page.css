@@ -13,6 +13,12 @@
   border-radius: var(--radius-md);
   background: var(--card-surface-bg);
 }
+.source-bar.preliminary {
+  border-color: color-mix(in srgb, var(--accent-warning) 50%, var(--card-surface-border));
+}
+.source-switch {
+  flex: none;
+}
 .source-bar > :global(svg) {
   flex: none;
   color: var(--accent-primary);

@@ -5,6 +5,7 @@
   import Icon from '@/components/Icon.svelte';
   import Spinner from '@/components/feedback/Spinner.svelte';
   import {
+    pickupRarityRank,
     timelinePickup,
     type TimelinePickupCatalog
   } from '@/lib/timeline/events/timeline-pickups';
@@ -62,7 +63,9 @@
         : '',
       gacha?.rates_confidence === 'inferred_standard'
         ? 'Standard rates (estimated)'
-        : 'Published banner rates'
+        : gacha?.provenance === 'global_early_master' || gacha?.confidence === 'preliminary'
+          ? 'Preliminary confirmed rates'
+          : 'Published banner rates'
     ]
       .filter(Boolean)
       .join(', ')
@@ -72,7 +75,13 @@
     const kind = event.eventType === 'support_card_banner' ? 'support' : 'character';
     const rates = gacha?.featured_pickups?.length ? gacha.featured_pickups : (gacha?.pickups ?? []);
     const ordered =
-      kind === 'support' ? [...rates].sort((a, b) => b.pickup_id - a.pickup_id) : rates;
+      kind === 'support'
+        ? [...rates].sort(
+            (a, b) =>
+              pickupRarityRank(b.pickup_id, kind, catalog) -
+                pickupRarityRank(a.pickup_id, kind, catalog) || a.pickup_id - b.pickup_id
+          )
+        : rates;
 
     if (ordered.length)
       return ordered.map((rate) => ({
@@ -129,18 +138,47 @@
           href={pickup.gametoraUrl}
           target="_blank"
           rel="noopener noreferrer"
+          title={pickup.subLabel ? `${pickup.name} (${pickup.subLabel})` : pickup.name}
         >
           <img
+            class="pickup-portrait"
             src={pickup.image}
             alt={pickup.name}
-            width="36"
-            height="36"
+            width="40"
+            height="40"
             onerror={hideImage}
           />
-          <span>
+          <span class="pickup-info">
             <strong>{pickup.name}</strong>
-            <small>{pickup.subLabel}</small>
-            <em>{rate || (ratesLoading ? 'Loading rate…' : 'Rate unavailable')}</em>
+            <span class="pickup-meta">
+              {#if pickup.rarityIcon || pickup.typeIcon}
+                <span class="pickup-icons">
+                  {#if pickup.rarityIcon}
+                    <img
+                      class="pickup-rarity-icon"
+                      src={pickup.rarityIcon}
+                      alt={pickup.rarityLabel ?? ''}
+                      title={pickup.rarityLabel}
+                      width="20"
+                      height="20"
+                    />
+                  {/if}
+                  {#if pickup.typeIcon}
+                    <img
+                      class="pickup-type-icon"
+                      src={pickup.typeIcon}
+                      alt={pickup.supportType ? `${pickup.supportType} support` : ''}
+                      title={pickup.supportType ? `${pickup.supportType} support` : undefined}
+                      width="16"
+                      height="16"
+                    />
+                  {/if}
+                </span>
+              {:else if pickup.subLabel}
+                <small>{pickup.subLabel}</small>
+              {/if}
+              <em>{rate || (ratesLoading ? 'Loading rate…' : 'Rate unavailable')}</em>
+            </span>
           </span>
         </a>
       {/each}

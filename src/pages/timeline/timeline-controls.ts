@@ -39,6 +39,8 @@ export interface TimelineStatus {
   total: number;
   searchPosition: string;
   plannerEventCount: number;
+  preliminaryCount: number;
+  preliminaryVersion?: string;
   loading: boolean;
   rewardsLoading: boolean;
 }

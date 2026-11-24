@@ -41,6 +41,28 @@
 [data-event-type='scenario_release'] {
   --event-accent: #81c784;
 }
+.event-card.is-preliminary {
+  border-color: color-mix(in srgb, var(--accent-warning) 65%, var(--border-primary));
+}
+.preliminary-ribbon {
+  position: absolute;
+  top: 5px;
+  left: 6px;
+  z-index: 3;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 7px;
+  border: 1px solid color-mix(in srgb, var(--accent-warning) 85%, transparent);
+  border-radius: 999px;
+  background: rgb(15 12 8 / 0.88);
+  color: var(--accent-warning);
+  font-size: 9.5px;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  line-height: 1.2;
+  backdrop-filter: blur(4px);
+}
 .event-card:hover,
 .event-card:focus-within {
   border-color: color-mix(in srgb, var(--event-accent) 65%, transparent);
@@ -139,6 +161,9 @@
   flex: none;
 }
 .metadata-item.rerun {
+  color: var(--accent-warning);
+}
+.metadata-item.preliminary {
   color: var(--accent-warning);
 }
 .metadata-item.predicted {

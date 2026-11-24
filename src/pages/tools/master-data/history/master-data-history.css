@@ -37,6 +37,9 @@
 .release.open {
   border-color: rgb(var(--accent-primary-rgb) / 0.4);
 }
+.release.preliminary {
+  border-color: color-mix(in srgb, var(--accent-warning) 45%, var(--card-surface-border));
+}
 .release-heading {
   min-height: 48px;
   display: flex;
@@ -49,17 +52,43 @@
   color: var(--text-primary);
   font: 600 13px var(--font-mono);
 }
+.resource-version {
+  color: var(--text-secondary);
+  font: 600 12px var(--font-mono);
+}
 time,
 .tables {
   color: var(--text-secondary);
   font-size: var(--font-xs);
   font-variant-numeric: tabular-nums;
 }
+.tables code {
+  font-family: var(--font-mono);
+}
 .toggle {
   margin-left: auto;
+  display: flex;
+  align-items: center;
+  gap: 4px;
 }
 .release-diff {
   padding: 0 10px 10px;
+}
+.preliminary-release-note {
+  margin-bottom: 10px;
+}
+.preliminary-release-note :global(.banner p) {
+  margin: 0;
+  font-size: 12px;
+}
+.preliminary-versions {
+  margin-top: 8px;
+  display: grid;
+  gap: 8px;
+}
+.preliminary-versions h3 {
+  margin: 0;
+  font-size: var(--font-sm);
 }
 @media (max-width: 760px) {
   .release-heading {

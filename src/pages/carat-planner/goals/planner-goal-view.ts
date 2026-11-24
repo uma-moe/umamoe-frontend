@@ -24,6 +24,11 @@ export function plannerGoalOptions(
           id: 'step-up-choice',
           pickupId: 0,
           kind: cardKind,
+          rarity: 3,
+          rarityLabel: undefined,
+          rarityIcon: undefined,
+          supportType: undefined,
+          typeIcon: undefined,
           image: '',
           name: 'Chosen card',
           subLabel: stepUp.selection_pool_size
@@ -46,19 +51,21 @@ export function plannerGoalViews(
 ) {
   return (
     stepUp ? [{ pickupId: 0, desiredCopies: target.desiredCopies }] : plannerPickupGoals(target)
-  ).map((goal) => {
-    const odds = projection.pickupGoals.find((odds) => odds.pickupId === goal.pickupId);
-    const actualCopies = target.actualCopies?.[stepUp ? 'chosen' : String(goal.pickupId)];
-    return {
-      ...goal,
-      option: options.find((option) => option.pickupId === goal.pickupId)!,
-      odds,
-      actualCopies,
-      met:
-        actualCopies !== undefined &&
-        actualCopies >= (odds?.copiesNeededFromPulls ?? goal.desiredCopies)
-    };
-  });
+  )
+    .map((goal) => {
+      const odds = projection.pickupGoals.find((odds) => odds.pickupId === goal.pickupId);
+      const actualCopies = target.actualCopies?.[stepUp ? 'chosen' : String(goal.pickupId)];
+      return {
+        ...goal,
+        option: options.find((option) => option.pickupId === goal.pickupId)!,
+        odds,
+        actualCopies,
+        met:
+          actualCopies !== undefined &&
+          actualCopies >= (odds?.copiesNeededFromPulls ?? goal.desiredCopies)
+      };
+    })
+    .sort((left, right) => (right.option?.rarity ?? 0) - (left.option?.rarity ?? 0));
 }
 
 export type PlannerGoalView = ReturnType<typeof plannerGoalViews>[number];

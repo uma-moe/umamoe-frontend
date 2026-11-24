@@ -134,6 +134,22 @@
 .goal-name small {
   font-size: 9px;
 }
+.option-meta {
+  display: inline-flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 3px 4px;
+}
+.meta-rarity-icon {
+  width: 18px;
+  height: 14px;
+  object-fit: contain;
+}
+.meta-type-icon {
+  width: 14px;
+  height: 14px;
+  object-fit: contain;
+}
 .goal-copies {
   display: grid;
   justify-items: center;

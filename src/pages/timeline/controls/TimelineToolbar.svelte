@@ -21,6 +21,7 @@
     ondate: (event: MouseEvent) => void;
     onfilterstoggle: () => void;
     onsearchjump: (offset: number) => void;
+    onpreliminary?: () => void;
   }
 
   let {
@@ -37,7 +38,8 @@
     ontoday,
     ondate,
     onfilterstoggle,
-    onsearchjump
+    onsearchjump,
+    onpreliminary
   }: Props = $props();
 </script>
 
@@ -76,6 +78,20 @@
         </div>
       {/if}
       <span class="timeline-count">{status.filtered} / {status.total}</span>
+      {#if status.preliminaryCount > 0 && onpreliminary}
+        <div
+          class="preliminary-trigger"
+          data-timeline-control="preliminary"
+        >
+          <Button
+            variant="secondary"
+            icon="warning"
+            onclick={onpreliminary}
+          >
+            Preliminary confirmed ({status.preliminaryCount})
+          </Button>
+        </div>
+      {/if}
       <div class="view">
         <SegmentedControl
           label="Timeline direction"

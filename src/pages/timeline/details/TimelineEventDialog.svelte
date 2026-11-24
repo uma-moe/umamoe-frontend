@@ -18,6 +18,7 @@
     plannedIds: string[];
     onplan: (event: TimelineRecord, planned: boolean) => void;
     onretryrewards: () => void;
+    onopenpreliminary?: () => void;
   }
 
   let {
@@ -28,7 +29,8 @@
     rewardsError,
     plannedIds,
     onplan,
-    onretryrewards
+    onretryrewards,
+    onopenpreliminary
   }: Props = $props();
 
   let detailEvent = $state<TimelineRecord>();
@@ -98,6 +100,12 @@
         onclose={closeDetails}
         onretryrates={() => void loadRates(true)}
         {onretryrewards}
+        onopenpreliminary={onopenpreliminary
+          ? () => {
+              closeDetails();
+              onopenpreliminary();
+            }
+          : undefined}
       />
     {:catch}
       <Dialog

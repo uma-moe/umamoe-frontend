@@ -20,12 +20,30 @@
 .target.past {
   color: var(--text-secondary);
 }
+.target.is-preliminary {
+  background: color-mix(in srgb, var(--accent-warning) 4%, var(--surface-1));
+}
 .pull-heading > span {
   font-size: 10px;
   color: var(--text-secondary);
 }
 .banner-media {
+  position: relative;
   min-width: 0;
+}
+.preliminary-media-pill {
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  padding: 1px 5px;
+  border: 1px solid color-mix(in srgb, var(--accent-warning) 80%, transparent);
+  border-radius: 999px;
+  background: rgb(15 12 8 / 0.88);
+  color: var(--accent-warning);
+  font-size: 8.5px;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  line-height: 1.25;
 }
 .target-title {
   min-width: 0;
@@ -65,16 +83,52 @@
   display: grid;
   gap: 4px;
 }
-.banner-identity > strong {
+.banner-heading {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 6px;
+  min-width: 0;
+}
+.banner-heading > strong {
   font-size: 0.84rem;
   line-height: 1.25;
   overflow-wrap: anywhere;
 }
-.banner-identity > strong.paid {
+.banner-heading > strong.paid {
   display: flex;
   align-items: center;
   gap: 5px;
   color: var(--color-gold);
+}
+.preliminary-row-note {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 5px 8px;
+  margin-top: 2px;
+  padding: 5px 8px;
+  border: 1px solid color-mix(in srgb, var(--accent-warning) 45%, var(--border-subtle));
+  border-radius: var(--radius-sm);
+  background: color-mix(in srgb, var(--accent-warning) 10%, var(--surface-1));
+  color: var(--text-primary);
+  font-size: 11px;
+  line-height: 1.35;
+}
+.preliminary-row-note > :global(svg) {
+  color: var(--accent-warning);
+  flex: none;
+}
+.preliminary-row-link {
+  margin-left: auto;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: var(--accent-warning);
+  font: inherit;
+  font-weight: 700;
+  text-decoration: underline;
+  cursor: pointer;
 }
 .paid > span {
   display: flex;

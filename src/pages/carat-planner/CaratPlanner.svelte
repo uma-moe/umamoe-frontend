@@ -23,7 +23,11 @@
   import { compactPlannerCollectionResourceState } from '@/lib/carat-planner/persistence/planner-resource-state';
   import { reconcileIncomePreset } from '@/lib/carat-planner/income/planner-income-presets';
   import { buildPlannerIncomeGroups, summarizePlannerIncome } from './income/planner-income-view';
-  import type { TimelinePickupCatalog } from '@/lib/timeline/events/timeline-pickups';
+  import {
+    timelineDisplayTitle,
+    type TimelinePickupCatalog
+  } from '@/lib/timeline/events/timeline-pickups';
+  import type { TimelinePreliminarySummary } from '@/lib/timeline/prediction/timeline-prediction-types';
   import { plannerUsingCache } from './planner-resource-repository';
   import { PlannerResources } from './planner-resources.svelte';
   import { withCurrentPlan } from './planner-collection';
@@ -41,6 +45,9 @@
     active?: boolean;
     events: TimelineRecord[];
     catalog: TimelinePickupCatalog;
+    preliminary?: TimelinePreliminarySummary | null;
+    preliminaryEvents?: TimelineRecord[];
+    onopenpreliminary?: () => void;
     collection: CaratPlanCollection;
     onchange: (collection: CaratPlanCollection) => void;
     saveError: string;
@@ -50,6 +57,9 @@
     active = true,
     events,
     catalog,
+    preliminary = null,
+    preliminaryEvents = [],
+    onopenpreliminary,
     collection = $bindable(),
     onchange,
     saveError
@@ -134,6 +144,31 @@
   );
 
   const activeTargets = $derived(enabledPlannerTargets(plan));
+  const preliminaryById = $derived(new Map(preliminaryEvents.map((event) => [event.id, event])));
+  const plannedPreliminaryTargets = $derived(
+    activeTargets.filter((target) => preliminaryById.has(target.eventId))
+  );
+  const mergedTargetsInPlan = $derived.by(() => {
+    const matches: { targetId: string; oldTitle: string; mergedInto: TimelineRecord }[] = [];
+    for (const target of activeTargets) {
+      const destination = preliminaryEvents.find((event) =>
+        event.preliminaryChanges?.mergedEvents.some((merged) => merged.eventId === target.eventId)
+      );
+      if (destination) {
+        matches.push({
+          targetId: target.id,
+          oldTitle: target.title,
+          mergedInto: destination
+        });
+      }
+    }
+    return matches;
+  });
+
+  function switchMergedTarget(oldTargetId: string, destination: TimelineRecord): void {
+    removeTarget(oldTargetId);
+    if (!addedEventIds.has(destination.id)) addEvent(destination);
+  }
   const addedEventIds = $derived(
     new Set([
       ...activeTargets.map((target) => target.eventId),
@@ -398,6 +433,53 @@
       </Button>
     </div>
   {/if}
+  {#if preliminary && preliminaryEvents.length}
+    <section class="planner-preliminary-alert">
+      <div class="preliminary-alert-head">
+        <span class="preliminary-alert-title">
+          <Icon
+            name="warning"
+            size={14}
+          />
+          <strong>
+            {plannedPreliminaryTargets.length || mergedTargetsInPlan.length
+              ? 'Preliminary confirmed banners in your plan'
+              : 'Preliminary confirmed banner changes'}
+          </strong>
+          <span class="preliminary-alert-sub">
+            Dates, merged pickups, rates, and free pulls are still subject to change by Cygames.
+          </span>
+        </span>
+        {#if onopenpreliminary}
+          <Button
+            size="sm"
+            variant="secondary"
+            onclick={onopenpreliminary}
+          >
+            View changes ({preliminaryEvents.length})
+          </Button>
+        {/if}
+      </div>
+      {#if mergedTargetsInPlan.length}
+        <div class="merged-target-alerts">
+          {#each mergedTargetsInPlan as item (item.targetId)}
+            <div class="merged-target-row">
+              <span>
+                {`Saved target ${item.oldTitle} was merged into ${timelineDisplayTitle(item.mergedInto)} in preliminary data.`}
+              </span>
+              <Button
+                size="sm"
+                variant="secondary"
+                onclick={() => switchMergedTarget(item.targetId, item.mergedInto)}
+              >
+                Switch to merged banner
+              </Button>
+            </div>
+          {/each}
+        </div>
+      {/if}
+    </section>
+  {/if}
   <PlannerSetup
     {plan}
     {events}
@@ -415,6 +497,8 @@
     {resources}
     {events}
     {catalog}
+    {preliminary}
+    {onopenpreliminary}
     oncommit={commit}
     onremove={removeTarget}
   />
