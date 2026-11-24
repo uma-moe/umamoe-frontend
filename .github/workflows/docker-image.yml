@@ -299,6 +299,9 @@ jobs:
           name: shell-site
           path: ${{ runner.temp }}/shell-export/var/www/html/umamoe/
           if-no-files-found: error
+          # Only this run's deploys read these artifacts; they count against the org's shared artifact quota.
+          # Approve production within 7 days.
+          retention-days: 7
 
       - name: Upload assets artifact
         if: github.event_name != 'pull_request' && steps.assets_plan.outputs.should_build == 'true'
@@ -307,6 +310,7 @@ jobs:
           name: asset-site
           path: ${{ runner.temp }}/assets-export/assets/
           if-no-files-found: error
+          retention-days: 7
 
   build_production:
     name: Build Production Shell
@@ -518,6 +522,7 @@ jobs:
           if-no-files-found: error
           # Production used to rsync straight from the export; keep dotfiles so --delete removes nothing new.
           include-hidden-files: true
+          retention-days: 7
 
   release:
     name: Check Release Kind
