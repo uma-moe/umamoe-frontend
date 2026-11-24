@@ -171,7 +171,7 @@
               class="prelim-all-link"
               onclick={onopenpreliminary}
             >
-              All changes
+              View all
               <Icon
                 name="arrow-right"
                 size={12}
