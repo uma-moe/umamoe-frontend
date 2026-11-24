@@ -444,7 +444,7 @@
           <strong>
             {plannedPreliminaryTargets.length || mergedTargetsInPlan.length
               ? 'Preliminary confirmed banners in your plan'
-              : 'Preliminary confirmed banner changes'}
+              : 'Preliminary confirmed banners'}
           </strong>
           <span class="preliminary-alert-sub">
             Dates, merged pickups, rates, and free pulls are still subject to change by Cygames.
@@ -456,7 +456,7 @@
             variant="secondary"
             onclick={onopenpreliminary}
           >
-            View changes ({preliminaryEvents.length})
+            View all ({preliminaryEvents.length})
           </Button>
         {/if}
       </div>

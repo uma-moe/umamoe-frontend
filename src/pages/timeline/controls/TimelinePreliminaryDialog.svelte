@@ -41,8 +41,8 @@
 
 <Dialog
   {open}
-  title="Preliminary banner changes"
-  description="Upcoming Global banners that differ from the expected schedule"
+  title="Preliminary confirmed banners"
+  description="Upcoming Global banners detected in preliminary game data"
   maxWidth="560px"
   maxHeight="82dvh"
   mobileMaxHeight="88dvh"
@@ -112,89 +112,91 @@
             </div>
           </header>
 
-          <div class="prelim-body">
-            {#if item.mergedEvents.length}
-              <div class="prelim-line">
-                <span class="prelim-label">Merged</span>
-                <span class="prelim-value">
-                  {#each item.mergedEvents as merged (merged.eventId)}
-                    <span>
-                      <strong>{merged.title}</strong>
-                      {#if merged.gachaId}
-                        <code>#{merged.gachaId}</code>
-                      {/if}
-                      {#if merged.estimatedDateLabel}
-                        <span class="muted">(est. {merged.estimatedDateLabel})</span>
-                      {/if}
-                    </span>
-                  {/each}
-                </span>
-              </div>
-            {/if}
+          {#if item.mergedEvents.length || item.addedPickups.length || item.removedPickups.length || item.shiftLabel || item.durationChangeLabel || item.freePulls}
+            <div class="prelim-body">
+              {#if item.mergedEvents.length}
+                <div class="prelim-line">
+                  <span class="prelim-label">Merged</span>
+                  <span class="prelim-value">
+                    {#each item.mergedEvents as merged (merged.eventId)}
+                      <span>
+                        <strong>{merged.title}</strong>
+                        {#if merged.gachaId}
+                          <code>#{merged.gachaId}</code>
+                        {/if}
+                        {#if merged.estimatedDateLabel}
+                          <span class="muted">(est. {merged.estimatedDateLabel})</span>
+                        {/if}
+                      </span>
+                    {/each}
+                  </span>
+                </div>
+              {/if}
 
-            {#if item.addedPickups.length || item.removedPickups.length}
-              <div class="prelim-line">
-                <span class="prelim-label">Pickups</span>
-                <span class="prelim-chips">
-                  {#each item.addedPickups as pickup (pickup.id)}
-                    <span class="pickup-chip added">
-                      <span class="chip-sign">+</span>
-                      {#if pickup.image}
-                        <img
-                          class="chip-art"
-                          src={pickup.image}
-                          alt=""
-                          width="22"
-                          height="22"
-                          onerror={hideImage}
-                        />
-                      {/if}
-                      <span>{pickup.name}</span>
-                    </span>
-                  {/each}
-                  {#each item.removedPickups as pickup (pickup.id)}
-                    <span class="pickup-chip removed">
-                      <span class="chip-sign">−</span>
-                      {#if pickup.image}
-                        <img
-                          class="chip-art"
-                          src={pickup.image}
-                          alt=""
-                          width="22"
-                          height="22"
-                          onerror={hideImage}
-                        />
-                      {/if}
-                      <span>{pickup.name}</span>
-                    </span>
-                  {/each}
-                </span>
-              </div>
-            {/if}
+              {#if item.addedPickups.length || item.removedPickups.length}
+                <div class="prelim-line">
+                  <span class="prelim-label">Pickups</span>
+                  <span class="prelim-chips">
+                    {#each item.addedPickups as pickup (pickup.id)}
+                      <span class="pickup-chip added">
+                        <span class="chip-sign">+</span>
+                        {#if pickup.image}
+                          <img
+                            class="chip-art"
+                            src={pickup.image}
+                            alt=""
+                            width="22"
+                            height="22"
+                            onerror={hideImage}
+                          />
+                        {/if}
+                        <span>{pickup.name}</span>
+                      </span>
+                    {/each}
+                    {#each item.removedPickups as pickup (pickup.id)}
+                      <span class="pickup-chip removed">
+                        <span class="chip-sign">−</span>
+                        {#if pickup.image}
+                          <img
+                            class="chip-art"
+                            src={pickup.image}
+                            alt=""
+                            width="22"
+                            height="22"
+                            onerror={hideImage}
+                          />
+                        {/if}
+                        <span>{pickup.name}</span>
+                      </span>
+                    {/each}
+                  </span>
+                </div>
+              {/if}
 
-            {#if item.shiftLabel || item.durationChangeLabel || item.freePulls}
-              <div class="prelim-tags">
-                {#if item.estimatedDateLabel && item.shiftLabel}
-                  <span class="prelim-tag">
-                    <span class="before">{item.estimatedDateLabel}</span>
-                    →
-                    <strong>{item.releaseDateLabel}</strong>
-                    <span class="tag-accent">({item.shiftLabel})</span>
-                  </span>
-                {/if}
-                {#if item.durationChangeLabel}
-                  <span class="prelim-tag">
-                    Duration <strong>{item.durationChangeLabel}</strong>
-                  </span>
-                {/if}
-                {#if item.freePulls}
-                  <span class="prelim-tag free-pulls">
-                    <strong>{`${item.freePulls} free pulls`}</strong>
-                  </span>
-                {/if}
-              </div>
-            {/if}
-          </div>
+              {#if item.shiftLabel || item.durationChangeLabel || item.freePulls}
+                <div class="prelim-tags">
+                  {#if item.estimatedDateLabel && item.shiftLabel}
+                    <span class="prelim-tag">
+                      <span class="before">{item.estimatedDateLabel}</span>
+                      →
+                      <strong>{item.releaseDateLabel}</strong>
+                      <span class="tag-accent">({item.shiftLabel})</span>
+                    </span>
+                  {/if}
+                  {#if item.durationChangeLabel}
+                    <span class="prelim-tag">
+                      Duration <strong>{item.durationChangeLabel}</strong>
+                    </span>
+                  {/if}
+                  {#if item.freePulls}
+                    <span class="prelim-tag free-pulls">
+                      <strong>{`${item.freePulls} free pulls`}</strong>
+                    </span>
+                  {/if}
+                </div>
+              {/if}
+            </div>
+          {/if}
         </article>
       {/each}
     </div>
