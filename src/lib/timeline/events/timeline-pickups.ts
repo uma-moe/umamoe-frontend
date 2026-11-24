@@ -1,5 +1,12 @@
-import { umaPortrait, supportCardHalf } from '@/lib/game-assets/art-links';
+import {
+  statIconByName,
+  supportCardHalf,
+  supportRarityIcon,
+  umaPortrait,
+  type SupportRarity
+} from '@/lib/game-assets/art-links';
 import { type CharacterNames } from '@/lib/game-data/characters';
+import { supportTypeName } from '@/lib/game-data/support-cards/support-card-details';
 import { type SupportCardData } from '@/lib/game-data/support-cards/support-cards';
 import type { TimelineRecord } from '@/pages/timeline/timeline-repository';
 import type { TimelinePickup } from '@/components/cards/timeline-types';
@@ -31,6 +38,22 @@ function gametoraUrl(id: number, kind: 'character' | 'support', name: string): s
     : undefined;
 }
 
+export function pickupRarityRank(
+  id: number,
+  kind: 'character' | 'support',
+  catalog: TimelinePickupCatalog
+): number {
+  if (kind === 'support') {
+    const known = catalog.supports.get(id)?.rarity;
+    if (typeof known === 'number' && known > 0) return known;
+    if (id >= 30000) return 3;
+    if (id >= 20000) return 2;
+    return 1;
+  }
+
+  return 3;
+}
+
 export function timelinePickup(
   id: number,
   catalog: TimelinePickupCatalog,
@@ -39,20 +62,39 @@ export function timelinePickup(
 ): TimelinePickup {
   if (kind === 'support') {
     const card = catalog.supports.get(id);
-    const type = card?.type ? card.type[0]!.toUpperCase() + card.type.slice(1).toLowerCase() : '';
+    const rarity = pickupRarityRank(id, kind, catalog);
+    const rarityLabel: SupportRarity = rarity === 3 ? 'SSR' : rarity === 2 ? 'SR' : 'R';
+    const supportType = card?.type
+      ? card.type.toLowerCase() === 'group'
+        ? 'Group'
+        : supportTypeName(card.type)
+      : undefined;
+    const groupCardName = card?.type === 'group' ? publicName(card.cardName, '') : '';
+    const name =
+      groupCardName && (!label || label.trim().toLowerCase() === card?.name.trim().toLowerCase())
+        ? groupCardName
+        : publicName(label, groupCardName || (card?.name ?? `Support ${id}`));
     return {
       id: String(id),
       kind,
-      gametoraUrl: gametoraUrl(id, kind, card?.name ?? publicName(label, '')),
+      rarity,
+      rarityLabel,
+      rarityIcon: supportRarityIcon(rarityLabel),
+      supportType,
+      typeIcon: supportType ? statIconByName(supportType) : undefined,
+      gametoraUrl: gametoraUrl(id, kind, groupCardName || card?.name || publicName(label, '')),
       image: supportCardHalf(id),
-      name: publicName(label, card?.name ?? `Support ${id}`),
-      subLabel: [
-        [null, 'R', 'SR', 'SSR'][card?.rarity ?? 0],
-        type ? `${type} Support` : 'Support card'
-      ]
+      name,
+      subLabel: [rarityLabel, supportType ? `${supportType} Support` : 'Support card']
         .filter(Boolean)
         .join(' '),
-      searchTerms: ['support', ...(type ? [type] : [])]
+      searchTerms: [
+        'support',
+        rarityLabel,
+        ...(supportType ? [supportType] : []),
+        ...(card?.name && card.name.toLowerCase() !== name.toLowerCase() ? [card.name] : []),
+        ...(card?.type && card.type.toLowerCase() !== supportType?.toLowerCase() ? [card.type] : [])
+      ]
     };
   }
 
@@ -67,6 +109,7 @@ export function timelinePickup(
   return {
     id: String(id),
     kind,
+    rarity: 3,
     gametoraUrl: gametoraUrl(id, kind, base),
     name: variant ? `${base} [${variant}]` : base,
     subLabel: variant ? `${variant} variant` : 'Character',
@@ -87,12 +130,12 @@ export function timelinePickups(
     }
   }
 
-  return [...new Set(ids)]
-    .filter((id) => Number.isFinite(id) && id > 0)
-    .map((id) => {
+  const uniqueIds = [...new Set(ids)].filter((id) => Number.isFinite(id) && id > 0);
+  return uniqueIds
+    .map((id, order) => {
       const kind = id >= 100000 ? 'character' : 'support';
       const index = ids
-        .filter((id) => (kind === 'character' ? id >= 100000 : id < 100000))
+        .filter((candidate) => (kind === 'character' ? candidate >= 100000 : candidate < 100000))
         .indexOf(id);
 
       const name = (kind === 'character' ? event.relatedCharacters : event.relatedSupportCards)[
@@ -100,10 +143,17 @@ export function timelinePickups(
       ];
 
       const pickup = timelinePickup(id, catalog, name?.includes('chara_stand_') ? undefined : name);
-      return event.eventType === 'legend_race' && kind === 'character'
-        ? { ...pickup, subLabel: 'Legend Race participant' }
-        : pickup;
-    });
+      return {
+        pickup:
+          event.eventType === 'legend_race' && kind === 'character'
+            ? { ...pickup, subLabel: 'Legend Race participant' }
+            : pickup,
+        rarity: pickup.rarity ?? pickupRarityRank(id, kind, catalog),
+        order
+      };
+    })
+    .sort((left, right) => right.rarity - left.rarity || left.order - right.order)
+    .map((entry) => entry.pickup);
 }
 
 export function timelineDisplayTitle(event: TimelineRecord): string {
@@ -121,6 +171,20 @@ export function timelineDisplayTitle(event: TimelineRecord): string {
       : [];
 
   if (!pickups?.length) return event.title;
+
+  if (event.eventType === 'support_card_banner') {
+    const ssrs = pickups.filter((item) => (item.rarity ?? 0) >= 3);
+    if (ssrs.length === 2) {
+      const total = Math.max(
+        pickups.length,
+        (Number(/\+\s*(\d+)\s+more/i.exec(event.title)?.[1]) || 0) + 1
+      );
+      const remaining = Math.max(0, total - 2);
+      const pair = `${ssrs[0]!.name} & ${ssrs[1]!.name}`;
+      return remaining ? `${pair} + ${remaining} more` : pair;
+    }
+  }
+
   const extra = Math.max(
     pickups.length - 1,
     Number(/\+\s*(\d+)\s+more/i.exec(event.title)?.[1]) || 0

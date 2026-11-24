@@ -37,6 +37,16 @@
   font-size: 11px;
   white-space: nowrap;
 }
+.preliminary-trigger :global(.ui-button) {
+  border-color: color-mix(in srgb, var(--accent-warning) 65%, var(--border-primary));
+  background: color-mix(in srgb, var(--accent-warning) 12%, var(--surface-1));
+  color: var(--accent-warning);
+  white-space: nowrap;
+}
+.preliminary-trigger :global(.ui-button:hover) {
+  border-color: var(--accent-warning);
+  background: color-mix(in srgb, var(--accent-warning) 18%, var(--surface-1));
+}
 .view {
   display: flex;
   align-items: center;

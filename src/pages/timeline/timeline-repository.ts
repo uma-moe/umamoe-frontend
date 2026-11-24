@@ -10,6 +10,8 @@ import {
   parseResourceDate,
   toTimelineCalculation,
   toTimelinePrediction,
+  toTimelinePreliminaryChanges,
+  toTimelinePreliminarySummary,
   type TimelinePrediction
 } from '@/lib/timeline/prediction/timeline-prediction-types';
 import { resourceCache } from '@/services/resources/resource-cache';
@@ -36,6 +38,7 @@ interface RawTimelineEvent {
   estimated_end_date?: string | null;
   jp_release_date?: string | null;
   is_confirmed?: boolean;
+  is_preliminary?: boolean;
   image_path?: string | null;
   image?: string | null;
   gacha_id?: unknown;
@@ -55,6 +58,7 @@ interface RawTimelineEvent {
   gametora_url?: string;
   umapyoi_url?: string;
   prediction?: Parameters<typeof toTimelinePrediction>[0];
+  preliminary_changes?: Parameters<typeof toTimelinePreliminaryChanges>[0];
 }
 
 interface TimelineResource {
@@ -68,8 +72,10 @@ interface TimelineResource {
     image_path?: string;
     image?: string;
     is_confirmed?: boolean;
+    is_preliminary?: boolean;
   }[];
   calculation?: Parameters<typeof toTimelineCalculation>[0];
+  preliminary?: Parameters<typeof toTimelinePreliminarySummary>[0];
 }
 
 const typeLabels: Record<string, string> = {
@@ -232,6 +238,8 @@ export const timelineRepository = {
                   timelineImage(event.image_path, event.type, event.id, contentUrl(event.image))
                 ),
                 predicted: !event.is_confirmed,
+                preliminary: event.is_preliminary === true,
+                preliminaryChanges: toTimelinePreliminaryChanges(event.preliminary_changes),
                 canPlan:
                   ['character_banner', 'support_card_banner', 'paid_banner'].includes(
                     event.type ?? ''
@@ -326,6 +334,7 @@ export const timelineRepository = {
           events,
           anniversaries,
           calculation: toTimelineCalculation(resource.calculation),
+          preliminary: toTimelinePreliminarySummary(resource.preliminary),
           catalog
         };
       },

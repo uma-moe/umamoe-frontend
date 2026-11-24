@@ -31,6 +31,181 @@
   margin-bottom: 8px;
   background: var(--surface-0);
 }
+.prelim-card {
+  display: grid;
+  gap: 6px;
+  padding: 7px 10px;
+  margin-bottom: 8px;
+  border: 1px solid color-mix(in srgb, var(--accent-warning) 35%, var(--border-subtle));
+  border-radius: 6px;
+  background: color-mix(in srgb, var(--accent-warning) 6%, var(--surface-1));
+}
+.prelim-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 4px 10px;
+}
+.prelim-title {
+  display: inline-flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 5px;
+  font-size: 11px;
+  color: var(--accent-warning);
+}
+.prelim-title :global(svg) {
+  flex: none;
+}
+.prelim-caveat {
+  color: var(--text-muted);
+  font-size: 10.5px;
+  font-weight: 500;
+}
+.prelim-caveat::before {
+  content: '· ';
+}
+.prelim-all-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  padding: 2px 6px;
+  border: 1px solid color-mix(in srgb, var(--accent-warning) 30%, var(--border-subtle));
+  border-radius: 4px;
+  background: transparent;
+  color: var(--text-secondary);
+  font: inherit;
+  font-size: 10.5px;
+  font-weight: 600;
+  cursor: pointer;
+}
+.prelim-all-link:hover,
+.prelim-all-link:focus-visible {
+  color: var(--text-primary);
+  border-color: color-mix(in srgb, var(--accent-warning) 55%, var(--border-primary));
+  background: color-mix(in srgb, var(--accent-warning) 10%, transparent);
+}
+.prelim-rows {
+  display: grid;
+  gap: 5px;
+  padding-top: 5px;
+  border-top: 1px solid color-mix(in srgb, var(--accent-warning) 16%, var(--border-subtle));
+}
+.prelim-line {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 4px 8px;
+  font-size: 11px;
+}
+.prelim-label {
+  color: var(--text-muted);
+  font-size: 10px;
+  font-weight: 650;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  min-width: 48px;
+}
+.prelim-value {
+  display: inline-flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 4px;
+  color: var(--text-primary);
+}
+.prelim-value code {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  color: var(--text-secondary);
+}
+.prelim-muted {
+  color: var(--text-muted);
+  font-size: 10.5px;
+}
+.prelim-chips {
+  display: inline-flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+.prelim-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 7px 2px 4px;
+  border-radius: 6px;
+  font-size: 10.5px;
+  font-weight: 600;
+  line-height: 1.2;
+}
+.prelim-chip.added {
+  border: 1px solid color-mix(in srgb, var(--color-success) 35%, transparent);
+  background: color-mix(in srgb, var(--color-success) 10%, transparent);
+  color: var(--color-success);
+}
+.prelim-chip.removed {
+  border: 1px solid color-mix(in srgb, var(--color-danger) 35%, transparent);
+  background: color-mix(in srgb, var(--color-danger) 10%, transparent);
+  color: var(--color-danger);
+}
+.chip-sign {
+  font-weight: 800;
+  padding-left: 2px;
+}
+.chip-art {
+  width: 22px;
+  height: 22px;
+  border-radius: 4px;
+  object-fit: contain;
+  flex: none;
+}
+.prelim-tags {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 4px 8px;
+  font-size: 10.5px;
+  color: var(--text-secondary);
+}
+.prelim-tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 1px 6px;
+  border-radius: 4px;
+  background: var(--surface-2);
+  border: 1px solid var(--border-subtle);
+}
+.prelim-tag .before {
+  color: var(--text-muted);
+  text-decoration: line-through;
+}
+.prelim-tag .tag-accent {
+  color: var(--accent-warning);
+  font-weight: 650;
+}
+.prelim-tag.free-pulls {
+  border-color: color-mix(in srgb, var(--accent-primary) 35%, transparent);
+  background: color-mix(in srgb, var(--accent-primary) 10%, transparent);
+  color: var(--accent-primary);
+}
+.pickup-badge-row {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  margin-top: 2px;
+}
+.pickup-badge-row .pickup-rarity-icon {
+  width: 20px;
+  height: 16px;
+  object-fit: contain;
+}
+.pickup-badge-row .pickup-type-icon {
+  width: 16px;
+  height: 16px;
+  object-fit: contain;
+}
 .facts {
   margin: 0;
 }

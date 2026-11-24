@@ -140,14 +140,18 @@ export function buildTimelinePrediction(
   }
 
   return {
-    title: !event.predicted ? 'Confirmed date' : 'Prediction',
+    title: !event.predicted
+      ? 'Confirmed date'
+      : event.preliminary
+        ? 'Preliminary date'
+        : 'Prediction',
     subtitle: subtitleForPrediction(prediction),
     scoreLabel: outcomeFit ? `Date fit ${formatPercent(outcomeFit.score)}` : undefined,
     scoreTone: outcomeFit ? fitTone(outcomeFit.score) : undefined,
     fitScore: outcomeFit?.score,
     fitLabel: outcomeFit ? formatPercent(outcomeFit.score) : undefined,
     metrics,
-    alternatives: !event.predicted ? [] : buildAlternatives(event, calculation)
+    alternatives: !event.predicted || event.preliminary ? [] : buildAlternatives(event, calculation)
   };
 }
 
@@ -430,6 +434,9 @@ function scheduleConfidence(
     case 'confirmed':
       confidence = 1;
       break;
+    case 'preliminary':
+      confidence = 0.96;
+      break;
     case 'interpolated':
       confidence = 0.9;
       break;
@@ -569,6 +576,8 @@ function subtitleForPrediction(prediction: TimelinePrediction): string {
   switch (prediction.kind) {
     case 'confirmed':
       return 'Date comes from the confirmed global schedule.';
+    case 'preliminary':
+      return 'Preliminary confirmed ahead of launch. Dates, pickups, and free pulls can still be changed by Cygames before official release.';
     case 'interpolated':
       return 'Placed between confirmed JP/global anchors.';
     case 'extrapolated':
@@ -582,6 +591,8 @@ function kindLabel(kind: TimelinePrediction['kind']): string {
   switch (kind) {
     case 'confirmed':
       return 'Confirmed';
+    case 'preliminary':
+      return 'Preliminary confirmed';
     case 'interpolated':
       return 'Interpolated';
     case 'extrapolated':

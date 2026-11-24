@@ -112,10 +112,107 @@ export function toTimelinePrediction(
 function isPredictionKind(value: string | undefined): value is TimelinePrediction['kind'] {
   return (
     value === 'confirmed' ||
+    value === 'preliminary' ||
     value === 'interpolated' ||
     value === 'extrapolated' ||
     value === 'fallback'
   );
+}
+
+interface BannerTimelineResourcePreliminarySummary {
+  resource_version?: string;
+  detected_at?: string;
+  cdn_last_modified?: string | null;
+  event_ids?: unknown;
+  merged_event_ids?: unknown;
+}
+
+interface BannerTimelineResourcePreliminaryMergedEvent {
+  event_id?: string;
+  gacha_id?: number;
+  title?: string;
+  estimated_release_date?: string | null;
+  pickup_card_ids?: unknown;
+}
+
+interface BannerTimelineResourcePreliminaryChanges {
+  estimated_release_date?: string | null;
+  estimated_end_date?: string | null;
+  estimated_duration_days?: number;
+  release_date_shift_days?: number;
+  added_pickup_card_ids?: unknown;
+  removed_pickup_card_ids?: unknown;
+  merged_events?: BannerTimelineResourcePreliminaryMergedEvent[];
+  preliminary_free_pulls?: number;
+}
+
+export function toTimelinePreliminarySummary(
+  value?: BannerTimelineResourcePreliminarySummary | null
+): TimelinePreliminarySummary | null {
+  if (!value || typeof value.resource_version !== 'string' || !value.resource_version.trim()) {
+    return null;
+  }
+
+  return {
+    resourceVersion: value.resource_version,
+    detectedAt: typeof value.detected_at === 'string' ? value.detected_at : undefined,
+    cdnLastModified:
+      typeof value.cdn_last_modified === 'string' ? value.cdn_last_modified : undefined,
+    eventIds: toStringList(value.event_ids),
+    mergedEventIds: toStringList(value.merged_event_ids)
+  };
+}
+
+export function toTimelinePreliminaryChanges(
+  value?: BannerTimelineResourcePreliminaryChanges | null
+): TimelinePreliminaryChanges | undefined {
+  if (!value || typeof value !== 'object') {
+    return undefined;
+  }
+
+  const mergedEvents = Array.isArray(value.merged_events)
+    ? value.merged_events
+        .map((item): TimelinePreliminaryMergedEvent | null => {
+          if (!item || typeof item.event_id !== 'string' || typeof item.title !== 'string') {
+            return null;
+          }
+
+          return {
+            eventId: item.event_id,
+            gachaId: typeof item.gacha_id === 'number' ? item.gacha_id : undefined,
+            title: item.title,
+            estimatedReleaseDate: parseResourceDate(item.estimated_release_date),
+            pickupCardIds: toNumberList(item.pickup_card_ids)
+          };
+        })
+        .filter((item): item is TimelinePreliminaryMergedEvent => item !== null)
+    : [];
+
+  return {
+    estimatedReleaseDate: parseResourceDate(value.estimated_release_date),
+    estimatedEndDate: parseResourceDate(value.estimated_end_date),
+    estimatedDurationDays:
+      typeof value.estimated_duration_days === 'number' ? value.estimated_duration_days : undefined,
+    releaseDateShiftDays:
+      typeof value.release_date_shift_days === 'number' ? value.release_date_shift_days : undefined,
+    addedPickupCardIds: toNumberList(value.added_pickup_card_ids),
+    removedPickupCardIds: toNumberList(value.removed_pickup_card_ids),
+    mergedEvents,
+    preliminaryFreePulls:
+      typeof value.preliminary_free_pulls === 'number' ? value.preliminary_free_pulls : undefined
+  };
+}
+
+function toStringList(value: unknown): string[] {
+  return Array.isArray(value)
+    ? value.filter((item): item is string => typeof item === 'string')
+    : [];
+}
+
+function toNumberList(value: unknown): number[] {
+  return Array.isArray(value)
+    ? value.map(Number).filter((item) => Number.isInteger(item) && item > 0)
+    : [];
 }
 
 function toCalendarLikelihood(
@@ -238,12 +335,39 @@ function toNamedLikelihoodArray(value: unknown): TimelineNamedLikelihood[] {
 }
 
 export interface TimelinePrediction {
-  kind: 'confirmed' | 'interpolated' | 'extrapolated' | 'fallback';
+  kind: 'confirmed' | 'preliminary' | 'interpolated' | 'extrapolated' | 'fallback';
   accelerationRate?: number;
   scheduleAdjustmentDays?: number;
   calendarLikelihood?: TimelineCalendarLikelihood;
   anchorJpDate?: Date;
   anchorGlobalDate?: Date;
+}
+
+export interface TimelinePreliminarySummary {
+  resourceVersion: string;
+  detectedAt?: string;
+  cdnLastModified?: string;
+  eventIds: string[];
+  mergedEventIds: string[];
+}
+
+export interface TimelinePreliminaryMergedEvent {
+  eventId: string;
+  gachaId?: number;
+  title: string;
+  estimatedReleaseDate?: Date;
+  pickupCardIds: number[];
+}
+
+export interface TimelinePreliminaryChanges {
+  estimatedReleaseDate?: Date;
+  estimatedEndDate?: Date;
+  estimatedDurationDays?: number;
+  releaseDateShiftDays?: number;
+  addedPickupCardIds: number[];
+  removedPickupCardIds: number[];
+  mergedEvents: TimelinePreliminaryMergedEvent[];
+  preliminaryFreePulls?: number;
 }
 
 export interface TimelineCalendarLikelihood {

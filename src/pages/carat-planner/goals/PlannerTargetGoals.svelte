@@ -54,6 +54,9 @@
   );
 
   const inferred = $derived(gacha?.rates_confidence === 'inferred_standard');
+  const preliminary = $derived(
+    gacha?.provenance === 'global_early_master' || gacha?.confidence === 'preliminary'
+  );
   const totalLabel = $derived(
     !goals.length
       ? 'Choose pickups'
@@ -203,6 +206,8 @@
           {:else}
             All goals{#if inferred}
               (estimated)
+            {:else if preliminary}
+              (preliminary)
             {:else if projection.sparkCopies}
               with {projection.sparkCopies} shared spark{projection.sparkCopies === 1 ? '' : 's'}
             {/if}
@@ -226,6 +231,7 @@
         {pickLimit}
         {cardKind}
         {inferred}
+        {preliminary}
         {hasResults}
         {pickupCopyMemory}
         bind:pickupSearch

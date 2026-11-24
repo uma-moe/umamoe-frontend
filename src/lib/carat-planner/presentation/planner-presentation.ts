@@ -11,7 +11,11 @@ import {
   type PlannerGachaEntry,
   type PlannerTarget
 } from '../carat-planner';
-import { timelinePickup, type TimelinePickupCatalog } from '../../timeline/events/timeline-pickups';
+import {
+  pickupRarityRank,
+  timelinePickup,
+  type TimelinePickupCatalog
+} from '../../timeline/events/timeline-pickups';
 import { normalizeRate } from '../gacha/planner-pull-probability';
 import { searchKey } from '../../timeline/board/timeline-search';
 
@@ -35,7 +39,7 @@ export function plannerPickupOptions(
 
   return ids
     .filter((id) => Number.isFinite(id) && id > 0)
-    .map((id) => {
+    .map((id, order) => {
       const source = published.find((pickup) => pickup.pickup_id === id);
       const index = event?.pickupCardIds.indexOf(id) ?? -1;
       const kind = plannerCardKind(target, gacha);
@@ -44,6 +48,7 @@ export function plannerPickupOptions(
       )?.[index];
 
       const pickup = timelinePickup(id, catalog, relatedName ?? source?.label, kind);
+      const rarity = pickup.rarity ?? pickupRarityRank(id, kind, catalog);
       const title = kind === 'support' ? event?.relatedSupportCardNames[index] : undefined;
       const name =
         title &&
@@ -53,13 +58,20 @@ export function plannerPickupOptions(
           : pickup.name;
 
       return {
-        ...pickup,
-        name,
-        pickupId: id,
-        rate: normalizeRate(source?.rate ?? Number.NaN),
-        exchangeable: source?.exchangeable !== false
+        option: {
+          ...pickup,
+          rarity,
+          name,
+          pickupId: id,
+          rate: normalizeRate(source?.rate ?? Number.NaN),
+          exchangeable: source?.exchangeable !== false
+        },
+        rarity,
+        order
       };
-    });
+    })
+    .sort((left, right) => right.rarity - left.rarity || left.order - right.order)
+    .map((entry) => entry.option);
 }
 
 /** Angular's token/name ranking, then upcoming-first and most-recent-past order. */

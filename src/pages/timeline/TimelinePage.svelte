@@ -33,6 +33,7 @@
     total: 0,
     searchPosition: '',
     plannerEventCount: 0,
+    preliminaryCount: 0,
     loading: true,
     rewardsLoading: false
   });
@@ -237,6 +238,7 @@
       ondate={openDate}
       onfilterstoggle={() => setFilters(!filtersOpen)}
       onsearchjump={jumpSearch}
+      onpreliminary={() => content?.openPreliminary()}
     />
     <TimelineFilterPanel
       open={filtersOpen}

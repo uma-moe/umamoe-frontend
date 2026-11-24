@@ -3,6 +3,7 @@
   import Button from '@/components/controls/Button.svelte';
   import Icon from '@/components/Icon.svelte';
   import { contentUrl, sanitizeContentHtml } from '@/lib/content-html';
+  import { buildPreliminaryEventSummary } from '@/lib/timeline/events/timeline-preliminary';
   import { buildTimelinePrediction } from '@/lib/timeline/prediction/timeline-prediction';
   import type { TimelineCalculation } from '@/lib/timeline/prediction/timeline-prediction-types';
   import { timelineRaceEventFacts } from '@/lib/timeline/events/timeline-race-facts';
@@ -32,6 +33,7 @@
     onclose: () => void;
     onretryrates: () => void;
     onretryrewards: () => void;
+    onopenpreliminary?: () => void;
   }
 
   let {
@@ -48,13 +50,17 @@
     onplan,
     onclose,
     onretryrates,
-    onretryrewards
+    onretryrewards,
+    onopenpreliminary
   }: Props = $props();
 
   const title = $derived(timelineDisplayTitle(event));
   const facts = $derived(timelineRaceEventFacts(event));
   const html = $derived(sanitizeContentHtml(event.description ?? ''));
   const prediction = $derived(buildTimelinePrediction(event, calculation));
+  const preliminarySummary = $derived(
+    event.preliminary ? buildPreliminaryEventSummary(event, catalog) : null
+  );
   const banner = $derived(
     ['character_banner', 'support_card_banner'].includes(event.eventType) && Boolean(event.canPlan)
   );
@@ -122,7 +128,11 @@
         size={15}
       />{event.typeLabel}{event.gachaLabel ? ', ' + event.gachaLabel : ''}{event.rerun
         ? ', rerun'
-        : ''}{event.predicted ? ', predicted' : ''}{#if prediction?.fitLabel}
+        : ''}{event.preliminary
+        ? ', preliminary confirmed'
+        : event.predicted
+          ? ', predicted'
+          : ''}{#if prediction?.fitLabel && !event.preliminary}
         <span>
           {prediction.fitLabel} date fit
         </span>
@@ -143,6 +153,116 @@
         decoding="async"
         onerror={hideImage}
       />
+    {/if}
+    {#if preliminarySummary}
+      <section class="prelim-card">
+        <div class="prelim-head">
+          <span class="prelim-title">
+            <Icon
+              name="warning"
+              size={13}
+            />
+            <strong>Preliminary confirmed</strong>
+            <span class="prelim-caveat">Subject to change by Cygames</span>
+          </span>
+          {#if onopenpreliminary}
+            <button
+              type="button"
+              class="prelim-all-link"
+              onclick={onopenpreliminary}
+            >
+              All changes
+              <Icon
+                name="arrow-right"
+                size={12}
+              />
+            </button>
+          {/if}
+        </div>
+        {#if preliminarySummary.mergedEvents.length || preliminarySummary.addedPickups.length || preliminarySummary.removedPickups.length || preliminarySummary.shiftLabel || preliminarySummary.durationChangeLabel || preliminarySummary.freePulls}
+          <div class="prelim-rows">
+            {#if preliminarySummary.mergedEvents.length}
+              <div class="prelim-line">
+                <span class="prelim-label">Merged</span>
+                <span class="prelim-value">
+                  {#each preliminarySummary.mergedEvents as merged (merged.eventId)}
+                    <span>
+                      <strong>{merged.title}</strong>
+                      {#if merged.gachaId}
+                        <code>#{merged.gachaId}</code>
+                      {/if}
+                      {#if merged.estimatedDateLabel}
+                        <span class="prelim-muted">(est. {merged.estimatedDateLabel})</span>
+                      {/if}
+                    </span>
+                  {/each}
+                </span>
+              </div>
+            {/if}
+            {#if preliminarySummary.addedPickups.length || preliminarySummary.removedPickups.length}
+              <div class="prelim-line">
+                <span class="prelim-label">Pickups</span>
+                <span class="prelim-chips">
+                  {#each preliminarySummary.addedPickups as pickup (pickup.id)}
+                    <span class="prelim-chip added">
+                      <span class="chip-sign">+</span>
+                      {#if pickup.image}
+                        <img
+                          class="chip-art"
+                          src={pickup.image}
+                          alt=""
+                          width="22"
+                          height="22"
+                          onerror={hideImage}
+                        />
+                      {/if}
+                      <span>{pickup.name}</span>
+                    </span>
+                  {/each}
+                  {#each preliminarySummary.removedPickups as pickup (pickup.id)}
+                    <span class="prelim-chip removed">
+                      <span class="chip-sign">−</span>
+                      {#if pickup.image}
+                        <img
+                          class="chip-art"
+                          src={pickup.image}
+                          alt=""
+                          width="22"
+                          height="22"
+                          onerror={hideImage}
+                        />
+                      {/if}
+                      <span>{pickup.name}</span>
+                    </span>
+                  {/each}
+                </span>
+              </div>
+            {/if}
+            {#if preliminarySummary.shiftLabel || preliminarySummary.durationChangeLabel || preliminarySummary.freePulls}
+              <div class="prelim-tags">
+                {#if preliminarySummary.estimatedDateLabel && preliminarySummary.shiftLabel}
+                  <span class="prelim-tag">
+                    <span class="before">{preliminarySummary.estimatedDateLabel}</span>
+                    →
+                    <strong>{preliminarySummary.releaseDateLabel}</strong>
+                    <span class="tag-accent">({preliminarySummary.shiftLabel})</span>
+                  </span>
+                {/if}
+                {#if preliminarySummary.durationChangeLabel}
+                  <span class="prelim-tag">
+                    Duration <strong>{preliminarySummary.durationChangeLabel}</strong>
+                  </span>
+                {/if}
+                {#if preliminarySummary.freePulls}
+                  <span class="prelim-tag free-pulls">
+                    <strong>{`${preliminarySummary.freePulls} free pulls`}</strong>
+                  </span>
+                {/if}
+              </div>
+            {/if}
+          </div>
+        {/if}
+      </section>
     {/if}
     <TimelineEventResources
       {event}
@@ -249,7 +369,30 @@
                   />
                   <span>
                     <strong>{item.name}</strong>
-                    <small>{item.subLabel}</small>
+                    {#if item.rarityIcon || item.typeIcon}
+                      <span class="pickup-badge-row">
+                        {#if item.rarityIcon}
+                          <img
+                            class="pickup-rarity-icon"
+                            src={item.rarityIcon}
+                            alt={item.rarityLabel ?? ''}
+                            width="20"
+                            height="16"
+                          />
+                        {/if}
+                        {#if item.typeIcon}
+                          <img
+                            class="pickup-type-icon"
+                            src={item.typeIcon}
+                            alt={item.supportType ? `${item.supportType} support` : ''}
+                            width="16"
+                            height="16"
+                          />
+                        {/if}
+                      </span>
+                    {:else}
+                      <small>{item.subLabel}</small>
+                    {/if}
                   </span>
                 </a>
               {/each}
@@ -258,10 +401,11 @@
         {/if}
       {/each}
     {/if}
-    {#if prediction}
+    {#if prediction && !event.preliminary}
       <TimelineEventPrediction
         {prediction}
         predicted={event.predicted}
+        preliminary={event.preliminary}
         {dateLabel}
       />
     {/if}

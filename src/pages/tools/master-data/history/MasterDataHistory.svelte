@@ -8,8 +8,10 @@
   import {
     loadMasterDiff,
     loadMasterReleases,
+    loadPreliminaryResourceVersions,
     type MasterDiff,
-    type MasterRelease
+    type MasterRelease,
+    type PreliminaryResourceVersion
   } from '@/services/resources/master-history';
   import DiffCounts from './DiffCounts.svelte';
   import MasterDataDiff from './MasterDataDiff.svelte';
@@ -19,6 +21,8 @@
     release: string;
     /** The table a shared link points at inside that diff. */
     table: string;
+    /** Opens the staged preliminary master.mdb in the Table browser tab. */
+    onbrowsepreliminary?: () => void;
   }
 
   type ReleasesState =
@@ -32,23 +36,41 @@
     | { status: 'loaded'; diff: MasterDiff }
     | { status: 'failed'; error: string };
 
-  let { release = $bindable(), table = $bindable() }: Props = $props();
+  let { release = $bindable(), table = $bindable(), onbrowsepreliminary }: Props = $props();
 
   let releasesState = $state.raw<ReleasesState>({ status: 'loading' });
+  let preliminaryVersions = $state.raw<PreliminaryResourceVersion[]>([]);
   let diffState = $state.raw<DiffState>({ status: 'idle' });
   let missingRelease = $state('');
   let releasesRequest: AbortController | undefined;
   let diffRequest: AbortController | undefined;
 
   const dateFormat = new Intl.DateTimeFormat(undefined, { dateStyle: 'medium', timeZone: 'UTC' });
+  const dateTimeFormat = new Intl.DateTimeFormat(undefined, {
+    month: 'short',
+    day: 'numeric',
+    year: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit',
+    timeZone: 'UTC',
+    timeZoneName: 'short'
+  });
 
   const newestFirst = $derived(
     releasesState.status === 'loaded' ? releasesState.releases.toReversed() : []
   );
 
+  const newestPreliminaryVersions = $derived(preliminaryVersions.toReversed());
+
   function releaseDate(date: string): string {
     const day = new Date(`${date}T00:00:00Z`);
     return Number.isNaN(day.getTime()) ? date : dateFormat.format(day);
+  }
+
+  function formatTimestamp(value?: string): string {
+    if (!value) return '';
+    const parsed = new Date(value);
+    return Number.isNaN(parsed.getTime()) ? value : dateTimeFormat.format(parsed);
   }
 
   function messageOf(error: unknown): string {
@@ -62,10 +84,14 @@
     releasesState = { status: 'loading' };
 
     try {
-      const releases = await loadMasterReleases(request.signal);
+      const [releases, observedPreliminary] = await Promise.all([
+        loadMasterReleases(request.signal),
+        loadPreliminaryResourceVersions(request.signal).catch(() => [])
+      ]);
       if (request.signal.aborted) return;
 
       releasesState = { status: 'loaded', releases };
+      preliminaryVersions = observedPreliminary;
       openLinkedRelease(releases);
     } catch (error) {
       if (!request.signal.aborted) releasesState = { status: 'failed', error: messageOf(error) };
@@ -181,6 +207,7 @@
         <li
           class="release"
           class:open
+          class:preliminary={entry.isPreliminary}
         >
           <div class="release-heading">
             <code
@@ -189,6 +216,12 @@
             >
               {entry.shortHash}
             </code>
+            {#if entry.isPreliminary}
+              <Badge tone="warning">Preliminary</Badge>
+            {/if}
+            {#if entry.resourceVersion}
+              <code class="resource-version">v{entry.resourceVersion}</code>
+            {/if}
             <time datetime={entry.date}>{releaseDate(entry.date)}</time>
             {#if entry.summary}
               <DiffCounts
@@ -201,6 +234,16 @@
                 {entry.summary.tablesChanged === 1 ? 'table' : 'tables'}
               </span>
               <span class="toggle">
+                {#if entry.isPreliminary && onbrowsepreliminary}
+                  <Button
+                    size="sm"
+                    variant="ghost"
+                    icon="database"
+                    onclick={onbrowsepreliminary}
+                  >
+                    Browse DB
+                  </Button>
+                {/if}
                 <Button
                   size="sm"
                   variant={open ? 'secondary' : 'ghost'}
@@ -222,6 +265,22 @@
               id="release-{entry.shortHash}"
               class="release-diff"
             >
+              {#if entry.isPreliminary}
+                <div class="preliminary-release-note">
+                  <Banner
+                    title="Unreleased CDN master upload"
+                    tone="warning"
+                  >
+                    <p>
+                      Diffed against the current live master. Cygames can still modify or replace
+                      this upload before official release.
+                      {#if entry.cdnLastModified}
+                        CDN Last-Modified: {formatTimestamp(entry.cdnLastModified)}.
+                      {/if}
+                    </p>
+                  </Banner>
+                </div>
+              {/if}
               {#if diffState.status === 'loading'}
                 <Spinner
                   label="Loading the diff…"
@@ -254,6 +313,47 @@
         </li>
       {/each}
     </ol>
+  {/if}
+
+  {#if newestPreliminaryVersions.length}
+    <section
+      class="preliminary-versions"
+      aria-labelledby="preliminary-versions-heading"
+    >
+      <header class="history-heading">
+        <h3 id="preliminary-versions-heading">Preliminary CDN resource versions</h3>
+        <p>Every unreleased Global CDN manifest detected ahead of the live app version.</p>
+      </header>
+      <ol class="releases">
+        {#each newestPreliminaryVersions as item (item.resourceVersion)}
+          <li class="release preliminary-log-item">
+            <div class="release-heading">
+              <code class="hash">v{item.resourceVersion}</code>
+              {#if item.promotedAt}
+                <Badge tone="success">Promoted</Badge>
+              {:else}
+                <Badge tone="warning">Unreleased</Badge>
+              {/if}
+              <span class="tables">
+                Ahead of live <code>v{item.liveResourceVersion}</code>
+              </span>
+              <code
+                class="resource-version"
+                title={item.masterSha256}
+              >
+                {item.masterShortHash}
+              </code>
+              <span class="tables">
+                {item.masterChangedFromLive ? 'Master updated' : 'Same master as live'}
+              </span>
+              <time datetime={item.cdnLastModified ?? item.detectedAt}>
+                {formatTimestamp(item.cdnLastModified ?? item.detectedAt)}
+              </time>
+            </div>
+          </li>
+        {/each}
+      </ol>
+    </section>
   {/if}
 </section>
 

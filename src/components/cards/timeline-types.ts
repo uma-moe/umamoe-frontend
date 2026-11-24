@@ -1,4 +1,6 @@
 import type { IconName } from '../icon-types';
+import type { SupportRarity } from '@/lib/game-assets/art-links';
+import type { TimelinePreliminaryChanges } from '@/lib/timeline/prediction/timeline-prediction-types';
 
 export interface TimelineReward {
   id: string;
@@ -14,6 +16,11 @@ export interface TimelinePickup {
   name: string;
   image: string;
   kind: 'character' | 'support';
+  rarity?: number;
+  rarityLabel?: SupportRarity;
+  rarityIcon?: string;
+  supportType?: string;
+  typeIcon?: string;
   subLabel?: string;
   searchTerms?: string[];
   gametoraUrl?: string;
@@ -30,6 +37,8 @@ export interface TimelineEventData {
   image?: string;
   rerun?: boolean;
   predicted?: boolean;
+  preliminary?: boolean;
+  preliminaryChanges?: TimelinePreliminaryChanges;
   rewards?: TimelineReward[];
   rewardLabel?: string;
   rewardContext?: string;

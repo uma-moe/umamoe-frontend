@@ -4,8 +4,10 @@ import { gzipSync } from 'node:zlib';
 import {
   loadMasterDiff,
   loadMasterReleases,
+  loadPreliminaryResourceVersions,
   parseMasterDiff,
-  parseMasterReleases
+  parseMasterReleases,
+  parsePreliminaryResourceVersions
 } from './master-history';
 
 const INITIAL_HASH = 'e0013366d059b091bb2a6b05275033d6b2302fb3297fc9227cc022d871ac0bfb';
@@ -128,4 +130,57 @@ it('refuses to request a diff for anything but a short hash', async () => {
 
   await expect(loadMasterDiff('../manifest')).rejects.toThrow('Invalid release.');
   expect(fetchMock).not.toHaveBeenCalled();
+});
+
+it('parses preliminary release metadata and observed CDN versions', async () => {
+  const preliminaryReleases = parseMasterReleases([
+    ...publishedReleases,
+    {
+      hash: NEXT_HASH,
+      short_hash: 'a866b847996f',
+      date: '2026-11-24',
+      previous_hash: INITIAL_HASH,
+      summary: { tables_changed: 2, added: 5, removed: 0, modified: 1 },
+      resource_version: '10008800',
+      is_preliminary: true,
+      detected_at: '2026-11-24T19:35:00Z',
+      cdn_last_modified: 'Tue, 24 Nov 2026 11:14:05 GMT'
+    }
+  ]);
+
+  expect(preliminaryReleases[2]).toMatchObject({
+    resourceVersion: '10008800',
+    isPreliminary: true,
+    detectedAt: '2026-11-24T19:35:00Z',
+    cdnLastModified: 'Tue, 24 Nov 2026 11:14:05 GMT'
+  });
+
+  const payload = [
+    {
+      resource_version: '10008800',
+      live_resource_version: '10008790',
+      master_sha256: NEXT_HASH,
+      master_short_hash: 'a866b847996f',
+      master_changed_from_live: true,
+      detected_at: '2026-11-24T19:35:00Z',
+      cdn_last_modified: 'Tue, 24 Nov 2026 11:14:05 GMT'
+    }
+  ];
+  expect(parsePreliminaryResourceVersions(payload)).toEqual([
+    {
+      resourceVersion: '10008800',
+      liveResourceVersion: '10008790',
+      masterSha256: NEXT_HASH,
+      masterShortHash: 'a866b847996f',
+      masterChangedFromLive: true,
+      detectedAt: '2026-11-24T19:35:00Z',
+      cdnLastModified: 'Tue, 24 Nov 2026 11:14:05 GMT'
+    }
+  ]);
+
+  const fetchMock = vi.fn(async () => new Response(JSON.stringify(payload)));
+  vi.stubGlobal('fetch', fetchMock);
+  const loaded = await loadPreliminaryResourceVersions();
+  expect(loaded).toHaveLength(1);
+  expect(loaded[0]?.resourceVersion).toBe('10008800');
 });

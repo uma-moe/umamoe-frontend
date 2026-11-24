@@ -24,6 +24,16 @@ export interface MasterDatabaseLocation {
   marker?: string;
 }
 
+/** An unreleased early Global CDN master database staged ahead of the live app version. */
+export interface PreliminaryMasterDatabaseLocation extends MasterDatabaseLocation {
+  resourceVersion: string;
+  liveResourceVersion?: string;
+  detectedAt?: string;
+  cdnLastModified?: string;
+  shortHash?: string;
+  currentPath?: string;
+}
+
 interface ResourceManifest {
   version?: string;
   resource_version?: string;
@@ -36,6 +46,7 @@ interface ResourceManifest {
   paths?: Record<string, ManifestEntry> | ManifestEntry[];
   entries?: Record<string, ManifestEntry> | ManifestEntry[];
   master?: MasterDatabaseLocation;
+  preliminaryMaster?: PreliminaryMasterDatabaseLocation;
 }
 
 const requestCache = new RequestCache();
@@ -132,6 +143,8 @@ function parseManifest(value: unknown): ResourceManifest {
 
   const master = parseMasterDatabase(value.master);
   if (master) manifest.master = master;
+  const preliminaryMaster = parsePreliminaryMasterDatabase(value.preliminary_master);
+  if (preliminaryMaster) manifest.preliminaryMaster = preliminaryMaster;
   return manifest;
 }
 
@@ -146,6 +159,34 @@ function parseMasterDatabase(value: unknown): MasterDatabaseLocation | undefined
 
   const location: MasterDatabaseLocation = { path: value.path };
   if (typeof value.marker === 'string') location.marker = value.marker;
+  return location;
+}
+
+function parsePreliminaryMasterDatabase(
+  value: unknown
+): PreliminaryMasterDatabaseLocation | undefined {
+  if (
+    !isRecord(value) ||
+    typeof value.path !== 'string' ||
+    !value.path.startsWith(resourceRoot + '/') ||
+    typeof value.resource_version !== 'string' ||
+    !value.resource_version.trim()
+  )
+    return undefined;
+
+  const location: PreliminaryMasterDatabaseLocation = {
+    path: value.path,
+    resourceVersion: value.resource_version
+  };
+  if (typeof value.marker === 'string') location.marker = value.marker;
+  if (typeof value.live_resource_version === 'string')
+    location.liveResourceVersion = value.live_resource_version;
+  if (typeof value.detected_at === 'string') location.detectedAt = value.detected_at;
+  if (typeof value.cdn_last_modified === 'string')
+    location.cdnLastModified = value.cdn_last_modified;
+  if (typeof value.short_hash === 'string') location.shortHash = value.short_hash;
+  if (typeof value.current_path === 'string' && value.current_path.startsWith(resourceRoot + '/'))
+    location.currentPath = value.current_path;
   return location;
 }
 
@@ -448,6 +489,11 @@ export const resourceCache = {
   /** Where the current export's master database can be downloaded, when the manifest names one. */
   async masterDatabase(): Promise<MasterDatabaseLocation | undefined> {
     return (await loadManifest(false)).master;
+  },
+
+  /** Where the unreleased early Global CDN master database can be downloaded, when staged. */
+  async preliminaryMasterDatabase(): Promise<PreliminaryMasterDatabaseLocation | undefined> {
+    return (await loadManifest(false)).preliminaryMaster;
   },
 
   /** Navigation checks share one manifest request and never block cached rendering. */

@@ -48,7 +48,12 @@
   const hasRewards = $derived(Boolean(event.rewards?.length || event.rewardContext));
   const hasDetails = $derived(hasPickups || hasRace || hasRewards || event.canPlan);
   const metadata = $derived(
-    [event.typeLabel, event.gachaLabel, event.rerun && 'Rerun', event.predicted && 'Predicted']
+    [
+      event.typeLabel,
+      event.gachaLabel,
+      event.rerun && 'Rerun',
+      event.preliminary ? 'Preliminary confirmed' : event.predicted && 'Predicted'
+    ]
       .filter(Boolean)
       .join(', ')
   );
@@ -71,6 +76,7 @@
   class:no-pickups={!hasPickups}
   class:has-race={hasRace}
   class:can-plan={event.canPlan}
+  class:is-preliminary={event.preliminary}
   data-event-type={event.eventType}
   data-event-id={event.id}
 >
@@ -112,6 +118,18 @@
           onerror={() => (failedImage = event.image)}
         />
       {/if}
+      {#if event.preliminary}
+        <span
+          class="preliminary-ribbon"
+          title="Preliminary confirmed. Subject to change by Cygames before official release."
+        >
+          <Icon
+            name="warning"
+            size={11}
+          />
+          <span>PRELIMINARY</span>
+        </span>
+      {/if}
     </div>
   {/if}
   <div class="event-body">
@@ -134,7 +152,9 @@
       {#if event.rerun}
         <span class="metadata-item rerun">Rerun</span>
       {/if}
-      {#if event.predicted}
+      {#if event.preliminary}
+        <span class="metadata-item preliminary">Preliminary</span>
+      {:else if event.predicted}
         <span class="metadata-item predicted">Predicted</span>
       {/if}
     </div>

@@ -5,6 +5,7 @@
   import Banner from '@/components/feedback/Banner.svelte';
   import Button from '@/components/controls/Button.svelte';
   import FileDrop from '@/components/controls/FileDrop.svelte';
+  import SegmentedControl from '@/components/controls/SegmentedControl.svelte';
   import Dialog from '@/components/overlays/Dialog.svelte';
   import Icon from '@/components/Icon.svelte';
   import Tabs, { type TabItem } from '@/components/navigation/Tabs.svelte';
@@ -51,12 +52,19 @@
   const loaded = $derived(session.database !== undefined);
   const activeTable = $derived(firstQueriedTable(executedSql, session.tables));
   const totalRows = $derived(session.tables.reduce((sum, table) => sum + table.rows, 0));
+  const activeSource = $derived(
+    session.database?.kind === 'preliminary' ? 'preliminary' : 'published'
+  );
 
   const sourceDetails = $derived.by(() => {
     if (session.opening) return 'Downloading and opening the database…';
     if (!loaded) return 'Not loaded';
 
     const size = `${session.tables.length.toLocaleString()} tables, ${totalRows.toLocaleString()} rows`;
+    if (session.database?.kind === 'preliminary') {
+      return `Unreleased CDN resource ${session.database.resourceVersion} (subject to change), ${size}`;
+    }
+
     if (session.database?.kind !== 'published') return size;
     return `Global ${session.database.marker.replace(':', ', resource ')}, ${size}`;
   });
@@ -95,16 +103,46 @@
     else browseStartingTable();
   }
 
+  async function openPreliminary() {
+    if (!(await session.openPreliminary())) return;
+
+    if (executedSql.trim()) execute(executedSql);
+    else browseStartingTable();
+  }
+
+  async function startInitialDatabase() {
+    if (link.source === 'preliminary') {
+      const preliminary = await session.checkPreliminary();
+      if (preliminary) {
+        await openPreliminary();
+        return;
+      }
+    }
+
+    await openPublished();
+  }
+
   function startBrowser() {
     if (browserStarted) return;
 
     browserStarted = true;
-    void openPublished();
+    void startInitialDatabase();
   }
 
   function selectView(id: string) {
     view = id === 'history' ? 'history' : 'browser';
     if (view === 'browser') startBrowser();
+  }
+
+  async function openPreliminaryFromHistory() {
+    view = 'browser';
+    browserStarted = true;
+    await openPreliminary();
+  }
+
+  async function selectDatabaseSource(next: string) {
+    if (next === 'preliminary') await openPreliminary();
+    else await openPublished();
   }
 
   async function switchToPublished() {
@@ -126,8 +164,9 @@
   }
 
   async function copyLink() {
+    const source = session.database?.kind === 'preliminary' ? 'preliminary' : undefined;
     const url =
-      location.origin + location.pathname + masterDataSearch({ sql: executedSql, filter });
+      location.origin + location.pathname + masterDataSearch({ sql: executedSql, filter, source });
     if (!(await copyText(url))) return;
 
     linkCopied = true;
@@ -137,10 +176,11 @@
 
   // The address always reopens the rows or diff on screen, like Hakuraku's shared links.
   $effect(() => {
+    const source = session.database?.kind === 'preliminary' ? 'preliminary' : undefined;
     const search =
       view === 'history'
         ? masterHistorySearch({ release: historyRelease, table: historyTable })
-        : masterDataSearch({ sql: executedSql, filter });
+        : masterDataSearch({ sql: executedSql, filter, source });
     untrack(() => history.replaceState(history.state, '', location.pathname + search));
   });
 
@@ -197,10 +237,12 @@
       <MasterDataHistory
         bind:release={historyRelease}
         bind:table={historyTable}
+        onbrowsepreliminary={openPreliminaryFromHistory}
       />
     {:else}
       <section
         class="source-bar"
+        class:preliminary={session.database?.kind === 'preliminary'}
         aria-label="Open database"
       >
         <Icon
@@ -212,12 +254,31 @@
             {#if session.database?.kind === 'file'}
               {session.database.name}
               <Badge tone="warning">Your file</Badge>
+            {:else if session.database?.kind === 'preliminary'}
+              Preliminary master database
+              <Badge tone="warning">Preliminary CDN</Badge>
             {:else}
               Game master database
             {/if}
           </strong>
           <span>{sourceDetails}</span>
         </div>
+        {#if session.database?.kind !== 'file' && session.preliminaryAvailable}
+          <div class="source-switch">
+            <SegmentedControl
+              label="Master database source"
+              options={[
+                { value: 'published', label: 'Live' },
+                {
+                  value: 'preliminary',
+                  label: `Preliminary (${session.preliminaryAvailable.resourceVersion})`
+                }
+              ]}
+              value={activeSource}
+              onchange={selectDatabaseSource}
+            />
+          </div>
+        {/if}
         {#if session.database?.kind === 'file'}
           <Button
             variant="ghost"
