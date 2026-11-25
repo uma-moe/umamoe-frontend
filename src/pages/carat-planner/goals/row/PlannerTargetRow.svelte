@@ -20,7 +20,8 @@
   import type { TimelineRecord } from '@/pages/timeline/timeline-repository';
   import {
     findGacha,
-    findPlannerEvent,
+    findMergedPlannerTarget,
+    findPlannerTargetEvent,
     type PlannerDataBundle,
     type PlannerTarget,
     type TargetProjection
@@ -52,6 +53,7 @@
     catalog: TimelinePickupCatalog;
     preliminary?: TimelinePreliminarySummary | null;
     onopenpreliminary?: () => void;
+    onswitchmerged?: (oldTargetId: string, destination: TimelineRecord) => void;
     pickupCopyMemory: Map<string, number>;
     onupdate: (mutator: (target: PlannerTarget) => void) => void;
     onremove: () => void;
@@ -66,16 +68,15 @@
     catalog,
     preliminary = null,
     onopenpreliminary,
+    onswitchmerged,
     pickupCopyMemory,
     onupdate,
     onremove
   }: Props = $props();
 
-  const event = $derived(findPlannerEvent(target.eventId, events));
+  const event = $derived(findPlannerTargetEvent(target, events));
   const mergedInto = $derived(
-    events.find((candidate) =>
-      candidate.preliminaryChanges?.mergedEvents.some((merged) => merged.eventId === target.eventId)
-    )
+    event ? undefined : findMergedPlannerTarget(target, events)?.destination
   );
   const gacha = $derived(findGacha(target, resources));
   const isPreliminary = $derived(
@@ -196,6 +197,15 @@
             <span>
               {`Absorbed into ${timelineDisplayTitle(mergedInto)} in preliminary data. Subject to change by Cygames.`}
             </span>
+            {#if onswitchmerged}
+              <button
+                type="button"
+                class="preliminary-row-link"
+                onclick={() => onswitchmerged(target.id, mergedInto)}
+              >
+                Switch to merged banner
+              </button>
+            {/if}
           </div>
         {/if}
       </div>

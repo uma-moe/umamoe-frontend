@@ -6,6 +6,7 @@ import {
   importPlanCollection,
   importSharedPlan,
   loadPlanCollection,
+  mergeTargetIntoBanner,
   probabilityAtLeast,
   projectPlan,
   savePlanCollection,
@@ -817,5 +818,149 @@ describe('Carat Planner compatibility', () => {
     plan.projectionStartDate = '2026-01-11';
     plan.targets[0]!.bannerEnd = '2026-01-12';
     expect(projectPlan(plan, resources).targets[0]?.fundedPulls).toBe(0);
+  });
+
+  it('moves pulls, pickup goals, crystals, and notes into an existing merged banner without losing progress', () => {
+    const plan = createPlan();
+    plan.targets = [
+      {
+        id: 'dest-target',
+        eventId: 'support-banner-2023_30151',
+        gachaId: 30151,
+        title: 'Mejiro Ramonu + 9 more',
+        bannerKind: 'support',
+        pullTiming: 'start',
+        plannedPulls: 400,
+        desiredCopies: 5,
+        pickupId: 30134,
+        pickupGoals: [{ pickupId: 30134, desiredCopies: 5 }],
+        useTickets: true,
+        allowPaidJewels: false,
+        rainbowCrystalsPlanned: 1,
+        goldCrystalsPlanned: 0,
+        notes: 'Spark Ramonu'
+      },
+      {
+        id: 'absorbed-target',
+        eventId: 'support-banner-2023_30155',
+        gachaId: 30155,
+        title: 'Darley Arabian + 1 more',
+        bannerKind: 'support',
+        pullTiming: 'end',
+        plannedPulls: 200,
+        desiredCopies: 4,
+        pickupId: 30137,
+        pickupGoals: [
+          { pickupId: 30137, desiredCopies: 4 },
+          { pickupId: 30134, desiredCopies: 2 }
+        ],
+        useTickets: true,
+        allowPaidJewels: false,
+        rainbowCrystalsPlanned: 2,
+        goldCrystalsPlanned: 1,
+        notes: 'Need Goddess LB3'
+      }
+    ];
+
+    const destination = {
+      id: 'support-banner-2023_30151',
+      title: 'Mejiro Ramonu + 9 more',
+      eventType: 'support_card_banner',
+      date: new Date('2026-12-01T22:00:00Z'),
+      estimatedEndDate: new Date('2026-12-25T22:00:00Z'),
+      gachaId: 30151,
+      pickupCardIds: [30134, 30137]
+    };
+
+    const next = activePlan(
+      mergeTargetIntoBanner(
+        { version: 1, activePlanId: plan.id, plans: [plan] },
+        'absorbed-target',
+        destination
+      )
+    );
+
+    expect(next.targets).toHaveLength(1);
+    expect(next.targets[0]).toMatchObject({
+      eventId: 'support-banner-2023_30151',
+      plannedPulls: 600,
+      pullTiming: 'start',
+      pickupGoals: [
+        { pickupId: 30134, desiredCopies: 5 },
+        { pickupId: 30137, desiredCopies: 4 }
+      ],
+      rainbowCrystalsPlanned: 3,
+      goldCrystalsPlanned: 1,
+      notes: 'Spark Ramonu\nNeed Goddess LB3'
+    });
+  });
+
+  it('transfers pulls and settings when switching an absorbed target to a merged banner not yet active', () => {
+    const plan = createPlan();
+    plan.disabledEventIds = ['support-banner-2023_30151'];
+    plan.targets = [
+      {
+        id: 'old-disabled-dest',
+        eventId: 'support-banner-2023_30151',
+        gachaId: 30151,
+        title: 'Mejiro Ramonu + 9 more',
+        bannerKind: 'support',
+        pullTiming: 'end',
+        plannedPulls: 200,
+        desiredCopies: 1,
+        pickupGoals: [{ pickupId: 30134, desiredCopies: 1 }],
+        useTickets: true,
+        allowPaidJewels: false,
+        notes: 'Stale note'
+      },
+      {
+        id: 'absorbed-target',
+        eventId: 'support-banner-2023_30155',
+        gachaId: 30155,
+        title: 'Darley Arabian + 1 more',
+        bannerKind: 'support',
+        pullTiming: 'start',
+        plannedPulls: 400,
+        desiredCopies: 4,
+        pickupId: 30137,
+        pickupGoals: [{ pickupId: 30137, desiredCopies: 4 }],
+        useTickets: false,
+        allowPaidJewels: true,
+        rainbowCrystalsPlanned: 2,
+        goldCrystalsPlanned: 0,
+        notes: 'Moved note'
+      }
+    ];
+
+    const destination = {
+      id: 'support-banner-2023_30151',
+      title: 'Mejiro Ramonu + 9 more',
+      eventType: 'support_card_banner',
+      date: new Date('2026-12-01T22:00:00Z'),
+      estimatedEndDate: new Date('2026-12-25T22:00:00Z'),
+      gachaId: 30151,
+      pickupCardIds: [30134, 30137]
+    };
+
+    const next = activePlan(
+      mergeTargetIntoBanner(
+        { version: 1, activePlanId: plan.id, plans: [plan] },
+        'absorbed-target',
+        destination
+      )
+    );
+
+    expect(next.disabledEventIds).toEqual([]);
+    expect(next.targets).toHaveLength(1);
+    expect(next.targets[0]).toMatchObject({
+      eventId: 'support-banner-2023_30151',
+      plannedPulls: 400,
+      pullTiming: 'start',
+      useTickets: false,
+      allowPaidJewels: true,
+      pickupGoals: [{ pickupId: 30137, desiredCopies: 4 }],
+      rainbowCrystalsPlanned: 2,
+      notes: 'Moved note'
+    });
   });
 });

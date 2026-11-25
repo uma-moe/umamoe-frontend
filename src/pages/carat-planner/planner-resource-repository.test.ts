@@ -287,3 +287,140 @@ it('repairs a corrupt protected artifact even when its manifest hash has not cha
   expect(await repository.core()).toEqual({ jewel_cost_per_pull: 150 });
   expect(http.mock.calls.map(([url]) => url)).toEqual(['/resources/planner/manifest.json']);
 });
+
+it('keeps valid target gachas when an orphaned or merged target has no protected data', async () => {
+  http.mockImplementation(async (url) =>
+    Response.json(
+      url.includes('manifest')
+        ? {
+            files: {
+              'planner_gacha_2026.json': 'planner_gacha_2026.json'
+            }
+          }
+        : {
+            gachas: [
+              {
+                event_id: 'support-banner-2023_30151',
+                gacha_id: 30151,
+                banner_kind: 'support',
+                start_date: '2026-12-01',
+                end_date: '2026-12-25',
+                free_pulls: 120,
+                pickups: [
+                  { pickup_id: 30134, rate: 0.0075 },
+                  { pickup_id: 30137, rate: 0.0075 }
+                ]
+              }
+            ]
+          }
+    )
+  );
+
+  const core = {
+    gacha_shard_by_event: { 'support-banner-2023_30151': '2026' },
+    gacha_shard_by_id: { '30151': '2026' }
+  };
+
+  const events = [
+    {
+      id: 'support-banner-2023_30155',
+      title: 'Darley Arabian + 1 more',
+      eventType: 'support_banner',
+      gachaId: 30155,
+      pickupCardIds: [30137]
+    },
+    {
+      id: 'support-banner-2023_30151',
+      title: 'Mejiro Ramonu + 9 more',
+      eventType: 'support_card_banner',
+      gachaId: 30151,
+      date: new Date('2026-12-01T22:00:00Z'),
+      pickupCardIds: [30134, 30137]
+    }
+  ];
+
+  const loaded = await repository.loadGachasFor(events, core);
+  expect(loaded.error).toBe('');
+  expect(loaded.gachas).toHaveLength(1);
+  expect(loaded.gachas[0]).toMatchObject({
+    event_id: 'support-banner-2023_30151',
+    gacha_id: 30151,
+    free_pulls: 120
+  });
+
+  const direct = await repository.gachasFor(events, core);
+  expect(direct).toHaveLength(1);
+  expect(direct[0]?.gacha_id).toBe(30151);
+});
+
+it('preserves working shards when another gacha shard fails to download', async () => {
+  http.mockImplementation(async (url) => {
+    if (url.includes('manifest')) {
+      return Response.json({
+        files: {
+          'planner_gacha_2026.json': 'planner_gacha_2026.json',
+          'planner_gacha_2027.json': 'planner_gacha_2027.json'
+        }
+      });
+    }
+
+    if (url.includes('planner_gacha_2027.json')) {
+      throw new Error('shard 2027 unavailable');
+    }
+
+    return Response.json({
+      gachas: [
+        {
+          event_id: 'support-banner-2023_30151',
+          gacha_id: 30151,
+          banner_kind: 'support',
+          start_date: '2026-12-01',
+          end_date: '2026-12-25',
+          pickups: [{ pickup_id: 30134, rate: 0.0075 }]
+        }
+      ]
+    });
+  });
+
+  const core = {
+    gacha_shard_by_event: {
+      'support-banner-2023_30151': '2026',
+      'support-banner-2024_30223': '2027'
+    }
+  };
+
+  const result = await repository.loadGachasFor(
+    [
+      {
+        id: 'support-banner-2023_30151',
+        title: 'Mejiro Ramonu',
+        eventType: 'support_card_banner',
+        gachaId: 30151
+      },
+      {
+        id: 'support-banner-2024_30223',
+        title: 'Orfevre',
+        eventType: 'support_card_banner',
+        gachaId: 30223
+      }
+    ],
+    core
+  );
+
+  expect(result.error).toBe('shard 2027 unavailable');
+  expect(result.gachas.map((entry) => entry.gacha_id)).toEqual([30151]);
+
+  await expect(
+    repository.gachasFor(
+      [
+        {
+          id: 'support-banner-2024_30223',
+          title: 'Orfevre',
+          eventType: 'support_card_banner',
+          gachaId: 30223
+        }
+      ],
+      core
+    )
+  ).rejects.toThrow('shard 2027 unavailable');
+});

@@ -4,7 +4,10 @@ import {
   timelineEventIndex
 } from './rewards/planner-reward-availability';
 import type { TimelineRecord } from '@/pages/timeline/timeline-repository';
-import { parseResourceDate } from '../timeline/prediction/timeline-prediction-types';
+import {
+  parseResourceDate,
+  type TimelinePreliminaryMergedEvent
+} from '../timeline/prediction/timeline-prediction-types';
 import {
   isPaidBanner,
   paidBannerType,
@@ -892,6 +895,47 @@ export function findPlannerEvent(
   );
 }
 
+export function findPlannerTargetEvent(
+  target: Pick<PlannerTarget, 'eventId' | 'gachaId' | 'gachaIds'>,
+  events: readonly TimelineRecord[]
+): TimelineRecord | undefined {
+  const byId = findPlannerEvent(target.eventId, events);
+  if (byId) return byId;
+  const ids = [target.gachaId, ...(target.gachaIds ?? [])].filter(
+    (value): value is number => value !== undefined && Number.isFinite(value) && value > 0
+  );
+
+  if (!ids.length) return undefined;
+  return events.find(
+    (event) =>
+      (event.gachaId !== undefined && ids.includes(event.gachaId)) ||
+      event.gachaIds.some((gachaId) => ids.includes(gachaId))
+  );
+}
+
+export function findMergedPlannerTarget(
+  target: Pick<PlannerTarget, 'eventId' | 'gachaId' | 'gachaIds'>,
+  events: readonly TimelineRecord[]
+): { destination: TimelineRecord; merged: TimelinePreliminaryMergedEvent } | undefined {
+  const normalizedTargetId = normalizedEventId(target.eventId);
+  const ids = [target.gachaId, ...(target.gachaIds ?? [])].filter(
+    (value): value is number => value !== undefined && Number.isFinite(value) && value > 0
+  );
+
+  for (const candidate of events) {
+    const merged = candidate.preliminaryChanges?.mergedEvents.find(
+      (item) =>
+        item.eventId === target.eventId ||
+        normalizedEventId(item.eventId) === normalizedTargetId ||
+        (item.gachaId !== undefined && ids.includes(item.gachaId))
+    );
+
+    if (merged) return { destination: candidate, merged };
+  }
+
+  return undefined;
+}
+
 export function plannerTargetEvents(
   plan: CaratPlan,
   events: readonly TimelineRecord[]
@@ -904,7 +948,7 @@ export function plannerTargetEvents(
         target.bannerKind === 'paid'
     )
     .map((target) => {
-      const event = findPlannerEvent(target.eventId, events);
+      const event = findPlannerTargetEvent(target, events);
       return {
         id: event?.id ?? target.eventId,
         title: event?.title ?? target.title,
@@ -930,7 +974,8 @@ export function synchronizePlannerTargets(
   const targets = plan.targets.map((target) => {
     const next = { ...target };
 
-    const event = findPlannerEvent(target.eventId, events);
+    const event = findPlannerTargetEvent(target, events);
+    const mergedInfo = event ? undefined : findMergedPlannerTarget(target, events);
     if (event) {
       next.title = event.title;
       const kind = bannerKind(event);
@@ -940,15 +985,24 @@ export function synchronizePlannerTargets(
       if (event.gachaId !== undefined) next.gachaId = event.gachaId;
       if (event.gachaIds.length) next.gachaIds = event.gachaIds;
       else delete next.gachaIds;
+    } else if (mergedInfo) {
+      if (mergedInfo.merged.title) next.title = mergedInfo.merged.title;
+      if (next.gachaId === undefined && mergedInfo.merged.gachaId !== undefined)
+        next.gachaId = mergedInfo.merged.gachaId;
     }
 
     const gacha = findGacha(next, { gachas });
     // Plans saved before a banner published its pick limit can hold more goals than it allows.
     if (next.pickupGoals) next.pickupGoals = selectBannerGoals(next.pickupGoals, gacha);
 
+    const mergedDate =
+      mergedInfo?.merged.estimatedReleaseDate?.toISOString().slice(0, 10) ??
+      mergedInfo?.destination.date.toISOString().slice(0, 10);
+
     const resourceStart =
       event?.date?.toISOString().slice(0, 10) ??
-      parseResourceDate(gacha?.start_date)?.toISOString().slice(0, 10);
+      parseResourceDate(gacha?.start_date)?.toISOString().slice(0, 10) ??
+      mergedDate;
 
     const start =
       resourceStart ?? parseResourceDate(target.bannerStart)?.toISOString().slice(0, 10);
@@ -1087,6 +1141,124 @@ export function setTimelineEvent(
 
   plan.updatedAt = new Date().toISOString();
   return copy;
+}
+
+export function mergeTargetIntoBanner(
+  collection: CaratPlanCollection,
+  oldTargetId: string,
+  destination: Parameters<typeof setTimelineEvent>[1],
+  rewards?: PlannerRewardResource
+): CaratPlanCollection {
+  const copy = clonePlanCollection(collection);
+  const plan = activePlan(copy);
+  const oldTarget = plan.targets.find((item) => item.id === oldTargetId);
+  if (!oldTarget || oldTarget.eventId === destination.id) return collection;
+
+  const existingDest = plan.targets.find(
+    (item) =>
+      item.id !== oldTarget.id &&
+      (item.eventId === destination.id ||
+        normalizedEventId(item.eventId) === normalizedEventId(destination.id) ||
+        (destination.gachaId !== undefined &&
+          (item.gachaId === destination.gachaId || item.gachaIds?.includes(destination.gachaId))))
+  );
+
+  const wasActive = Boolean(existingDest && !plan.disabledEventIds.includes(existingDest.eventId));
+  if (existingDest && existingDest.eventId !== destination.id) {
+    const previousEventId = existingDest.eventId;
+    existingDest.eventId = destination.id;
+    plan.disabledEventIds = plan.disabledEventIds.map((eventId) =>
+      eventId === previousEventId ? destination.id : eventId
+    );
+  }
+
+  const next = setTimelineEvent(copy, destination, true, rewards);
+  const nextPlan = activePlan(next);
+  const destTarget = nextPlan.targets.find((item) => item.eventId === destination.id);
+  if (!destTarget || destTarget.id === oldTarget.id) return next;
+
+  const oldGoals = plannerPickupGoals(oldTarget);
+  const destPaid = destTarget.bannerKind === 'paid';
+  if (wasActive) {
+    destTarget.plannedPulls = Math.min(5000, destTarget.plannedPulls + oldTarget.plannedPulls);
+    if (oldTarget.actualPulls !== undefined)
+      destTarget.actualPulls = Math.min(
+        5000,
+        (destTarget.actualPulls ?? 0) + oldTarget.actualPulls
+      );
+
+    if (oldTarget.actualCopies) {
+      const mergedCopies: Record<string, number> = { ...(destTarget.actualCopies ?? {}) };
+      for (const [key, count] of Object.entries(oldTarget.actualCopies))
+        mergedCopies[key] = Math.min(5000, (mergedCopies[key] ?? 0) + count);
+      destTarget.actualCopies = mergedCopies;
+    }
+
+    const mergedGoals = plannerPickupGoals(destTarget).map((goal) => ({ ...goal }));
+    for (const goal of oldGoals) {
+      const current = mergedGoals.find((item) => item.pickupId === goal.pickupId);
+      if (current) current.desiredCopies = Math.max(current.desiredCopies, goal.desiredCopies);
+      else if (mergedGoals.length < 20) mergedGoals.push({ ...goal });
+    }
+
+    destTarget.pickupGoals = mergedGoals;
+    destTarget.pickupId = mergedGoals[0]?.pickupId;
+    destTarget.desiredCopies = mergedGoals[0]?.desiredCopies ?? destTarget.desiredCopies;
+
+    if (destTarget.bannerKind === 'support') {
+      destTarget.rainbowCrystalsPlanned = Math.min(
+        20,
+        (destTarget.rainbowCrystalsPlanned ?? 0) + (oldTarget.rainbowCrystalsPlanned ?? 0)
+      );
+      destTarget.goldCrystalsPlanned = Math.min(
+        20,
+        (destTarget.goldCrystalsPlanned ?? 0) + (oldTarget.goldCrystalsPlanned ?? 0)
+      );
+    }
+
+    if (oldTarget.notes) {
+      destTarget.notes = !destTarget.notes
+        ? oldTarget.notes
+        : destTarget.notes.includes(oldTarget.notes)
+          ? destTarget.notes
+          : `${destTarget.notes}\n${oldTarget.notes}`.slice(0, 2000);
+    }
+  } else {
+    destTarget.plannedPulls = Math.min(5000, oldTarget.plannedPulls);
+    destTarget.pullTiming = oldTarget.pullTiming;
+    destTarget.customPullDate = oldTarget.customPullDate;
+    if (!destPaid) {
+      destTarget.useTickets = oldTarget.useTickets;
+      destTarget.ticketLimit = oldTarget.ticketLimit;
+      destTarget.allowPaidJewels = oldTarget.allowPaidJewels;
+    }
+
+    destTarget.actualPulls = oldTarget.actualPulls;
+    destTarget.actualCopies = oldTarget.actualCopies ? { ...oldTarget.actualCopies } : undefined;
+    if (oldGoals.length) {
+      destTarget.pickupGoals = oldGoals.map((goal) => ({ ...goal }));
+      destTarget.pickupId = oldGoals[0]!.pickupId;
+      destTarget.desiredCopies = oldGoals[0]!.desiredCopies;
+    }
+
+    if (destTarget.bannerKind === 'support') {
+      destTarget.rainbowCrystalsPlanned = Math.min(20, oldTarget.rainbowCrystalsPlanned ?? 0);
+      destTarget.goldCrystalsPlanned = Math.min(20, oldTarget.goldCrystalsPlanned ?? 0);
+    }
+
+    if (oldTarget.notes) destTarget.notes = oldTarget.notes;
+    else delete destTarget.notes;
+  }
+
+  nextPlan.targets = nextPlan.targets.filter((item) => item.id !== oldTarget.id);
+  nextPlan.disabledEventIds = nextPlan.disabledEventIds.filter(
+    (eventId) => eventId !== oldTarget.eventId
+  );
+  nextPlan.enabledRewardEventIds = nextPlan.enabledRewardEventIds.filter(
+    (eventId) => eventId !== oldTarget.eventId
+  );
+  nextPlan.updatedAt = new Date().toISOString();
+  return next;
 }
 
 const dayMs = 86_400_000;

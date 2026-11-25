@@ -11,7 +11,10 @@
     buildPlannerLedger,
     clonePlanCollection,
     enabledPlannerTargets,
+    findMergedPlannerTarget,
     findPlannerEvent,
+    findPlannerTargetEvent,
+    mergeTargetIntoBanner,
     plannerTargetEvents,
     resolvePlannerPullDate,
     synchronizePlannerTargets,
@@ -146,19 +149,20 @@
   const activeTargets = $derived(enabledPlannerTargets(plan));
   const preliminaryById = $derived(new Map(preliminaryEvents.map((event) => [event.id, event])));
   const plannedPreliminaryTargets = $derived(
-    activeTargets.filter((target) => preliminaryById.has(target.eventId))
+    activeTargets.filter((target) =>
+      preliminaryById.has(findPlannerTargetEvent(target, events)?.id ?? target.eventId)
+    )
   );
   const mergedTargetsInPlan = $derived.by(() => {
     const matches: { targetId: string; oldTitle: string; mergedInto: TimelineRecord }[] = [];
     for (const target of activeTargets) {
-      const destination = preliminaryEvents.find((event) =>
-        event.preliminaryChanges?.mergedEvents.some((merged) => merged.eventId === target.eventId)
-      );
-      if (destination) {
+      if (findPlannerTargetEvent(target, events)) continue;
+      const merged = findMergedPlannerTarget(target, preliminaryEvents);
+      if (merged) {
         matches.push({
           targetId: target.id,
           oldTitle: target.title,
-          mergedInto: destination
+          mergedInto: merged.destination
         });
       }
     }
@@ -166,12 +170,28 @@
   });
 
   function switchMergedTarget(oldTargetId: string, destination: TimelineRecord): void {
-    removeTarget(oldTargetId);
-    if (!addedEventIds.has(destination.id)) addEvent(destination);
+    const summary = rewardSummaries.get(destination.id);
+    publish(
+      mergeTargetIntoBanner(
+        withCurrentPlan(collection, plan),
+        oldTargetId,
+        {
+          ...destination,
+          plannerRewardAvailable:
+            destination.plannerRewardAvailable || Boolean(summary && summary.mode !== 'placement')
+        },
+        loader.ready ? effectiveRewards : undefined
+      )
+    );
   }
   const addedEventIds = $derived(
     new Set([
-      ...activeTargets.map((target) => target.eventId),
+      ...activeTargets.flatMap((target) => {
+        const matched = findPlannerTargetEvent(target, events);
+        return matched && matched.id !== target.eventId
+          ? [target.eventId, matched.id]
+          : [target.eventId];
+      }),
       ...plan.enabledRewardEventIds.filter((id) => !plan.disabledEventIds.includes(id))
     ])
   );
@@ -219,7 +239,7 @@
   }
 
   function addEvent(event: TimelineRecord): void {
-    if (event.plannerRewardAvailable && (loader.loading || loader.error)) return;
+    if (event.plannerRewardAvailable && (loader.loading || !loader.ready)) return;
     const summary = rewardSummaries.get(event.id);
     publish(
       setTimelineEvent(
@@ -375,7 +395,7 @@
         {events}
         projectionStart={plan.projectionStartDate}
         {addedEventIds}
-        rewardsUnavailable={loader.loading || Boolean(loader.error)}
+        rewardsUnavailable={loader.loading || !loader.ready}
         bind:query={eventSearch}
         onadd={addEvent}
       />
@@ -499,6 +519,7 @@
     {catalog}
     {preliminary}
     {onopenpreliminary}
+    onswitchmerged={switchMergedTarget}
     oncommit={commit}
     onremove={removeTarget}
   />

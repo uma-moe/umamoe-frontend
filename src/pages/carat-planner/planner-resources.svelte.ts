@@ -37,10 +37,9 @@ export class PlannerResources {
     const request = ++this.#gachaRequest;
     this.error = '';
     this.gachasLoading = true;
-    this.bundle = { ...this.bundle, gachas: [] };
 
     try {
-      const gachas = await plannerResourceRepository.gachasFor(
+      const { gachas, error } = await plannerResourceRepository.loadGachasFor(
         this.#targetEvents(),
         this.bundle.core,
         this.#refreshGachas
@@ -49,6 +48,7 @@ export class PlannerResources {
       if (!this.#destroyed && request === this.#gachaRequest && key === this.#targetKey()) {
         this.#refreshGachas = false;
         this.bundle = { ...this.bundle, gachas };
+        this.error = error;
       }
     } catch (reason) {
       if (!this.#destroyed && request === this.#gachaRequest && key === this.#targetKey())

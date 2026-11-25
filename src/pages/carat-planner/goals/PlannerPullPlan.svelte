@@ -24,6 +24,7 @@
     catalog: TimelinePickupCatalog;
     preliminary?: TimelinePreliminarySummary | null;
     onopenpreliminary?: () => void;
+    onswitchmerged?: (oldTargetId: string, destination: TimelineRecord) => void;
     oncommit: (mutator: (plan: CaratPlan) => void) => void;
     onremove: (id: string) => void;
   }
@@ -37,6 +38,7 @@
     catalog,
     preliminary = null,
     onopenpreliminary,
+    onswitchmerged,
     oncommit,
     onremove
   }: Props = $props();
@@ -186,6 +188,7 @@
               {catalog}
               {preliminary}
               {onopenpreliminary}
+              {onswitchmerged}
               {pickupCopyMemory}
               onupdate={(mutator) => updateTarget(target.id, mutator)}
               onremove={() => onremove(target.id)}
