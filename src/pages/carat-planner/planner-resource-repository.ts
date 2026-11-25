@@ -366,11 +366,11 @@ export const plannerResourceRepository = {
       supportCardRarities
     };
   },
-  async gachasFor(
+  async loadGachasFor(
     events: readonly PlannerGachaEvent[],
     core: PlannerCoreResource,
     refresh = false
-  ): Promise<PlannerGachaEntry[]> {
+  ): Promise<{ gachas: PlannerGachaEntry[]; error: string }> {
     const generation = refresh ? ++gachaGeneration : gachaGeneration;
     const fetched: PlannerGachaEntry[] = [];
     const shards = new Set(
@@ -380,7 +380,7 @@ export const plannerResourceRepository = {
         .filter((value): value is string => Boolean(value))
     );
 
-    await Promise.all(
+    const shardResults = await Promise.allSettled(
       [...shards].map(async (shard) => {
         const normalized = shard.replace(/^planner_gacha_/, '').replace(/\.json(?:\.gz)?$/, '');
         const resource = await artifact<PlannerGachaResource>(
@@ -394,7 +394,18 @@ export const plannerResourceRepository = {
       })
     );
 
-    return events.flatMap((event) => {
+    let error = '';
+    for (const result of shardResults) {
+      if (result.status === 'rejected') {
+        error =
+          result.reason instanceof Error
+            ? result.reason.message
+            : 'Some banner rates could not be loaded.';
+        break;
+      }
+    }
+
+    const gachas = events.flatMap((event) => {
       const ids = [event.gachaId, ...(event.gachaIds ?? [])].filter(
         (id): id is number => id !== undefined
       );
@@ -407,7 +418,7 @@ export const plannerResourceRepository = {
         loaded(event) ??
         synthetic(event);
 
-      if (!source) throw new Error(`No protected gacha data was found for ${event.title}.`);
+      if (!source) return [];
       const resolved = resolvePlannerGachaRates(source, {
         featuredPickupIds: event.pickupCardIds ?? [],
         gachaType: event.gachaType,
@@ -419,6 +430,17 @@ export const plannerResourceRepository = {
 
       return [eventResolved];
     });
+
+    return { gachas, error };
+  },
+  async gachasFor(
+    events: readonly PlannerGachaEvent[],
+    core: PlannerCoreResource,
+    refresh = false
+  ): Promise<PlannerGachaEntry[]> {
+    const { gachas, error } = await this.loadGachasFor(events, core, refresh);
+    if (!gachas.length && error) throw new Error(error);
+    return gachas;
   },
   invalidate(): void {
     gachaGeneration++;

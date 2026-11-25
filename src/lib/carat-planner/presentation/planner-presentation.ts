@@ -3,7 +3,8 @@ import type { TimelineRecord } from '@/pages/timeline/timeline-repository';
 import {
   bannerKind,
   enabledPlannerTargets,
-  findPlannerEvent,
+  findMergedPlannerTarget,
+  findPlannerTargetEvent,
   plannerPickupGoals,
   plannerTargetablePickups,
   resolvePlannerPullDate,
@@ -26,13 +27,14 @@ export function plannerPickupOptions(
   events: TimelineRecord[],
   catalog: TimelinePickupCatalog
 ) {
-  const event = findPlannerEvent(target.eventId, events);
+  const event = findPlannerTargetEvent(target, events);
+  const merged = event ? undefined : findMergedPlannerTarget(target, events)?.merged;
   const published = plannerTargetablePickups(gacha);
   const ids = [
     ...new Set([
       ...(published.length
         ? published.map((pickup) => pickup.pickup_id)
-        : (event?.pickupCardIds ?? [])),
+        : (event?.pickupCardIds ?? merged?.pickupCardIds ?? [])),
       ...plannerPickupGoals(target).map((goal) => goal.pickupId)
     ])
   ];

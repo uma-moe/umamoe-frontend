@@ -4,6 +4,8 @@ import type { TimelineRecord } from '@/pages/timeline/timeline-repository';
 import {
   createPlan,
   findGacha,
+  findMergedPlannerTarget,
+  findPlannerTargetEvent,
   plannerPickupGoals,
   plannerTargetEvents,
   projectPlan,
@@ -419,5 +421,103 @@ describe('Angular Planner search and pull-plan presentation', () => {
     expect(items[0]).toMatchObject({ label: '0.5-Year Anniversary', date: '2026-09-02' });
     expect(items[3]).toMatchObject({ label: '1st Anniversary' });
     expect(items.at(-1)).toMatchObject({ past: true });
+  });
+
+  it('resolves renamed banners by gachaId and keeps merged banners hydrated without deleting them', () => {
+    const plan = createPlan();
+    plan.targets = [
+      {
+        id: 'renamed',
+        eventId: 'umapyoi-gacha-30433',
+        gachaId: 30433,
+        title: 'umapyoi-gacha-30433',
+        bannerKind: 'support',
+        pullTiming: 'end',
+        plannedPulls: 400,
+        desiredCopies: 5,
+        pickupId: 30298,
+        pickupGoals: [{ pickupId: 30298, desiredCopies: 5 }],
+        useTickets: true,
+        allowPaidJewels: false
+      },
+      {
+        id: 'merged',
+        eventId: 'support-banner-2023_30155',
+        gachaId: 30155,
+        title: 'support-banner-2023_30155',
+        bannerKind: 'support',
+        pullTiming: 'end',
+        plannedPulls: 200,
+        desiredCopies: 1,
+        pickupId: 30137,
+        pickupGoals: [{ pickupId: 30137, desiredCopies: 1 }],
+        useTickets: true,
+        allowPaidJewels: false
+      }
+    ];
+
+    const current = [
+      event('support-banner-2023_30151', 'Mejiro Ramonu + 9 more', '2026-12-01T22:00:00Z', {
+        eventType: 'support_card_banner',
+        gachaId: 30151,
+        preliminary: true,
+        pickupCardIds: [30134, 30137],
+        preliminaryChanges: {
+          addedPickupCardIds: [30137],
+          removedPickupCardIds: [],
+          mergedEvents: [
+            {
+              eventId: 'support-banner-2023_30155',
+              gachaId: 30155,
+              title: 'Progenitors and Guides + 1 more',
+              estimatedReleaseDate: new Date('2026-12-17T22:00:00Z'),
+              pickupCardIds: [30137, 20055]
+            }
+          ]
+        }
+      }),
+      event('support-banner-30433', 'Agnes Digital + 1 more', '2029-01-11T22:00:00Z', {
+        eventType: 'support_card_banner',
+        gachaId: 30433,
+        image: 'https://assets.uma.moe/en/art/timeline/support/banner/2026_30433.webp',
+        estimatedEndDate: new Date('2029-01-22T22:00:00Z'),
+        pickupCardIds: [30298]
+      })
+    ];
+
+    expect(findPlannerTargetEvent(plan.targets[0]!, current)?.id).toBe('support-banner-30433');
+    expect(findPlannerTargetEvent(plan.targets[1]!, current)).toBeUndefined();
+    expect(findMergedPlannerTarget(plan.targets[1]!, current)?.destination.id).toBe(
+      'support-banner-2023_30151'
+    );
+
+    const synced = synchronizePlannerTargets(plan, current);
+    expect(synced.targets).toHaveLength(2);
+    expect(synced.targets[0]).toMatchObject({
+      eventId: 'umapyoi-gacha-30433',
+      title: 'Agnes Digital + 1 more',
+      bannerStart: '2029-01-11',
+      bannerEnd: '2029-01-22',
+      imagePath: 'https://assets.uma.moe/en/art/timeline/support/banner/2026_30433.webp'
+    });
+    expect(synced.targets[1]).toMatchObject({
+      eventId: 'support-banner-2023_30155',
+      title: 'Progenitors and Guides + 1 more',
+      bannerStart: '2026-12-17',
+      bannerEnd: '2026-12-17'
+    });
+    expect(synchronizePlannerTargets(synced, current)).toBe(synced);
+
+    const gachaRefs = plannerTargetEvents(plan, current);
+    expect(gachaRefs[0]).toMatchObject({
+      id: 'support-banner-30433',
+      gachaId: 30433,
+      date: new Date('2029-01-11T22:00:00Z')
+    });
+    expect(gachaRefs[1]).toMatchObject({
+      id: 'support-banner-2023_30155',
+      gachaId: 30155,
+      date: undefined
+    });
   });
 });
