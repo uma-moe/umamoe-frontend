@@ -48,4 +48,30 @@ describe('target statlines', () => {
   it('has nothing to show without a course', () => {
     expect(targetStatlines(data, {})).toBeUndefined();
   });
+
+  it('prefers precomputed hybrid course forecasts when present', () => {
+    const hybrid: StatlinesData = {
+      latestCm: 22,
+      method: 'hybrid-cm-physics-v1',
+      errors: { model: [14, 37, 26, 44, 24], previousCm: [46, 240, 74, 45, 81], forecasts: 20 },
+      past: [],
+      forecasts: {
+        '10504': {
+          1: [1580, 790, 1150, 650, 1100],
+          2: [1585, 780, 1155, 620, 1105],
+          3: [1550, 770, 1170, 660, 1050],
+          4: [1565, 765, 1175, 630, 1085]
+        }
+      }
+    };
+
+    const target = targetStatlines(hybrid, {
+      cm: 23,
+      course: { courseId: 10504, distance: 2000, dirt: false }
+    });
+
+    expect(target?.kind).toBe('forecast');
+    expect(target?.rows).toHaveLength(4);
+    expect(target?.rows[0]).toEqual({ style: 1, stats: [1580, 790, 1150, 650, 1100] });
+  });
 });

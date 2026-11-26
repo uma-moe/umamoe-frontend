@@ -40,10 +40,16 @@ export const FINAL_SPURT_MARK: PlotMark = {
   color: SPURT.color
 };
 
-/** White skills, gold skills, inherited uniques, and the uniques runners have as their own. */
-export type SkillRarity = 'white' | 'gold' | 'inherited' | 'personal';
+/** White skills, gold skills, evolved skills (2nd Anni+), inherited uniques, and own uniques. */
+export type SkillRarity = 'white' | 'gold' | 'evolved' | 'inherited' | 'personal';
 
-export const SKILL_RARITIES: readonly SkillRarity[] = ['white', 'gold', 'inherited', 'personal'];
+export const SKILL_RARITIES: readonly SkillRarity[] = [
+  'white',
+  'gold',
+  'evolved',
+  'inherited',
+  'personal'
+];
 
 /**
  * Which version of each unique shows: inherited from a parent, or the character's own. One at a time, so each ranks
@@ -151,6 +157,7 @@ interface Candidate {
 }
 
 function rarityOf(skill: SkillData): SkillRarity {
+  if (skill.rarity === 6) return 'evolved';
   if (skill.skill_id >= INHERITED_UNIQUE_FROM) return 'inherited';
   if (skill.unique || skill.rarity >= 3) return 'personal';
   return skill.rarity === 2 ? 'gold' : 'white';
@@ -173,6 +180,7 @@ export function raritiesOf(
 const TIERS: Record<SkillRarity, PlottedSkill['tier']> = {
   white: 'white',
   gold: 'gold',
+  evolved: 'evolved',
   inherited: 'inherited',
   personal: 'personal'
 };

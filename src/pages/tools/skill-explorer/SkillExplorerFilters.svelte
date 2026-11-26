@@ -94,6 +94,7 @@
   const RARITY_NAMES: Record<SkillRarity, string> = {
     white: 'White',
     gold: 'Gold',
+    evolved: 'Evolved',
     inherited: 'Inherited unique',
     personal: 'Own unique'
   };

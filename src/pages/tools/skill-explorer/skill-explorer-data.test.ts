@@ -189,6 +189,33 @@ describe('Skill Explorer data', () => {
     expect(scopePath({ kind: 'course', course: kyoto2200 })).toBe('turf/medium/10808.json.gz');
     expect(scopePath({ kind: 'group', surface: '2', distance: 'all' })).toBe('dirt/all.json.gz');
   });
+
+  it('parses real-meta reference build ensembles', () => {
+    const scope = parseScope({
+      ...courseFile,
+      references: {
+        '1': [
+          {
+            card: 109801,
+            stats: [1600, 620, 1210, 630, 1130],
+            skills: [100981, 200011],
+            baseline_win: 34.5,
+            source: 'cm22-2026-11-26'
+          }
+        ]
+      }
+    });
+
+    expect(scope.references?.['1']).toEqual([
+      {
+        card: 109801,
+        stats: [1600, 620, 1210, 630, 1130],
+        skills: [100981, 200011],
+        baselineWin: 34.5,
+        source: 'cm22-2026-11-26'
+      }
+    ]);
+  });
 });
 
 describe('race days', () => {

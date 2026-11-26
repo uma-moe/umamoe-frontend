@@ -155,12 +155,25 @@ export interface Partner {
   win: number;
 }
 
+/** One real competitive CM build in a course style's reference ensemble. */
+export interface ReferenceBuild {
+  card: number;
+  stats: [number, number, number, number, number];
+  skills: number[];
+  /** Simulated win rate (0–100) of this build on the course's fields. */
+  baselineWin: number;
+  /** Snapshot ID the build was drawn from (e.g. "cm22-2026-11-26"). */
+  source?: string;
+}
+
 export interface ScopeData {
   /** Courses the scope averages. */
   courses: number;
   styles: Record<StyleKey, SkillPoint[]>;
-  /** The reference build per style, for a single course. */
+  /** The primary reference build per style, for a single course. */
   builds?: Partial<Record<StyleKey, number[]>>;
+  /** Real competitive CM reference builds per style, for a single course (E12+). */
+  references?: Partial<Record<StyleKey, ReferenceBuild[]>>;
   /** Per style, each skill's partners, for a single course. */
   partners?: Partial<Record<StyleKey, Map<number, Partner[]>>>;
   /**
@@ -347,6 +360,37 @@ function parseBuilds(value: unknown): ScopeData['builds'] {
   );
 }
 
+function parseReferenceBuild(value: unknown): ReferenceBuild {
+  if (!isRecord(value) || !Array.isArray(value.stats) || value.stats.length !== 5)
+    throw new Error('Skill Explorer data has an invalid reference build.');
+  if (!Array.isArray(value.skills))
+    throw new Error('Skill Explorer data has invalid reference build skills.');
+  return {
+    card: finiteNumber(value.card, 'reference card'),
+    stats: value.stats.map((s) => finiteNumber(s, 'reference stat')) as [
+      number,
+      number,
+      number,
+      number,
+      number
+    ],
+    skills: value.skills.map((id) => finiteNumber(id, 'reference skill')),
+    baselineWin:
+      value.baseline_win === undefined ? 0 : finiteNumber(value.baseline_win, 'reference win rate'),
+    source: typeof value.source === 'string' && value.source !== '' ? value.source : undefined
+  };
+}
+
+function parseReferences(value: unknown): ScopeData['references'] {
+  if (!isRecord(value)) return undefined;
+  const entries = STYLE_KEYS.flatMap((style) => {
+    const list = value[style];
+    if (!Array.isArray(list) || list.length === 0) return [];
+    return [[style, list.map(parseReferenceBuild)] as const];
+  });
+  return entries.length > 0 ? Object.fromEntries(entries) : undefined;
+}
+
 export function parseScope(value: unknown): ScopeData {
   if (!isRecord(value) || !isRecord(value.styles))
     throw new Error('Skill Explorer data is invalid.');
@@ -364,6 +408,7 @@ export function parseScope(value: unknown): ScopeData {
     courses: finiteNumber(value.courses, 'course count'),
     styles: { ...byStyle, all: averageStyles(Object.values(byStyle)) },
     builds: parseBuilds(value.builds),
+    references: parseReferences(value.references),
     partners: parsePartners(value.partners),
     margins: parseMargins(value.margins)
   };

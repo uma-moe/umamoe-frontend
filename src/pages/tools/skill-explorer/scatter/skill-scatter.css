@@ -308,6 +308,12 @@
   border-color: #e8c25a;
 }
 
+.skill-dot.tier-evolved {
+  border-width: 2px;
+  border-color: #f472b6;
+  box-shadow: 0 0 0 1px rgb(244 114 182 / 0.35), 0 2px 4px rgb(0 0 0 / 0.45);
+}
+
 .skill-dot.tier-inherited {
   border-color: var(--accent-pink);
 }
