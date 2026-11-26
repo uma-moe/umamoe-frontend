@@ -303,6 +303,21 @@
       "source": "hakuraku"
     },
     {
+      "id": "gacha-simulator",
+      "title": "Gacha Simulator",
+      "description": "Simulate live, preliminary, and future character and support card banners.",
+      "path": "/tools/gacha-simulator",
+      "group": "tools",
+      "icon": "dice",
+      "navigation": "secondary",
+      "width": "normal",
+      "status": "available",
+      "dataOwnership": "local",
+      "indexable": true,
+      "adSurface": null,
+      "source": "moe"
+    },
+    {
       "id": "race-simulator",
       "title": "Race Simulator",
       "description": "Simulate race outcomes.",

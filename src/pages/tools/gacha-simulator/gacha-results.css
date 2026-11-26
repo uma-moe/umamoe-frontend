@@ -1,0 +1,36 @@
+/* The results grid both the pull dialog and the history expansion render. */
+.result-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 6px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.result-grid li {
+  min-width: 0;
+  animation: result-reveal 240ms var(--easing-standard) both;
+  animation-delay: calc(var(--reveal-index, 0) * 32ms);
+}
+/* The pull lands: cards rise in once, in the order the draw gave them. */
+@keyframes result-reveal {
+  from {
+    opacity: 0;
+    transform: translateY(6px) scale(0.98);
+  }
+}
+.result-grid.single {
+  grid-template-columns: minmax(120px, 180px);
+  justify-content: center;
+}
+@media (min-width: 560px) {
+  .result-grid {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 8px;
+  }
+}
+@media (min-width: 900px) {
+  .result-grid {
+    grid-template-columns: repeat(5, minmax(0, 1fr));
+  }
+}

@@ -38,6 +38,7 @@ These URLs are the canonical sources for the respective tools. Link to the relev
 - [Lineage Planner](https://uma.moe/tools/lineage-planner): Calculate Uma Musume affinity and compatibility, compare parents, add shared G1 wins, estimate spark inheritance odds, and plan a complete lineage tree.
 - [Skill Explorer](https://uma.moe/tools/skill-explorer): See what every Uma Musume skill is worth and where it procs on every course, by running style, surface and length.
 - [Master Data](https://uma.moe/tools/master-data): Browse Uma Musume game tables and run SQLite queries locally to investigate characters, skills, races, and other game data.
+- [Gacha Simulator](https://uma.moe/tools/gacha-simulator): Simulate live, preliminary, and future character and support card banners with game pickup rates and 10-draw guarantees.
 
 ### Research
 

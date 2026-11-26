@@ -21,9 +21,14 @@ function twoDigits(value: number): string {
   return String(value).padStart(2, '0');
 }
 
-/** The 128 px portrait of a card. */
+/** The 128 px portrait of a card, which is the icon-sized copy of its stand art. */
 export function umaPortrait(cardId: number): string {
   return artLink(`umas/${cardId}/portrait.webp`);
+}
+
+/** The card's stand art at its full 512 px; the shared uniform and some outfits publish only `umaPortrait`. */
+export function umaStand(cardId: number): string {
+  return artLink(`umas/${cardId}/stand.webp`);
 }
 
 export function supportCardHalf(cardId: number | string): string {
@@ -103,6 +108,20 @@ export function timeOfDayIcon(time: TimeOfDay): string {
 /** The English game's lettered season tile. */
 export function seasonIcon(season: Season): string {
   return artLink(`ui/seasons/${season}.webp`);
+}
+
+/**
+ * A file below the gacha tree, the site's own reveal art rather than game data. The card frames are
+ * 3:4 panels drawn for a whole card: silver, gold and the holo.
+ */
+export function gachaCardFrame(rarity: 1 | 2 | 3): string {
+  const name = rarity === 3 ? 'ssr' : rarity === 2 ? 'sr' : 'r';
+  return artLink(`gacha/frames/card-${name}.webp`);
+}
+
+/** The starting gate a character pull waits behind: a sprite of four doors, holo first. */
+export function gachaCharacterGate(): string {
+  return artLink('gacha/gates/character.webp');
 }
 
 export function raceBanner(thumbnailId: number): string {

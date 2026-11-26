@@ -96,6 +96,12 @@
     {
       "@type": "ListItem",
       "position": 16,
+      "name": "Gacha Simulator",
+      "url": "https://uma.moe/tools/gacha-simulator"
+    },
+    {
+      "@type": "ListItem",
+      "position": 17,
       "name": "Research",
       "url": "https://uma.moe/research"
     }

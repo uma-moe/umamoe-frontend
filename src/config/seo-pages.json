@@ -121,6 +121,12 @@
     "priority": 0.6,
     "changeFrequency": "weekly"
   },
+  "/tools/gacha-simulator": {
+    "title": "Uma Musume Gacha Simulator | uma.moe",
+    "description": "Simulate live, preliminary, and future character and support card banners with game pickup rates and 10-draw guarantees.",
+    "priority": 0.7,
+    "changeFrequency": "weekly"
+  },
   "/tools/skill-explorer": {
     "title": "Uma Musume Skill Explorer | uma.moe",
     "description": "See what every Uma Musume skill is worth and where it procs on every course, by running style, surface and length.",
