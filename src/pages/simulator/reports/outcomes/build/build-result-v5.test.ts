@@ -159,6 +159,18 @@ describe('V5 in the existing optimizer', () => {
     );
   });
 
+  it('adds every rank a merged chain holds, as its SP does', () => {
+    const response = result();
+    response.model!.build!.explanation.runner_up!.skills.push(skill(0, 0.5));
+    const view = theorizedResult({ result: response, offers })!;
+    const chain = view.builds[0]!.cells.find(
+      (cell) => cell.skill.offer.skill.name === 'Swinging Maestro'
+    )!;
+    expect(chain.skill.via.map((offer) => offer.skill.name)).toEqual(['Corner Recovery ○']);
+    expect(chain.skill.cost).toBe(340);
+    expect(chain.value).toBeCloseTo(3.5);
+  });
+
   it('keeps absent scores and paired evidence unknown instead of claiming zero benefit', () => {
     const response = result();
     response.model!.build!.explanation.runner_up!.skills.pop();

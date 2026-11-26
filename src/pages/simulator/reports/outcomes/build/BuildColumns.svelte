@@ -52,12 +52,12 @@
 
   const UNIT_TITLE: Record<SkillUnit, string> = {
     lengths: 'Lengths gained',
-    score: 'Skill score',
+    score: 'Score lost if dropped',
     seconds: 'Seconds saved'
   };
   const UNIT_HEADING: Record<SkillUnit, string> = {
     lengths: 'Gain',
-    score: 'Score',
+    score: 'If dropped',
     seconds: 'Saved'
   };
   const ordinal = (rank: number) => rank + (['st', 'nd', 'rd'][rank - 1] ?? 'th');
