@@ -48,6 +48,8 @@
     distanceOptions: SelectOption[];
     courseOptions: SelectOption[];
     meetingOptions: SelectOption[];
+    /** Show the Runaway (style 5) tab when the loaded bundle values it. */
+    hasRunaway?: boolean;
     onmeetingchange: (value: string) => void;
   }
 
@@ -76,15 +78,20 @@
     distanceOptions,
     courseOptions,
     meetingOptions,
+    hasRunaway = false,
     onmeetingchange
   }: Props = $props();
 
   let raceAnchor = $state<HTMLDivElement>();
   let filtersOpen = $state(false);
-  const styleOptions = (['all', '1', '2', '3', '4'] as const).map((value) => ({
-    value,
-    label: STYLE_NAMES[value]
-  }));
+  const styleOptions = $derived(
+    (hasRunaway ? (['all', '1', '2', '3', '4', '5'] as const) : (['all', '1', '2', '3', '4'] as const)).map(
+      (value) => ({
+        value,
+        label: STYLE_NAMES[value]
+      })
+    )
+  );
   const showOptions: { value: ShowLimit; label: string }[] = [
     { value: '25', label: 'Top 25' },
     { value: '50', label: 'Top 50' },
@@ -94,6 +101,7 @@
   const RARITY_NAMES: Record<SkillRarity, string> = {
     white: 'White',
     gold: 'Gold',
+    evolved: 'Evolved',
     inherited: 'Inherited unique',
     personal: 'Own unique'
   };

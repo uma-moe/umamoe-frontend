@@ -33,11 +33,13 @@
   const note = $derived(
     target.kind === 'winners'
       ? 'Median of the runners who won their room, with the middle half of them, in tens.'
-      : 'Forecast from CM10–19 winners for the current stat era, in tens; ± is the typical miss.'
+      : target.method
+        ? `Forecast from CM17–${target.latestCm} winners and course physics, in tens; ± is the typical miss.`
+        : `Forecast from CM10–${target.latestCm} winners for the current stat era, in tens; ± is the typical miss.`
   );
 
   function groupLabel(group: StatlineGroup): string {
-    if (group.styles.length === RUNNING_STYLES.length) return 'All styles';
+    if (group.styles.length === target.rows.length) return 'All styles';
     return group.styles.map((style) => STYLE_NAMES[String(style) as StyleKey]).join(', ');
   }
 

@@ -1,7 +1,13 @@
 import { describe, expect, it } from 'vitest';
 import type { SkillData } from '@/lib/game-data/skills/skills';
 import { SECTIONS, SKILL_KINDS, type SkillFacts, type SkillPoint } from './skill-explorer-data';
-import { SKILL_RARITIES, toggleType, plotView, type PlotOptions } from './skill-explorer-view';
+import {
+  SKILL_RARITIES,
+  raritiesOf,
+  toggleType,
+  plotView,
+  type PlotOptions
+} from './skill-explorer-view';
 import { valueAxis, valuePercent } from './scatter/scatter-scale';
 
 function skill(skillId: number, name: string, extra: Partial<SkillData> = {}): SkillData {
@@ -381,5 +387,12 @@ describe('toggleType', () => {
 
     expect(empty.size).toBe(0);
     expect([...toggleType(empty, 'inherited')]).toEqual(['inherited']);
+  });
+
+  it('classifies rarity 6 evolved skills as evolved even when skill_id >= 900000', () => {
+    const evo = skill(100101111, 'Evolved Speed', { rarity: 6 });
+    const rarities = raritiesOf([point(100101111, 5.0, 0.9)], new Map([[100101111, evo]]));
+
+    expect(rarities).toEqual(['evolved']);
   });
 });

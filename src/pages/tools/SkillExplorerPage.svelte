@@ -53,7 +53,7 @@
     type UmaSkills,
     type UnvaluedSkills
   } from './skill-explorer/umas/uma-skills';
-  import BuildPanel from './skill-explorer/build/BuildPanel.svelte';
+  import BuildPanel, { type ReferenceBuildView } from './skill-explorer/build/BuildPanel.svelte';
   import ExplorerGuide from './skill-explorer/ExplorerGuide.svelte';
   import SkillExplorerFilters from './skill-explorer/SkillExplorerFilters.svelte';
   import SkillScatter from './skill-explorer/scatter/SkillScatter.svelte';
@@ -201,7 +201,11 @@
       ? targetStatlines(statlines, {
           cm: selectedMeeting?.number,
           course: selectedCourse
-            ? { distance: selectedCourse.distance, dirt: selectedCourse.surface === 2 }
+            ? {
+                courseId: selectedCourse.courseId,
+                distance: selectedCourse.distance,
+                dirt: selectedCourse.surface === 2
+              }
             : undefined
         })
       : undefined
@@ -250,9 +254,32 @@
       .sort((left, right) => left.label.localeCompare(right.label))
   ]);
 
-  /** The reference build, which the values are measured in, is shown on a single course for a single style. */
+  /** The reference build(s), which the values are measured in, shown on a single course for a single style. */
   const buildStyle = $derived(selectedCourse && style !== 'all' ? style : undefined);
   const referenceBuild = $derived(buildStyle ? scopeData?.builds?.[buildStyle] : undefined);
+  const referenceBuilds = $derived<ReferenceBuildView[]>(
+    buildStyle && scopeData?.references?.[buildStyle]
+      ? scopeData.references[buildStyle]!.map((ref) => {
+          const character = characterNames[String(Math.floor(ref.card / 100))];
+          const skin = character?.skins?.[String(ref.card).slice(-2)];
+          const name = character?.name
+            ? skin
+              ? `${character.name} (${skin})`
+              : character.name
+            : `Uma ${ref.card}`;
+          return {
+            card: ref.card,
+            name,
+            portrait: umaPortrait(ref.card),
+            stats: ref.stats,
+            baselineWin: ref.baselineWin,
+            source: ref.source,
+            skills: ref.skills.map((skillId) => relatedSkill(skillId))
+          };
+        })
+      : []
+  );
+  const hasRunaway = $derived((scopeData?.styles['5']?.length ?? 0) > 0);
   const points = $derived(scopeData?.styles[style] ?? []);
   const heldRarities = $derived(raritiesOf(points, allSkills));
   // With both versions of uniques valued, one shows at a time: a version alone shows whatever the toggle says.
@@ -279,7 +306,8 @@
           kinds,
           search,
           comparedSkillIds,
-          umaSkillIds: selectedUma && skillsGivenBy(selectedUma, shownUniqueVersion === 'own'),
+          umaSkillIds:
+            selectedUma && skillsGivenBy(selectedUma, shownUniqueVersion === 'own', index?.skills),
           bestOfFamily,
           limit: limitOf(show),
           showDayBound,
@@ -425,7 +453,12 @@
   }
 
   function inReferenceBuild(skillId: number): boolean {
-    return style !== 'all' && Boolean(referenceBuild?.includes(skillId));
+    if (style === 'all') return false;
+    if (referenceBuilds.length > 0) {
+      return referenceBuilds.some((ref) => ref.skills.some((s) => s.skillId === skillId));
+    }
+
+    return Boolean(referenceBuild?.includes(skillId));
   }
 
   function restorePick(loaded: ExplorerIndex): void {
@@ -631,6 +664,7 @@
         {distanceOptions}
         {courseOptions}
         meetingOptions={meetingSelectOptions}
+        {hasRunaway}
         onmeetingchange={chooseMeeting}
       />
 
@@ -655,12 +689,13 @@
         {#if scopeLoading}
           <Spinner size={18} />
         {/if}
-        {#if (buildStyle && referenceBuild) || target}
+        {#if (buildStyle && (referenceBuild || referenceBuilds.length > 0)) || target}
           <!-- The values' build and target stats: they share the title row, and wrap to the next one together. -->
           <div class="scope-tools">
-            {#if buildStyle && referenceBuild}
+            {#if buildStyle && (referenceBuild || referenceBuilds.length > 0)}
               <BuildPanel
-                skills={referenceBuild.map((skillId) => relatedSkill(skillId))}
+                skills={(referenceBuild ?? []).map((skillId) => relatedSkill(skillId))}
+                references={referenceBuilds}
                 styleName={STYLE_NAMES[buildStyle]}
               />
             {/if}

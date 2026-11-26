@@ -34,7 +34,7 @@
     skillId: number;
     name: string;
     image?: string;
-    tier: 'white' | 'gold' | 'inherited' | 'personal';
+    tier: 'white' | 'gold' | 'evolved' | 'inherited' | 'personal';
     x: number;
     /** Lengths or win points, as `format` shows them. */
     y: number;

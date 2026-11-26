@@ -149,10 +149,23 @@ export function explorerUmas({
 /** An inherited unique's number less this is the character's own version of it. */
 const INHERITED_OFFSET = 800_000;
 
-/** Her unique, inherited or with `own` her own version of it, and every skill she starts with or unlocks. */
-export function skillsGivenBy(uma: UmaSkills, own = false): Set<number> {
+/**
+ * Her unique, inherited or with `own` her own version of it, every skill she starts with or unlocks,
+ * and any character-evolved skills (`facts` carrying her `cardId`).
+ */
+export function skillsGivenBy(
+  uma: UmaSkills,
+  own = false,
+  facts?: ReadonlyMap<number, { card?: number }>
+): Set<number> {
   const skillIds = new Set(uma.skills);
   if (uma.unique !== undefined) skillIds.add(own ? uma.unique - INHERITED_OFFSET : uma.unique);
+  if (facts !== undefined) {
+    for (const [skillId, fact] of facts) {
+      if (fact.card === uma.cardId && skillId >= 1_000_000) skillIds.add(skillId);
+    }
+  }
+
   return skillIds;
 }
 

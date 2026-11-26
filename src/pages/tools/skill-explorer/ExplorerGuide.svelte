@@ -37,16 +37,16 @@
 
     <h3>Skill value</h3>
     <p>
-      In build is what a skill adds to the reference build: what our optimizer buys this running
-      style here with the SP the latest CM's runners spent on average, before hints. A gold or ◎
-      replaces its weaker version, and a skill already in the build shows what removing it costs.
-      Optimal times skills like Groundwork at their best tested point. Alone adds the skill to a
-      runner with no other skills, like a solo sim.
+      In build is what a skill adds across the reference builds: real competitive builds of this
+      running style drawn from recent Champions Meetings and adapted to the course. A gold, evolved
+      or ◎ skill replaces its weaker version, and a skill held by a build shows what removing it
+      costs. Optimal times skills like Groundwork at their best tested point. Alone adds the skill
+      to a runner with no other skills, like a solo sim.
     </p>
     <p>
-      The build holds one own unique and two inherited ones, never both versions of the same unique.
-      An own unique shows what it adds in place of the build's own unique, since an uma has only
-      one. The unique toggle switches the chart between own and inherited versions.
+      Each reference build keeps its own character unique and inherited skills, and own uniques show
+      what they add in place of each build's own unique. The unique toggle switches the chart
+      between own and inherited versions.
     </p>
     <p>
       Over all races multiplies the value by how often the reference runner activates the skill: a

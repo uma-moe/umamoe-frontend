@@ -8,6 +8,7 @@ const margin: Stats = [27, 63, 50, 100, 81];
 function forecast(rows: Stats[]): TargetStatlines {
   return {
     kind: 'forecast',
+    latestCm: 22,
     margin,
     rows: rows.map((stats, index) => ({ style: (index + 1) as 1 | 2 | 3 | 4, stats }))
   };
