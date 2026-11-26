@@ -8,7 +8,7 @@
     gachaCharacterGate,
     supportRarityIcon
   } from '@/lib/game-assets/art-links';
-  import { isLit, isOpen, type RevealPhase } from './gacha-reveal';
+  import { isLit, isOpen, isScanning, type RevealPhase } from './gacha-reveal';
   import type { GachaItemDisplay } from './gacha-display';
 
   export type GachaResultItem = GachaDrawResult & GachaItemDisplay;
@@ -25,6 +25,10 @@
     flourish?: boolean;
     /** A quick pull: no deal, no turn, straight to the faces. */
     instant?: boolean;
+    /** False while a trainee's gate still wears the plainest leaf, waiting for the wave to reach it. */
+    upgraded?: boolean;
+    /** The rarity the gate is showing right now: the waves colour it before the doors part. */
+    gateRarity?: number;
   }
 
   let {
@@ -34,7 +38,9 @@
     pull = false,
     phase = 'settled',
     flourish = true,
-    instant = false
+    instant = false,
+    upgraded = true,
+    gateRarity
   }: Props = $props();
   let useFallback = $state(false);
   let failed = $state(false);
@@ -43,7 +49,8 @@
   const open = $derived(isOpen(phase));
   /** The flourish is due: the card has landed and its light may start. */
   const lit = $derived(isLit(phase));
-
+  /** The wave is reading the gates, so a gate that upgrades now earns its flash of light. */
+  const scanning = $derived(isScanning(phase));
   /** The game's own rarity emblems exist for support cards only; a trainee's rarity is stars. */
   const supportRarity = $derived(
     kind === 'support' ? ({ 1: 'R', 2: 'SR', 3: 'SSR' } as const)[result.rarity] : undefined
@@ -51,17 +58,17 @@
   const rarityLabel = $derived(supportRarity ?? `${result.rarity}★`);
   /** Every card wears the game's rarity frame: silver for the lowest, then gold, then the holo. */
   const frameArt = $derived(gachaCardFrame(result.rarity));
+  /** What the gate is wearing, which its waves change long before the card's own rarity is read. */
+  const gate = $derived(gateRarity ?? result.rarity);
   /**
    * The gate sprite holds four leaves: a holo pair, then one gold leaf and one silver leaf. The gold
    * leaf hinges on its left edge and the silver one on its right, so each rarity mirrors whichever
    * door needs it to put both posts on the outside.
    */
-  const gateLeft = $derived(result.rarity === 3 ? '0%' : result.rarity === 2 ? '66.6666%' : '100%');
-  const gateRight = $derived(
-    result.rarity === 3 ? '33.3333%' : result.rarity === 2 ? '66.6666%' : '100%'
-  );
-  const gateFlipLeft = $derived(result.rarity === 1 ? '-1' : '1');
-  const gateFlipRight = $derived(result.rarity === 2 ? '-1' : '1');
+  const gateLeft = $derived(gate === 3 ? '0%' : gate === 2 ? '66.6666%' : '100%');
+  const gateRight = $derived(gate === 3 ? '33.3333%' : gate === 2 ? '66.6666%' : '100%');
+  const gateFlipLeft = $derived(gate === 1 ? '-1' : '1');
+  const gateFlipRight = $derived(gate === 2 ? '-1' : '1');
   const imageSource = $derived(useFallback ? result.thumbImage : result.image);
 
   function imageFailed() {
@@ -152,6 +159,8 @@
   class:instant
   class:framed={kind === 'support'}
   class:flipping={pull && kind === 'support'}
+  class:gate-bloom={pull && kind === 'character' && gate === 3 && !open}
+  class:scanning={pull && kind === 'character' && scanning}
   class:celebrate-mid={pull && flourish && lit && result.rarity === 2}
   class:celebrate-top={pull && flourish && lit && result.rarity === 3}
   style:--card-frame="url({frameArt})"
@@ -194,10 +203,18 @@
       <div
         class="gate"
         class:open
+        class:upgraded={gate > 1}
+        class:glow={gate === 3}
         aria-hidden="true"
       >
-        <span class="gate-door left"></span>
-        <span class="gate-door right"></span>
+        <span class="gate-door left">
+          <span class="gate-base"></span>
+          <span class="gate-leaf"></span>
+        </span>
+        <span class="gate-door right">
+          <span class="gate-base"></span>
+          <span class="gate-leaf"></span>
+        </span>
       </div>
     {/if}
   {/if}
@@ -380,44 +397,224 @@
     /* The panel is transparent above the door, so the door carries the card's surface with it: the
        backdrop leaves when the doors do, which is what uncovers the art. */
     background-color: var(--card-surface-bg);
+    transition: transform var(--gate, 460ms) var(--easing-standard)
+      calc(var(--reveal-index, 0) * var(--stagger, 45ms) + var(--lead-in, 100ms));
+  }
+  .gate-door.left {
+    left: 0;
+  }
+  .gate-door.right {
+    right: 0;
+  }
+  /** One leaf of the gate sprite, filling its half of the door. */
+  .gate-base,
+  .gate-leaf {
+    position: absolute;
+    inset: 0;
     background-image: var(--gate-art);
     background-repeat: no-repeat;
     /* Each panel is one leaf; scaling past the box and pinning to the bottom fills the card without
        squeezing the door's own proportions. */
     background-size: 400% 126%;
-    transition: transform var(--gate, 460ms) var(--easing-standard)
-      calc(var(--reveal-index, 0) * var(--stagger, 45ms) + var(--lead-in, 100ms));
   }
-  /* The hinge posts have to end up on the outside, which takes a mirror on whichever door is showing
-     the leaf's hinged side inwards: the silver leaf for the left door, the gold one for the right. */
-  .gate-door.left {
-    left: 0;
+  /* Every gate is dealt as the plainest leaf. The hinge posts have to end up on the outside, which
+     takes a mirror on whichever door is showing the leaf's hinged side inwards. */
+  .gate-base {
+    background-position: 100% 100%;
+  }
+  .gate-door.left .gate-base {
+    transform: scaleX(-1);
+  }
+  /* The leaf the card actually drew, laid over the plain one and lit once the wave reaches it. */
+  .gate-leaf {
+    opacity: 0;
+    transition: opacity var(--flip, 260ms) var(--easing-standard);
+  }
+  .gate-door.left .gate-leaf {
     background-position: var(--gate-left, 0%) 100%;
     transform: scaleX(var(--gate-flip-left, 1));
   }
-  .gate-door.right {
-    right: 0;
+  .gate-door.right .gate-leaf {
     background-position: var(--gate-right, 33.3333%) 100%;
     transform: scaleX(var(--gate-flip-right, 1));
   }
+  .gate.upgraded .gate-leaf {
+    opacity: 1;
+  }
+  /* A quick pull skips the wave, so the leaf is simply there. */
+  .instant .gate-leaf {
+    transition: none;
+  }
+  /* Every gate that changes pops as its wave lands, and the holo ones pop again — bigger — when the
+     second wave takes them rainbow. A skipped pull never runs either. */
+  .result.scanning .gate.upgraded {
+    animation: gate-jump var(--flash, 380ms) var(--easing-standard) both;
+  }
+  .result.scanning .gate.upgraded .gate-base,
+  .result.scanning .gate.upgraded .gate-leaf {
+    animation: gate-flash var(--flash, 380ms) var(--easing-standard) both;
+  }
+  .result.scanning .gate.glow {
+    animation: gate-jump-rainbow var(--flash, 380ms) var(--easing-standard) both;
+  }
+  .result.scanning .gate.glow .gate-base,
+  .result.scanning .gate.glow .gate-leaf {
+    animation: gate-flash-rainbow var(--flash, 380ms) var(--easing-standard) both;
+  }
+  @keyframes gate-jump {
+    from {
+      transform: scale(1);
+    }
+    32% {
+      transform: scale(1.08);
+    }
+    64% {
+      transform: scale(0.985);
+    }
+    to {
+      transform: scale(1);
+    }
+  }
+  @keyframes gate-jump-rainbow {
+    from {
+      transform: scale(1);
+    }
+    28% {
+      transform: scale(1.12);
+    }
+    62% {
+      transform: scale(0.98);
+    }
+    to {
+      transform: scale(1);
+    }
+  }
+  @keyframes gate-flash {
+    from {
+      filter: brightness(1.7) saturate(1.2);
+    }
+    to {
+      filter: brightness(1);
+    }
+  }
+  @keyframes gate-flash-rainbow {
+    from {
+      filter: brightness(2.1) saturate(1.5) hue-rotate(-24deg);
+    }
+    to {
+      filter: brightness(1);
+    }
+  }
+  /* The doors fall away down and out rather than sliding straight sideways, which reads as weight
+     and keeps the parting leaves from looking like a pair of shutters. */
   .gate.open .gate-door.left {
-    transform: translateX(-100%) scaleX(var(--gate-flip-left, 1));
+    transform: translate(-100%, 24%);
   }
   .gate.open .gate-door.right {
-    transform: translateX(100%) scaleX(var(--gate-flip-right, 1));
+    transform: translate(100%, 24%);
+  }
+  /* A drop shadow follows the alpha an image is drawn with, so the leaf is painted a second time in a
+     layer of its own — the panel's surface left behind — and that copy's shadow traces the door's
+     silhouette instead of the card's rectangle. The copy is the same leaf in the same place, so it
+     only ever shows as light: on the card's dark surround, through the cut-outs, past its edge. The
+     light is the rarity's own, so a gate says which one it became. */
+  /* Only the holo has a glow. A gold one read as a different material rather than the same door, so
+     the rare gate is a colour change and nothing more. */
+  .gate.glow {
+    --gate-light-1: rgb(255 135 195 / 0.5);
+    --gate-light-2: rgb(111 216 255 / 0.38);
+    --gate-light-3: rgb(184 155 255 / 0.32);
+  }
+  .gate.glow .gate-leaf::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    background-image: var(--gate-art);
+    background-repeat: no-repeat;
+    background-size: 400% 126%;
+    background-position: inherit;
+    filter: drop-shadow(0 0 5px var(--gate-light-1)) drop-shadow(0 0 11px var(--gate-light-2))
+      drop-shadow(0 0 18px var(--gate-light-3));
+    /* The light belongs behind the doors, not to them: it goes out as they part instead of travelling
+       off the card with the leaf, and the reveal's own bloom takes over from there. */
+    transition: opacity calc(var(--gate, 460ms) * 0.35) var(--easing-standard)
+      calc(var(--reveal-index, 0) * var(--stagger, 45ms) + var(--lead-in, 100ms));
+  }
+  .gate.open.glow .gate-leaf::before {
+    opacity: 0;
+  }
+  /* The holo's other sign: glints of light drifting over the leaves, twinkling before anything moves.
+     Each one is a hard little core inside a wide coloured bloom, because over a leaf this bright a soft
+     glow on its own is nothing the eye can find. The glints ride the doors, so they leave with them
+     instead of needing a fade of their own. */
+  .gate.glow .gate-leaf::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    /* The field is larger than the door, so drifting it slides glints in and out of the crop rather
+       than shifting the whole pattern in lockstep. */
+    background-size: 150% 150%;
+    background-repeat: no-repeat;
+    background-image:
+      radial-gradient(circle 4px at 55% 30%, #fff, rgb(255 255 255 / 0.35) 55%, transparent 70%),
+      radial-gradient(circle 20px at 55% 30%, rgb(160 235 255 / 0.7), transparent 70%),
+      radial-gradient(circle 3.5px at 28% 62%, #fff, rgb(255 255 255 / 0.35) 55%, transparent 70%),
+      radial-gradient(circle 18px at 28% 62%, rgb(255 170 210 / 0.65), transparent 70%),
+      radial-gradient(circle 4px at 62% 48%, #fff, rgb(255 255 255 / 0.35) 55%, transparent 70%),
+      radial-gradient(circle 18px at 62% 48%, rgb(255 220 140 / 0.7), transparent 70%),
+      radial-gradient(circle 3px at 38% 82%, #fff, rgb(255 255 255 / 0.35) 55%, transparent 70%),
+      radial-gradient(circle 16px at 38% 82%, rgb(200 180 255 / 0.7), transparent 70%);
+    mix-blend-mode: screen;
+    animation:
+      gate-drift 10s ease-in-out infinite alternate -2s,
+      gate-twinkle 1700ms ease-in-out infinite alternate -400ms;
+  }
+  /* The two leaves drift and flicker out of step, or the card reads as one blinking panel. */
+  .gate.glow .gate-door.right .gate-leaf::after {
+    animation-delay:
+      -6s,
+      -1000ms;
+  }
+  @keyframes gate-drift {
+    from {
+      background-position: 8% 18%;
+    }
+    to {
+      background-position: 58% 72%;
+    }
+  }
+  @keyframes gate-twinkle {
+    from {
+      opacity: 0.5;
+    }
+    to {
+      opacity: 1;
+    }
+  }
+  /* While the doors are shut the card lets its own clip go, so a leaf's light can leave the card
+     instead of stopping in a straight line at its edge. */
+  .result.gate-bloom,
+  .gate-bloom .gate {
+    overflow: visible;
+  }
+  .gate-bloom .veil {
+    border-radius: inherit;
   }
   /* A trainee stands as a silhouette while the gate opens, then the light comes up on the art. The
      shade follows the doors: it holds through the first half of the swing and is gone as they land. */
   .result:not(.framed) {
     --gate: 460ms;
   }
-  /* The silhouette is a veil over the card rather than a filter on the art, so the doors uncover it as
-     they part and it deshades with the second half of their swing. */
+  /* The shade is a veil over the card rather than a filter on the art, so the doors uncover it as they
+     part. It is black to start: nothing of the trainee shows through the lattice until her gate is out
+     of the way, and then the art comes up as the shade lifts. */
   .veil {
     position: absolute;
     inset: 0;
     z-index: 3;
-    background: rgb(6 8 12 / 0.84);
+    background: #000;
     pointer-events: none;
     transition: opacity calc(var(--gate, 460ms) / 2) var(--easing-standard)
       calc(
