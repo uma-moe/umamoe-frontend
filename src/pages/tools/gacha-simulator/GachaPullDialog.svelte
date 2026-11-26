@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { untrack } from 'svelte';
   import Button from '@/components/controls/Button.svelte';
   import Dialog from '@/components/overlays/Dialog.svelte';
   import type { GachaSpend } from '@/lib/gacha-simulator/gacha-budget';
@@ -6,16 +7,23 @@
   import type { GachaPurchaseOffer } from '@/lib/gacha-simulator/gacha-purchases';
   import GachaResultCard from './GachaResultCard.svelte';
   import type { SessionResult } from './gacha-session';
+  import {
+    IDLE_REVEAL,
+    REVEAL_TIMINGS,
+    isOpen,
+    revealTransition,
+    type RevealEvent,
+    type RevealState
+  } from './gacha-reveal';
 
   /**
-   * A pull's beats: how long it sits face-down (long enough to read the rarity band on the back), and
-   * the turn every card makes, staggered by --reveal-index. The card reads the same numbers from these
-   * custom properties, so the light never lands on a card that is still turning.
+   * A pull's beats are the reveal machine's; the cards read the same timings from these custom
+   * properties, so a card's own turn cannot drift from the phase it is in.
    */
-  const HOLD_MS = 800;
-  const TURN_MS = 560;
-  const STAGGER_MS = 45;
-  const LEAD_IN_MS = 100;
+  const TURN_MS = REVEAL_TIMINGS.turn;
+  const STAGGER_MS = REVEAL_TIMINGS.stagger;
+  const LEAD_IN_MS = REVEAL_TIMINGS.leadIn;
+  const HOLD_MS = REVEAL_TIMINGS.hold;
 
   export interface GachaPurchaseOption {
     offer: GachaPurchaseOffer;
@@ -58,22 +66,20 @@
     onclose
   }: Props = $props();
 
-  /** How long the whole deal takes, from the first card's start to the last card landing. */
-  const flipSpan = $derived(LEAD_IN_MS + TURN_MS + STAGGER_MS * Math.max(0, results.length - 1));
-
   /** Which purchase started the pull in flight, so only it shows the wait. */
   let pending = $state<GachaPurchaseOffer['id'] | null>(null);
-  /** The timers of a reveal in flight, so Skip can end it at once. */
-  let timers: number[] = [];
-  /** A pull deals face-down and sits before it opens; this is that flip. */
-  let revealed = $state(true);
-  /** True while the reveal is still playing, so the next pull cannot cut into it. */
-  let settling = $state(false);
-  /** The draw the reveal belongs to, so a new batch cannot mount wearing the last pull's state. */
+  /** Where the reveal is; the cards render the phase they are handed. */
+  let reveal = $state<RevealState>(IDLE_REVEAL);
+  /** The draw the reveal belongs to, so a new batch cannot mount wearing the last pull's phase. */
   let revealFor = $state<number | undefined>(undefined);
+  /** The one timer the machine is waiting on. */
+  let timer: number | undefined;
 
   const current = $derived(results[0]?.drawIndex);
-  const revealedNow = $derived(revealed && revealFor === current);
+  /** A batch only wears the phase that belongs to it. */
+  const phase = $derived(revealFor === current ? reveal.phase : 'dealt');
+  const boardOpen = $derived(isOpen(phase));
+  const settling = $derived(results.length > 0 && phase !== 'lit' && phase !== 'settled');
 
   const affordable = $derived(purchases.some(({ plan }) => plan.shortfall === 0));
 
@@ -81,33 +87,34 @@
     if (!drawing) pending = null;
   });
 
+  /** Steps the machine and clears whatever it was waiting on. */
+  function dispatch(event: RevealEvent) {
+    window.clearTimeout(timer);
+    const { state, after } = revealTransition(reveal, event);
+    reveal = state;
+    timer =
+      after === null ? undefined : window.setTimeout(() => dispatch({ type: 'elapsed' }), after);
+  }
+
   $effect(() => {
     const newest = results[0]?.drawIndex;
+    const count = results.length;
+    const still = quick || window.matchMedia('(prefers-reduced-motion: reduce)').matches;
     if (newest === undefined) return;
 
-    const still = quick || window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-    revealFor = newest;
-    revealed = still;
-    settling = !still;
-    if (still) return;
+    /* The machine reads its own state, so the step runs untracked: a tracked read would make the
+       effect depend on the phase it just wrote. */
+    untrack(() => {
+      revealFor = newest;
+      dispatch(still ? { type: 'skip' } : { type: 'pull', count });
+    });
 
-    /* The light follows each card's own landing, so it is timed in the card rather than here. */
-    const open = window.setTimeout(() => (revealed = true), HOLD_MS);
-    const done = window.setTimeout(() => (settling = false), HOLD_MS + flipSpan + 300);
-    timers = [open, done];
-
-    return () => {
-      for (const timer of timers) window.clearTimeout(timer);
-      timers = [];
-    };
+    return () => window.clearTimeout(timer);
   });
 
   /** Ends the deal and the flourish at once, landing on the finished pull. */
   function skip() {
-    for (const timer of timers) window.clearTimeout(timer);
-    timers = [];
-    revealed = true;
-    settling = false;
+    dispatch({ type: 'skip' });
   }
 </script>
 
@@ -143,7 +150,7 @@
               {kind}
               position={result.drawIndex}
               pull
-              revealed={revealedNow}
+              {phase}
               flourish={!quick}
               instant={quick}
             />

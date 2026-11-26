@@ -8,6 +8,7 @@
     gachaCharacterGate,
     supportRarityIcon
   } from '@/lib/game-assets/art-links';
+  import { isLit, isOpen, type RevealPhase } from './gacha-reveal';
   import type { GachaItemDisplay } from './gacha-display';
 
   export type GachaResultItem = GachaDrawResult & GachaItemDisplay;
@@ -18,8 +19,8 @@
     position: number;
     /** True for a live pull: the card deals face-down and earns its rarity flourish. */
     pull?: boolean;
-    /** False while the pull sits face-down, before its reveal. */
-    revealed?: boolean;
+    /** Where the reveal has got to; a card dealt outside a pull is already settled. */
+    phase?: RevealPhase;
     /** The rarity flourish, which waits until the card has finished turning. */
     flourish?: boolean;
     /** A quick pull: no deal, no turn, straight to the faces. */
@@ -31,12 +32,17 @@
     kind,
     position,
     pull = false,
-    revealed = true,
+    phase = 'settled',
     flourish = true,
     instant = false
   }: Props = $props();
   let useFallback = $state(false);
   let failed = $state(false);
+
+  /** The card has stopped waiting face-down and its gate or turn is under way. */
+  const open = $derived(isOpen(phase));
+  /** The flourish is due: the card has landed and its light may start. */
+  const lit = $derived(isLit(phase));
 
   /** The game's own rarity emblems exist for support cards only; a trainee's rarity is stars. */
   const supportRarity = $derived(
@@ -146,8 +152,8 @@
   class:instant
   class:framed={kind === 'support'}
   class:flipping={pull && kind === 'support'}
-  class:celebrate-mid={pull && flourish && revealed && result.rarity === 2}
-  class:celebrate-top={pull && flourish && revealed && result.rarity === 3}
+  class:celebrate-mid={pull && flourish && lit && result.rarity === 2}
+  class:celebrate-top={pull && flourish && lit && result.rarity === 3}
   style:--card-frame="url({frameArt})"
   style:--gate-left={gateLeft}
   style:--gate-right={gateRight}
@@ -159,11 +165,11 @@
     <!-- A support pull is a real card: two faces a half turn apart, dealt back up. -->
     <div
       class="card-scene"
-      class:open={revealed}
+      class:open
     >
       <div
         class="card-flip"
-        class:open={revealed}
+        class:open
       >
         <div class="card-face">{@render face()}</div>
         <div
@@ -182,12 +188,12 @@
       <!-- A trainee waits behind the starting gate, which parts on the beat and lets the light through. -->
       <span
         class="veil"
-        class:lit={revealed}
+        class:lit={open}
         aria-hidden="true"
       ></span>
       <div
         class="gate"
-        class:open={revealed}
+        class:open
         aria-hidden="true"
       >
         <span class="gate-door left"></span>
