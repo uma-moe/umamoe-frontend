@@ -1,0 +1,67 @@
+.pull-grid {
+  min-height: 100%;
+  display: grid;
+  /* The stage keeps the pull in the middle and still scrolls when the cards outgrow it. */
+  align-content: safe center;
+}
+/* A quick pull deals its cards straight in. */
+.result-grid.no-motion li {
+  animation: none;
+}
+.pull-empty {
+  min-height: 180px;
+  display: grid;
+  place-content: center;
+  justify-items: center;
+  gap: 6px;
+  color: var(--text-muted);
+  text-align: center;
+}
+.pull-empty b {
+  color: var(--text-secondary);
+  font-size: var(--font-md);
+  font-weight: 700;
+}
+.pull-empty span {
+  font-size: var(--font-sm);
+}
+/* The footer is the choice of purchase: one button per currency, full width. */
+.pull-controls {
+  min-width: 0;
+  width: 100%;
+  display: grid;
+  gap: 6px;
+}
+.pull-actions {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+}
+/* While a reveal plays, the purchases give way to the one button that advances it. */
+.pull-actions.single {
+  grid-template-columns: minmax(0, 1fr);
+}
+.pull-actions :global(.ui-button) {
+  white-space: nowrap;
+}
+/* A blocked draw keeps its size and gives up the accent fill, so its reason stays readable. */
+.pull-actions :global(.ui-button--primary:disabled) {
+  border-color: var(--factor-field-border);
+  background: var(--factor-field-bg);
+  color: var(--text-secondary);
+  opacity: 1;
+}
+.pull-blocked {
+  margin: 0;
+  color: var(--text-muted);
+  font-size: var(--font-xs);
+}
+@media (max-width: 560px) {
+  /* Ten cards have to clear a phone's footer, so the stage trades its gaps for the last name. */
+  .pull-grid .result-grid {
+    gap: 4px;
+  }
+  .pull-actions {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}

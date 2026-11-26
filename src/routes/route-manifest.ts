@@ -16,7 +16,8 @@ export const navigationBadges: Readonly<Record<string, 'New' | 'Updated' | 'Beta
   '/tools/skill-explorer': 'Beta',
   '/simulator/hp': 'New',
   '/simulator/skills': 'New',
-  '/tools/master-data': 'New'
+  '/tools/master-data': 'New',
+  '/tools/gacha-simulator': 'New'
 };
 
 export interface AppRouteDefinition {

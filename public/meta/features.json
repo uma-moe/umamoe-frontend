@@ -228,6 +228,21 @@
       "source": "hakuraku"
     },
     {
+      "id": "gacha-simulator",
+      "title": "Gacha Simulator",
+      "description": "Simulate live, preliminary, and future character and support card banners with game pickup rates and 10-draw guarantees.",
+      "path": "/tools/gacha-simulator",
+      "group": "tools",
+      "icon": "dice",
+      "navigation": "secondary",
+      "width": "normal",
+      "status": "available",
+      "dataOwnership": "local",
+      "indexable": true,
+      "adSurface": null,
+      "source": "moe"
+    },
+    {
       "id": "research",
       "title": "Research",
       "description": "Read Hakuraku research notes on Uma Musume racing, skills, simulation, and game mechanics.",

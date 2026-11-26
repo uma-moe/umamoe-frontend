@@ -1,0 +1,250 @@
+.section-heading {
+  min-height: var(--control-height);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+h2,
+h3 {
+  margin: 0;
+}
+h2 {
+  font-size: var(--font-md);
+}
+/* A phone gives the banner art its own row; the details read under it. */
+.banner-details {
+  min-width: 0;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 8px;
+  margin-top: 8px;
+}
+.banner-image {
+  width: 100%;
+  height: auto;
+  display: block;
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-sm);
+  background: var(--surface-2);
+}
+.banner-info {
+  min-width: 0;
+  display: grid;
+  gap: 5px;
+}
+.banner-title {
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.banner-title :global(.badge) {
+  min-height: 20px;
+  flex: none;
+  padding: 2px 6px;
+  font-size: 9px;
+}
+h3 {
+  min-width: 0;
+  overflow: hidden;
+  font-size: var(--font-sm);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.banner-meta {
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  gap: 2px;
+}
+time {
+  color: var(--text-secondary);
+  font-size: var(--font-xs);
+  white-space: nowrap;
+}
+.banner-meta :global(.info-icon) {
+  width: 18px;
+  height: 18px;
+}
+.banner-meta :global(.info-icon svg) {
+  width: 13px;
+  height: 13px;
+}
+.pickup-rows {
+  min-width: 0;
+  display: grid;
+  gap: 2px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.pickup-rows li {
+  min-width: 0;
+  display: grid;
+  grid-template-columns: 22px minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 6px;
+}
+.pickup-rows img {
+  width: 22px;
+  height: 22px;
+  display: block;
+  object-fit: cover;
+  object-position: top center;
+  border-radius: var(--radius-xs);
+  background: var(--surface-2);
+}
+.pickup-rows span {
+  min-width: 0;
+  overflow: hidden;
+  font-size: 11px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.pickup-rows b {
+  color: var(--color-accent);
+  font-size: 11px;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+.pickup-more {
+  justify-self: start;
+  padding-block: 2px;
+  color: var(--color-accent);
+  font-size: 11px;
+  font-weight: 650;
+}
+.popover-rows {
+  max-height: 240px;
+  overflow-y: auto;
+  padding-right: 4px;
+}
+.popover-rows img {
+  width: 24px;
+  height: 24px;
+}
+.popover-rows span {
+  font-size: 12px;
+}
+p {
+  margin: 0;
+  color: var(--text-secondary);
+  font-size: 11px;
+  line-height: 1.6;
+}
+.rates {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 6px;
+  margin: 0;
+}
+.rates div {
+  min-width: 0;
+  display: flex;
+  align-items: baseline;
+  gap: 5px;
+}
+dt {
+  color: var(--text-muted);
+  font-size: var(--font-xs);
+}
+dd {
+  margin: 0;
+  font-weight: 750;
+  font-variant-numeric: tabular-nums;
+}
+.rates dd {
+  font-size: var(--font-sm);
+}
+/* The setup surface: what the pull will spend, then the door into it. */
+.pull-setup {
+  display: grid;
+  gap: 8px;
+  margin-top: 12px;
+}
+.budget-fields {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+}
+.budget-meta {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 8px;
+}
+.start-pull :global(.ui-button) {
+  width: 100%;
+}
+.draw-blocked {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin: 0;
+  color: var(--text-muted);
+}
+.draw-blocked :global(svg) {
+  flex: none;
+}
+@media (max-width: 560px) {
+  .budget-fields {
+    gap: 6px;
+  }
+  .budget-fields :global(.prefix-icon) {
+    display: none;
+  }
+  .budget-fields :global(.field-label) {
+    font-size: 11px;
+  }
+  .budget-fields :global(input[type='number']) {
+    padding: 0 6px;
+    font-size: 12px;
+  }
+  .budget-fields :global(.number-controls) {
+    display: none;
+  }
+}
+@media (min-width: 768px) {
+  .banner-details {
+    grid-template-columns: minmax(220px, 0.8fr) minmax(0, 1.2fr);
+    align-items: center;
+    gap: 12px;
+    margin-top: 10px;
+  }
+  .banner-image {
+    height: auto;
+    max-height: 156px;
+  }
+  .banner-info {
+    gap: 7px;
+  }
+  h3 {
+    font-size: var(--font-md);
+  }
+  .banner-title {
+    gap: 8px;
+  }
+  .banner-title :global(.badge) {
+    min-height: 24px;
+    padding: 2px 9px;
+    font-size: var(--font-xs);
+  }
+  .pickup-rows {
+    max-width: 340px;
+  }
+  .pickup-rows li {
+    grid-template-columns: 26px minmax(0, 1fr) auto;
+    gap: 8px;
+  }
+  .pickup-rows img {
+    width: 26px;
+    height: 26px;
+  }
+  .pickup-rows span,
+  .pickup-rows b,
+  .pickup-more {
+    font-size: 12px;
+  }
+}

@@ -75,6 +75,11 @@
   let activeIndex = $state(0);
   /** Set while autofocusing, so that focus does not open the suggestions. */
   let skipFocusOpen = false;
+  /**
+   * A touch tap focuses to place the caret. Selecting the query there would put the phone's
+   * text menu (Look Up, Copy, …) over the suggestions, so the selection stays for mouse and keyboard.
+   */
+  let touchFocus = false;
 
   $effect(() => {
     if (!autofocus) return;
@@ -306,10 +311,11 @@
       autocomplete="off"
       oninput={handleInput}
       onclick={show}
+      onpointerdown={(event) => (touchFocus = event.pointerType !== 'mouse')}
       onfocus={() => {
         if (skipFocusOpen) return;
         show();
-        if (!action) input.select();
+        if (!action && !touchFocus) input.select();
       }}
       onkeydown={handleKeydown}
     />

@@ -56,6 +56,7 @@ describe('Application route manifest', () => {
       '/simulator/skills',
       '/tools/lineage-planner',
       '/timeline?tab=carat-planner',
+      '/tools/gacha-simulator',
       '/tools/statistics',
       '/tools/master-data'
     ]);
@@ -66,6 +67,7 @@ describe('Application route manifest', () => {
       'New',
       undefined,
       undefined,
+      'New',
       undefined,
       'New'
     ]);

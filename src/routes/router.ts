@@ -48,6 +48,7 @@ const pageModules = {
     import('@/pages/competitive/race-analysis/RaceAnalysisPage.svelte'),
   '/competitive/cm-data': () => import('@/pages/competitive/CmDataPage.svelte'),
   '/tools/master-data': () => import('@/pages/tools/MasterDataPage.svelte'),
+  '/tools/gacha-simulator': () => import('@/pages/tools/GachaSimulatorPage.svelte'),
   '/tools/skill-explorer': () => import('@/pages/tools/SkillExplorerPage.svelte'),
   '/research': () => import('@/pages/research-notes/ResearchPage.svelte'),
   '/research/:noteId': () => import('@/pages/research-notes/ResearchPage.svelte'),

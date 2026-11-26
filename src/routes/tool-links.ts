@@ -48,6 +48,14 @@ export const toolLinks = [
     description: 'Plan pulls and banners'
   },
   {
+    id: 'gacha-simulator',
+    href: '/tools/gacha-simulator',
+    icon: 'dice' as const,
+    accent: 'pink',
+    title: 'Gacha Simulator',
+    description: 'Simulate live and future banner draws'
+  },
+  {
     id: 'statistics',
     href: '/tools/statistics',
     icon: 'chart' as const,
