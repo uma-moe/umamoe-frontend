@@ -78,8 +78,9 @@
   /** The one timer the machine is waiting on. */
   let timer: number | undefined;
   /**
-   * How many colour waves have run: 0 while the gates are plain, 1 after the first, 2 after the
-   * second. A trainee board always takes two, whatever it drew.
+   * How many colour waves have run: 0 while the gates are plain, then one per wave that lands. A
+   * board with a holo always runs two; without one, a second wave only runs if there is a row left
+   * worth colouring.
    */
   let wave = $state(0);
 

@@ -51,7 +51,8 @@ export interface RevealState {
   count: number;
   /** Which board dealt: a trainee's gates are coloured in waves, a support card turns over. */
   kind: GachaKind;
-  /** How many colour waves a trainee's board takes, which is two whether or not it drew a holo. */
+  /** How many colour waves a trainee's board takes: two when there is a holo or a second row to
+   * colour, one when a single wave says everything. */
   waves: number;
   /** How long each wave holds before the next one lands. */
   beat: number;

@@ -25,8 +25,6 @@
     flourish?: boolean;
     /** A quick pull: no deal, no turn, straight to the faces. */
     instant?: boolean;
-    /** False while a trainee's gate still wears the plainest leaf, waiting for the wave to reach it. */
-    upgraded?: boolean;
     /** The rarity the gate is showing right now: the waves colour it before the doors part. */
     gateRarity?: number;
   }
@@ -39,7 +37,6 @@
     phase = 'settled',
     flourish = true,
     instant = false,
-    upgraded = true,
     gateRarity
   }: Props = $props();
   let useFallback = $state(false);
@@ -406,7 +403,7 @@
   .gate-door.right {
     right: 0;
   }
-  /** One leaf of the gate sprite, filling its half of the door. */
+  /* One leaf of the gate sprite, filling its half of the door. */
   .gate-base,
   .gate-leaf {
     position: absolute;
@@ -513,13 +510,9 @@
   .gate.open .gate-door.right {
     transform: translate(100%, 24%);
   }
-  /* A drop shadow follows the alpha an image is drawn with, so the leaf is painted a second time in a
-     layer of its own — the panel's surface left behind — and that copy's shadow traces the door's
-     silhouette instead of the card's rectangle. The copy is the same leaf in the same place, so it
-     only ever shows as light: on the card's dark surround, through the cut-outs, past its edge. The
-     light is the rarity's own, so a gate says which one it became. */
-  /* Only the holo has a glow. A gold one read as a different material rather than the same door, so
-     the rare gate is a colour change and nothing more. */
+  /* Only the holo gets a glow: a drop shadow painted from a second copy of the leaf, which follows
+     the alpha the sprite is drawn with, so the light traces the door's own silhouette — the crest, the
+     lattice — instead of the card's rectangle, and spills past its edge. */
   .gate.glow {
     --gate-light-1: rgb(255 135 195 / 0.5);
     --gate-light-2: rgb(111 216 255 / 0.38);
@@ -602,8 +595,7 @@
   .gate-bloom .veil {
     border-radius: inherit;
   }
-  /* A trainee stands as a silhouette while the gate opens, then the light comes up on the art. The
-     shade follows the doors: it holds through the first half of the swing and is gone as they land. */
+  /* The gate's swing, which the shade below and the glow's fade both keep time with. */
   .result:not(.framed) {
     --gate: 460ms;
   }
