@@ -79,7 +79,7 @@ export class GachaSimulatorRepository {
 
     if (futureEvents.length) {
       try {
-        const jpCatalog = await loadJpGachaCatalog(timeline.catalog.characters);
+        const jpCatalog = await loadJpGachaCatalog(timeline.catalog.characters, globalSupportCards);
         let added = 0;
         for (const event of futureEvents) {
           const kind = bannerKind(event);

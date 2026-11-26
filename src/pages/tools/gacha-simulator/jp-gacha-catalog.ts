@@ -21,7 +21,10 @@ interface JpSupportRecord extends SupportCardData {
   title_en?: string;
 }
 
-export async function loadJpGachaCatalog(names: CharacterNames): Promise<GachaDisplayCatalog> {
+export async function loadJpGachaCatalog(
+  names: CharacterNames,
+  englishCards: readonly SupportCardData[] = []
+): Promise<GachaDisplayCatalog> {
   const [characterRecords, supportRecords] = await Promise.all([
     fetchJsonResource<JpCharacterRecord[]>(
       `${environment.resourceUrl}/jp/current/character.json.gz`
@@ -30,6 +33,7 @@ export async function loadJpGachaCatalog(names: CharacterNames): Promise<GachaDi
       `${environment.resourceUrl}/jp/current/support-cards-db.json.gz`
     )
   ]);
+  const englishById = new Map(englishCards.map((card) => [Number(card.id), card]));
 
   const characters = characterRecords.flatMap((entry): [number, CharacterData][] => {
     const id = Number(entry.id);
@@ -49,7 +53,9 @@ export async function loadJpGachaCatalog(names: CharacterNames): Promise<GachaDi
       ]
     ];
   });
-  const englishSupports = supportRecords.map(englishSupportRecord);
+  const englishSupports = supportRecords.map((card) =>
+    englishSupportRecord(card, englishById.get(Number(card.id)))
+  );
   const supports = normalizeSupportCards(englishSupports);
 
   return {
@@ -59,23 +65,41 @@ export async function loadJpGachaCatalog(names: CharacterNames): Promise<GachaDi
 }
 
 /**
- * A JP record read in English. A card keeps its own name only when that name is its own: a Group
- * card is filed under the group (Darley Arabian's card is Progenitors and Guides), and a few cards
- * spell their character differently. When the name is just the character again, the English name
- * book wins, since the master's text is Japanese.
- */
-export function englishSupportRecord(card: JpSupportRecord): JpSupportRecord {
+ * A JP record read in English. The global card set carries the English names, including a Group
+ * card's group (Symboli Rudolf's card is Heirs to the Throne); the JP record only has them in
+ * Japanese, so it supplies whatever the global set does not have yet.
+ */ export function englishSupportRecord(
+  card: JpSupportRecord,
+  english?: SupportCardData
+): JpSupportRecord {
   const masterName = card.character_name || card.name;
   const ownName = card.card_name?.trim();
-  const characterName = card.name_en?.trim() || masterName;
-  const cardName = ownName && ownName !== masterName ? ownName : characterName;
   const title = card.title_en?.trim().replace(/^\[|\]$/g, '');
+  const englishTitle = english?.cardTitle?.replace(/^\[|\]$/g, '').trim();
+
+  const characterName = english?.name?.trim() || card.name_en?.trim() || masterName;
+  const cardName =
+    english?.cardName?.trim() ||
+    (ownName && ownName !== masterName && isTranslated(ownName) ? ownName : characterName);
 
   return {
     ...card,
     character_name: characterName,
     card_name: cardName,
-    card_title: title ? `[${title}]` : (card.card_title ?? card.cardTitle),
-    card_full_name: title ? `[${title}] ${cardName}` : (card.card_full_name ?? card.cardFullName)
+    card_title: englishTitle
+      ? `[${englishTitle}]`
+      : title
+        ? `[${title}]`
+        : (card.card_title ?? card.cardTitle),
+    card_full_name: englishTitle
+      ? `[${englishTitle}] ${cardName}`
+      : title
+        ? `[${title}] ${cardName}`
+        : (card.card_full_name ?? card.cardFullName)
   };
+}
+
+/** True for a name that is not Japanese: the JP master's own card names are in kana and kanji. */
+function isTranslated(name: string): boolean {
+  return !/[\u3040-\u30ff\u3400-\u9fff]/.test(name);
 }

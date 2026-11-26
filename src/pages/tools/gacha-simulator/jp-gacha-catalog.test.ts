@@ -1,38 +1,48 @@
 import { describe, expect, it } from 'vitest';
+import type { SupportCardData } from '@/lib/game-data/support-cards/support-card-details';
 import { englishSupportRecord } from './jp-gacha-catalog';
 
-const record = (overrides: Record<string, unknown>) =>
-  englishSupportRecord({
-    id: '30137',
-    name: 'Darley Arabian',
-    rarity: 3,
-    type: 'group',
-    release_date: '2023-03-20',
-    character_name: 'Darley Arabian',
-    card_name: 'Progenitors and Guides',
-    card_title: '[Chasing Eternal Glory]',
-    card_full_name: '[Chasing Eternal Glory] Progenitors and Guides',
-    ...overrides
-  });
+const jpRecord = (overrides: Record<string, unknown>) =>
+  englishSupportRecord(
+    {
+      id: '30067',
+      name: 'シンボリルドルフ',
+      rarity: 3,
+      type: 'group',
+      release_date: '2023-02-24',
+      character_name: 'シンボリルドルフ',
+      card_name: '玉座に集いし者たち',
+      card_title: '[尊敬と敬愛]',
+      card_full_name: '[尊敬と敬愛] 玉座に集いし者たち',
+      title_en: '[Esteemed and Adored]',
+      ...overrides
+    },
+    overrides.english as SupportCardData | undefined
+  );
+
+const globalCard: SupportCardData = {
+  id: '30067',
+  name: 'Symboli Rudolf',
+  rarity: 3,
+  type: 'group',
+  release_date: '2023-02-24',
+  cardName: 'Heirs to the Throne',
+  cardTitle: '[Esteemed and Adored]'
+};
 
 describe('JP support card in English', () => {
-  it('keeps a Group card under its group, not its lead character', () => {
-    expect(record({})).toMatchObject({
-      character_name: 'Darley Arabian',
-      card_name: 'Progenitors and Guides',
-      card_title: '[Chasing Eternal Glory]',
-      card_full_name: '[Chasing Eternal Glory] Progenitors and Guides'
+  it('takes a Group card name from the global set, not the Japanese master text', () => {
+    expect(jpRecord({ english: globalCard })).toMatchObject({
+      character_name: 'Symboli Rudolf',
+      card_name: 'Heirs to the Throne',
+      card_title: '[Esteemed and Adored]',
+      card_full_name: '[Esteemed and Adored] Heirs to the Throne'
     });
   });
 
-  it('reads the English character name when the card name is only the character again', () => {
+  it('reads the English character and title for a card the global set does not have', () => {
     expect(
-      record({
-        name_en: 'Nishino Flower',
-        title_en: '[Little Cupcakes, Big Emotion]',
-        character_name: 'ニシノフラワー',
-        card_name: 'ニシノフラワー'
-      })
+      jpRecord({ name_en: 'Nishino Flower', title_en: '[Little Cupcakes, Big Emotion]' })
     ).toMatchObject({
       character_name: 'Nishino Flower',
       card_name: 'Nishino Flower',
@@ -40,9 +50,18 @@ describe('JP support card in English', () => {
     });
   });
 
-  it('falls back to the character name for a card with no name of its own', () => {
-    expect(record({ character_name: 'Kitasan Black', card_name: undefined })).toMatchObject({
-      card_name: 'Kitasan Black'
+  it('falls back to the English character when the card name has no translation', () => {
+    expect(jpRecord({ name_en: 'Symboli Rudolf', title_en: undefined })).toMatchObject({
+      character_name: 'Symboli Rudolf',
+      card_name: 'Symboli Rudolf'
+    });
+  });
+
+  it('keeps the master name when nothing is translated yet', () => {
+    expect(jpRecord({ title_en: undefined })).toMatchObject({
+      character_name: 'シンボリルドルフ',
+      card_name: 'シンボリルドルフ',
+      card_title: '[尊敬と敬愛]'
     });
   });
 });
