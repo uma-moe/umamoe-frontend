@@ -57,7 +57,8 @@ describe('Application route manifest', () => {
       '/tools/lineage-planner',
       '/timeline?tab=carat-planner',
       '/tools/statistics',
-      '/tools/master-data'
+      '/tools/master-data',
+      '/tools/racecourse-viewer'
     ]);
     expect(tools.children?.map((child) => child.badge)).toEqual([
       'New',
@@ -67,7 +68,8 @@ describe('Application route manifest', () => {
       undefined,
       undefined,
       undefined,
-      'New'
+      'New',
+      undefined
     ]);
     expect(tools.expanded).toBe(true);
     expect(tools.children?.filter((child) => child.current).map((child) => child.id)).toEqual([
