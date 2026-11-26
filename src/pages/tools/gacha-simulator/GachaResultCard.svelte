@@ -611,7 +611,9 @@
       card-halo 1150ms var(--easing-standard) calc(var(--land) + 40ms) both,
       card-glow 3600ms ease-in-out calc(var(--land) + 1190ms) infinite alternate;
   }
-  .result.celebrate-top .result-art {
+  /* The flash runs on the art itself: a filter on .result-art would make it a stacking context and
+     drop the corner badges behind the frame band, which is only thick enough to notice on the holo. */
+  .result.celebrate-top .result-image img {
     animation: frame-flash 900ms var(--easing-standard) calc(var(--land) + 40ms) both;
   }
   @keyframes card-sparkle {
