@@ -106,7 +106,7 @@
        effect depend on the phase it just wrote. */
     untrack(() => {
       revealFor = newest;
-      dispatch(still ? { type: 'skip' } : { type: 'pull', count });
+      dispatch(still ? { type: 'skip' } : { type: 'pull', count, kind });
     });
 
     return () => window.clearTimeout(timer);

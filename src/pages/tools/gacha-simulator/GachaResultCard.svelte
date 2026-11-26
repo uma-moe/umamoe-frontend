@@ -221,10 +221,6 @@
     border: 1px solid var(--card-surface-border);
     border-radius: var(--radius-md);
     background: var(--card-surface-bg);
-    /* When this card lands: the deal's lead-in, its own place in the stagger, and its turn. */
-    --land: calc(
-      var(--lead-in, 100ms) + var(--reveal-index, 0) * var(--stagger, 45ms) + var(--turn, 560ms)
-    );
   }
   /* A framed card is the game's own card, so its art sits inside the frame's band instead. The radius
      is the frame art's own outer corner (72px on its 648px width), so the card clips exactly where the
@@ -410,15 +406,10 @@
   .gate.open .gate-door.right {
     transform: translateX(100%) scaleX(var(--gate-flip-right, 1));
   }
-  /* A trainee stands as a silhouette while the gate opens, then the light comes up on the art. Both
-     beats count from the moment the deal lands, so the hold is one of the shared timings, and the
+  /* A trainee stands as a silhouette while the gate opens, then the light comes up on the art. The
      shade follows the doors: it holds through the first half of the swing and is gone as they land. */
   .result:not(.framed) {
     --gate: 460ms;
-    --lit-at: calc(var(--hold, 800ms) + var(--gate));
-    --land: calc(
-      var(--lead-in, 100ms) + var(--reveal-index, 0) * var(--stagger, 45ms) + var(--lit-at)
-    );
   }
   /* The silhouette is a veil over the card rather than a filter on the art, so the doors uncover it as
      they part and it deshades with the second half of their swing. */
@@ -595,7 +586,8 @@
       transparent 66%
     );
     transform: translateX(-115%);
-    animation: card-sheen 1000ms var(--easing-standard) calc(var(--land) + 40ms) both;
+    animation: card-sheen 1000ms var(--easing-standard)
+      calc(var(--reveal-index, 0) * var(--stagger, 45ms) + 40ms) both;
   }
   .result.celebrate-top .card-effects::before,
   .result.celebrate-top .card-effects::after {
@@ -618,7 +610,8 @@
       radial-gradient(circle 1.8px at 79% 27%, rgb(184 155 255 / 0.95), transparent),
       radial-gradient(circle 1.6px at 90% 48%, rgb(255 135 195 / 0.9), transparent),
       radial-gradient(circle 1.5px at 21% 40%, rgb(255 207 107 / 0.85), transparent);
-    animation: card-sparkle 1200ms var(--easing-standard) calc(var(--land) + 20ms) both;
+    animation: card-sparkle 1200ms var(--easing-standard)
+      calc(var(--reveal-index, 0) * var(--stagger, 45ms) + 20ms) both;
   }
   .result.celebrate-top .card-effects::after {
     background-image:
@@ -629,13 +622,16 @@
       radial-gradient(circle 1.6px at 84% 80%, rgb(255 207 107 / 0.9), transparent),
       radial-gradient(circle 1.5px at 45% 89%, rgb(111 216 255 / 0.85), transparent),
       radial-gradient(circle 1.6px at 73% 33%, rgb(255 255 255 / 0.85), transparent);
-    animation: card-sparkle 1500ms var(--easing-standard) calc(var(--land) + 150ms) both;
+    animation: card-sparkle 1500ms var(--easing-standard)
+      calc(var(--reveal-index, 0) * var(--stagger, 45ms) + 150ms) both;
   }
   .result.celebrate-top {
     /* The reveal blooms, then the halo keeps breathing for as long as the pull is on screen. */
     animation:
-      card-bloom 1150ms var(--easing-standard) calc(var(--land) + 40ms) both,
-      card-glow 3600ms ease-in-out calc(var(--land) + 1190ms) infinite alternate;
+      card-bloom 1150ms var(--easing-standard)
+        calc(var(--reveal-index, 0) * var(--stagger, 45ms) + 40ms) both,
+      card-glow 3600ms ease-in-out calc(var(--reveal-index, 0) * var(--stagger, 45ms) + 1190ms)
+        infinite alternate;
   }
   /* A card that turns carries its halo with it, so the light is the face's shadow rather than the
      card's, and the card's own bloom would only be a second halo left standing behind the turn. */
@@ -646,14 +642,17 @@
     animation:
       card-face-shown var(--turn, 560ms) linear both
         calc(var(--reveal-index, 0) * var(--stagger, 45ms) + var(--lead-in, 100ms)),
-      card-halo 1150ms var(--easing-standard) calc(var(--land) + 40ms) both,
-      card-glow 3600ms ease-in-out calc(var(--land) + 1190ms) infinite alternate;
+      card-halo 1150ms var(--easing-standard)
+        calc(var(--reveal-index, 0) * var(--stagger, 45ms) + 40ms) both,
+      card-glow 3600ms ease-in-out calc(var(--reveal-index, 0) * var(--stagger, 45ms) + 1190ms)
+        infinite alternate;
   }
   /* The flash runs on the art itself: a filter on .result-art would make it a stacking context and
      drop the corner badges behind the frame band, which is only thick enough to notice on the holo. */
   /* The holo flash on a support card's art; a trainee's light-up carries its own pop. */
   .result.celebrate-top.framed .result-image img {
-    animation: frame-flash 900ms var(--easing-standard) calc(var(--land) + 40ms) both;
+    animation: frame-flash 900ms var(--easing-standard)
+      calc(var(--reveal-index, 0) * var(--stagger, 45ms) + 40ms) both;
   }
   @keyframes card-sparkle {
     from {
