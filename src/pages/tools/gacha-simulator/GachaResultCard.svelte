@@ -179,7 +179,7 @@
   {:else}
     {@render face()}
     {#if pull}
-      <!-- A trainee waits behind the starting gate, which parts on the beat. -->
+      <!-- A trainee waits behind the starting gate, which parts on the beat and lets the light through. -->
       <div
         class="gate"
         class:open={revealed}
@@ -188,6 +188,11 @@
         <span class="gate-door left"></span>
         <span class="gate-door right"></span>
       </div>
+      <span
+        class="sweep-light"
+        class:open={revealed}
+        aria-hidden="true"
+      ></span>
     {/if}
   {/if}
   <!-- The reveal's light is clipped to the card, so a band that ends up off the card cannot show. -->
@@ -398,6 +403,36 @@
   }
   .gate.open .gate-door.right {
     transform: translateX(100%) scaleX(var(--gate-flip-right, 1));
+  }
+  /* The light the gates let through, crossing the art as they part. It starts and ends invisible, so
+     reduced motion leaves nothing on the card. */
+  .sweep-light {
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    left: 0;
+    z-index: 5;
+    width: 34%;
+    opacity: 0;
+    pointer-events: none;
+    background: linear-gradient(90deg, transparent, rgb(255 255 255 / 0.4), transparent);
+  }
+  .sweep-light.open {
+    animation: sweep-bar 620ms var(--easing-standard)
+      calc(var(--reveal-index, 0) * var(--stagger, 45ms) + var(--lead-in, 100ms)) both;
+  }
+  @keyframes sweep-bar {
+    from {
+      opacity: 0;
+      transform: translateX(-100%);
+    }
+    25% {
+      opacity: 1;
+    }
+    to {
+      opacity: 0;
+      transform: translateX(320%);
+    }
   }
   .result.framed.flipping {
     /* The faces carry the frame, so the card itself only supplies the scene, and the scene is allowed
