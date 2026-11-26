@@ -437,10 +437,9 @@
     place-items: center;
     color: var(--text-muted);
   }
-  .position {
+  .position,
+  .rarity {
     position: absolute;
-    bottom: 4px;
-    left: 4px;
     padding: 2px 5px;
     border-radius: var(--radius-xs);
     background: rgb(0 0 0 / 0.76);
@@ -449,15 +448,14 @@
     font-weight: 800;
     line-height: 1.2;
   }
-
+  .position {
+    bottom: 4px;
+    left: 4px;
+  }
+  /* A trainee keeps its rarity in the corner; a support card wears the game's emblem up top. */
   .rarity {
-    position: absolute;
-    border-radius: var(--radius-xs);
-    background: rgb(0 0 0 / 0.76);
-    color: white;
-    font-size: 10px;
-    font-weight: 800;
-    line-height: 1.2;
+    bottom: 4px;
+    right: 4px;
   }
 
   /* The game's rarity emblem carries its own colour and lettering, so it needs no pill. */
