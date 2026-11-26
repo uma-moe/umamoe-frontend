@@ -293,20 +293,24 @@ jobs:
           cache-from: type=gha,scope=${{ env.CACHE_SCOPE }}
           cache-to: type=gha,mode=max,scope=${{ env.CACHE_SCOPE }}
 
-      - name: Upload shell artifact
-        uses: actions/upload-artifact@v4
+      # The deploy jobs take the bundles from the Actions cache, not from artifacts: artifact storage
+      # counts against the organisation's quota, and a full quota blocked deploys. A cache restores
+      # to the path it was saved from, so the deploy jobs read these export paths. Keys have no
+      # attempt number, so re-running only a deploy job finds the bundles of its run. GitHub evicts
+      # entries unused for 7 days: approve production within that, or re-run the whole workflow.
+      - name: Hand the shell bundle to the deploy jobs
+        if: github.event_name != 'pull_request'
+        uses: actions/cache/save@v4
         with:
-          name: shell-site
-          path: ${{ runner.temp }}/shell-export/var/www/html/umamoe/
-          if-no-files-found: error
+          path: ${{ runner.temp }}/shell-export/var/www/html/umamoe
+          key: shell-site-${{ github.run_id }}
 
-      - name: Upload assets artifact
+      - name: Hand the assets bundle to the deploy jobs
         if: github.event_name != 'pull_request' && steps.assets_plan.outputs.should_build == 'true'
-        uses: actions/upload-artifact@v4
+        uses: actions/cache/save@v4
         with:
-          name: asset-site
-          path: ${{ runner.temp }}/assets-export/assets/
-          if-no-files-found: error
+          path: ${{ runner.temp }}/assets-export/assets
+          key: asset-site-${{ github.run_id }}
 
   build_production:
     name: Build Production Shell
@@ -510,14 +514,12 @@ jobs:
             exit 1
           fi
 
-      - name: Upload production shell artifact
-        uses: actions/upload-artifact@v4
+      # Cached like the beta bundles; the cache keeps dotfiles, so --delete removes nothing new.
+      - name: Hand the production shell bundle to the deploy job
+        uses: actions/cache/save@v4
         with:
-          name: production-shell-site
-          path: ${{ runner.temp }}/production-shell-export/var/www/html/umamoe/
-          if-no-files-found: error
-          # Production used to rsync straight from the export; keep dotfiles so --delete removes nothing new.
-          include-hidden-files: true
+          path: ${{ runner.temp }}/production-shell-export/var/www/html/umamoe
+          key: production-shell-site-${{ github.run_id }}
 
   release:
     name: Check Release Kind
@@ -591,18 +593,20 @@ jobs:
     runs-on: ubuntu-latest
     environment: ${{ needs.release.outputs.data_only == 'true' && 'beta-auto' || 'beta' }}
     steps:
-      - name: Download shell artifact
-        uses: actions/download-artifact@v4
+      - name: Take the shell bundle from the build job
+        uses: actions/cache/restore@v4
         with:
-          name: shell-site
-          path: ${{ runner.temp }}/shell-site
+          path: ${{ runner.temp }}/shell-export/var/www/html/umamoe
+          key: shell-site-${{ github.run_id }}
+          fail-on-cache-miss: true
 
-      - name: Download assets artifact
+      - name: Take the assets bundle from the build job
         if: needs.build.outputs.should_deploy_assets == 'true'
-        uses: actions/download-artifact@v4
+        uses: actions/cache/restore@v4
         with:
-          name: asset-site
-          path: ${{ runner.temp }}/asset-site
+          path: ${{ runner.temp }}/assets-export/assets
+          key: asset-site-${{ github.run_id }}
+          fail-on-cache-miss: true
 
       - name: Mask deployment metadata
         shell: bash
@@ -704,7 +708,7 @@ jobs:
             --exclude 'assets/' \
             --exclude 'statistics/' \
             -e "ssh -o LogLevel=ERROR -p $DEPLOY_PORT" \
-            "${{ runner.temp }}/shell-site/" \
+            "${{ runner.temp }}/shell-export/var/www/html/umamoe/" \
             "$DEPLOY_USER@$DEPLOY_HOST:${{ env.BETA_REMOTE_SHELL_DIR }}/"
 
       - name: Deploy beta assets bundle
@@ -718,7 +722,7 @@ jobs:
           for relative_dir in \
             images \
             timeline-images; do
-            source_dir="${{ runner.temp }}/asset-site/${relative_dir}"
+            source_dir="${{ runner.temp }}/assets-export/assets/${relative_dir}"
             if [[ -d "$source_dir" ]]; then
               ssh -o LogLevel=ERROR -p "$DEPLOY_PORT" "$DEPLOY_USER@$DEPLOY_HOST" \
                 "mkdir -p '${{ env.BETA_REMOTE_ASSETS_DIR }}/${relative_dir}'"
@@ -739,18 +743,20 @@ jobs:
     runs-on: ubuntu-latest
     environment: ${{ needs.release.outputs.data_only == 'true' && 'production-auto' || 'production' }}
     steps:
-      - name: Download production shell artifact
-        uses: actions/download-artifact@v4
+      - name: Take the production shell bundle from the build job
+        uses: actions/cache/restore@v4
         with:
-          name: production-shell-site
           path: ${{ runner.temp }}/production-shell-export/var/www/html/umamoe
+          key: production-shell-site-${{ github.run_id }}
+          fail-on-cache-miss: true
 
-      - name: Download assets artifact
+      - name: Take the assets bundle from the build job
         if: needs.build.outputs.should_deploy_assets == 'true'
-        uses: actions/download-artifact@v4
+        uses: actions/cache/restore@v4
         with:
-          name: asset-site
-          path: ${{ runner.temp }}/asset-site
+          path: ${{ runner.temp }}/assets-export/assets
+          key: asset-site-${{ github.run_id }}
+          fail-on-cache-miss: true
 
       - name: Mask deployment metadata
         shell: bash
@@ -864,7 +870,7 @@ jobs:
           for relative_dir in \
             images \
             timeline-images; do
-            source_dir="${{ runner.temp }}/asset-site/${relative_dir}"
+            source_dir="${{ runner.temp }}/assets-export/assets/${relative_dir}"
             if [[ -d "$source_dir" ]]; then
               ssh -o LogLevel=ERROR -p "$DEPLOY_PORT" "$DEPLOY_USER@$DEPLOY_HOST" \
                 "mkdir -p '${{ env.PROD_REMOTE_ASSETS_DIR }}/${relative_dir}'"
