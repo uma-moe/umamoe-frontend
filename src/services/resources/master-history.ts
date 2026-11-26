@@ -62,6 +62,7 @@ export interface MasterDiff {
 
 const historyPath = '/resources/masterdata';
 const shortHashPattern = /^[0-9a-f]{12}$/;
+const resourceVersionPattern = /^\d+$/;
 
 /** Every published release, oldest first. */
 export function loadMasterReleases(signal?: AbortSignal): Promise<MasterRelease[]> {
@@ -113,11 +114,13 @@ export function loadMasterDiff(shortHash: string, signal?: AbortSignal): Promise
 export function parseMasterReleases(value: unknown): MasterRelease[] {
   if (!Array.isArray(value)) throw new Error('Invalid master release history.');
 
-  return value.map((entry) => {
+  const releases = value.map((entry) => {
     const release = parseRelease(entry);
     if (!release) throw new Error('Invalid master release history.');
     return release;
   });
+
+  return sortMasterReleases(releases);
 }
 
 export function parseMasterDiff(value: unknown): MasterDiff {
@@ -185,7 +188,7 @@ function parseRelease(value: unknown): MasterRelease | undefined {
 export function parsePreliminaryResourceVersions(value: unknown): PreliminaryResourceVersion[] {
   if (!Array.isArray(value)) throw new Error('Invalid preliminary CDN version history.');
 
-  return value.map((entry) => {
+  const versions = value.map((entry) => {
     if (
       !isRecord(entry) ||
       typeof entry.resource_version !== 'string' ||
@@ -212,6 +215,76 @@ export function parsePreliminaryResourceVersions(value: unknown): PreliminaryRes
       parsed.promotedAt = entry.promoted_at;
     return parsed;
   });
+
+  return sortPreliminaryResourceVersions(versions);
+}
+
+function parseResourceVersion(value?: string): number | undefined {
+  if (!value) return undefined;
+  const trimmed = value.trim();
+  if (!resourceVersionPattern.test(trimmed)) return undefined;
+  const parsed = Number(trimmed);
+  return Number.isSafeInteger(parsed) ? parsed : undefined;
+}
+
+/** Keeps legacy unversioned entries in place while ordering versioned releases numerically ascending. */
+function sortMasterReleases(releases: MasterRelease[]): MasterRelease[] {
+  const versionedSlots: number[] = [];
+  const versioned: { index: number; version: number; release: MasterRelease }[] = [];
+
+  releases.forEach((release, index) => {
+    const version = parseResourceVersion(release.resourceVersion);
+    if (version === undefined) return;
+    versionedSlots.push(index);
+    versioned.push({ index, version, release });
+  });
+
+  if (versioned.length <= 1) return releases;
+
+  versioned.sort((left, right) => {
+    if (left.version !== right.version) return left.version - right.version;
+    const leftLive = left.release.isPreliminary ? 0 : 1;
+    const rightLive = right.release.isPreliminary ? 0 : 1;
+    if (leftLive !== rightLive) return leftLive - rightLive;
+    const dateCompare = left.release.date.localeCompare(right.release.date);
+    if (dateCompare !== 0) return dateCompare;
+    return left.index - right.index;
+  });
+
+  const ordered = releases.slice();
+  versioned.forEach((entry, position) => {
+    const slot = versionedSlots[position];
+    if (slot !== undefined) ordered[slot] = entry.release;
+  });
+
+  return ordered;
+}
+
+function sortPreliminaryResourceVersions(
+  versions: PreliminaryResourceVersion[]
+): PreliminaryResourceVersion[] {
+  if (versions.length <= 1) return versions;
+
+  return versions
+    .map((entry, index) => ({
+      entry,
+      index,
+      version: parseResourceVersion(entry.resourceVersion)
+    }))
+    .sort((left, right) => {
+      if (
+        left.version !== undefined &&
+        right.version !== undefined &&
+        left.version !== right.version
+      )
+        return left.version - right.version;
+      if (left.version === undefined && right.version !== undefined) return -1;
+      if (left.version !== undefined && right.version === undefined) return 1;
+      const detectedCompare = left.entry.detectedAt.localeCompare(right.entry.detectedAt);
+      if (detectedCompare !== 0) return detectedCompare;
+      return left.index - right.index;
+    })
+    .map((item) => item.entry);
 }
 
 function parseSummary(value: unknown): MasterDiffSummary | undefined {

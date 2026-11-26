@@ -184,3 +184,97 @@ it('parses preliminary release metadata and observed CDN versions', async () => 
   expect(loaded).toHaveLength(1);
   expect(loaded[0]?.resourceVersion).toBe('10008800');
 });
+
+it('orders versioned releases by numeric resource version while keeping legacy entries in place', () => {
+  const releases = parseMasterReleases([
+    ...publishedReleases,
+    {
+      hash: '27745b9cfcde9dbecd9aacebc897197ac38ed1839575851ba3fecbd722d0a6d9',
+      short_hash: '27745b9cfcde',
+      date: '2026-11-20',
+      previous_hash: NEXT_HASH,
+      summary: { tables_changed: 66, added: 1623, removed: 0, modified: 63 },
+      resource_version: '10008790'
+    },
+    {
+      hash: 'd2ef9d9033fd715dc80e952da47642839356a68dcf2d571a0888cdc84df3205c',
+      short_hash: 'd2ef9d9033fd',
+      date: '2026-11-24',
+      previous_hash: '27745b9cfcde9dbecd9aacebc897197ac38ed1839575851ba3fecbd722d0a6d9',
+      summary: { tables_changed: 128, added: 8872, removed: 0, modified: 340 },
+      resource_version: '10008800',
+      is_preliminary: true
+    },
+    {
+      hash: '6301580557455f070e10c334e869fba8502b90ca705ea6b04b423e4aecfeea15',
+      short_hash: '630158055745',
+      date: '2026-11-26',
+      previous_hash: '27745b9cfcde9dbecd9aacebc897197ac38ed1839575851ba3fecbd722d0a6d9',
+      summary: { tables_changed: 4, added: 3, removed: 0, modified: 17 },
+      resource_version: '10008795'
+    }
+  ]);
+
+  expect(releases.map((entry) => entry.resourceVersion ?? entry.shortHash)).toEqual([
+    'e0013366d059',
+    'a866b847996f',
+    '10008790',
+    '10008795',
+    '10008800'
+  ]);
+});
+
+it('orders a superseded preliminary release before a live release of the same resource version', () => {
+  const releases = parseMasterReleases([
+    {
+      hash: NEXT_HASH,
+      short_hash: 'a866b847996f',
+      date: '2026-12-01',
+      previous_hash: INITIAL_HASH,
+      summary: { tables_changed: 1, added: 1, removed: 0, modified: 0 },
+      resource_version: '10008800'
+    },
+    {
+      hash: INITIAL_HASH,
+      short_hash: 'e0013366d059',
+      date: '2026-11-24',
+      previous_hash: null,
+      summary: null,
+      resource_version: '10008800',
+      is_preliminary: true
+    }
+  ]);
+
+  expect(
+    releases.map((entry) => ({
+      shortHash: entry.shortHash,
+      preliminary: Boolean(entry.isPreliminary)
+    }))
+  ).toEqual([
+    { shortHash: 'e0013366d059', preliminary: true },
+    { shortHash: 'a866b847996f', preliminary: false }
+  ]);
+});
+
+it('orders observed preliminary CDN versions by numeric resource version', () => {
+  const versions = parsePreliminaryResourceVersions([
+    {
+      resource_version: '10008810',
+      live_resource_version: '10008795',
+      master_sha256: NEXT_HASH,
+      master_short_hash: 'a866b847996f',
+      master_changed_from_live: true,
+      detected_at: '2026-11-25T10:00:00Z'
+    },
+    {
+      resource_version: '10008800',
+      live_resource_version: '10008790',
+      master_sha256: INITIAL_HASH,
+      master_short_hash: 'e0013366d059',
+      master_changed_from_live: true,
+      detected_at: '2026-11-24T19:35:00Z'
+    }
+  ]);
+
+  expect(versions.map((entry) => entry.resourceVersion)).toEqual(['10008800', '10008810']);
+});
