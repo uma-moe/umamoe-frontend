@@ -49,19 +49,18 @@ describe('target statlines', () => {
     expect(targetStatlines(data, {})).toBeUndefined();
   });
 
-  it('prefers precomputed hybrid course forecasts including Runaway when present', () => {
+  it('prefers precomputed hybrid course forecasts when present', () => {
     const hybrid: StatlinesData = {
       latestCm: 22,
       method: 'hybrid-cm-physics-v1',
-      errors: { model: [15, 35, 40, 40, 40], previousCm: [46, 240, 74, 45, 81], forecasts: 25 },
+      errors: { model: [14, 37, 26, 44, 24], previousCm: [46, 240, 74, 45, 81], forecasts: 20 },
       past: [],
       forecasts: {
         '10504': {
           1: [1580, 790, 1150, 650, 1100],
           2: [1585, 780, 1155, 620, 1105],
           3: [1550, 770, 1170, 660, 1050],
-          4: [1565, 765, 1175, 630, 1085],
-          5: [1590, 830, 1090, 660, 1080]
+          4: [1565, 765, 1175, 630, 1085]
         }
       }
     };
@@ -72,7 +71,7 @@ describe('target statlines', () => {
     });
 
     expect(target?.kind).toBe('forecast');
-    expect(target?.rows).toHaveLength(5);
-    expect(target?.rows[4]).toEqual({ style: 5, stats: [1590, 830, 1090, 660, 1080] });
+    expect(target?.rows).toHaveLength(4);
+    expect(target?.rows[0]).toEqual({ style: 1, stats: [1580, 790, 1150, 650, 1100] });
   });
 });

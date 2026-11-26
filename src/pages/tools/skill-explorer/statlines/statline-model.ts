@@ -9,11 +9,10 @@ export const STAT_NAMES = ['Speed', 'Stamina', 'Power', 'Guts', 'Wit'] as const;
 
 export type Stats = [number, number, number, number, number];
 
-/** Running styles as the simulator numbers them: front, pace, late, end, runaway. */
-export type RunningStyle = 1 | 2 | 3 | 4 | 5;
+/** Running styles as the simulator numbers them: front, pace, late, end. */
+export type RunningStyle = 1 | 2 | 3 | 4;
 
-export const RUNNING_STYLES: readonly RunningStyle[] = [1, 2, 3, 4, 5];
-export const CORE_RUNNING_STYLES: readonly RunningStyle[] = [1, 2, 3, 4];
+export const RUNNING_STYLES: readonly RunningStyle[] = [1, 2, 3, 4];
 
 /** The first CM of the current stat era, after the cap rose; CM16 sat between the eras. */
 export const CURRENT_ERA_FROM = 17;
@@ -64,8 +63,8 @@ const RIDGE = 1e-3;
  */
 export function featureVector(features: StatlineFeatures, distance: boolean): number[] {
   const vector: number[] = [];
-  for (const style of CORE_RUNNING_STYLES) {
-    const isStyle = (features.style === 5 ? 1 : features.style) === style ? 1 : 0;
+  for (const style of RUNNING_STYLES) {
+    const isStyle = features.style === style ? 1 : 0;
     vector.push(isStyle);
     if (distance) vector.push(isStyle * (features.distance / 1000 - 2));
   }

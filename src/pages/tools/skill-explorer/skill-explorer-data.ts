@@ -8,17 +8,16 @@ export const EXPLORER_FILES_URL = '/api/sim/skill-explorer';
 export const SECTIONS = 24;
 
 /** Running styles as the simulator numbers them, plus every style averaged. */
-export type StyleKey = '1' | '2' | '3' | '4' | '5' | 'all';
+export type StyleKey = '1' | '2' | '3' | '4' | 'all';
 
-export const STYLE_KEYS = ['1', '2', '3', '4', '5'] as const;
+export const STYLE_KEYS = ['1', '2', '3', '4'] as const;
 
 export const STYLE_NAMES: Record<StyleKey, string> = {
   all: 'All styles',
   '1': 'Front',
   '2': 'Pace',
   '3': 'Late',
-  '4': 'End',
-  '5': 'Runaway'
+  '4': 'End'
 };
 
 /** Which courses a data file averages: every course of a surface and length, or one course. A CM is its course. */

@@ -190,33 +190,28 @@ describe('Skill Explorer data', () => {
     expect(scopePath({ kind: 'group', surface: '2', distance: 'all' })).toBe('dirt/all.json.gz');
   });
 
-  it('parses Runaway style 5 and real-meta reference build ensembles', () => {
+  it('parses real-meta reference build ensembles', () => {
     const scope = parseScope({
       ...courseFile,
-      styles: {
-        ...courseFile.styles,
-        '5': [[200011, 6.0, 4.0, 0.8, 0.2, 1, sections(4, 800)]]
-      },
       references: {
         '1': [
           {
             card: 109801,
             stats: [1600, 620, 1210, 630, 1130],
             skills: [100981, 200011],
-            baseline_win: 24.5,
+            baseline_win: 34.5,
             source: 'cm22-2026-11-26'
           }
         ]
       }
     });
 
-    expect(scope.styles['5'][0]?.win).toBe(6.0);
     expect(scope.references?.['1']).toEqual([
       {
         card: 109801,
         stats: [1600, 620, 1210, 630, 1130],
         skills: [100981, 200011],
-        baselineWin: 24.5,
+        baselineWin: 34.5,
         source: 'cm22-2026-11-26'
       }
     ]);

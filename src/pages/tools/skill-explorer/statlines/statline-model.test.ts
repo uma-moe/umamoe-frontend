@@ -74,7 +74,7 @@ describe('statline model', () => {
 
     const errors = leaveOneCmOut(statlines, terms);
 
-    expect(errors.forecasts).toBe(40);
+    expect(errors.forecasts).toBe(32);
     expect(errors.model[1]).toBeLessThan(errors.previousCm[1]);
   });
 });

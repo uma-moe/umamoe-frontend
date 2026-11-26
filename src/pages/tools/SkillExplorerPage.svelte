@@ -279,7 +279,6 @@
         })
       : []
   );
-  const hasRunaway = $derived((scopeData?.styles['5']?.length ?? 0) > 0);
   const points = $derived(scopeData?.styles[style] ?? []);
   const heldRarities = $derived(raritiesOf(points, allSkills));
   // With both versions of uniques valued, one shows at a time: a version alone shows whatever the toggle says.
@@ -664,7 +663,6 @@
         {distanceOptions}
         {courseOptions}
         meetingOptions={meetingSelectOptions}
-        {hasRunaway}
         onmeetingchange={chooseMeeting}
       />
 
