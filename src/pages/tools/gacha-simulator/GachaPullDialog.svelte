@@ -118,7 +118,6 @@
   maxWidth="960px"
   maxHeight="94dvh"
   mobileMaxHeight="97dvh"
-  height="90dvh"
   contentPadding="10px 12px"
   mobileContentPadding="6px"
   mobileFill
@@ -129,6 +128,7 @@
       <ol
         class="result-grid"
         class:single={results.length === 1}
+        class:characters={kind === 'character'}
         class:no-motion={quick}
         style:--turn="{TURN_MS}ms"
         style:--stagger="{STAGGER_MS}ms"

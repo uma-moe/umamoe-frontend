@@ -3,6 +3,20 @@
   display: grid;
   /* The stage keeps the pull in the middle and still scrolls when the cards outgrow it. */
   align-content: safe center;
+  /* What two rows of cards have to fit: the dialog's tallest box, less its header and footer. */
+  --row-height: calc((94dvh - 11.5rem) / 2);
+}
+/* Ten cards fill two rows of five, so the grid narrows until those rows fit the dialog's height
+   instead of pushing a scrollbar onto a desktop screen. */
+@media (min-width: 900px) {
+  .result-grid {
+    max-width: calc(var(--row-height) / 1.4 * 5 + 32px);
+    margin-inline: auto;
+  }
+  /* A trainee's art is four wide to five tall, so its rows are the taller ones. */
+  .result-grid.characters {
+    max-width: calc(var(--row-height) / 1.65 * 5 + 32px);
+  }
 }
 /* A quick pull deals its cards straight in. */
 .result-grid.no-motion li {
