@@ -30,7 +30,7 @@ export interface TargetRow {
 
 export type TargetStatlines =
   | { kind: 'winners'; cm: number; rows: TargetRow[] }
-  | { kind: 'forecast'; rows: TargetRow[]; margin: Stats };
+  | { kind: 'forecast'; rows: TargetRow[]; margin: Stats; fromCm?: number; latestCm?: number };
 
 function stats(value: unknown, label: string): Stats {
   const list = numberList(value, label);
@@ -128,9 +128,13 @@ export function targetStatlines(
 
   const { distance, dirt } = race.course;
   const cm = Math.max(race.cm ?? 0, data.latestCm + 1);
+  const fromCm =
+    data.past.length > 0 ? Math.min(...data.past.map((statline) => statline.cm)) : undefined;
   return {
     kind: 'forecast',
     margin: data.errors.model,
+    fromCm,
+    latestCm: data.latestCm,
     rows: RUNNING_STYLES.map((style) => ({
       style,
       stats: forecastStatline(data.model, { style, distance, dirt, cm })

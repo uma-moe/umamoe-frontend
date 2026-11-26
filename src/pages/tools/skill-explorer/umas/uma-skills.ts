@@ -1,6 +1,8 @@
 import type { CharacterNames } from '@/lib/game-data/characters';
+import { isEvoSkill } from '@/lib/game-data/skills/skills';
 import { fetchJsonResource } from '@/services/resources/json-response';
 import { finiteNumber, isRecord, numberList } from '../json-guards';
+import type { SkillFacts } from '../skill-explorer-data';
 
 /** What a trainee card gives: its unique as inherited, and its starting and potential-level skills. */
 export interface UmaSkills {
@@ -149,10 +151,21 @@ export function explorerUmas({
 /** An inherited unique's number less this is the character's own version of it. */
 const INHERITED_OFFSET = 800_000;
 
-/** Her unique, inherited or with `own` her own version of it, and every skill she starts with or unlocks. */
-export function skillsGivenBy(uma: UmaSkills, own = false): Set<number> {
+/** Her unique (inherited or with `own` her own version), her starting/potential skills, and any evolved skills mapped to her card. */
+export function skillsGivenBy(
+  uma: UmaSkills,
+  own = false,
+  facts?: ReadonlyMap<number, SkillFacts>
+): Set<number> {
   const skillIds = new Set(uma.skills);
   if (uma.unique !== undefined) skillIds.add(own ? uma.unique - INHERITED_OFFSET : uma.unique);
+  if (facts !== undefined) {
+    for (const [skillId, fact] of facts) {
+      if (fact.card === uma.cardId && isEvoSkill({ skill_id: skillId, rarity: 0 })) {
+        skillIds.add(skillId);
+      }
+    }
+  }
   return skillIds;
 }
 

@@ -1,17 +1,20 @@
 <script lang="ts">
   import Button from '@/components/controls/Button.svelte';
   import Dialog from '@/components/overlays/Dialog.svelte';
+  import type { StyleBaseline } from '../skill-explorer-data';
   import SkillChipList, { type RelatedSkill } from '../SkillChipList.svelte';
 
   interface Props {
-    /** The reference build the values are measured in. */
+    /** The headline reference build the values are measured around. */
     skills: RelatedSkill[];
     styleName: string;
+    baseline?: StyleBaseline;
   }
 
-  let { skills, styleName }: Props = $props();
+  let { skills, styleName, baseline }: Props = $props();
 
   const id = $props.id();
+  const STAT_LABELS = ['SPD', 'STA', 'PWR', 'GUT', 'WIT'] as const;
 
   let open = $state(false);
 </script>
@@ -31,11 +34,30 @@
 <Dialog
   bind:open
   title="Reference build"
-  description={`What our optimizer buys a ${styleName} runner here with the latest CM's average SP. Every value on the chart is a skill added to this.`}
+  description={`Headline Champions Meeting ace build for ${styleName} runners here. Explorer values average across an ensemble of real CM ace builds (standardized to a 20% win rate) for a broad overview. Use the Build Optimizer for exact full-build synergies.`}
   maxWidth="640px"
   maxHeight="88dvh"
   mobileMaxHeight="96dvh"
 >
+  {#if baseline && (baseline.stats || baseline.win !== undefined)}
+    <div class="baseline">
+      {#if baseline.stats}
+        {#each STAT_LABELS as label, index (label)}
+          <span>
+            <strong>{label}</strong>
+            {baseline.stats[index]}
+          </span>
+        {/each}
+      {/if}
+      {#if baseline.win !== undefined}
+        <span>
+          <strong>Ensemble WR</strong>
+          {baseline.win.toFixed(1)}%
+        </span>
+      {/if}
+    </div>
+  {/if}
+
   <section
     class="skills"
     aria-labelledby="{id}-skills"
@@ -74,6 +96,27 @@
     line-height: 18px;
     font-variant-numeric: tabular-nums;
     text-align: center;
+  }
+
+  .baseline {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.35rem 0.75rem;
+    margin-bottom: 10px;
+    padding: 6px 10px;
+    border: 1px solid var(--border-primary);
+    border-radius: 6px;
+    background: var(--bg-secondary);
+    color: var(--text-secondary);
+    font-size: 0.76rem;
+    font-variant-numeric: tabular-nums;
+  }
+
+  .baseline strong {
+    color: var(--text-muted);
+    font-size: 0.68rem;
+    font-weight: 600;
+    margin-right: 0.2rem;
   }
 
   .skills {

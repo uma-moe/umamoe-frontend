@@ -21,6 +21,11 @@ const DARK: Record<SkillRarity, SkillChipColors> = {
     background: 'rgba(255, 170, 32, 0.13)',
     text: '#ffe08a'
   },
+  evolved: {
+    border: 'rgba(244, 114, 182, 0.58)',
+    background: ['rgba(236, 72, 153, 0.24)', 'rgba(244, 114, 182, 0.14)'],
+    text: '#fbcfe8'
+  },
   special: {
     border: 'rgba(33, 150, 243, 0.4)',
     background: 'rgba(33, 150, 243, 0.13)',
@@ -44,6 +49,11 @@ const LIGHT: Record<SkillRarity, SkillChipColors> = {
     border: 'rgba(180, 83, 9, 0.36)',
     background: 'rgba(245, 158, 11, 0.13)',
     text: '#92400e'
+  },
+  evolved: {
+    border: 'rgba(219, 39, 119, 0.44)',
+    background: ['rgba(236, 72, 153, 0.14)', 'rgba(244, 114, 182, 0.08)'],
+    text: '#9d174d'
   },
   special: {
     border: 'rgba(37, 99, 235, 0.34)',

@@ -40,7 +40,12 @@ describe('target statlines', () => {
   it('forecasts a coming CM with the typical held-out miss', () => {
     const target = targetStatlines(data, { cm: 21, course: { distance: 1600, dirt: false } });
 
-    expect(target).toMatchObject({ kind: 'forecast', margin: [27, 63, 50, 100, 81] });
+    expect(target).toMatchObject({
+      kind: 'forecast',
+      margin: [27, 63, 50, 100, 81],
+      fromCm: 19,
+      latestCm: 19
+    });
     expect(target?.rows).toHaveLength(4);
     expect(target?.rows[0]?.stats).toEqual(flat);
   });

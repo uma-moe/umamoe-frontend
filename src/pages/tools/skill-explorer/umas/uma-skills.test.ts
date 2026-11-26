@@ -117,10 +117,15 @@ describe('uma picker', () => {
     expect(helios).toMatchObject({ name: 'Daitaku Helios', outfit: 'Joyful Jamboree!' });
   });
 
-  it('gives her unique and her skills', () => {
-    const given = skillsGivenBy(cards[0]!);
+  it('gives her unique, her skills, and any character-evolved skills mapped to her card', () => {
+    const facts = new Map([
+      [100101111, { kind: 'recovery' as const, card: 100101 }],
+      [100102111, { kind: 'speed' as const, card: 100102 }],
+      [100011, { kind: 'speed' as const, card: 100101 }]
+    ]);
+    const given = skillsGivenBy(cards[0]!, false, facts);
 
-    expect([...given].sort()).toEqual([200512, 201352, 900011]);
+    expect([...given].sort((a, b) => a - b)).toEqual([200512, 201352, 900011, 100101111]);
   });
 
   it('counts what of hers has no value yet', () => {

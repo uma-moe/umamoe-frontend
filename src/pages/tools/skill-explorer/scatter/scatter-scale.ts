@@ -40,15 +40,15 @@ const VALUE_FLOOR = 1;
 const TOP_ROOM = 0.03;
 const BOTTOM_ROOM = 0.08;
 
-/** The value axis spanning `values`, from the floor or a little below the lowest, whichever is lower. */
-export function valueAxis(values: number[]): ValueAxis {
+/** The value axis spanning `values`, from `floor` or a little below the lowest, whichever is lower. */
+export function valueAxis(values: number[], floor = VALUE_FLOOR): ValueAxis {
   if (values.length === 0) return { low: -MIN_ROOT_SPAN, high: MIN_ROOT_SPAN, ticks: [0] };
 
   const lowestRoot = signedRoot(Math.min(...values));
   const highestRoot = signedRoot(Math.max(...values));
   const centre = (lowestRoot + highestRoot) / 2;
   const span = Math.max(highestRoot - lowestRoot, MIN_ROOT_SPAN);
-  const low = Math.min(signedRoot(VALUE_FLOOR), centre - span / 2 - span * BOTTOM_ROOM);
+  const low = Math.min(signedRoot(floor), centre - span / 2 - span * BOTTOM_ROOM);
   const high = centre + span / 2 + span * TOP_ROOM;
   return { low, high, ticks: valueTicks(low, high) };
 }

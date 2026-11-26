@@ -3,9 +3,11 @@ import { dayAllows } from './cm/race-day';
 import {
   averageStyles,
   explorerFileUrl,
+  headlinePoint,
   parseScope,
   scopePath,
   SECTIONS,
+  wrWeightedMean,
   type SkillPoint
 } from './skill-explorer-data';
 
@@ -175,6 +177,75 @@ describe('Skill Explorer data', () => {
     const [averaged] = averageStyles([[impossible], [impossible], [impossible], [impossible]]);
 
     expect(averaged).toEqual(impossible);
+  });
+
+  it('reads single-course sectionWins, baselines, raced IDs, and averages sectionWins across styles', () => {
+    const frontWins = new Array<number>(SECTIONS).fill(0);
+    frontWins[6] = 10; // +1.0 pp/fire
+    frontWins[16] = 140; // +14.0 pp/fire
+    const paceWins = new Array<number>(SECTIONS).fill(0);
+    paceWins[6] = 30; // +3.0 pp/fire
+    paceWins[16] = 60; // +6.0 pp/fire
+
+    const frontSecs = new Array<number>(SECTIONS).fill(0);
+    frontSecs[6] = 400;
+    frontSecs[16] = 200;
+    const paceSecs = new Array<number>(SECTIONS).fill(0);
+    paceSecs[6] = 400;
+    paceSecs[16] = 200;
+
+    const scope = parseScope({
+      courses: 1,
+      styles: {
+        '1': [[200341, 4.0, 2.0, 0.6, 0.4, 1, frontSecs]],
+        '2': [[200341, 3.0, 1.5, 0.6, 0.4, 1, paceSecs]],
+        '3': [],
+        '4': []
+      },
+      baselines: { '1': { stats: [1500, 750, 1200, 900, 1100], win: 28.5 } },
+      raced: { '1': [200341] },
+      ci95: { '1': { '200341': 1.2 }, '2': { '200341': 1.6 } },
+      sectionWins: {
+        '1': { '200341': frontWins },
+        '2': { '200341': paceWins }
+      }
+    });
+
+    const front = scope.styles['1'][0]!;
+    expect(front.raced).toBe(true);
+    expect(front.ci95).toBeCloseTo(1.2);
+    expect(scope.styles.all[0]!.ci95).toBeCloseTo(1.4);
+    expect(front.sectionWins?.[16]).toBeCloseTo(14.0);
+    expect(scope.baselines?.['1']).toEqual({ stats: [1500, 750, 1200, 900, 1100], win: 28.5 });
+    expect(scope.styles.all[0]!.sectionWins?.[6]).toBeCloseTo(2.0);
+    expect(scope.styles.all[0]!.sectionWins?.[16]).toBeCloseTo(10.0);
+    expect(wrWeightedMean(front.sections, front.sectionWins)).toBeGreaterThan(0.6);
+  });
+
+  it('leaves headlinePoint undefined when a gated skill runs naturally unforced with zero feeders', () => {
+    const natural = headlinePoint({
+      forced: { win: 4.5, expected: 4.1, rate: 0.9, mean: 0.5 },
+      setup: { feeders: [], sp: 0, at: 0.381 },
+      points: [
+        { at: 0.167, win: 2.0, expected: 1.8, rate: 0.9, mean: 0.17, raced: false },
+        { at: 0.542, win: 4.5, expected: 4.1, rate: 0.9, mean: 0.54, raced: false }
+      ]
+    });
+
+    expect(natural).toBeUndefined();
+  });
+
+  it('picks setup.at in headlinePoint even when both setup and optimal points are raced', () => {
+    const picked = headlinePoint({
+      forced: { win: 6.2, expected: 5.7, rate: 0.92, mean: 0.67 },
+      setup: { feeders: [200501], sp: 300, at: 0.75 },
+      points: [
+        { at: 0.667, win: 6.2, expected: 5.7, rate: 0.92, mean: 0.67, raced: true },
+        { at: 0.75, win: 3.1, expected: 2.85, rate: 0.92, mean: 0.75, raced: true }
+      ]
+    });
+
+    expect(picked?.at).toBe(0.75);
   });
 
   it('finds a course under its own surface and length, as the simulator serves it', () => {

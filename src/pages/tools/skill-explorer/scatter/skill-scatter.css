@@ -10,10 +10,86 @@
   grid-row: 1;
   grid-column: 1 / -1;
   flex-wrap: wrap;
-  gap: 0.25rem 1rem;
+  gap: 0.3rem 0.75rem;
   align-items: center;
   justify-content: space-between;
-  padding-bottom: 0.4rem;
+  padding-bottom: 0.35rem;
+}
+
+.toolbar-right {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.45rem;
+  margin-left: auto;
+}
+
+.toolbar-chips {
+  display: inline-flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+}
+
+.toolbar-sep {
+  width: 1px;
+  height: 16px;
+  background: var(--border-primary);
+  flex: none;
+}
+
+.plot-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.32rem;
+  height: 24px;
+  padding: 0 7px 0 9px;
+  border-radius: var(--radius-pill);
+  font-family: inherit;
+  font-size: 0.72rem;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  line-height: 1;
+  white-space: nowrap;
+  cursor: pointer;
+  transition:
+    background-color var(--duration-fast),
+    border-color var(--duration-fast);
+}
+
+.plot-chip.compare {
+  border: 1px solid rgb(var(--accent-pink-rgb) / 0.36);
+  background: rgb(var(--accent-pink-rgb) / 0.12);
+  color: var(--accent-pink);
+}
+
+.plot-chip.compare:hover {
+  border-color: rgb(var(--accent-pink-rgb) / 0.6);
+  background: rgb(var(--accent-pink-rgb) / 0.2);
+}
+
+.plot-chip.evo {
+  border: 1px solid rgb(var(--accent-purple-rgb) / 0.38);
+  background: rgb(var(--accent-purple-rgb) / 0.12);
+  color: var(--accent-purple);
+}
+
+.plot-chip.evo:hover {
+  border-color: rgb(var(--accent-purple-rgb) / 0.62);
+  background: rgb(var(--accent-purple-rgb) / 0.2);
+}
+
+.plot-chip:focus-visible {
+  outline: 2px solid var(--accent-primary);
+  outline-offset: 1px;
+}
+
+.chip-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: currentColor;
+  flex: none;
 }
 
 .hint {
@@ -241,6 +317,113 @@
   pointer-events: none;
 }
 
+/* 2D proc distribution overlay (vertical Gaussian WR violin + horizontal track proc-density ribbon).
+   Sits above all ordinary skills and labels (`z-index: 6/7`) while keeping compared (`8`), active (`9`), and hovered (`10`) icons on top. */
+.ci-overlay {
+  --overlay-color: var(--accent-primary);
+  position: absolute;
+  inset: 0;
+  z-index: 6;
+  pointer-events: none;
+  animation: ci-arrive 190ms cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+.ci-overlay.compared {
+  --overlay-color: var(--accent-pink);
+  z-index: 6;
+}
+
+.ci-overlay.focused {
+  --overlay-color: var(--accent-primary);
+  z-index: 7;
+}
+
+.ci-overlay.compared.focused {
+  --overlay-color: var(--accent-pink);
+}
+
+@keyframes ci-arrive {
+  from {
+    opacity: 0;
+    transform: scale(0.92);
+  }
+}
+
+.ci-svg {
+  display: block;
+  width: 100%;
+  height: 100%;
+  overflow: visible;
+  filter: drop-shadow(0 0 3px rgb(0 0 0 / 0.85));
+}
+
+:global([data-theme='light']) .ci-svg {
+  filter: drop-shadow(0 0 2.5px rgb(255 255 255 / 0.9));
+}
+
+/* Vertical WR Gaussian density violin: soft 95% tails tapering cleanly from a clearly shaded 50% IQR core. */
+.violin-full {
+  fill: color-mix(in srgb, var(--overlay-color) 16%, transparent);
+  stroke: color-mix(in srgb, var(--overlay-color) 55%, transparent);
+  stroke-width: 1.25;
+}
+
+.violin-iqr {
+  fill: color-mix(in srgb, var(--overlay-color) 36%, transparent);
+  stroke: color-mix(in srgb, var(--overlay-color) 90%, transparent);
+  stroke-width: 1.5;
+}
+
+.ci-overlay.model .violin-full,
+.ci-overlay.model .violin-iqr,
+.ci-overlay.model .violin-stem {
+  stroke-dasharray: 3 2;
+}
+
+.violin-stem {
+  stroke: color-mix(in srgb, var(--overlay-color) 60%, transparent);
+  stroke-width: 1.25;
+}
+
+.violin-iqr-tick {
+  stroke: color-mix(in srgb, var(--overlay-color) 92%, transparent);
+  stroke-width: 1.5;
+}
+
+.violin-cap {
+  stroke: color-mix(in srgb, var(--overlay-color) 75%, transparent);
+  stroke-width: 1.75;
+  stroke-linecap: round;
+}
+
+.ci-bound {
+  position: absolute;
+  padding: 0 4px;
+  border: 1px solid color-mix(in srgb, var(--overlay-color) 45%, transparent);
+  border-radius: 3px;
+  background: color-mix(in srgb, var(--bg-secondary) 92%, transparent);
+  color: color-mix(in srgb, var(--overlay-color) 90%, var(--text-primary));
+  font-size: 9.5px;
+  font-weight: 600;
+  line-height: 14px;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.ci-bound.high {
+  transform: translate(-50%, calc(-100% - 4px));
+}
+
+.ci-bound.low {
+  transform: translate(-50%, 4px);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .ci-overlay {
+    animation: none;
+  }
+}
+
 .name {
   display: inline-flex;
   align-items: center;
@@ -262,6 +445,7 @@
 }
 
 .name.active {
+  z-index: 8;
   color: var(--accent-primary);
 }
 
@@ -289,10 +473,10 @@
   cursor: grabbing;
 }
 
-/* A skill grows a little under the pointer. */
+/* A skill grows a little under the pointer, always staying on top of its distribution overlay. */
 @media (hover: hover) {
   .viewport:not(.dragging) .skill-dot:hover {
-    z-index: 7;
+    z-index: 10;
     transform: translate(-50%, -50%) scale(1.2);
   }
 }
@@ -308,8 +492,22 @@
   border-color: #e8c25a;
 }
 
+/* An evolved skill: the game's pink evolved frame, set apart from gold, cyan inherited uniques, and rainbow own uniques. */
+.skill-dot.tier-evolved:not(.forced, .optimal) {
+  padding: 1px;
+  border-width: 2px;
+  border-color: transparent;
+  background:
+    linear-gradient(var(--bg-tertiary), var(--bg-tertiary)) padding-box,
+    linear-gradient(135deg, #ff7eb6, #f472b6 50%, #ec4899) border-box;
+}
+
 .skill-dot.tier-inherited {
-  border-color: var(--accent-pink);
+  border-color: #22d3ee;
+}
+
+:global([data-theme='light']) .skill-dot.tier-inherited {
+  border-color: #0891b2;
 }
 
 /* An own unique: the game's rainbow edge, as on skill chips, a pixel wider at the padding's cost so it reads at icon
@@ -324,7 +522,7 @@
 }
 
 .skill-dot.active {
-  z-index: 6;
+  z-index: 9;
 }
 
 .skill-dot:focus-visible {
@@ -333,7 +531,7 @@
 }
 
 .skill-dot.pinned {
-  z-index: 6;
+  z-index: 9;
   border: 2px solid var(--accent-primary);
   box-shadow: 0 2px 4px rgb(0 0 0 / 0.45);
   opacity: 1;
@@ -386,28 +584,28 @@
   color: var(--accent-purple);
 }
 .name.compared {
-  z-index: 4;
+  z-index: 8;
   color: var(--accent-pink);
   opacity: 1;
 }
 .skill-dot.compared {
-  z-index: 5;
+  z-index: 8;
   border: 2px solid var(--accent-pink);
   opacity: 1;
 }
 .name.search-match {
-  z-index: 8;
+  z-index: 11;
   color: var(--accent-primary);
   opacity: 1;
   background: var(--component-bg);
 }
 .skill-dot.search-match {
-  z-index: 9;
+  z-index: 12;
   border: 1px solid var(--accent-primary);
   opacity: 1;
 }
 .skill-dot.search-match.active {
-  z-index: 10;
+  z-index: 13;
 }
 .name.search-match .compare-tag {
   color: var(--accent-pink);
@@ -431,22 +629,10 @@
 .compare-mark {
   color: var(--accent-pink);
 }
-.comparison-controls {
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-  margin-left: auto;
-}
-.comparison-controls > span {
-  color: var(--accent-pink);
-  font-size: 0.75rem;
-  font-variant-numeric: tabular-nums;
-}
-
+/* Foreground layer shares `.viewport`'s stacking context so compared/hovered overlays sit strictly above unselected skills. */
 .skill-layer {
   position: absolute;
   inset: 0;
-  z-index: 1;
   pointer-events: none;
 }
 /* Composite the background once so overlapping nonmatches cannot accumulate opacity. */

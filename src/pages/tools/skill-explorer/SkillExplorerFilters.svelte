@@ -9,7 +9,8 @@
   import TextField from '@/components/controls/TextField.svelte';
   import { SKILL_KINDS, STYLE_NAMES, type SkillKind, type StyleKey } from './skill-explorer-data';
   import {
-    SKILL_RARITIES,
+    DEFAULT_SKILL_RARITIES,
+    toggleType,
     type ShowLimit,
     type SkillRarity,
     type UniqueVersion,
@@ -27,6 +28,8 @@
     courseId: string;
     meetingNumber: string;
     xMode: XMode;
+    /** True when the current scope carries per-section win rates, enabling the WR proc-point axis. */
+    hasSectionWins: boolean;
     yMode: YMode;
     rarities: ReadonlySet<SkillRarity>;
     /** The rarities the shown skills have; only these get a filter. */
@@ -34,6 +37,8 @@
     uniqueVersion: UniqueVersion;
     /** The shown skills hold both versions of uniques, so the version gets a toggle. */
     bothUniqueVersions: boolean;
+    /** The shown skills include evolved skills, giving them a quick visibility toggle. */
+    hasEvolved: boolean;
     kinds: ReadonlySet<SkillKind>;
     search: string;
     umaCardId: number | undefined;
@@ -58,11 +63,13 @@
     courseId = $bindable(),
     meetingNumber = $bindable(),
     xMode = $bindable(),
+    hasSectionWins,
     yMode = $bindable(),
     rarities = $bindable(),
     rarityOptions,
     uniqueVersion = $bindable(),
     bothUniqueVersions,
+    hasEvolved,
     kinds = $bindable(),
     search = $bindable(),
     umaCardId = $bindable(),
@@ -80,11 +87,49 @@
   }: Props = $props();
 
   let raceAnchor = $state<HTMLDivElement>();
+  let displayOpen = $state(false);
   let filtersOpen = $state(false);
+
+  const xAxisOptions = $derived<SelectOption[]>(
+    hasSectionWins
+      ? [
+          { value: 'position', label: 'Activation point' },
+          { value: 'wrPosition', label: 'Avg WR proc' },
+          { value: 'cost', label: 'SP efficiency' }
+        ]
+      : [
+          { value: 'position', label: 'Activation point' },
+          { value: 'cost', label: 'SP efficiency' }
+        ]
+  );
   const styleOptions = (['all', '1', '2', '3', '4'] as const).map((value) => ({
     value,
-    label: STYLE_NAMES[value]
+    label: value === 'all' ? 'All' : STYLE_NAMES[value],
+    title: value === 'all' ? STYLE_NAMES.all : undefined
   }));
+  const yModeOptions: { value: YMode; label: string }[] = [
+    { value: 'value', label: 'In build' },
+    { value: 'forced', label: 'Optimal' },
+    { value: 'alone', label: 'Alone' }
+  ];
+  const Y_MODE_LABELS: Record<YMode, string> = {
+    value: 'In build',
+    forced: 'Optimal',
+    alone: 'Alone'
+  };
+  const Y_MODE_NOTES: Record<YMode, string> = {
+    value: "Added win rate across the style's representative CM ace builds.",
+    forced: 'Same as In build, with gated skills forced at their best tested timing.',
+    alone: 'Win rate added to a runner carrying no other skills.'
+  };
+  const scaleOptions = [
+    { value: 'normalized', label: 'Normalized' },
+    { value: 'per-proc', label: 'Per proc' }
+  ];
+  const SCALE_NOTES = {
+    normalized: 'Weighted by activation rate (value × proc rate) to compare expected impact.',
+    perProc: 'Win rate gained only in races where the skill actually activates.'
+  } as const;
   const showOptions: { value: ShowLimit; label: string }[] = [
     { value: '25', label: 'Top 25' },
     { value: '50', label: 'Top 50' },
@@ -94,12 +139,13 @@
   const RARITY_NAMES: Record<SkillRarity, string> = {
     white: 'White',
     gold: 'Gold',
+    evolved: 'Evolved',
     inherited: 'Inherited unique',
     personal: 'Own unique'
   };
-  const uniqueVersionOptions: { value: UniqueVersion; label: string }[] = [
-    { value: 'inherited', label: 'Inherited uniques' },
-    { value: 'own', label: 'Own uniques' }
+  const uniqueVersionOptions: { value: UniqueVersion; label: string; title: string }[] = [
+    { value: 'inherited', label: 'Inherited', title: 'Inherited uniques' },
+    { value: 'own', label: 'Own', title: 'Own uniques' }
   ];
   const KIND_NAMES: Record<SkillKind, string> = {
     speed: 'Speed',
@@ -135,8 +181,13 @@
   const raceNotes = $derived(
     new Map(meetingOptions.map((option) => ['cm:' + option.value, option.description]))
   );
+  const displayChanged = $derived(yMode !== 'value' || !procScaled || show !== '100');
+  const raritiesChanged = $derived(
+    rarities.size !== DEFAULT_SKILL_RARITIES.length ||
+      DEFAULT_SKILL_RARITIES.some((rarity) => !rarities.has(rarity))
+  );
   const changedFilters = $derived(
-    Number(rarities.size !== SKILL_RARITIES.length) +
+    Number(raritiesChanged) +
       Number(kinds.size !== SKILL_KINDS.length) +
       Number(surface !== 'all') +
       Number(distance !== 'all') +
@@ -162,10 +213,16 @@
     meetingNumber = '';
   }
 
+  function resetDisplay() {
+    yMode = 'value';
+    procScaled = true;
+    show = '100';
+  }
+
   function resetFilters() {
     surface = 'all';
     distance = 'all';
-    rarities = new Set(SKILL_RARITIES);
+    rarities = new Set(DEFAULT_SKILL_RARITIES);
     kinds = new Set(SKILL_KINDS);
     bestOfFamily = false;
     showDayBound = true;
@@ -214,159 +271,246 @@
   </div>
 
   <div class="view-controls">
-    <div class="style-control">
-      <SegmentedControl
-        label="Running style"
-        options={styleOptions}
-        bind:value={style}
-      />
-    </div>
-    <div class="plot-controls">
-      <SegmentedControl
-        label="Horizontal axis"
-        compact
-        options={[
-          { value: 'position', label: 'Activation point' },
-          { value: 'cost', label: 'SP cost' }
-        ]}
-        bind:value={xMode}
-      />
-      <SegmentedControl
-        label="Skill value"
-        compact
-        options={[
-          { value: 'value', label: 'In build' },
-          { value: 'forced', label: 'Optimal' },
-          { value: 'alone', label: 'Alone' }
-        ]}
-        bind:value={yMode}
-      />
-      {#if bothUniqueVersions}
+    <div class="bar-primary">
+      <div class="style-control">
         <SegmentedControl
-          label="Unique version"
+          label="Running style"
           compact
-          options={uniqueVersionOptions}
-          bind:value={uniqueVersion}
+          options={styleOptions}
+          bind:value={style}
         />
+      </div>
+
+      <span
+        class="bar-divider"
+        aria-hidden="true"
+      ></span>
+
+      <div
+        class="axis-select"
+        title="Horizontal axis"
+      >
+        <SelectField
+          id="skill-explorer-axis"
+          label="Horizontal axis"
+          hideLabel
+          prefixIcon="chart"
+          options={xAxisOptions}
+          bind:value={xMode}
+        />
+      </div>
+
+      {#if bothUniqueVersions}
+        <div class="inline-control unique-control">
+          <span class="inline-label">Uniques</span>
+          <SegmentedControl
+            label="Unique version"
+            compact
+            options={uniqueVersionOptions}
+            bind:value={uniqueVersion}
+          />
+        </div>
       {/if}
     </div>
-    <div class="limit-segments">
-      <SegmentedControl
-        label="Skills shown"
-        compact
-        options={showOptions}
-        bind:value={show}
-      />
-    </div>
-    <div class="limit-select">
-      <SelectField
-        id="skill-explorer-limit"
-        label="Skills shown"
-        hideLabel
-        options={showOptions}
-        bind:value={show}
-      />
-    </div>
-    <Checkbox
-      variant="field"
-      id="skill-explorer-proc-scaled"
-      label="Over all races"
-      bind:checked={procScaled}
-    />
-    <div
-      class="filter-menu"
-      class:active={filtersOpen || changedFilters > 0}
-    >
-      <InspectPopover
-        label="Skill filters"
-        align="end"
-        onopenchange={(open) => (filtersOpen = open)}
+
+    <div class="bar-actions">
+      {#if hasEvolved}
+        <button
+          type="button"
+          class="evo-toggle"
+          class:active={rarities.has('evolved')}
+          aria-pressed={rarities.has('evolved')}
+          title="Show all evolved skills on the chart"
+          onclick={() => (rarities = toggleType(rarities, 'evolved'))}
+        >
+          <Icon
+            name="star"
+            size={13}
+          />
+          <span>Evolved</span>
+        </button>
+      {/if}
+
+      <div
+        class="menu-popover display-menu"
+        class:active={displayOpen || displayChanged}
       >
-        {#snippet trigger()}
-          <span class="filter-trigger">
-            <Icon
-              name="filter"
-              size={16}
-            />
-            Filters
-            {#if changedFilters > 0}
-              <span class="filter-count">{changedFilters}</span>
-            {/if}
-            <Icon
-              name="chevron"
-              size={14}
-            />
-          </span>
-        {/snippet}
-        {#snippet children()}
-          <div class="filter-panel">
-            <header><h3>Skill filters</h3></header>
-            <div class="filter-group">
-              <span class="group-label">Track</span>
-              <SegmentedControl
-                label="Track"
-                compact
-                options={surfaceOptions}
-                bind:value={surface}
-                onchange={keepCourseInScope}
+        <InspectPopover
+          label="Chart display"
+          align="end"
+          onopenchange={(open) => (displayOpen = open)}
+        >
+          {#snippet trigger()}
+            <span class="menu-trigger">
+              <Icon
+                name="tune"
+                size={15}
               />
+              <span class="display-summary">
+                <span>{Y_MODE_LABELS[yMode]}</span>
+                <span
+                  class="summary-tail"
+                  class:summary-default={procScaled}
+                >
+                  <span class:summary-muted={procScaled}>
+                    {procScaled ? 'Normalized' : 'Per proc'}
+                  </span>
+                </span>
+              </span>
+              {#if show !== '100'}
+                <span class="menu-badge">{show === 'all' ? 'All' : show}</span>
+              {/if}
+              <Icon
+                name="chevron"
+                size={14}
+              />
+            </span>
+          {/snippet}
+          {#snippet children()}
+            <div class="filter-panel display-panel">
+              <header><h3>Chart display</h3></header>
+              <div class="filter-group">
+                <span class="group-label">Skill value</span>
+                <SegmentedControl
+                  label="Skill value"
+                  compact
+                  options={yModeOptions}
+                  bind:value={yMode}
+                />
+                <p class="group-note">{Y_MODE_NOTES[yMode]}</p>
+              </div>
+              <div class="filter-group">
+                <span class="group-label">Proc-rate scaling</span>
+                <SegmentedControl
+                  label="Proc-rate scaling"
+                  compact
+                  options={scaleOptions}
+                  value={procScaled ? 'normalized' : 'per-proc'}
+                  onchange={(next) => (procScaled = next === 'normalized')}
+                />
+                <p class="group-note">
+                  {procScaled ? SCALE_NOTES.normalized : SCALE_NOTES.perProc}
+                </p>
+              </div>
+              <div class="filter-group">
+                <span class="group-label">Skills shown</span>
+                <SegmentedControl
+                  label="Skills shown"
+                  compact
+                  options={showOptions}
+                  bind:value={show}
+                />
+              </div>
+              <footer>
+                <Button
+                  variant="secondary"
+                  size="sm"
+                  disabled={!displayChanged}
+                  onclick={resetDisplay}
+                >
+                  Reset display
+                </Button>
+              </footer>
             </div>
-            <div class="filter-group">
-              <span class="group-label">Distance</span>
-              <SegmentedControl
-                label="Distance"
-                compact
-                options={distanceOptions}
-                bind:value={distance}
-                onchange={keepCourseInScope}
+          {/snippet}
+        </InspectPopover>
+      </div>
+
+      <div
+        class="menu-popover filter-menu"
+        class:active={filtersOpen || changedFilters > 0}
+      >
+        <InspectPopover
+          label="Skill filters"
+          align="end"
+          onopenchange={(open) => (filtersOpen = open)}
+        >
+          {#snippet trigger()}
+            <span class="menu-trigger">
+              <Icon
+                name="filter"
+                size={15}
               />
+              <span>Filters</span>
+              {#if changedFilters > 0}
+                <span class="menu-badge">{changedFilters}</span>
+              {/if}
+              <Icon
+                name="chevron"
+                size={14}
+              />
+            </span>
+          {/snippet}
+          {#snippet children()}
+            <div class="filter-panel">
+              <header><h3>Skill filters</h3></header>
+              <div class="filter-group">
+                <span class="group-label">Track</span>
+                <SegmentedControl
+                  label="Track"
+                  compact
+                  options={surfaceOptions}
+                  bind:value={surface}
+                  onchange={keepCourseInScope}
+                />
+              </div>
+              <div class="filter-group">
+                <span class="group-label">Distance</span>
+                <SegmentedControl
+                  label="Distance"
+                  compact
+                  options={distanceOptions}
+                  bind:value={distance}
+                  onchange={keepCourseInScope}
+                />
+              </div>
+              <TypeFilters
+                label="Rarity"
+                all={rarityOptions}
+                names={RARITY_NAMES}
+                bind:selected={rarities}
+              />
+              <TypeFilters
+                label="Effect"
+                all={SKILL_KINDS}
+                names={KIND_NAMES}
+                bind:selected={kinds}
+              />
+              <div class="condition-filters">
+                <Checkbox
+                  variant="field"
+                  id="skill-explorer-best-of-family"
+                  label="Best version only"
+                  ariaLabel="Best version only"
+                  description="Keep the strongest of ○, ◎ and gold"
+                  bind:checked={bestOfFamily}
+                />
+                <Checkbox
+                  variant="field"
+                  id="skill-explorer-day-bound"
+                  label="Ground, weather, season and night skills"
+                  ariaLabel="Ground, weather, season and night skills"
+                  description={dayFromMeeting
+                    ? "Set by the CM's race day: shown when it matches"
+                    : 'Valued as if the race day had their condition, marked Forced'}
+                  disabled={dayFromMeeting}
+                  bind:checked={showDayBound}
+                />
+              </div>
+              <footer>
+                <Button
+                  variant="secondary"
+                  size="sm"
+                  disabled={changedFilters === 0}
+                  onclick={resetFilters}
+                >
+                  Reset filters
+                </Button>
+              </footer>
             </div>
-            <TypeFilters
-              label="Rarity"
-              all={rarityOptions}
-              names={RARITY_NAMES}
-              bind:selected={rarities}
-            />
-            <TypeFilters
-              label="Effect"
-              all={SKILL_KINDS}
-              names={KIND_NAMES}
-              bind:selected={kinds}
-            />
-            <div class="condition-filters">
-              <Checkbox
-                variant="field"
-                id="skill-explorer-best-of-family"
-                label="Best version only"
-                ariaLabel="Best version only"
-                description="Keep the strongest of ○, ◎ and gold"
-                bind:checked={bestOfFamily}
-              />
-              <Checkbox
-                variant="field"
-                id="skill-explorer-day-bound"
-                label="Ground, weather, season and night skills"
-                ariaLabel="Ground, weather, season and night skills"
-                description={dayFromMeeting
-                  ? "Set by the CM's race day: shown when it matches"
-                  : 'Valued as if the race day had their condition, marked Forced'}
-                disabled={dayFromMeeting}
-                bind:checked={showDayBound}
-              />
-            </div>
-            <footer>
-              <Button
-                variant="secondary"
-                size="sm"
-                disabled={changedFilters === 0}
-                onclick={resetFilters}
-              >
-                Reset filters
-              </Button>
-            </footer>
-          </div>
-        {/snippet}
-      </InspectPopover>
+          {/snippet}
+        </InspectPopover>
+      </div>
     </div>
   </div>
 </div>

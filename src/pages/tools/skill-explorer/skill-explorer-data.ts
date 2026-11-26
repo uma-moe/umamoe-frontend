@@ -61,6 +61,8 @@ export interface ExplorerIndex {
   buildSize: number;
   model: ExplorerModel;
   skills: Map<number, SkillFacts>;
+  /** Evolved skill ID -> base gold skill ID it evolves from. */
+  evolvesFrom: Map<number, number>;
   courses: ExplorerCourse[];
 }
 
@@ -83,6 +85,12 @@ export interface SkillPoint {
   courses: number;
   /** Share of races it first fires in each section, summing to `rate`. */
   sections: number[];
+  /** Win points added per firing when it first activates in each section (single course, non-recovery skills). */
+  sectionWins?: number[];
+  /** True when the skill's value came from direct paired races rather than the model alone. */
+  raced?: boolean;
+  /** 95% confidence / prediction interval half-width in win points over all races, matching `expected`. */
+  ci95?: number;
   /**
    * Courses of the scope it never fired on in her build, so it was valued forced to fire wherever the course lets it
    * (the runners around her and other skills' activations counting as met; course, day and style still apply).
@@ -90,6 +98,12 @@ export interface SkillPoint {
   forced: number;
   /** For a skill that waits on her other skills' activations, like Groundwork: its other timings. */
   gated?: GatedValues;
+}
+
+/** Reference runner metadata for one style on a single course. */
+export interface StyleBaseline {
+  stats?: [number, number, number, number, number];
+  win?: number;
 }
 
 /** A gated skill's value at one timing, read as a row's: per firing, over all races, its rate and mean proc point. */
@@ -129,16 +143,72 @@ export interface GatedValues {
 }
 
 /**
- * The forced point a gated skill's If triggered value is: the raced one, else the one its setup opens by, else (no
- * setup reaches any) the one worth most.
+ * The forced point a gated skill's Set up value is: the point its setup opens by, else a raced point, else (no
+ * setup reaches any) the one worth most. Undefined when the skill ran naturally unforced with zero feeders.
  */
 export function headlinePoint(gated: GatedValues): ForcedPoint | undefined {
   const points = gated.points ?? [];
-  const raced = points.find((point) => point.raced);
-  if (raced !== undefined) return raced;
   const opened = points.find((point) => point.at === gated.setup?.at);
   if (opened !== undefined) return opened;
+
+  if (gated.setup !== undefined && gated.setup.feeders.length === 0) return undefined;
+
+  const raced = points.find((point) => point.raced);
+  if (raced !== undefined) return raced;
+
   return mostWorth(points);
+}
+
+/** Minimum share of races a section needs before its per-section WR contributes to WR-weighted means. */
+const MIN_WR_MEAN_SHARE = 0.01;
+
+/**
+ * Average activation point weighted by each section's win-rate contribution (`sections[i] * sectionWins[i]`),
+ * skipping tiny noise slivers when meaningful activation buckets exist.
+ */
+export function wrWeightedMean(
+  sections: readonly number[],
+  sectionWins: readonly number[] | undefined
+): number | undefined {
+  if (
+    sectionWins === undefined ||
+    sectionWins.length !== SECTIONS ||
+    sections.length !== SECTIONS
+  ) {
+    return undefined;
+  }
+
+  const peakShare = Math.max(0, ...sections);
+  const floor = peakShare >= MIN_WR_MEAN_SHARE ? MIN_WR_MEAN_SHARE : 0;
+
+  let positiveWeight = 0;
+  let positiveWeightedPos = 0;
+  let absoluteWeight = 0;
+  let absoluteWeightedPos = 0;
+
+  for (let i = 0; i < SECTIONS; i += 1) {
+    const share = sections[i]!;
+    const win = sectionWins[i]!;
+    if (share < floor || share <= 0 || !Number.isFinite(win)) continue;
+
+    const center = (i + 0.5) / SECTIONS;
+    const contribution = share * win;
+    if (contribution > 0) {
+      positiveWeight += contribution;
+      positiveWeightedPos += center * contribution;
+    }
+
+    const magnitude = Math.abs(contribution);
+    if (magnitude > 0) {
+      absoluteWeight += magnitude;
+      absoluteWeightedPos += center * magnitude;
+    }
+  }
+
+  if (positiveWeight > 0) return positiveWeightedPos / positiveWeight;
+  if (absoluteWeight > 0) return absoluteWeightedPos / absoluteWeight;
+
+  return undefined;
 }
 
 /** The value worth most over all races. */
@@ -161,6 +231,8 @@ export interface ScopeData {
   styles: Record<StyleKey, SkillPoint[]>;
   /** The reference build per style, for a single course. */
   builds?: Partial<Record<StyleKey, number[]>>;
+  /** Per style on a single course: the reference runner's forecasted statline and measured baseline win rate. */
+  baselines?: Partial<Record<StyleKey, StyleBaseline>>;
   /** Per style, each skill's partners, for a single course. */
   partners?: Partial<Record<StyleKey, Map<number, Partner[]>>>;
   /**
@@ -214,6 +286,16 @@ function parseSkillFacts(value: unknown): Map<number, SkillFacts> {
   );
 }
 
+function parseEvolvesFrom(value: unknown): Map<number, number> {
+  if (!isRecord(value)) return new Map();
+  return new Map(
+    Object.entries(value).map(([evoId, baseId]) => [
+      Number(evoId),
+      finiteNumber(baseId, 'base gold skill')
+    ])
+  );
+}
+
 export function parseIndex(value: unknown): ExplorerIndex {
   if (!isRecord(value) || !Array.isArray(value.courses))
     throw new Error('Skill Explorer index is invalid.');
@@ -221,6 +303,7 @@ export function parseIndex(value: unknown): ExplorerIndex {
     buildSize: finiteNumber(value.buildSize, 'build size'),
     model: parseModel(value.model),
     skills: parseSkillFacts(value.skills),
+    evolvesFrom: parseEvolvesFrom(value.evolvesFrom),
     courses: value.courses.map(parseCourse)
   };
 }
@@ -347,16 +430,122 @@ function parseBuilds(value: unknown): ScopeData['builds'] {
   );
 }
 
+function parseBaselines(value: unknown): ScopeData['baselines'] {
+  if (!isRecord(value)) return undefined;
+
+  const baselines: Partial<Record<StyleKey, StyleBaseline>> = {};
+  for (const style of STYLE_KEYS) {
+    const entry = value[style];
+    if (!isRecord(entry)) continue;
+
+    const baseline: StyleBaseline = {};
+    if (Array.isArray(entry.stats) && entry.stats.length === 5) {
+      baseline.stats = entry.stats.map((stat) => finiteNumber(stat, 'baseline stat')) as [
+        number,
+        number,
+        number,
+        number,
+        number
+      ];
+    }
+
+    if (entry.win !== undefined) {
+      baseline.win = finiteNumber(entry.win, 'baseline win');
+    }
+
+    if (baseline.stats !== undefined || baseline.win !== undefined) {
+      baselines[style] = baseline;
+    }
+  }
+
+  return Object.keys(baselines).length > 0 ? baselines : undefined;
+}
+
+/** Per style, `{skill id: [24 tenths of a win point]}` converted to win points per firing. */
+function parseSectionWins(value: unknown): Map<number, number[]> {
+  if (!isRecord(value)) return new Map();
+
+  return new Map(
+    Object.entries(value).map(([id, raw]) => {
+      if (!Array.isArray(raw) || raw.length !== SECTIONS) {
+        throw new Error('Skill Explorer data has an invalid section win count.');
+      }
+
+      const wins = raw.map((tenths) => finiteNumber(tenths, 'section win points') / 10);
+      return [Number(id), wins];
+    })
+  );
+}
+
+function parseRaced(value: unknown): Set<number> {
+  if (!Array.isArray(value)) return new Set();
+
+  return new Set(value.map((id) => finiteNumber(id, 'raced skill')));
+}
+
+function parseCi95(value: unknown): Map<number, number> {
+  if (!isRecord(value)) return new Map();
+
+  return new Map(
+    Object.entries(value).map(([id, half]) => [
+      Number(id),
+      finiteNumber(half, '95% interval half-width')
+    ])
+  );
+}
+
+function attachStyleExtras(
+  points: SkillPoint[],
+  gated: Map<number, GatedValues>,
+  sectionWins: Map<number, number[]>,
+  raced: Set<number>,
+  ci95: Map<number, number>
+): SkillPoint[] {
+  if (gated.size === 0 && sectionWins.size === 0 && raced.size === 0 && ci95.size === 0) {
+    return points;
+  }
+
+  return points.map((point) => {
+    const gatedValues = gated.get(point.skillId);
+    const wins = sectionWins.get(point.skillId);
+    const isRaced = raced.has(point.skillId);
+    const interval = ci95.get(point.skillId);
+    if (gatedValues === undefined && wins === undefined && !isRaced && interval === undefined) {
+      return point;
+    }
+
+    return {
+      ...point,
+      ...(gatedValues !== undefined ? { gated: gatedValues } : {}),
+      ...(wins !== undefined ? { sectionWins: wins } : {}),
+      ...(isRaced ? { raced: true } : {}),
+      ...(interval !== undefined ? { ci95: interval } : {})
+    };
+  });
+}
+
 export function parseScope(value: unknown): ScopeData {
   if (!isRecord(value) || !isRecord(value.styles))
     throw new Error('Skill Explorer data is invalid.');
   const styles = value.styles;
   const gated = isRecord(value.gated) ? value.gated : {};
+  const sectionWins = isRecord(value.sectionWins) ? value.sectionWins : {};
+  const raced = isRecord(value.raced) ? value.raced : {};
+  const ci95 = isRecord(value.ci95) ? value.ci95 : {};
   const byStyle = Object.fromEntries(
     STYLE_KEYS.map((style) => {
       const rows = styles[style];
       const points = Array.isArray(rows) ? rows.map(parseRow) : [];
-      return [style, withGated(points, parseGated(gated[style]))];
+      return [
+        style,
+        attachStyleExtras(
+          points,
+          parseGated(gated[style]),
+          parseSectionWins(sectionWins[style]),
+          parseRaced(raced[style]),
+          parseCi95(ci95[style])
+        )
+      ];
     })
   ) as Record<(typeof STYLE_KEYS)[number], SkillPoint[]>;
 
@@ -364,6 +553,7 @@ export function parseScope(value: unknown): ScopeData {
     courses: finiteNumber(value.courses, 'course count'),
     styles: { ...byStyle, all: averageStyles(Object.values(byStyle)) },
     builds: parseBuilds(value.builds),
+    baselines: parseBaselines(value.baselines),
     partners: parsePartners(value.partners),
     margins: parseMargins(value.margins)
   };
@@ -389,7 +579,17 @@ function parseMargins(value: unknown): ScopeData['margins'] {
 export function averageStyles(styles: SkillPoint[][]): SkillPoint[] {
   const totals = new Map<
     number,
-    SkillPoint & { firedMean: number; eligibleStyles: number; forcedTotal?: TimedValue }
+    SkillPoint & {
+      firedMean: number;
+      eligibleStyles: number;
+      forcedTotal?: TimedValue;
+      secWinWeighted?: number[];
+      secWinWeight?: number[];
+      secWinSum?: number[];
+      secWinCount: number;
+      ci95Sum: number;
+      ci95Count: number;
+    }
   >();
   for (const points of styles) {
     for (const point of points) {
@@ -406,7 +606,10 @@ export function averageStyles(styles: SkillPoint[][]): SkillPoint[] {
           eligibleStyles: 0,
           courses: 0,
           sections: new Array<number>(SECTIONS).fill(0),
-          forced: 0
+          forced: 0,
+          secWinCount: 0,
+          ci95Sum: 0,
+          ci95Count: 0
         };
         totals.set(point.skillId, total);
       }
@@ -421,6 +624,10 @@ export function averageStyles(styles: SkillPoint[][]): SkillPoint[] {
       total.forced = Math.max(total.forced, point.forced);
       total.firedMean += point.mean * point.rate;
       total.courses = Math.max(total.courses, point.courses);
+      if (point.ci95 !== undefined && point.ci95 > 0) {
+        total.ci95Sum += point.ci95;
+        total.ci95Count += 1;
+      }
       if (point.gated) {
         total.forcedTotal ??= { win: 0, expected: 0, rate: 0, mean: 0 };
         const forced = point.gated.forced;
@@ -429,37 +636,78 @@ export function averageStyles(styles: SkillPoint[][]): SkillPoint[] {
         total.forcedTotal.rate += forced.rate;
         total.forcedTotal.mean += forced.mean * forced.rate;
       }
+
       point.sections.forEach((share, index) => {
         total.sections[index]! += share;
       });
+
+      if (point.sectionWins !== undefined && point.sectionWins.length === SECTIONS) {
+        total.secWinWeighted ??= new Array<number>(SECTIONS).fill(0);
+        total.secWinWeight ??= new Array<number>(SECTIONS).fill(0);
+        total.secWinSum ??= new Array<number>(SECTIONS).fill(0);
+        total.secWinCount += 1;
+        for (let i = 0; i < SECTIONS; i += 1) {
+          const share = point.sections[i]!;
+          const win = point.sectionWins[i]!;
+          total.secWinWeighted[i]! += share * win;
+          total.secWinWeight[i]! += share;
+          total.secWinSum[i]! += win;
+        }
+      }
     }
   }
 
-  return [...totals.values()].map(({ firedMean, eligibleStyles, forcedTotal, ...total }) => {
-    const count = Math.max(1, eligibleStyles);
-    const gated: Pick<SkillPoint, 'gated'> = forcedTotal
-      ? {
-          gated: {
-            forced: {
-              win: forcedTotal.win / count,
-              expected: forcedTotal.expected / count,
-              rate: forcedTotal.rate / count,
-              mean: forcedTotal.rate > 0 ? forcedTotal.mean / forcedTotal.rate : 0
+  return [...totals.values()].map(
+    ({
+      firedMean,
+      eligibleStyles,
+      forcedTotal,
+      secWinWeighted,
+      secWinWeight,
+      secWinSum,
+      secWinCount,
+      ci95Sum,
+      ci95Count,
+      ...total
+    }) => {
+      const count = Math.max(1, eligibleStyles);
+      const gated: Pick<SkillPoint, 'gated'> = forcedTotal
+        ? {
+            gated: {
+              forced: {
+                win: forcedTotal.win / count,
+                expected: forcedTotal.expected / count,
+                rate: forcedTotal.rate / count,
+                mean: forcedTotal.rate > 0 ? forcedTotal.mean / forcedTotal.rate : 0
+              }
             }
           }
-        }
-      : {};
-    return {
-      ...total,
-      ...gated,
-      win: total.win / count,
-      winAlone: total.winAlone / count,
-      expected: total.expected / count,
-      rate: total.rate / count,
-      mean: total.rate > 0 ? firedMean / total.rate : 0,
-      sections: total.sections.map((share) => share / count)
-    };
-  });
+        : {};
+      const sectionWins: Pick<SkillPoint, 'sectionWins'> =
+        secWinCount > 0 && secWinWeighted && secWinWeight && secWinSum
+          ? {
+              sectionWins: secWinWeighted.map((weighted, i) => {
+                const weight = secWinWeight[i]!;
+                return weight > 0 ? weighted / weight : secWinSum[i]! / secWinCount;
+              })
+            }
+          : {};
+      const ci95: Pick<SkillPoint, 'ci95'> =
+        ci95Count > 0 ? { ci95: Math.round((ci95Sum / ci95Count) * 100) / 100 } : {};
+      return {
+        ...total,
+        ...gated,
+        ...sectionWins,
+        ...ci95,
+        win: total.win / count,
+        winAlone: total.winAlone / count,
+        expected: total.expected / count,
+        rate: total.rate / count,
+        mean: total.rate > 0 ? firedMean / total.rate : 0,
+        sections: total.sections.map((share) => share / count)
+      };
+    }
+  );
 }
 
 /** A surface, then a length: `turf/medium`. */

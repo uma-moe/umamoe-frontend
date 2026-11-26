@@ -19,7 +19,12 @@
     trackName,
     type RaceCourse
   } from '@/lib/game-data/racing/courses';
-  import { loadSkills, skillRarity, type SkillData } from '@/lib/game-data/skills/skills';
+  import {
+    isEvoSkill,
+    loadSkills,
+    skillRarity,
+    type SkillData
+  } from '@/lib/game-data/skills/skills';
   import {
     loadSupportCards,
     type SupportCardData
@@ -84,12 +89,13 @@
     type StyleKey
   } from './skill-explorer/skill-explorer-data';
   import {
-    SKILL_RARITIES,
+    DEFAULT_SKILL_RARITIES,
+    gateFeeders,
     hiddenRarity,
-    isNegativeSkill,
     limitOf,
     plotView,
     raritiesOf,
+    skillPurchaseCost,
     type ShowLimit,
     type SkillRarity,
     type UniqueVersion,
@@ -135,7 +141,7 @@
   let meetingNumber = $state('');
   let xMode = $state<XMode>('position');
   let yMode = $state<YMode>('value');
-  let rarities = $state.raw<ReadonlySet<SkillRarity>>(new Set(SKILL_RARITIES));
+  let rarities = $state.raw<ReadonlySet<SkillRarity>>(new Set(DEFAULT_SKILL_RARITIES));
   let uniqueVersion = $state<UniqueVersion>('inherited');
   let kinds = $state.raw<ReadonlySet<SkillKind>>(new Set(SKILL_KINDS));
   let search = $state('');
@@ -145,6 +151,7 @@
   let showDayBound = $state(true);
   let procScaled = $state(true);
   let comparedSkillIds = $state.raw<ReadonlySet<number>>(new Set());
+  let revealedEvoIds = $state.raw<ReadonlySet<number>>(new Set());
 
   const explorerCourses = $derived(index?.courses ?? []);
 
@@ -253,12 +260,15 @@
   /** The reference build, which the values are measured in, is shown on a single course for a single style. */
   const buildStyle = $derived(selectedCourse && style !== 'all' ? style : undefined);
   const referenceBuild = $derived(buildStyle ? scopeData?.builds?.[buildStyle] : undefined);
+  const styleBaseline = $derived(buildStyle ? scopeData?.baselines?.[buildStyle] : undefined);
   const points = $derived(scopeData?.styles[style] ?? []);
-  const heldRarities = $derived(raritiesOf(points, allSkills));
+  const hasSectionWins = $derived(points.some((point) => point.sectionWins !== undefined));
+  const heldRarities = $derived(raritiesOf(points, skills));
   // With both versions of uniques valued, one shows at a time: a version alone shows whatever the toggle says.
   const bothUniqueVersions = $derived(
     heldRarities.includes('inherited') && heldRarities.includes('personal')
   );
+  const hasEvolved = $derived(heldRarities.includes('evolved'));
   const shownUniqueVersion = $derived(bothUniqueVersions ? uniqueVersion : undefined);
   const rarityOptions = $derived(
     shownUniqueVersion === undefined
@@ -279,7 +289,10 @@
           kinds,
           search,
           comparedSkillIds,
-          umaSkillIds: selectedUma && skillsGivenBy(selectedUma, shownUniqueVersion === 'own'),
+          evolvesFrom: index?.evolvesFrom,
+          revealedEvoIds,
+          umaSkillIds:
+            selectedUma && skillsGivenBy(selectedUma, shownUniqueVersion === 'own', index?.skills),
           bestOfFamily,
           limit: limitOf(show),
           showDayBound,
@@ -292,17 +305,34 @@
 
   const yTitle = $derived(
     (yMode === 'alone'
-      ? 'Est. win rate gained on its own'
-      : 'Est. win rate added to the reference build' +
+      ? `Est. win rate${xMode === 'cost' ? ' per 100 SP' : ''} gained on its own`
+      : `Est. win rate${xMode === 'cost' ? ' per 100 SP' : ''} added to the reference build` +
         (yMode === 'forced' ? ', waiting skills forced' : '')) +
-      (procScaled ? ', over all races' : ', when it activates')
+      (procScaled ? ', normalized for proc rate' : ', per proc')
   );
   /** What the plot's axes mean: when it changes, the zoom starts again from the whole plot. */
   const viewKey = $derived(
     [JSON.stringify(scope), style, xMode, yMode, procScaled, selectedCourse?.distance].join('|')
   );
   const pointsById = $derived(new Map(points.map((point) => [point.skillId, point])));
-  const margin = $derived(scopeData?.margins[style]);
+  const evosByBase = $derived.by(() => {
+    const grouped = new Map<number, number[]>();
+    if (!index) return grouped;
+    for (const [evoId, baseId] of index.evolvesFrom) {
+      if (!pointsById.has(evoId) || !skills.has(evoId)) continue;
+      const list = grouped.get(baseId);
+      if (list) list.push(evoId);
+      else grouped.set(baseId, [evoId]);
+    }
+
+    for (const ids of grouped.values()) {
+      ids.sort(
+        (left, right) => (pointsById.get(right)?.win ?? 0) - (pointsById.get(left)?.win ?? 0)
+      );
+    }
+
+    return grouped;
+  });
 
   function courseLabel(id: number): string {
     const course = raceCourses.get(id);
@@ -376,10 +406,10 @@
     return shown.length > 0 ? shown.join(', ') : undefined;
   }
 
-  /** A skill as other skills' cards name it: a unique by its character, any other by its icon. */
+  /** A skill as other skills' cards name it: a unique by its character, any other (including evolved) by its icon. */
   function relatedSkill(skillId: number): RelatedSkill {
     const skill = skills.get(skillId);
-    const card = index?.skills.get(skillId)?.card;
+    const card = isEvoSkill(skill) ? undefined : index?.skills.get(skillId)?.card;
     return {
       skillId,
       name: skill?.name ?? `Skill ${skillId}`,
@@ -399,29 +429,58 @@
       .map((partner) => relatedSkill(partner.skillId));
   }
 
-  /** A count-gated skill's gate, and the scope's most valuable skills that mostly fire where it counts. */
+  /** A count-gated skill's gate, and the scope's most valuable build-legal skills that mostly fire where it counts. */
   function gateOf(skillId: number, conditions: string) {
     const gate = countGate(conditions);
     if (gate === undefined) return undefined;
 
-    const [from, to] = gate.sections;
-    const feeders = points
-      .filter((point) => {
-        const skill = skills.get(point.skillId);
-        if (point.skillId === skillId || skill === undefined || isNegativeSkill(skill))
-          return false;
-
-        const countsForGate =
-          gate.counted === 'any' || index?.skills.get(point.skillId)?.kind === 'recovery';
-        if (!countsForGate) return false;
-
-        const inWindow = point.sections.slice(from, to).reduce((sum, share) => sum + share, 0);
-        return inWindow > point.rate / 2;
-      })
-      .sort((left, right) => right.win - left.win)
-      .slice(0, FEEDERS_SHOWN)
-      .map((point) => relatedSkill(point.skillId));
+    const opened = skills.get(skillId);
+    const charLocked =
+      opened !== undefined && (isEvoSkill(opened) || opened.unique === true || opened.rarity >= 3);
+    const ownerCardId =
+      (charLocked ? index?.skills.get(skillId)?.card : undefined) ?? selectedUma?.cardId;
+    const feeders = gateFeeders({
+      skillId,
+      gate,
+      points,
+      skills,
+      facts: index?.skills,
+      ownerCardId,
+      day: selectedMeeting ? raceDay : undefined,
+      limit: FEEDERS_SHOWN
+    }).map((point) => relatedSkill(point.skillId));
     return { gate, feeders };
+  }
+
+  function evolutionsOf(skillId: number): number[] {
+    return evosByBase.get(skillId) ?? [];
+  }
+
+  function areEvosShown(evoIds: readonly number[]): boolean {
+    return evoIds.length > 0 && evoIds.every((id) => revealedEvoIds.has(id));
+  }
+
+  function toggleDisplayEvos(evoIds: readonly number[]) {
+    if (evoIds.length === 0) return;
+
+    const next = new Set(revealedEvoIds);
+    if (areEvosShown(evoIds)) {
+      for (const id of evoIds) next.delete(id);
+    } else {
+      for (const id of evoIds) next.add(id);
+    }
+
+    revealedEvoIds = next;
+  }
+
+  function evoToggleFor(skillId: number) {
+    const evoIds = evolutionsOf(skillId);
+    if (evoIds.length === 0) return undefined;
+    return {
+      count: evoIds.length,
+      shown: areEvosShown(evoIds),
+      toggle: () => toggleDisplayEvos(evoIds)
+    };
   }
 
   function inReferenceBuild(skillId: number): boolean {
@@ -555,6 +614,12 @@
   });
 
   $effect(() => {
+    if (!hasSectionWins && xMode === 'wrPosition') {
+      xMode = 'position';
+    }
+  });
+
+  $effect(() => {
     const course = selectedCourse;
     terrain = undefined;
     if (course === undefined) return;
@@ -587,7 +652,7 @@
   routeId="skill-explorer"
   title="Skill Explorer"
   badge="Beta"
-  description="Compare what each skill is worth and where it activates, on every course."
+  description="Overview of individual skill value and activation timing across every course."
   width="wide"
 >
   {#if pageError}
@@ -613,11 +678,13 @@
         bind:courseId
         bind:meetingNumber
         bind:xMode
+        {hasSectionWins}
         bind:yMode
         bind:rarities
         {rarityOptions}
         bind:uniqueVersion
         {bothUniqueVersions}
+        {hasEvolved}
         bind:kinds
         bind:search
         bind:umaCardId
@@ -635,33 +702,37 @@
       />
 
       <div class="scope-line">
-        <div class="scope-title">
-          <h2>{scopeTitle()}</h2>
-          <ExplorerGuide
-            model={modelName(index.model.variant)}
-            checkpoint={index.model.checkpoint}
-            {margin}
-          />
+        <div class="scope-head">
+          <div class="scope-title">
+            <h2>{scopeTitle()}</h2>
+            <ExplorerGuide
+              model={modelName(index.model.variant)}
+              checkpoint={index.model.checkpoint}
+            />
+          </div>
+          {#if scopeData}
+            <span class="scope-meta">
+              {#if scopeData.courses > 1}
+                {scopeData.courses} courses,
+              {/if}
+              {view?.plotted.length ?? 0} skills
+            </span>
+          {/if}
+          {#if selectedUma && selectedUmaNote}
+            <span class="scope-meta">{selectedUma.name}: {selectedUmaNote}</span>
+          {/if}
+          {#if scopeLoading}
+            <Spinner size={18} />
+          {/if}
         </div>
-        {#if scopeData}
-          <span>
-            {scopeData.courses}
-            {scopeData.courses === 1 ? 'course' : 'courses'}, {view?.plotted.length ?? 0} skills
-          </span>
-        {/if}
-        {#if selectedUma && selectedUmaNote}
-          <span>{selectedUma.name}: {selectedUmaNote}</span>
-        {/if}
-        {#if scopeLoading}
-          <Spinner size={18} />
-        {/if}
         {#if (buildStyle && referenceBuild) || target}
-          <!-- The values' build and target stats: they share the title row, and wrap to the next one together. -->
+          <!-- The values' build and target stats: they share the title row on wide screens, and align edge-to-edge below it on smaller ones. -->
           <div class="scope-tools">
             {#if buildStyle && referenceBuild}
               <BuildPanel
                 skills={referenceBuild.map((skillId) => relatedSkill(skillId))}
                 styleName={STYLE_NAMES[buildStyle]}
+                baseline={styleBaseline}
               />
             {/if}
             {#if target}
@@ -695,6 +766,8 @@
           xTitle={view.xTitle}
           xSplit={view.xSplit}
           ySplit={view.ySplit}
+          yUnitSuffix={view.yUnitSuffix}
+          yFloor={view.yFloor}
           {yTitle}
           format={formatWinPoints}
           quadrants={view.quadrants}
@@ -704,6 +777,9 @@
           {comparedSkillIds}
           oncompare={toggleCompared}
           onclearcomparison={() => (comparedSkillIds = new Set())}
+          {revealedEvoIds}
+          onclearevos={() => (revealedEvoIds = new Set())}
+          evoToggle={evoToggleFor}
           details={skillDetails}
         />
       {/if}
@@ -715,7 +791,9 @@
   {@const point = pointsById.get(skillId)}
   {@const skill = skills.get(skillId)}
   {#if point && skill}
-    {@const card = index?.skills.get(skillId)?.card}
+    {@const card = isEvoSkill(skill) ? undefined : index?.skills.get(skillId)?.card}
+    {@const evoIds = evolutionsOf(skillId)}
+    {@const baseId = index?.evolvesFrom.get(skillId)}
     <SkillCard
       point={dayFromMeeting ? { ...point, forced: 0 } : point}
       name={skill.name}
@@ -723,7 +801,7 @@
       badge={card === undefined ? undefined : skillIcon(skill.icon)}
       description={skill.description}
       effects={skillEffectDetails(skillEffects.get(skillId), selectedCourse?.distance)}
-      spCost={skill.baseCost}
+      spCost={skillPurchaseCost(skill, skills, index?.evolvesFrom)}
       providers={providers.get(skillId)}
       {providerStatus}
       requirements={describeRequirements(skill.conditions ?? '', trackName)}
@@ -735,7 +813,12 @@
         : undefined}
       inBuild={inReferenceBuild(skillId)}
       mode={yMode}
+      {procScaled}
       nameSkills={(ids) => ids.map((id) => relatedSkill(id))}
+      evolutions={evoIds.map((id) => relatedSkill(id))}
+      evolutionsShown={areEvosShown(evoIds)}
+      ontoggleevolutions={evoIds.length > 0 ? () => toggleDisplayEvos(evoIds) : undefined}
+      evolvesFrom={baseId !== undefined && skills.has(baseId) ? relatedSkill(baseId) : undefined}
     />
   {/if}
 {/snippet}
