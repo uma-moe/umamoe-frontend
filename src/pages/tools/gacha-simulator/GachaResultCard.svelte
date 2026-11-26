@@ -437,10 +437,10 @@
     place-items: center;
     color: var(--text-muted);
   }
-  .position,
-  .rarity {
+  .position {
     position: absolute;
     bottom: 4px;
+    left: 4px;
     padding: 2px 5px;
     border-radius: var(--radius-xs);
     background: rgb(0 0 0 / 0.76);
@@ -449,15 +449,20 @@
     font-weight: 800;
     line-height: 1.2;
   }
-  .position {
-    left: 4px;
-  }
+
   .rarity {
-    right: 4px;
+    position: absolute;
+    border-radius: var(--radius-xs);
+    background: rgb(0 0 0 / 0.76);
+    color: white;
+    font-size: 10px;
+    font-weight: 800;
+    line-height: 1.2;
   }
+
   /* The game's rarity emblem carries its own colour and lettering, so it needs no pill. */
   .rarity-art {
-    width: 19%;
+    width: 20%;
     padding: 0;
     background: none;
     border-radius: 0;
@@ -471,9 +476,20 @@
   /* The game's own icon for what the card trains, in the corner the game puts it. */
   .type-icon {
     position: absolute;
-    top: 4px;
-    right: 4px;
+    top: 0;
+    right: 0;
     width: 20%;
+  }
+  /* A support card wears both corner badges along its top edge: rarity left, type right. */
+  .result.framed .rarity-art {
+    top: 0;
+    left: 8px;
+    z-index: 20;
+  }
+  .result.framed .type-icon {
+    top: 0;
+    right: 0px;
+    z-index: 20;
   }
   .type-icon img {
     width: 100%;
