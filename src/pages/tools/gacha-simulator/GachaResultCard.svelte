@@ -383,7 +383,7 @@
     /* Each panel is one leaf; scaling past the box and pinning to the bottom fills the card without
        squeezing the door's own proportions. */
     background-size: 400% 126%;
-    transition: transform 460ms var(--easing-standard)
+    transition: transform var(--gate, 460ms) var(--easing-standard)
       calc(var(--reveal-index, 0) * var(--stagger, 45ms) + var(--lead-in, 100ms));
   }
   /* The hinge posts have to end up on the outside, which takes a mirror on whichever door is showing
@@ -405,23 +405,28 @@
     transform: translateX(100%) scaleX(var(--gate-flip-right, 1));
   }
   /* A trainee stands as a silhouette while the gate opens, then the light comes up on the art. Both
-     beats count from the moment the deal lands, so the hold is one of the shared timings. */
+     beats count from the moment the deal lands, so the hold is one of the shared timings, and the
+     shade follows the doors: it holds through the first half of the swing and is gone as they land. */
   .result:not(.framed) {
-    --lit-at: calc(var(--hold, 800ms) + 1180ms);
+    --gate: 460ms;
+    --lit-at: calc(var(--hold, 800ms) + var(--gate));
     --land: calc(
       var(--lead-in, 100ms) + var(--reveal-index, 0) * var(--stagger, 45ms) + var(--lit-at)
     );
   }
-  /* The silhouette is a veil over the card rather than a filter on the art, and it lifts once the
-     gates have opened, a beat before the rarity flourish starts. */
+  /* The silhouette is a veil over the card rather than a filter on the art, so the doors uncover it as
+     they part and it deshades with the second half of their swing. */
   .veil {
     position: absolute;
     inset: 0;
     z-index: 3;
-    background: rgb(6 8 12 / 0.9);
+    background: rgb(6 8 12 / 0.84);
     pointer-events: none;
-    transition: opacity 320ms var(--easing-standard)
-      calc(var(--lead-in, 100ms) + var(--reveal-index, 0) * var(--stagger, 45ms) + 860ms);
+    transition: opacity calc(var(--gate, 460ms) / 2) var(--easing-standard)
+      calc(
+        var(--lead-in, 100ms) + var(--reveal-index, 0) * var(--stagger, 45ms) + var(--gate, 460ms) /
+          2
+      );
   }
   .veil.lit {
     opacity: 0;
