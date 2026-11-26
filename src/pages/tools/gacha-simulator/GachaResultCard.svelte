@@ -180,6 +180,11 @@
     {@render face()}
     {#if pull}
       <!-- A trainee waits behind the starting gate, which parts on the beat and lets the light through. -->
+      <span
+        class="veil"
+        class:lit={revealed}
+        aria-hidden="true"
+      ></span>
       <div
         class="gate"
         class:open={revealed}
@@ -188,11 +193,6 @@
         <span class="gate-door left"></span>
         <span class="gate-door right"></span>
       </div>
-      <span
-        class="sweep-light"
-        class:open={revealed}
-        aria-hidden="true"
-      ></span>
     {/if}
   {/if}
   <!-- The reveal's light is clipped to the card, so a band that ends up off the card cannot show. -->
@@ -404,35 +404,27 @@
   .gate.open .gate-door.right {
     transform: translateX(100%) scaleX(var(--gate-flip-right, 1));
   }
-  /* The light the gates let through, crossing the art as they part. It starts and ends invisible, so
-     reduced motion leaves nothing on the card. */
-  .sweep-light {
+  /* A trainee stands as a silhouette while the gate opens, then the light comes up on the art. Both
+     beats count from the moment the deal lands, so the hold is one of the shared timings. */
+  .result:not(.framed) {
+    --lit-at: calc(var(--hold, 800ms) + 1180ms);
+    --land: calc(
+      var(--lead-in, 100ms) + var(--reveal-index, 0) * var(--stagger, 45ms) + var(--lit-at)
+    );
+  }
+  /* The silhouette is a veil over the card rather than a filter on the art, and it lifts once the
+     gates have opened, a beat before the rarity flourish starts. */
+  .veil {
     position: absolute;
-    top: 0;
-    bottom: 0;
-    left: 0;
-    z-index: 5;
-    width: 34%;
-    opacity: 0;
+    inset: 0;
+    z-index: 3;
+    background: rgb(6 8 12 / 0.9);
     pointer-events: none;
-    background: linear-gradient(90deg, transparent, rgb(255 255 255 / 0.4), transparent);
+    transition: opacity 320ms var(--easing-standard)
+      calc(var(--lead-in, 100ms) + var(--reveal-index, 0) * var(--stagger, 45ms) + 860ms);
   }
-  .sweep-light.open {
-    animation: sweep-bar 620ms var(--easing-standard)
-      calc(var(--reveal-index, 0) * var(--stagger, 45ms) + var(--lead-in, 100ms)) both;
-  }
-  @keyframes sweep-bar {
-    from {
-      opacity: 0;
-      transform: translateX(-100%);
-    }
-    25% {
-      opacity: 1;
-    }
-    to {
-      opacity: 0;
-      transform: translateX(320%);
-    }
+  .veil.lit {
+    opacity: 0;
   }
   .result.framed.flipping {
     /* The faces carry the frame, so the card itself only supplies the scene, and the scene is allowed
@@ -648,7 +640,8 @@
   }
   /* The flash runs on the art itself: a filter on .result-art would make it a stacking context and
      drop the corner badges behind the frame band, which is only thick enough to notice on the holo. */
-  .result.celebrate-top .result-image img {
+  /* The holo flash on a support card's art; a trainee's light-up carries its own pop. */
+  .result.celebrate-top.framed .result-image img {
     animation: frame-flash 900ms var(--easing-standard) calc(var(--land) + 40ms) both;
   }
   @keyframes card-sparkle {

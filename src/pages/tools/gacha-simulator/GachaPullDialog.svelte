@@ -133,6 +133,7 @@
         style:--turn="{TURN_MS}ms"
         style:--stagger="{STAGGER_MS}ms"
         style:--lead-in="{LEAD_IN_MS}ms"
+        style:--hold="{HOLD_MS}ms"
         aria-label={`${results.length} ${results.length === 1 ? 'card' : 'cards'} from this pull`}
       >
         {#each results as result, index (result.drawIndex)}
