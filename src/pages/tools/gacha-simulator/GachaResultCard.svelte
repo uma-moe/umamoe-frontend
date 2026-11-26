@@ -146,8 +146,8 @@
   class:instant
   class:framed={kind === 'support'}
   class:flipping={pull && kind === 'support'}
-  class:celebrate-mid={pull && flourish && result.rarity === 2}
-  class:celebrate-top={pull && flourish && result.rarity === 3}
+  class:celebrate-mid={pull && flourish && revealed && result.rarity === 2}
+  class:celebrate-top={pull && flourish && revealed && result.rarity === 3}
   style:--card-frame="url({frameArt})"
   style:--gate-left={gateLeft}
   style:--gate-right={gateRight}
@@ -168,6 +168,7 @@
         <div class="card-face">{@render face()}</div>
         <div
           class="card-back"
+          class:glow={result.rarity === 3}
           aria-hidden="true"
         >
           <span class="card-back-surface"><LogoMark size={48} /></span>
@@ -189,6 +190,11 @@
       </div>
     {/if}
   {/if}
+  <!-- The reveal's light is clipped to the card, so a band that ends up off the card cannot show. -->
+  <span
+    class="card-effects"
+    aria-hidden="true"
+  ></span>
 </article>
 
 <style>
@@ -204,6 +210,10 @@
     border: 1px solid var(--card-surface-border);
     border-radius: var(--radius-md);
     background: var(--card-surface-bg);
+    /* When this card lands: the deal's lead-in, its own place in the stagger, and its turn. */
+    --land: calc(
+      var(--lead-in, 100ms) + var(--reveal-index, 0) * var(--stagger, 45ms) + var(--turn, 560ms)
+    );
   }
   /* A framed card is the game's own card, so its art sits inside the frame's band instead. The radius
      is the frame art's own outer corner (72px on its 648px width), so the card clips exactly where the
@@ -213,6 +223,16 @@
     padding: 4.5%;
     border: 0;
     border-radius: var(--card-radius);
+  }
+  /* Holds the reveal's light, clipped to the card's own rounded box: the sheen finishes a full card
+     width to the right, and without this clip it would show there and widen the dialog's scroll area. */
+  .card-effects {
+    position: absolute;
+    inset: 0;
+    z-index: 3;
+    overflow: hidden;
+    border-radius: var(--card-radius, var(--radius-md));
+    pointer-events: none;
   }
   /* The rarity frame, painted over the card so the art can never cross its band. */
   .card-frame {
@@ -239,16 +259,20 @@
     transform: rotateY(180deg);
   }
   .card-flip.open {
-    animation: card-turn 560ms cubic-bezier(0.45, 0, 0.15, 1) both
-      calc(var(--reveal-index, 0) * 45ms + 100ms);
+    /* A near-linear middle: a steeper curve blurs the card through edge-on, so it reads as a card
+       that vanishes and comes back already half turned. */
+    animation: card-turn var(--turn, 560ms) cubic-bezier(0.4, 0, 0.6, 1) both
+      calc(var(--reveal-index, 0) * var(--stagger, 45ms) + var(--lead-in, 100ms));
   }
   /* The lift rides on the scene, so the turn keeps one continuous speed instead of stalling halfway.
      The face is held back until the card is past edge-on, which stops it bleeding through the back. */
   .card-scene.open {
-    animation: card-lift 620ms ease-in-out both calc(var(--reveal-index, 0) * 45ms + 100ms);
+    animation: card-lift var(--turn, 560ms) ease-in-out both
+      calc(var(--reveal-index, 0) * var(--stagger, 45ms) + var(--lead-in, 100ms));
   }
   .card-flip.open .card-face {
-    animation: card-face-shown 560ms linear both calc(var(--reveal-index, 0) * 45ms + 100ms);
+    animation: card-face-shown var(--turn, 560ms) linear both
+      calc(var(--reveal-index, 0) * var(--stagger, 45ms) + var(--lead-in, 100ms));
   }
   @keyframes card-lift {
     0% {
@@ -262,11 +286,12 @@
     }
   }
   @keyframes card-face-shown {
+    /* The face comes up over the last third of the turn instead of snapping on at edge-on. */
     0%,
     50% {
       opacity: 0;
     }
-    50.01%,
+    78%,
     100% {
       opacity: 1;
     }
@@ -308,6 +333,13 @@
     background: var(--card-surface-bg);
     transform: rotateY(180deg);
   }
+  /* A holo card waits face-down with a hint of its light, so the deal reads before the turn. */
+  .card-back.glow {
+    box-shadow:
+      0 0 18px 2px rgb(184 155 255 / 0.32),
+      0 0 28px 6px rgb(111 216 255 / 0.2),
+      0 0 38px 10px rgb(255 135 195 / 0.14);
+  }
   /* The back carries the same rarity band as the face, so the colour reads before the turn. */
   .card-back-surface {
     display: grid;
@@ -346,7 +378,8 @@
     /* Each panel is one leaf; scaling past the box and pinning to the bottom fills the card without
        squeezing the door's own proportions. */
     background-size: 400% 126%;
-    transition: transform 460ms var(--easing-standard) calc(var(--reveal-index, 0) * 45ms + 100ms);
+    transition: transform 460ms var(--easing-standard)
+      calc(var(--reveal-index, 0) * var(--stagger, 45ms) + var(--lead-in, 100ms));
   }
   /* The hinge posts have to end up on the outside, which takes a mirror on whichever door is showing
      the leaf's hinged side inwards: the silver leaf for the left door, the gold one for the right. */
@@ -367,8 +400,10 @@
     transform: translateX(100%) scaleX(var(--gate-flip-right, 1));
   }
   .result.framed.flipping {
-    /* The faces carry the frame, so the card itself only supplies the scene. */
+    /* The faces carry the frame, so the card itself only supplies the scene, and the scene is allowed
+       to grow past it while the card turns. */
     padding: 0;
+    overflow: visible;
   }
   .result-art {
     position: relative;
@@ -494,7 +529,7 @@
   /* The pull's peak. SR passes one band of light; SSR blooms a rainbow halo behind the card and
      lets a field of rainbow sparks cross it. Each keyframe starts at the card's resting state, so
      reduced motion leaves nothing mid-effect. */
-  .result.celebrate-mid::after {
+  .result.celebrate-mid .card-effects::after {
     content: '';
     position: absolute;
     inset: 0;
@@ -508,11 +543,10 @@
       transparent 66%
     );
     transform: translateX(-115%);
-    animation: card-sheen 1000ms var(--easing-standard) calc(var(--reveal-index, 0) * 24ms + 60ms)
-      both;
+    animation: card-sheen 1000ms var(--easing-standard) calc(var(--land) + 40ms) both;
   }
-  .result.celebrate-top::before,
-  .result.celebrate-top::after {
+  .result.celebrate-top .card-effects::before,
+  .result.celebrate-top .card-effects::after {
     content: '';
     position: absolute;
     inset: 0;
@@ -523,7 +557,7 @@
     mix-blend-mode: screen;
   }
   /* Two spark fields, so the light keeps moving after the first wave has gone. */
-  .result.celebrate-top::before {
+  .result.celebrate-top .card-effects::before {
     background-image:
       radial-gradient(circle 1.8px at 13% 17%, rgb(255 255 255 / 0.95), transparent),
       radial-gradient(circle 1.6px at 29% 8%, rgb(255 135 195 / 0.95), transparent),
@@ -532,10 +566,9 @@
       radial-gradient(circle 1.8px at 79% 27%, rgb(184 155 255 / 0.95), transparent),
       radial-gradient(circle 1.6px at 90% 48%, rgb(255 135 195 / 0.9), transparent),
       radial-gradient(circle 1.5px at 21% 40%, rgb(255 207 107 / 0.85), transparent);
-    animation: card-sparkle 1200ms var(--easing-standard) calc(var(--reveal-index, 0) * 24ms + 20ms)
-      both;
+    animation: card-sparkle 1200ms var(--easing-standard) calc(var(--land) + 20ms) both;
   }
-  .result.celebrate-top::after {
+  .result.celebrate-top .card-effects::after {
     background-image:
       radial-gradient(circle 1.6px at 11% 55%, rgb(111 216 255 / 0.9), transparent),
       radial-gradient(circle 1.7px at 34% 74%, rgb(184 155 255 / 0.95), transparent),
@@ -544,18 +577,28 @@
       radial-gradient(circle 1.6px at 84% 80%, rgb(255 207 107 / 0.9), transparent),
       radial-gradient(circle 1.5px at 45% 89%, rgb(111 216 255 / 0.85), transparent),
       radial-gradient(circle 1.6px at 73% 33%, rgb(255 255 255 / 0.85), transparent);
-    animation: card-sparkle 1500ms var(--easing-standard)
-      calc(var(--reveal-index, 0) * 24ms + 150ms) both;
+    animation: card-sparkle 1500ms var(--easing-standard) calc(var(--land) + 150ms) both;
   }
   .result.celebrate-top {
     /* The reveal blooms, then the halo keeps breathing for as long as the pull is on screen. */
     animation:
-      card-bloom 1150ms var(--easing-standard) calc(var(--reveal-index, 0) * 24ms + 40ms) both,
-      card-glow 3600ms ease-in-out calc(var(--reveal-index, 0) * 24ms + 1190ms) infinite alternate;
+      card-bloom 1150ms var(--easing-standard) calc(var(--land) + 40ms) both,
+      card-glow 3600ms ease-in-out calc(var(--land) + 1190ms) infinite alternate;
+  }
+  /* A card that turns carries its halo with it, so the light is the face's shadow rather than the
+     card's, and the card's own bloom would only be a second halo left standing behind the turn. */
+  .result.celebrate-top.framed.flipping {
+    animation: none;
+  }
+  .result.celebrate-top .card-flip.open .card-face {
+    animation:
+      card-face-shown var(--turn, 560ms) linear both
+        calc(var(--reveal-index, 0) * var(--stagger, 45ms) + var(--lead-in, 100ms)),
+      card-halo 1150ms var(--easing-standard) calc(var(--land) + 40ms) both,
+      card-glow 3600ms ease-in-out calc(var(--land) + 1190ms) infinite alternate;
   }
   .result.celebrate-top .result-art {
-    animation: frame-flash 900ms var(--easing-standard) calc(var(--reveal-index, 0) * 24ms + 40ms)
-      both;
+    animation: frame-flash 900ms var(--easing-standard) calc(var(--land) + 40ms) both;
   }
   @keyframes card-sparkle {
     from {
@@ -574,6 +617,37 @@
     }
   }
   /* The halo is a stack of coloured shadows, shifting hue as it swells and settles. */
+  /* The same bloom without the pop, for the halo that rides on a card mid-turn. */
+  @keyframes card-halo {
+    from {
+      box-shadow:
+        0 0 0 0 rgb(255 135 195 / 0),
+        0 0 0 0 rgb(255 207 107 / 0),
+        0 0 0 0 rgb(111 216 255 / 0),
+        0 0 0 0 rgb(184 155 255 / 0);
+    }
+    28% {
+      box-shadow:
+        0 0 16px 2px rgb(255 135 195 / 0.75),
+        0 0 24px 6px rgb(255 207 107 / 0.6),
+        0 0 32px 10px rgb(111 216 255 / 0.55),
+        0 0 44px 14px rgb(184 155 255 / 0.5);
+    }
+    62% {
+      box-shadow:
+        0 0 18px 3px rgb(184 155 255 / 0.7),
+        0 0 26px 7px rgb(111 216 255 / 0.6),
+        0 0 34px 11px rgb(255 207 107 / 0.5),
+        0 0 46px 15px rgb(255 135 195 / 0.45);
+    }
+    to {
+      box-shadow:
+        0 0 16px 2px rgb(255 135 195 / 0.55),
+        0 0 24px 6px rgb(255 207 107 / 0.45),
+        0 0 32px 10px rgb(111 216 255 / 0.4),
+        0 0 44px 14px rgb(184 155 255 / 0.35);
+    }
+  }
   @keyframes card-bloom {
     from {
       scale: 1;

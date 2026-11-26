@@ -8,13 +8,14 @@
   import type { SessionResult } from './gacha-session';
 
   /**
-   * A pull's beats: how long it sits face-down (long enough to read the rarity band on the back),
-   * when the light follows, and how long the buttons stay busy. The turn is staggered by
-   * --reveal-index in GachaResultCard (45ms a card, 100ms in, 480ms to turn).
+   * A pull's beats: how long it sits face-down (long enough to read the rarity band on the back), and
+   * the turn every card makes, staggered by --reveal-index. The card reads the same numbers from these
+   * custom properties, so the light never lands on a card that is still turning.
    */
   const HOLD_MS = 800;
-  const FLIP_MS = 900;
-  const SETTLE_MS = HOLD_MS + FLIP_MS + 300;
+  const TURN_MS = 560;
+  const STAGGER_MS = 45;
+  const LEAD_IN_MS = 100;
 
   export interface GachaPurchaseOption {
     offer: GachaPurchaseOffer;
@@ -57,16 +58,22 @@
     onclose
   }: Props = $props();
 
+  /** How long the whole deal takes, from the first card's start to the last card landing. */
+  const flipSpan = $derived(LEAD_IN_MS + TURN_MS + STAGGER_MS * Math.max(0, results.length - 1));
+
   /** Which purchase started the pull in flight, so only it shows the wait. */
   let pending = $state<GachaPurchaseOffer['id'] | null>(null);
   /** The timers of a reveal in flight, so Skip can end it at once. */
   let timers: number[] = [];
   /** A pull deals face-down and sits before it opens; this is that flip. */
   let revealed = $state(true);
-  /** The rarity flourish waits for the cards to have turned. */
-  let flourish = $state(true);
   /** True while the reveal is still playing, so the next pull cannot cut into it. */
   let settling = $state(false);
+  /** The draw the reveal belongs to, so a new batch cannot mount wearing the last pull's state. */
+  let revealFor = $state<number | undefined>(undefined);
+
+  const current = $derived(results[0]?.drawIndex);
+  const revealedNow = $derived(revealed && revealFor === current);
 
   const affordable = $derived(purchases.some(({ plan }) => plan.shortfall === 0));
 
@@ -79,16 +86,15 @@
     if (newest === undefined) return;
 
     const still = quick || window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    revealFor = newest;
     revealed = still;
-    /* Quick pulls drop the flourish too; the rarity frame still carries the rarity. */
-    flourish = !quick;
     settling = !still;
     if (still) return;
 
+    /* The light follows each card's own landing, so it is timed in the card rather than here. */
     const open = window.setTimeout(() => (revealed = true), HOLD_MS);
-    const light = window.setTimeout(() => (flourish = true), HOLD_MS + FLIP_MS);
-    const done = window.setTimeout(() => (settling = false), SETTLE_MS);
-    timers = [open, light, done];
+    const done = window.setTimeout(() => (settling = false), HOLD_MS + flipSpan + 300);
+    timers = [open, done];
 
     return () => {
       for (const timer of timers) window.clearTimeout(timer);
@@ -101,7 +107,6 @@
     for (const timer of timers) window.clearTimeout(timer);
     timers = [];
     revealed = true;
-    flourish = true;
     settling = false;
   }
 </script>
@@ -125,6 +130,9 @@
         class="result-grid"
         class:single={results.length === 1}
         class:no-motion={quick}
+        style:--turn="{TURN_MS}ms"
+        style:--stagger="{STAGGER_MS}ms"
+        style:--lead-in="{LEAD_IN_MS}ms"
         aria-label={`${results.length} ${results.length === 1 ? 'card' : 'cards'} from this pull`}
       >
         {#each results as result, index (result.drawIndex)}
@@ -134,8 +142,8 @@
               {kind}
               position={result.drawIndex}
               pull
-              {revealed}
-              {flourish}
+              revealed={revealedNow}
+              flourish={!quick}
               instant={quick}
             />
           </li>
