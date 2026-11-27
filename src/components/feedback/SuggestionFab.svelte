@@ -63,8 +63,9 @@
     padding: 12px 0;
     border: 1px solid var(--border-primary);
     border-right: 0;
-    /* The half turn puts this rounded side against the left edge of the screen. */
-    border-radius: 0 999px 999px 0;
+    /* The half turn puts these rounded corners against the left edge of the screen;
+       the right side stays square where the tab meets the edge. */
+    border-radius: 0 var(--radius-sm) var(--radius-sm) 0;
     background: var(--surface-overlay);
     box-shadow: var(--shadow-md);
     color: var(--text-secondary);
