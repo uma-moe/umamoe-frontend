@@ -24,6 +24,7 @@
   import MoeFooter from './MoeFooter.svelte';
   import Spinner from '@/components/feedback/Spinner.svelte';
   import ServiceNotices from './ServiceNotices.svelte';
+  import SuggestionFab from '@/components/feedback/SuggestionFab.svelte';
   import StickyFooterAd from './ads/StickyFooterAd.svelte';
   import { syncFusePage } from '@/services/ads/fuse-ads';
 
@@ -390,6 +391,7 @@
   <PageTour startRequest={tourRequest} />
 {/if}
 <ServiceNotices />
+<SuggestionFab />
 {#if FindLoadedResults}
   <FindLoadedResults />
 {/if}
