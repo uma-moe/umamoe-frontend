@@ -72,20 +72,20 @@
 <button
   class="suggestion-fab"
   type="button"
-  aria-label="Send a suggestion"
-  title="Send a suggestion"
+  aria-label="Send feedback"
+  title="Send feedback"
   onclick={() => (open = true)}
 >
   <Icon
     name="send"
-    size={20}
+    size={15}
   />
-  <span>Suggest</span>
+  <span>Feedback</span>
 </button>
 
 <Dialog
   bind:open
-  title="Send a suggestion"
+  title="Send feedback"
   description="Bugs, ideas, anything else. Only the team sees it."
   icon="send"
   onclose={reset}
@@ -163,21 +163,24 @@
   .suggestion-fab {
     position: fixed;
     z-index: calc(var(--z-header) + 1);
-    right: max(16px, env(safe-area-inset-right));
-    /* Sits above the mobile tab toolbar and any injected footer creative. */
-    bottom: calc(16px + env(safe-area-inset-bottom) + var(--footer-ad-height, 0px));
+    /* A tab against the right edge, clear of the footer and any injected creative. */
+    top: 50%;
+    right: 0;
+    transform: translateY(-50%);
     display: inline-flex;
     align-items: center;
-    gap: 8px;
-    min-height: 44px;
-    padding: 0 16px;
+    gap: 6px;
+    min-height: 34px;
+    padding: 0 10px;
     border: 1px solid var(--border-primary);
-    border-radius: 999px;
+    border-right: 0;
+    border-radius: 999px 0 0 999px;
     background: var(--surface-overlay);
     box-shadow: var(--shadow-md);
-    color: var(--text-primary);
-    font-size: var(--font-sm);
+    color: var(--text-secondary);
+    font-size: 12px;
     font-weight: 600;
+    letter-spacing: 0.01em;
     cursor: pointer;
   }
   .suggestion-fab:hover {
@@ -186,10 +189,7 @@
   }
   .suggestion-fab:focus-visible {
     outline: 2px solid var(--accent-primary);
-    outline-offset: 2px;
-  }
-  :global(body:has(.mobile-bottom-toolbar)) .suggestion-fab {
-    bottom: calc(var(--timeline-toolbar-height) + 12px);
+    outline-offset: -2px;
   }
   .suggestion-form {
     display: grid;
@@ -254,13 +254,14 @@
     margin: 0;
   }
   @media (max-width: 560px) {
+    /* On a phone the label would cover a whole card edge, so the tab keeps to its icon. */
     .suggestion-fab span {
       display: none;
     }
     .suggestion-fab {
-      width: 52px;
-      padding: 0;
       justify-content: center;
+      width: 34px;
+      padding: 0;
     }
     .form-actions {
       display: grid;
