@@ -78,10 +78,20 @@ export function normalizeSkill(entry: Record<string, unknown>): SkillData {
   };
 }
 
+/** Evolved skills carry master rarity 6 (character evos are also numbered from 100,000,000). */
+export const EVO_SKILL_RARITY = 6;
+const CHARACTER_EVO_ID_FROM = 100_000_000;
+
+export function isEvoSkill(skill: Pick<SkillData, 'skill_id' | 'rarity'> | undefined): boolean {
+  if (!skill) return false;
+  return skill.rarity === EVO_SKILL_RARITY || skill.skill_id >= CHARACTER_EVO_ID_FROM;
+}
+
 export function skillRarity(
   skill: SkillData | undefined,
   inherited: boolean
-): 'normal' | 'gold' | 'special' | 'unique-inherited' | 'unique-main' {
+): 'normal' | 'gold' | 'evolved' | 'special' | 'unique-inherited' | 'unique-main' {
+  if (isEvoSkill(skill)) return 'evolved';
   if (skill?.unique || skill?.rarity === 4) return inherited ? 'unique-inherited' : 'unique-main';
   return skill?.rarity === 3 ? 'special' : skill?.rarity === 2 ? 'gold' : 'normal';
 }
@@ -119,7 +129,7 @@ export function resolveEncodedSkill(
 
   const directInherited = encodedId >= 900000 && encodedId < 1000000;
   const baseId = directInherited ? encodedId : Math.floor(encodedId / 10);
-  if (String(baseId).startsWith('9')) {
+  if (baseId >= 900000 && baseId < 1000000) {
     const rest = String(baseId).slice(1);
     for (const prefix of ['1', '2', '3']) {
       const skill = skills.get(Number(prefix + rest));
@@ -157,7 +167,7 @@ export function sortEncodedSkills(skills: Map<number, SkillData>, ids: number[])
             ? 0
             : 3;
 
-    return (skill.rarity === 2 ? 2 : 6) + type;
+    return (isEvoSkill(skill) ? 2 : skill.rarity === 2 ? 6 : 10) + type;
   }
 
   return ids

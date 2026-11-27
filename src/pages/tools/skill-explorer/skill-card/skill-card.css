@@ -131,6 +131,24 @@ header p {
   color: var(--accent-error);
 }
 
+.worth .value-line {
+  display: inline-flex;
+  align-items: baseline;
+  flex-wrap: wrap;
+  gap: 0.25rem;
+}
+
+.worth .ci {
+  color: var(--text-secondary);
+  font-size: 0.64rem;
+  font-weight: 500;
+  white-space: nowrap;
+}
+
+.worth .ci.model {
+  color: var(--text-muted);
+}
+
 .number {
   color: var(--accent-primary);
   font-weight: 600;
@@ -186,10 +204,61 @@ h4 {
   gap: 0.5rem;
 }
 
+.evo-toggle {
+  padding: 1px 7px;
+  border: 1px solid rgb(244 114 182 / 0.55);
+  border-radius: 999px;
+  background: rgb(244 114 182 / 0.12);
+  color: #f472b6;
+  font: inherit;
+  font-size: 0.64rem;
+  font-weight: 600;
+  line-height: 1.4;
+  cursor: pointer;
+}
+
+.evo-toggle:hover {
+  background: rgb(244 114 182 / 0.22);
+}
+
+.evo-toggle.active {
+  border-color: #ec4899;
+  background: rgb(236 72 153 / 0.28);
+  color: var(--text-primary);
+}
+
+.sp-meta {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+}
+
 .sp-cost {
   color: var(--accent-warning);
   font-size: 0.72rem;
   font-variant-numeric: tabular-nums;
+}
+
+.sp-efficiency {
+  padding: 1px 6px;
+  border: 1px solid var(--border-primary);
+  border-radius: 999px;
+  background: var(--bg-secondary);
+  color: var(--text-secondary);
+  font-size: 0.66rem;
+  font-weight: 650;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.sp-efficiency.positive {
+  border-color: rgb(var(--accent-success-rgb) / 0.35);
+  color: var(--accent-success);
+}
+
+.sp-efficiency.negative {
+  border-color: rgb(var(--accent-error-rgb) / 0.35);
+  color: var(--accent-error);
 }
 
 .effects p {
@@ -346,22 +415,121 @@ svg {
 }
 
 .bar {
+  fill: color-mix(in srgb, var(--accent-primary) 70%, transparent);
+}
+
+.bar.with-wr {
+  fill: color-mix(in srgb, var(--accent-primary) 34%, transparent);
+}
+
+.bar.hovered {
   fill: var(--accent-primary);
 }
 
-.mean {
-  stroke: var(--text-primary);
-  stroke-width: 1.25;
-  stroke-dasharray: 3 2;
+.bucket-highlight {
+  fill: rgb(var(--accent-primary-rgb) / 0.14);
 }
-.spurt-boundary {
-  stroke: var(--accent-warning);
-  stroke-width: 1;
+
+.bucket-hit {
+  fill: transparent;
+  cursor: crosshair;
+}
+
+.wr-zero {
+  stroke: var(--border-primary);
+  stroke-width: 0.75;
   stroke-dasharray: 2 2;
 }
+
+.wr-band {
+  fill: color-mix(in srgb, var(--accent-success) 10%, transparent);
+  stroke: none;
+}
+
+.wr-line {
+  fill: none;
+  stroke: var(--accent-success);
+  stroke-width: 1.5;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.wr-scale-label {
+  fill: color-mix(in srgb, var(--accent-success) 75%, var(--text-muted));
+  font-size: 7px;
+  font-weight: 600;
+  text-anchor: end;
+  font-variant-numeric: tabular-nums;
+}
+
+.wr-hover-dot {
+  fill: var(--text-muted);
+  stroke: var(--component-bg);
+  stroke-width: 0.9;
+}
+
+.wr-hover-dot.positive {
+  fill: var(--accent-success);
+}
+
+.wr-hover-dot.negative {
+  fill: var(--accent-error);
+}
+
+.mean {
+  stroke: color-mix(in srgb, var(--text-primary) 65%, transparent);
+  stroke-width: 1;
+  stroke-dasharray: 2.5 2;
+}
+
+.wr-mean {
+  stroke: color-mix(in srgb, var(--accent-success) 75%, transparent);
+  stroke-width: 1;
+}
+
+.spurt-boundary {
+  stroke: color-mix(in srgb, var(--accent-warning) 65%, transparent);
+  stroke-width: 0.9;
+  stroke-dasharray: 2 2;
+}
+
+.proc-readout {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.1rem 0.55rem;
+  align-items: baseline;
+  min-height: 1.15em;
+  margin-top: 3px;
+  color: var(--text-secondary);
+  font-size: 0.69rem;
+  font-variant-numeric: tabular-nums;
+}
+
+.proc-readout .iqr-readout {
+  color: var(--accent-primary);
+  font-weight: 500;
+}
+
+.proc-readout .wr-avg-readout,
+.proc-readout .wr-readout.positive {
+  color: var(--accent-success);
+  font-weight: 600;
+}
+
+.proc-readout .wr-readout.negative {
+  color: var(--accent-error);
+  font-weight: 600;
+}
+
 .key.spurt::before {
   height: 2px;
   background: var(--accent-warning);
+}
+
+.key.wr-curve::before {
+  height: 2px;
+  border-radius: 999px;
+  background: var(--accent-success);
 }
 
 .terrain {

@@ -1,7 +1,15 @@
 import { describe, expect, it } from 'vitest';
 import type { SkillData } from '@/lib/game-data/skills/skills';
 import { SECTIONS, SKILL_KINDS, type SkillFacts, type SkillPoint } from './skill-explorer-data';
-import { SKILL_RARITIES, toggleType, plotView, type PlotOptions } from './skill-explorer-view';
+import {
+  DEFAULT_SKILL_RARITIES,
+  SKILL_RARITIES,
+  gateFeeders,
+  toggleType,
+  plotView,
+  skillPurchaseCost,
+  type PlotOptions
+} from './skill-explorer-view';
 import { valueAxis, valuePercent } from './scatter/scatter-scale';
 
 function skill(skillId: number, name: string, extra: Partial<SkillData> = {}): SkillData {
@@ -312,12 +320,108 @@ describe('Skill Explorer plot view', () => {
     expect(unique.image).toContain('100101');
   });
 
+  it('classifies evolved skills apart from inherited uniques and uses skill icons even when mapped to a card', () => {
+    const charEvo = skill(100101111, 'Gluttonous Ruler', { rarity: 6 });
+    const scenarioEvo = skill(407011, 'Scenario Evo', { rarity: 6 });
+    const evoSkills = new Map([...skills, [100101111, charEvo], [407011, scenarioEvo]]);
+    const evoFacts = new Map<number, SkillFacts>([
+      ...facts,
+      [100101111, { kind: 'recovery', card: 100101 }],
+      [407011, { kind: 'speed' }]
+    ]);
+    const evoPoints = [...points, point(100101111, 1.2, 0.4), point(407011, 1.1, 0.5)];
+
+    const plotted = view({
+      points: evoPoints,
+      skills: evoSkills,
+      facts: evoFacts,
+      uniqueVersion: 'own',
+      rarities: new Set(['evolved'])
+    }).plotted;
+
+    expect(plotted.map((item) => [item.skillId, item.tier])).toEqual([
+      [100101111, 'evolved'],
+      [407011, 'evolved']
+    ]);
+    expect(plotted[0]!.image).toContain('skills/icons/10011');
+    expect(plotted[1]!.image).toContain('skills/icons/10011');
+    // Character evos are not hidden by the uniqueVersion toggle or confused with inherited uniques.
+    expect(
+      view({
+        points: evoPoints,
+        skills: evoSkills,
+        facts: evoFacts,
+        uniqueVersion: 'inherited',
+        rarities: new Set(['inherited'])
+      }).plotted.map((item) => item.skillId)
+    ).toEqual([900011]);
+  });
+
+  it('hides evos by default but surfaces and highlights them via base-skill search, Display evo, or Uma highlight', () => {
+    const evo = skill(100101111, 'Tail Nine', { rarity: 6 });
+    const evoSkills = new Map([...skills, [100101111, evo]]);
+    const evoFacts = new Map<number, SkillFacts>([
+      ...facts,
+      [100101111, { kind: 'speed', card: 100101 }]
+    ]);
+    const evoPoints = [...points, point(100101111, 2.5, 0.5)];
+    const evolvesFrom = new Map([[100101111, 200341]]);
+    const defaults = {
+      points: evoPoints,
+      skills: evoSkills,
+      facts: evoFacts,
+      rarities: new Set(DEFAULT_SKILL_RARITIES),
+      evolvesFrom
+    };
+
+    // Hidden by default so evos never crowd Top 100.
+    expect(shownIds(defaults)).not.toContain(100101111);
+
+    // Searching the base gold ("Corner Connoisseur") surfaces and highlights its evo too.
+    const searched = view({ ...defaults, limit: 1, search: 'corner' }).plotted;
+    expect(searched.find((item) => item.skillId === 100101111)).toMatchObject({
+      searchMatch: true,
+      matches: true
+    });
+
+    // Clicking "Display evo" reveals the evo even beyond the plot limit.
+    expect(shownIds({ ...defaults, limit: 1, revealedEvoIds: new Set([100101111]) })).toContain(
+      100101111
+    );
+
+    // Selecting the owning Uma surfaces her evo too.
+    expect(shownIds({ ...defaults, umaSkillIds: new Set([100101111, 200341]) })).toContain(
+      100101111
+    );
+  });
+
   it('places skills by proc point in metres on a single course', () => {
     const metres = view({ courseDistance: 2000 });
 
     const connoisseur = metres.plotted.find((plotted) => plotted.skillId === 200341)!;
     expect(connoisseur.xLabel).toBe('1200 m');
     expect(metres.xUnit).toEqual({ scale: 2000, suffix: ' m' });
+  });
+
+  it('scales per-skill 95% CI half-width with procScaled and omits it in alone mode', () => {
+    const withCi = points.map((p) =>
+      p.skillId === 200341 ? { ...p, rate: 0.5, ci95: 1.2, raced: true } : p
+    );
+
+    const overall = view({ points: withCi, procScaled: true }).plotted.find(
+      (item) => item.skillId === 200341
+    )!;
+    const perProc = view({ points: withCi, procScaled: false }).plotted.find(
+      (item) => item.skillId === 200341
+    )!;
+    const alone = view({ points: withCi, yMode: 'alone', procScaled: true }).plotted.find(
+      (item) => item.skillId === 200341
+    )!;
+
+    expect(overall.yError).toBeCloseTo(1.2);
+    expect(overall.raced).toBe(true);
+    expect(perProc.yError).toBeCloseTo(2.4);
+    expect(alone.yError).toBeUndefined();
   });
 
   it('tints the race phases and marks where the final spurt can begin on the proc point axis only', () => {
@@ -332,8 +436,88 @@ describe('Skill Explorer plot view', () => {
     expect(view({ xMode: 'cost' })).toMatchObject({ bands: [], marks: [] });
   });
 
-  it('leaves out skills without an SP cost on the cost axis', () => {
-    expect(view({ xMode: 'cost' }).plotted.map((plotted) => plotted.x)).toEqual([180, 110, 90]);
+  it('places skills by WR-weighted activation point in wrPosition mode when sectionWins exist', () => {
+    const secs = new Array<number>(SECTIONS).fill(0);
+    secs[6] = 0.5;
+    secs[16] = 0.25;
+    const secWins = new Array<number>(SECTIONS).fill(0);
+    secWins[6] = 0.4;
+    secWins[16] = 16.0;
+    const connoisseur = { ...point(200341, 4.0, 0.4), sections: secs, sectionWins: secWins };
+
+    const wrPlot = view({ points: [connoisseur], xMode: 'wrPosition', courseDistance: 2000 });
+    const plotted = wrPlot.plotted[0]!;
+
+    expect(plotted.x).toBeGreaterThan(0.65);
+    expect(wrPlot.xTitle).toBe('Avg WR activation point (metres)');
+    expect(wrPlot.marks.map((mark) => mark.at)).toEqual([2 / 3]);
+  });
+
+  it('computes full SP purchase costs including 2-tier and 3-tier prerequisites and evo base skills, omitting own uniques', () => {
+    const pricedSkills = new Map<number, SkillData>([
+      ...skills,
+      [200014, skill(200014, 'Right-Handed Demon', { rarity: 2, baseCost: 130 })],
+      [200342, skill(200342, 'Corner Acceleration ○', { rarity: 1, baseCost: 180 })],
+      [201102, skill(201102, 'Medium Straightaways ○', { rarity: 1, baseCost: 100 })],
+      [201101, skill(201101, 'Medium Straightaways ◎', { rarity: 1, baseCost: 110 })],
+      [201103, skill(201103, 'Flash Forward', { rarity: 2, baseCost: 150 })],
+      [100101111, skill(100101111, 'Moonlight Sommelier', { rarity: 6 })],
+      [100011, skill(100011, 'Own Unique', { rarity: 4, unique: true, baseCost: 200 })]
+    ]);
+    const evolvesFrom = new Map([[100101111, 200341]]);
+
+    expect(skillPurchaseCost(pricedSkills.get(200012)!, pricedSkills)).toEqual({
+      total: 90,
+      direct: 90,
+      prerequisite: 0
+    });
+    expect(skillPurchaseCost(pricedSkills.get(200011)!, pricedSkills)).toEqual({
+      total: 200,
+      direct: 110,
+      prerequisite: 90
+    });
+    // 3-tier gold green: adds both ○ (90) and ◎ (110), skipping negative × (200013).
+    expect(skillPurchaseCost(pricedSkills.get(200014)!, pricedSkills)).toEqual({
+      total: 330,
+      direct: 130,
+      prerequisite: 200
+    });
+    // 3-tier gold speed: adds ○ (100) + ◎ (110) + gold (150) = 360.
+    expect(skillPurchaseCost(pricedSkills.get(201103)!, pricedSkills)).toEqual({
+      total: 360,
+      direct: 150,
+      prerequisite: 210
+    });
+    expect(skillPurchaseCost(pricedSkills.get(200341)!, pricedSkills)).toEqual({
+      total: 360,
+      direct: 180,
+      prerequisite: 180
+    });
+    expect(skillPurchaseCost(pricedSkills.get(100101111)!, pricedSkills, evolvesFrom)).toEqual({
+      total: 360,
+      direct: 180,
+      prerequisite: 180,
+      fromBase: true
+    });
+    expect(skillPurchaseCost(pricedSkills.get(100011)!, pricedSkills)).toBeUndefined();
+  });
+
+  it('plots WR per 100 SP against trimmed total SP cost in SP efficiency mode and omits unpriced skills', () => {
+    const withCi = points.map((p) => (p.skillId === 200011 ? { ...p, ci95: 0.4, raced: true } : p));
+    const efficiency = view({ points: withCi, xMode: 'cost' });
+
+    // Sorted by WR / 100 SP: 200341 (0.8 / 1.8 = 0.444), 200012 (0.3 / 0.9 = 0.333), 200011 (0.5 / 2.0 = 0.25)
+    expect(efficiency.plotted.map((plotted) => [plotted.skillId, plotted.x])).toEqual([
+      [200341, 180],
+      [200012, 90],
+      [200011, 200]
+    ]);
+    expect(efficiency.plotted[0]!.y).toBeCloseTo(0.8 * (100 / 180));
+    expect(efficiency.plotted[1]!.y).toBeCloseTo(0.3 * (100 / 90));
+    expect(efficiency.plotted[2]!.y).toBeCloseTo(0.5 * (100 / 200));
+    expect(efficiency.plotted[2]!.yError).toBeCloseTo(0.2);
+    expect(efficiency.xAxis.min).toBeGreaterThan(0);
+    expect(efficiency.yUnitSuffix).toBe('/ 100 SP');
   });
 });
 
@@ -381,5 +565,93 @@ describe('toggleType', () => {
 
     expect(empty.size).toBe(0);
     expect([...toggleType(empty, 'inherited')]).toEqual(['inherited']);
+  });
+});
+
+describe('gateFeeders', () => {
+  const midSections = () => {
+    const secs = new Array<number>(SECTIONS).fill(0);
+    secs[8] = 0.9;
+    return secs;
+  };
+  const midPoint = (id: number, win: number): SkillPoint => ({
+    ...point(id, win, 0.35),
+    rate: 0.9,
+    sections: midSections()
+  });
+
+  it('caps owned uniques at one per uma, excludes other-uma uniques/evos for character skills, and deduplicates families', () => {
+    const feederSkills = new Map<number, SkillData>([
+      [103401111, skill(103401111, "Firefighter's Ascent", { rarity: 6 })],
+      [100011, skill(100011, 'Own Unique A', { rarity: 5, unique: true })],
+      [100021, skill(100021, 'Own Unique B', { rarity: 5, unique: true })],
+      [100031, skill(100031, 'Own Unique C', { rarity: 5, unique: true })],
+      [100101111, skill(100101111, 'Other Evo', { rarity: 6 })],
+      [900011, skill(900011, 'Inherited A', { rarity: 1, inherited: true })],
+      [900041, skill(900041, 'Inherited D', { rarity: 1, inherited: true })],
+      [900051, skill(900051, 'Inherited E', { rarity: 1, inherited: true })],
+      [900061, skill(900061, 'Inherited F', { rarity: 1, inherited: true })],
+      [200331, skill(200331, 'Professor of Curvature', { rarity: 2 })],
+      [200332, skill(200332, 'Corner Adept ○', { rarity: 1 })],
+      [201661, skill(201661, "Playtime's Over!", { rarity: 2 })],
+      [201251, skill(201251, 'Medium Corners ◎', { rarity: 1 })]
+    ]);
+    const feederFacts = new Map<number, SkillFacts>([
+      [103401111, { kind: 'speed', card: 103401 }],
+      [100011, { kind: 'speed', card: 100101 }],
+      [100021, { kind: 'speed', card: 100201 }],
+      [100031, { kind: 'speed', card: 100301 }],
+      [100101111, { kind: 'speed', card: 100101 }],
+      [900011, { kind: 'speed', card: 100101 }],
+      [900041, { kind: 'speed', card: 100401 }],
+      [900051, { kind: 'speed', card: 100501 }],
+      [900061, { kind: 'speed', card: 100601 }],
+      [200331, { kind: 'speed' }],
+      [200332, { kind: 'speed' }],
+      [201661, { kind: 'speed' }],
+      [201251, { kind: 'speed' }]
+    ]);
+    const feederPoints = [
+      midPoint(100011, 10.0),
+      midPoint(100021, 9.5),
+      midPoint(100031, 9.0),
+      midPoint(100101111, 8.8),
+      midPoint(900011, 5.0),
+      midPoint(900041, 4.8),
+      midPoint(900051, 4.6),
+      midPoint(900061, 4.4),
+      midPoint(200331, 4.0),
+      midPoint(200332, 3.8),
+      midPoint(201661, 3.5),
+      midPoint(201251, 3.2)
+    ];
+    const gate = {
+      count: 3,
+      counted: 'any' as const,
+      sections: [4, 16] as [number, number],
+      where: 'in the mid race'
+    };
+
+    // Generic skill: at most 1 owned unique (100011), skips its inherited twin (900011), at most 2 inherited (900041, 900051),
+    // skips other-Uma evo (100101111), deduplicates 200331/200332 -> [100011, 900041, 900051, 200331, 201661].
+    const generic = gateFeeders({
+      skillId: 201611,
+      gate,
+      points: feederPoints,
+      skills: feederSkills,
+      facts: feederFacts
+    });
+    expect(generic.map((p) => p.skillId)).toEqual([100011, 900041, 900051, 200331, 201661]);
+
+    // Character-locked evo (Inari One 103401): excludes all other Umas' own uniques and other Umas' evos.
+    const charEvo = gateFeeders({
+      skillId: 103401111,
+      gate,
+      points: feederPoints,
+      skills: feederSkills,
+      facts: feederFacts,
+      ownerCardId: 103401
+    });
+    expect(charEvo.map((p) => p.skillId)).toEqual([900011, 900041, 200331, 201661, 201251]);
   });
 });

@@ -23,7 +23,7 @@
     display: inline-flex;
     vertical-align: middle;
     margin-left: 2px;
-    --inspect-popover-width: 280px;
+    --inspect-popover-width: 305px;
   }
   /* The card's labels are small capitals: a full-size icon would make every tile taller. */
   .value-help :global(.info-icon) {
@@ -37,9 +37,9 @@
   p {
     margin: 0;
     color: var(--text-secondary);
-    font-size: 11px;
+    font-size: 12.5px;
     font-weight: 400;
-    line-height: 1.6;
+    line-height: 1.5;
     letter-spacing: normal;
     text-transform: none;
     white-space: normal;

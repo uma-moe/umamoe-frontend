@@ -1,13 +1,13 @@
 <script lang="ts">
   import { onDestroy, type Snippet } from 'svelte';
   import type { Attachment } from 'svelte/attachments';
-  import IconButton from '@/components/controls/IconButton.svelte';
   import Icon from '@/components/Icon.svelte';
-  import Button from '@/components/controls/Button.svelte';
+  import IconButton from '@/components/controls/IconButton.svelte';
   import ToggleButton from '@/components/controls/ToggleButton.svelte';
   import SkillDialog from './SkillDialog.svelte';
   import { placeIcons } from './icon-layout';
   import { placeLabels } from './label-layout';
+  import { buildGaussianViolin, CI95_Z, type ViolinGeometry } from './distribution-overlay';
   import {
     linearPercent,
     linearValueAt,
@@ -34,10 +34,14 @@
     skillId: number;
     name: string;
     image?: string;
-    tier: 'white' | 'gold' | 'inherited' | 'personal';
+    tier: 'white' | 'gold' | 'evolved' | 'inherited' | 'personal';
     x: number;
     /** Lengths or win points, as `format` shows them. */
     y: number;
+    /** 95% confidence or model interval half-width in the same units as `y`. */
+    yError?: number;
+    /** True when `y` came from direct paired races rather than the model alone. */
+    raced?: boolean;
     xLabel: string;
     /** Dimmed when a search leaves it out. */
     matches: boolean;
@@ -89,6 +93,10 @@
     xSplit: number;
     ySplit: number;
     yTitle: string;
+    /** Optional suffix shown on the median tick and skill aria-labels (e.g. `'/ 100 SP'`). */
+    yUnitSuffix?: string;
+    /** Optional lower floor for the root-scaled vertical axis. */
+    yFloor?: number;
     format: (value: number) => string;
     quadrants: QuadrantLabels;
     bands?: readonly PlotBand[];
@@ -100,6 +108,13 @@
     comparedSkillIds: ReadonlySet<number>;
     oncompare: (skillId: number) => void;
     onclearcomparison: () => void;
+    /** Evolved skills currently revealed from base skill cards ("Display evo"). */
+    revealedEvoIds?: ReadonlySet<number>;
+    onclearevos?: () => void;
+    /** For a base gold skill with evolved versions: count, whether displayed, and toggle handler. */
+    evoToggle?: (
+      skillId: number
+    ) => { count: number; shown: boolean; toggle: () => void } | undefined;
   }
 
   let {
@@ -110,6 +125,8 @@
     xSplit,
     ySplit,
     yTitle,
+    yUnitSuffix,
+    yFloor,
     format,
     quadrants,
     bands = [],
@@ -118,7 +135,10 @@
     details,
     comparedSkillIds,
     oncompare,
-    onclearcomparison
+    onclearcomparison,
+    revealedEvoIds,
+    onclearevos,
+    evoToggle
   }: Props = $props();
 
   const detailsId = $props.id();
@@ -144,6 +164,7 @@
   let plotWindow = $state<PlotWindow>(WHOLE_PLOT);
   let pinnedId = $state<number>();
   let previewId = $state<number>();
+  let hoveredId = $state<number>();
   let selectedButton = $state<HTMLButtonElement>();
   let dragging = $state(false);
   let labelFont = $state('');
@@ -159,7 +180,12 @@
   const iconSize = $derived(viewportWidth < 600 ? 22 : 30);
   const zoom = $derived(zoomOf(plotWindow));
   const zoomed = $derived(isZoomed(plotWindow));
-  const yAxis = $derived(valueAxis(points.map((point) => point.y)));
+  const yAxis = $derived(
+    valueAxis(
+      points.map((point) => point.y),
+      yFloor
+    )
+  );
 
   const onScreen = $derived(
     points.flatMap((point) => {
@@ -265,9 +291,60 @@
     activeId === undefined ? undefined : placed.find((icon) => icon.id === activeId)
   );
 
+  interface DistributionOverlay {
+    id: number;
+    dimmed: boolean;
+    x: number;
+    y: number;
+    raced: boolean;
+    compared: boolean;
+    focused: boolean;
+    violin: ViolinGeometry;
+    highLabel: string;
+    lowLabel: string;
+  }
+
+  /** Foreground vertical Gaussian WR violins for hovered, pinned, and compared skills. */
+  const overlays = $derived(
+    placed.flatMap((icon): DistributionOverlay[] => {
+      const point = pointsById.get(icon.id);
+      if (!point || point.yError === undefined || point.yError <= 0) return [];
+
+      const compared = comparedSkillIds.has(icon.id);
+      const focused = icon.id === hoveredId || icon.id === activeId;
+      if (!focused && !compared) return [];
+
+      const rawY = screenY(valuePercent(point.y, yAxis) / 100);
+      const dy = icon.y - rawY;
+      const sigma = point.yError / CI95_Z;
+      const violin = buildGaussianViolin(
+        icon.x,
+        (z) => screenY(valuePercent(point.y + z * sigma, yAxis) / 100) + dy,
+        iconSize / 2 + 12,
+        4,
+        Math.max(4, viewportHeight - 4)
+      );
+      return [
+        {
+          id: icon.id,
+          dimmed: isDimmed(point),
+          x: icon.x,
+          y: icon.y,
+          raced: point.raced === true,
+          compared,
+          focused,
+          violin,
+          highLabel: format(point.y + point.yError),
+          lowLabel: format(point.y - point.yError)
+        }
+      ];
+    })
+  );
+
   function highlightRank(skillId: number): number {
     if (pointsById.get(skillId)?.searchMatch) return 2;
-    return comparedSkillIds.has(skillId) ? 1 : 0;
+    if (comparedSkillIds.has(skillId) || revealedEvoIds?.has(skillId)) return 1;
+    return 0;
   }
 
   function highlighted(skillId: number): boolean {
@@ -353,6 +430,19 @@
     previewId = undefined;
     selectedButton = event.currentTarget as HTMLButtonElement;
     pinnedId = pinnedId === skillId ? undefined : skillId;
+  }
+
+  function hoverSkill(skillId: number, event: PointerEvent) {
+    if (event.pointerType === 'mouse' && !dragging) {
+      hoveredId = skillId;
+    }
+
+    previewSkill(skillId, event);
+  }
+
+  function unhoverSkill(skillId: number) {
+    if (hoveredId === skillId) hoveredId = undefined;
+    leavePreview();
   }
 
   function previewSkill(skillId: number, event: PointerEvent) {
@@ -451,6 +541,7 @@
     if (!dragging && pressTravel > DRAG_THRESHOLD) {
       dragging = true;
       previewId = undefined;
+      hoveredId = undefined;
       viewport.setPointerCapture(event.pointerId);
     }
   }
@@ -542,55 +633,87 @@
 >
   <div class="toolbar">
     <p class="hint">
-      <span class="with-hover">
-        Hover a skill for details, click to pin it. Scroll or pinch to zoom.
-      </span>
-      <span class="with-touch">Tap a skill for details. Pinch to zoom.</span>
+      <span class="with-hover">Hover for details, click to pin, scroll to zoom.</span>
+      <span class="with-touch">Tap for details, pinch to zoom.</span>
       {#if zoomed}
         Drag to pan.
       {/if}
     </p>
-    {#if comparedSkillIds.size > 0}
-      <div class="comparison-controls">
-        <span>{comparedSkillIds.size} compared</span>
-        <Button
-          variant="secondary"
+    <div class="toolbar-right">
+      {#if comparedSkillIds.size > 0 || (revealedEvoIds && revealedEvoIds.size > 0 && onclearevos)}
+        <div class="toolbar-chips">
+          {#if comparedSkillIds.size > 0}
+            <button
+              type="button"
+              class="plot-chip compare"
+              aria-label={`Clear ${comparedSkillIds.size} compared`}
+              title="Clear comparison"
+              onclick={onclearcomparison}
+            >
+              <span
+                class="chip-dot"
+                aria-hidden="true"
+              ></span>
+              <span>{comparedSkillIds.size} compared</span>
+              <Icon
+                name="close"
+                size={12}
+              />
+            </button>
+          {/if}
+          {#if revealedEvoIds && revealedEvoIds.size > 0 && onclearevos}
+            <button
+              type="button"
+              class="plot-chip evo"
+              aria-label={`Hide ${revealedEvoIds.size} revealed ${revealedEvoIds.size === 1 ? 'evo' : 'evos'}`}
+              title="Hide revealed evolved skills"
+              onclick={onclearevos}
+            >
+              <Icon
+                name="star"
+                size={11}
+              />
+              <span>{revealedEvoIds.size} {revealedEvoIds.size === 1 ? 'evo' : 'evos'}</span>
+              <Icon
+                name="close"
+                size={12}
+              />
+            </button>
+          {/if}
+        </div>
+        <span
+          class="toolbar-sep"
+          aria-hidden="true"
+        ></span>
+      {/if}
+      <div
+        class="zoom"
+        role="group"
+        aria-label="Zoom"
+      >
+        <IconButton
+          icon="minus"
           size="sm"
-          icon="close"
-          ariaLabel="Clear comparison"
-          onclick={onclearcomparison}
-        >
-          Clear
-        </Button>
+          label="Zoom out"
+          disabled={!zoomed}
+          onclick={() => zoomBy(1 / ZOOM_STEP)}
+        />
+        <output aria-live="polite">{zoom.toFixed(1)}×</output>
+        <IconButton
+          icon="add"
+          size="sm"
+          label="Zoom in"
+          disabled={zoom >= MAX_ZOOM - 0.001}
+          onclick={() => zoomBy(ZOOM_STEP)}
+        />
+        <IconButton
+          icon="refresh"
+          size="sm"
+          label="Show the whole plot"
+          disabled={!zoomed}
+          onclick={showWholePlot}
+        />
       </div>
-    {/if}
-    <div
-      class="zoom"
-      role="group"
-      aria-label="Zoom"
-    >
-      <IconButton
-        icon="minus"
-        size="sm"
-        label="Zoom out"
-        disabled={!zoomed}
-        onclick={() => zoomBy(1 / ZOOM_STEP)}
-      />
-      <output aria-live="polite">{zoom.toFixed(1)}×</output>
-      <IconButton
-        icon="add"
-        size="sm"
-        label="Zoom in"
-        disabled={zoom >= MAX_ZOOM - 0.001}
-        onclick={() => zoomBy(ZOOM_STEP)}
-      />
-      <IconButton
-        icon="refresh"
-        size="sm"
-        label="Show the whole plot"
-        disabled={!zoomed}
-        onclick={showWholePlot}
-      />
     </div>
   </div>
 
@@ -702,7 +825,7 @@
           style:top={`${splitY}px`}
           aria-hidden="true"
         >
-          {format(ySplit)}
+          {format(ySplit)}{yUnitSuffix ? ` ${yUnitSuffix}` : ''}
           <small>median</small>
         </span>
       {/if}
@@ -721,6 +844,87 @@
           class="skill-layer"
           class:dimmed
         >
+          {#each overlays as overlay (overlay.id)}
+            {#if overlay.dimmed === dimmed}
+              <div
+                class="ci-overlay"
+                class:focused={overlay.focused}
+                class:compared={overlay.compared}
+                class:model={!overlay.raced}
+                style:transform-origin={`${overlay.x}px ${overlay.y}px`}
+                aria-hidden="true"
+              >
+                <svg
+                  class="ci-svg"
+                  width={viewportWidth}
+                  height={viewportHeight}
+                  viewBox={`0 0 ${viewportWidth} ${viewportHeight}`}
+                >
+                  <path
+                    class="violin-full"
+                    d={overlay.violin.fullPath}
+                  />
+                  <path
+                    class="violin-iqr"
+                    d={overlay.violin.iqrPath}
+                  />
+                  <line
+                    class="violin-stem"
+                    x1={overlay.x}
+                    x2={overlay.x}
+                    y1={overlay.violin.topY}
+                    y2={overlay.violin.bottomY}
+                  />
+                  <line
+                    class="violin-iqr-tick"
+                    x1={overlay.x - overlay.violin.q3HalfWidth}
+                    x2={overlay.x + overlay.violin.q3HalfWidth}
+                    y1={overlay.violin.q3Y}
+                    y2={overlay.violin.q3Y}
+                  />
+                  <line
+                    class="violin-iqr-tick"
+                    x1={overlay.x - overlay.violin.q1HalfWidth}
+                    x2={overlay.x + overlay.violin.q1HalfWidth}
+                    y1={overlay.violin.q1Y}
+                    y2={overlay.violin.q1Y}
+                  />
+                  <line
+                    class="violin-cap"
+                    x1={overlay.x - 5}
+                    x2={overlay.x + 5}
+                    y1={overlay.violin.topY}
+                    y2={overlay.violin.topY}
+                  />
+                  <line
+                    class="violin-cap"
+                    x1={overlay.x - 5}
+                    x2={overlay.x + 5}
+                    y1={overlay.violin.bottomY}
+                    y2={overlay.violin.bottomY}
+                  />
+                </svg>
+
+                {#if overlay.violin.bottomY - overlay.violin.topY >= 16}
+                  <span
+                    class="ci-bound high"
+                    style:left={`${overlay.x}px`}
+                    style:top={`${overlay.violin.topY}px`}
+                  >
+                    {overlay.highLabel}
+                  </span>
+                  <span
+                    class="ci-bound low"
+                    style:left={`${overlay.x}px`}
+                    style:top={`${overlay.violin.bottomY}px`}
+                  >
+                    {overlay.lowLabel}
+                  </span>
+                {/if}
+              </div>
+            {/if}
+          {/each}
+
           {#each labels as label (label.id)}
             {@const point = pointsById.get(label.id)}
             {#if point && isDimmed(point) === dimmed}
@@ -767,13 +971,13 @@
                 class:pinned={icon.id === pinnedId}
                 style:left={`${icon.x}px`}
                 style:top={`${icon.y}px`}
-                aria-label={`${point.name}: ${format(point.y)}, ${point.xLabel}${point.forced ? ', forced to proc' : point.optimal ? ', at its optimal timing' : point.setUp ? ', set up with skills that trigger it' : ''}${point.searchMatch ? ', search match' : ''}${comparedSkillIds.has(point.skillId) ? ', compared' : ''}`}
+                aria-label={`${point.name}: ${format(point.y)}${yUnitSuffix ? ` ${yUnitSuffix}` : ''}${point.yError !== undefined ? ` (±${point.yError.toFixed(1)}%${yUnitSuffix ? ` ${yUnitSuffix}` : ''} 95% CI)` : ''}, ${point.xLabel}${point.forced ? ', forced to proc' : point.optimal ? ', at its optimal timing' : point.setUp ? ', set up with skills that trigger it' : ''}${point.searchMatch ? ', search match' : ''}${comparedSkillIds.has(point.skillId) ? ', compared' : ''}`}
                 aria-haspopup="dialog"
                 aria-expanded={icon.id === activeId}
                 aria-controls={icon.id === activeId ? detailsId : undefined}
                 popovertarget={icon.id === activeId ? detailsId : undefined}
-                onpointerenter={(event) => previewSkill(icon.id, event)}
-                onpointerleave={leavePreview}
+                onpointerenter={(event) => hoverSkill(icon.id, event)}
+                onpointerleave={() => unhoverSkill(icon.id)}
                 onclick={(event) => togglePinned(icon.id, event)}
                 {@attach followActiveMarker(icon.id)}
               >
@@ -832,6 +1036,16 @@
           }}
         >
           {#snippet headerActions()}
+            {@const evo = evoToggle?.(selectedId)}
+            {#if evo}
+              <ToggleButton
+                label={evo.count === 1 ? 'Display evo' : `Display evos (${evo.count})`}
+                icon="star"
+                size="sm"
+                pressed={evo.shown}
+                onclick={evo.toggle}
+              />
+            {/if}
             <ToggleButton
               label="Compare"
               icon="swap"

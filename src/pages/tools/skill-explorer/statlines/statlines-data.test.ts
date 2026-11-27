@@ -40,9 +40,42 @@ describe('target statlines', () => {
   it('forecasts a coming CM with the typical held-out miss', () => {
     const target = targetStatlines(data, { cm: 21, course: { distance: 1600, dirt: false } });
 
-    expect(target).toMatchObject({ kind: 'forecast', margin: [27, 63, 50, 100, 81] });
+    expect(target).toMatchObject({
+      kind: 'forecast',
+      margin: [27, 63, 50, 100, 81],
+      fromCm: 19,
+      latestCm: 19
+    });
     expect(target?.rows).toHaveLength(4);
     expect(target?.rows[0]?.stats).toEqual(flat);
+  });
+
+  it('prefers precomputed hybrid physics forecasts by courseId when available', () => {
+    const hybrid: StatlinesData = {
+      latestCm: 22,
+      method: 'hybrid-era-physics-v1',
+      errors: { model: [15, 35, 25, 44, 25], previousCm: [45, 242, 68, 39, 76], forecasts: 16 },
+      past: data.past,
+      forecasts: {
+        '10504': {
+          1: [1580, 820, 1120, 660, 1100],
+          2: [1580, 810, 1130, 660, 1090],
+          3: [1560, 790, 1150, 650, 1080],
+          4: [1560, 790, 1150, 650, 1080]
+        }
+      }
+    };
+    const target = targetStatlines(hybrid, {
+      cm: 23,
+      course: { courseId: 10504, distance: 2000, dirt: false }
+    });
+
+    expect(target).toMatchObject({
+      kind: 'forecast',
+      method: 'hybrid-era-physics-v1',
+      latestCm: 22
+    });
+    expect(target?.rows[0]).toEqual({ style: 1, stats: [1580, 820, 1120, 660, 1100] });
   });
 
   it('has nothing to show without a course', () => {

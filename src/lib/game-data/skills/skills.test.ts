@@ -2,6 +2,7 @@ import { setupResourceFixtures } from '../../../../tests/fixtures/resource-setup
 
 import { expect, it } from 'vitest';
 import {
+  isEvoSkill,
   loadSkills,
   normalizeSkill,
   resolveEncodedSkill,
@@ -85,4 +86,44 @@ it('normalizes legacy boolean flags and metadata-derived unique skills like Angu
   expect(skillRarity(skillLookup.get(100011), false)).toBe('unique-main');
   expect(sortEncodedSkills(skillLookup, [200011, 100011])).toEqual([100011, 200011]);
   expect(skillLookup.get(100011)?.icon).toBe('utx_ico_skill_20013.png');
+});
+
+it('classifies and sorts evolved skills cleanly without confusing them with inherited uniques', () => {
+  const charEvo: SkillData = { skill_id: 100101111, name: 'Gluttonous Ruler', rarity: 6, icon: '' };
+  const preMasterEvo: SkillData = {
+    skill_id: 100101211,
+    name: 'Accelerating to My Dreams!',
+    rarity: 1,
+    icon: ''
+  };
+  const scenarioEvo: SkillData = { skill_id: 407011, name: 'Scenario Evo', rarity: 6, icon: '' };
+  const successionEvo: SkillData = {
+    skill_id: 91101351,
+    name: 'Succession Evo',
+    rarity: 6,
+    icon: ''
+  };
+  const gold: SkillData = { skill_id: 200511, name: 'In Body and Mind', rarity: 2, icon: '' };
+  const unique: SkillData = { skill_id: 100011, name: 'Shooting Star', rarity: 4, icon: '' };
+
+  expect(isEvoSkill(charEvo)).toBe(true);
+  expect(isEvoSkill(preMasterEvo)).toBe(true);
+  expect(isEvoSkill(scenarioEvo)).toBe(true);
+  expect(isEvoSkill(successionEvo)).toBe(true);
+  expect(isEvoSkill(gold)).toBe(false);
+
+  expect(skillRarity(charEvo, false)).toBe('evolved');
+  expect(skillRarity(preMasterEvo, false)).toBe('evolved');
+  expect(skillRarity(scenarioEvo, false)).toBe('evolved');
+
+  const lookup = new Map(
+    [charEvo, scenarioEvo, successionEvo, gold, unique].map((entry) => [entry.skill_id, entry])
+  );
+  expect(resolveEncodedSkill(lookup, 911013511)).toMatchObject({
+    skill: successionEvo,
+    inherited: false
+  });
+  expect(sortEncodedSkills(lookup, [2005111, 100101111, 1000111])).toEqual([
+    1000111, 100101111, 2005111
+  ]);
 });

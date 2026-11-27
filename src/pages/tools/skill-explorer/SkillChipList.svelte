@@ -95,9 +95,9 @@
     border-left: 1px solid var(--skill-border);
   }
 
-  /* A unique shows its uma's portrait, which has no frame of its own: give it a frame like the skill icons', in the
-     chip's colours, which also sets it off from the name. */
-  li :global(.skill-chip[class*='rarity-unique'] img) {
+  /* A unique or character-evolved skill shows its uma's portrait, which has no frame of its own: give it a frame like
+     the skill icons', in the chip's colours, which also sets it off from the name. */
+  li :global(.skill-chip:is([class*='rarity-unique'], .rarity-evolved) img) {
     box-sizing: border-box;
     border: 2px solid var(--skill-border);
     border-radius: 6px 0 0 6px;
@@ -110,7 +110,7 @@
     border-color: rgb(255 209 102 / 0.55);
   }
 
-  li :global(.skill-chip[class*='rarity-unique'] .skill-body) {
+  li :global(.skill-chip:is([class*='rarity-unique'], .rarity-evolved) .skill-body) {
     border-left: 0;
   }
 </style>

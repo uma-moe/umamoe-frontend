@@ -2,7 +2,7 @@
   import IconButton from '../controls/IconButton.svelte';
   import Icon from '../Icon.svelte';
 
-  type SkillRarity = 'normal' | 'gold' | 'special' | 'unique-inherited' | 'unique-main';
+  type SkillRarity = 'normal' | 'gold' | 'evolved' | 'special' | 'unique-inherited' | 'unique-main';
 
   interface Props {
     name: string;
@@ -159,6 +159,11 @@
     --skill-bg: rgb(255 170 32 / 0.13);
     --skill-text: #ffe08a;
   }
+  .rarity-evolved {
+    --skill-border: rgb(244 114 182 / 0.58);
+    --skill-bg: linear-gradient(135deg, rgb(236 72 153 / 0.24), rgb(244 114 182 / 0.14));
+    --skill-text: #fbcfe8;
+  }
   .rarity-special {
     --skill-border: rgb(33 150 243 / 0.4);
     --skill-bg: rgb(33 150 243 / 0.13);
@@ -273,6 +278,11 @@
     --skill-border: rgb(180 83 9 / 0.36);
     --skill-bg: rgb(245 158 11 / 0.13);
     --skill-text: #92400e;
+  }
+  :global([data-theme='light']) .rarity-evolved {
+    --skill-border: rgb(219 39 119 / 0.44);
+    --skill-bg: linear-gradient(135deg, rgb(236 72 153 / 0.14), rgb(244 114 182 / 0.08));
+    --skill-text: #9d174d;
   }
   :global([data-theme='light']) .rarity-unique-inherited {
     --skill-border: rgb(126 34 206 / 0.32);
