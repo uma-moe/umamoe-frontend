@@ -49,18 +49,22 @@
   .suggestion-fab {
     position: fixed;
     z-index: calc(var(--z-header) + 1);
-    /* A tab against the right edge, clear of the footer and any injected creative. */
+    /* A tab against the right edge, clear of the footer and any injected creative.
+       The label reads bottom to top, so the tab hangs like a handle. */
     top: 50%;
     right: 0;
-    transform: translateY(-50%);
+    translate: 0 -50%;
+    rotate: 180deg;
+    writing-mode: vertical-rl;
     display: inline-flex;
     align-items: center;
     gap: 6px;
-    min-height: 34px;
-    padding: 0 10px;
+    width: 34px;
+    padding: 12px 0;
     border: 1px solid var(--border-primary);
     border-right: 0;
-    border-radius: 999px 0 0 999px;
+    /* The half turn puts this rounded side against the left edge of the screen. */
+    border-radius: 0 999px 999px 0;
     background: var(--surface-overlay);
     box-shadow: var(--shadow-md);
     color: var(--text-secondary);
@@ -84,7 +88,7 @@
     }
     .suggestion-fab {
       justify-content: center;
-      width: 34px;
+      height: 34px;
       padding: 0;
     }
   }
