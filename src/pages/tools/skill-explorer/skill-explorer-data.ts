@@ -106,6 +106,15 @@ export interface StyleBaseline {
   win?: number;
 }
 
+/** One real competitive CM build in a style's reference ensemble. */
+export interface ReferenceBuild {
+  card: number;
+  stats: [number, number, number, number, number];
+  skills: number[];
+  baselineWin: number;
+  source?: string;
+}
+
 /** A gated skill's value at one timing, read as a row's: per firing, over all races, its rate and mean proc point. */
 export interface TimedValue {
   win: number;
@@ -231,6 +240,8 @@ export interface ScopeData {
   styles: Record<StyleKey, SkillPoint[]>;
   /** The reference build per style, for a single course. */
   builds?: Partial<Record<StyleKey, number[]>>;
+  /** Real competitive CM builds per style on a single course, when present. */
+  references?: Partial<Record<StyleKey, ReferenceBuild[]>>;
   /** Per style on a single course: the reference runner's forecasted statline and measured baseline win rate. */
   baselines?: Partial<Record<StyleKey, StyleBaseline>>;
   /** Per style, each skill's partners, for a single course. */
@@ -430,6 +441,40 @@ function parseBuilds(value: unknown): ScopeData['builds'] {
   );
 }
 
+function parseReferences(value: unknown): ScopeData['references'] {
+  if (!isRecord(value)) return undefined;
+
+  const refs: Partial<Record<StyleKey, ReferenceBuild[]>> = {};
+  for (const style of STYLE_KEYS) {
+    const list = value[style];
+    if (!Array.isArray(list) || list.length === 0) continue;
+
+    refs[style] = list
+      .filter((item): item is Record<string, unknown> => isRecord(item))
+      .map((item) => ({
+        card: finiteNumber(item.card, 'reference card'),
+        stats:
+          Array.isArray(item.stats) && item.stats.length === 5
+            ? (item.stats.map((s) => finiteNumber(s, 'reference stat')) as [
+                number,
+                number,
+                number,
+                number,
+                number
+              ])
+            : [0, 0, 0, 0, 0],
+        skills: Array.isArray(item.skills)
+          ? item.skills.map((id) => finiteNumber(id, 'reference skill'))
+          : [],
+        baselineWin:
+          item.baseline_win !== undefined ? finiteNumber(item.baseline_win, 'reference win') : 0,
+        source: typeof item.source === 'string' && item.source.length > 0 ? item.source : undefined
+      }));
+  }
+
+  return Object.keys(refs).length > 0 ? refs : undefined;
+}
+
 function parseBaselines(value: unknown): ScopeData['baselines'] {
   if (!isRecord(value)) return undefined;
 
@@ -553,6 +598,7 @@ export function parseScope(value: unknown): ScopeData {
     courses: finiteNumber(value.courses, 'course count'),
     styles: { ...byStyle, all: averageStyles(Object.values(byStyle)) },
     builds: parseBuilds(value.builds),
+    references: parseReferences(value.references),
     baselines: parseBaselines(value.baselines),
     partners: parsePartners(value.partners),
     margins: parseMargins(value.margins)

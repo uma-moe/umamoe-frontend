@@ -222,6 +222,33 @@ describe('Skill Explorer data', () => {
     expect(wrWeightedMean(front.sections, front.sectionWins)).toBeGreaterThan(0.6);
   });
 
+  it('parses real reference build ensembles when present on a single course', () => {
+    const scope = parseScope({
+      ...courseFile,
+      references: {
+        '1': [
+          {
+            card: 102001,
+            stats: [1525, 661, 1107, 734, 1114],
+            skills: [100201, 200011],
+            baseline_win: 35.4,
+            source: 'cm22-2026-11-26'
+          }
+        ]
+      }
+    });
+
+    expect(scope.references?.['1']).toEqual([
+      {
+        card: 102001,
+        stats: [1525, 661, 1107, 734, 1114],
+        skills: [100201, 200011],
+        baselineWin: 35.4,
+        source: 'cm22-2026-11-26'
+      }
+    ]);
+  });
+
   it('leaves headlinePoint undefined when a gated skill runs naturally unforced with zero feeders', () => {
     const natural = headlinePoint({
       forced: { win: 4.5, expected: 4.1, rate: 0.9, mean: 0.5 },

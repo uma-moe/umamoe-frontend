@@ -11,12 +11,14 @@ import {
   type Stats
 } from './statline-model';
 
-/** What past CM winners brought, and the model fitted on it with its held-out errors. */
+/** What past CM winners brought, plus precomputed hybrid forecasts (and optional legacy linear model). */
 export interface StatlinesData {
   latestCm: number;
-  model: StatlineModel;
+  method?: string;
+  model?: StatlineModel;
   errors: StatErrors;
   past: CmStatline[];
+  forecasts?: Record<string, Partial<Record<RunningStyle, Stats>>>;
 }
 
 /** One style's statline to aim for: the value, and either a range or a ± margin. */
@@ -30,7 +32,14 @@ export interface TargetRow {
 
 export type TargetStatlines =
   | { kind: 'winners'; cm: number; rows: TargetRow[] }
-  | { kind: 'forecast'; rows: TargetRow[]; margin: Stats; fromCm?: number; latestCm?: number };
+  | {
+      kind: 'forecast';
+      rows: TargetRow[];
+      margin: Stats;
+      fromCm?: number;
+      latestCm?: number;
+      method?: string;
+    };
 
 function stats(value: unknown, label: string): Stats {
   const list = numberList(value, label);
@@ -71,18 +80,43 @@ function parseModel(value: unknown): StatlineModel {
   };
 }
 
+function parseForecasts(
+  value: unknown
+): Record<string, Partial<Record<RunningStyle, Stats>>> | undefined {
+  if (!isRecord(value)) return undefined;
+  const out: Record<string, Partial<Record<RunningStyle, Stats>>> = {};
+  for (const [courseId, byStyle] of Object.entries(value)) {
+    if (!isRecord(byStyle)) continue;
+    const styles: Partial<Record<RunningStyle, Stats>> = {};
+    for (const style of RUNNING_STYLES) {
+      const entry = byStyle[String(style)];
+      if (entry !== undefined) styles[style] = stats(entry, 'forecast statline');
+    }
+
+    out[courseId] = styles;
+  }
+
+  return out;
+}
+
 export function parseStatlines(value: unknown): StatlinesData {
   if (!isRecord(value) || !Array.isArray(value.past) || !isRecord(value.errors))
     throw new Error('Skill Explorer statlines are invalid.');
+  const model = value.model !== undefined ? parseModel(value.model) : undefined;
+  const forecasts = parseForecasts(value.forecasts);
+  if (model === undefined && forecasts === undefined)
+    throw new Error('Skill Explorer statlines have neither forecasts nor model.');
   return {
     latestCm: finiteNumber(value.latestCm, 'latest CM'),
-    model: parseModel(value.model),
+    method: typeof value.method === 'string' ? value.method : undefined,
+    model,
     errors: {
       model: stats(value.errors.model, 'held-out error'),
       previousCm: stats(value.errors.previousCm, 'baseline error'),
       forecasts: finiteNumber(value.errors.forecasts, 'forecast count')
     },
-    past: value.past.map(parsePast)
+    past: value.past.map(parsePast),
+    forecasts
   };
 }
 
@@ -106,7 +140,7 @@ export function loadStatlines(): Promise<StatlinesData> {
  */
 export function targetStatlines(
   data: StatlinesData,
-  race: { cm?: number; course?: { distance: number; dirt: boolean } }
+  race: { cm?: number; course?: { courseId?: number; distance: number; dirt: boolean } }
 ): TargetStatlines | undefined {
   const winners = data.past.filter((statline) => statline.cm === race.cm);
   if (race.cm !== undefined && winners.length > 0) {
@@ -126,18 +160,40 @@ export function targetStatlines(
 
   if (race.course === undefined) return undefined;
 
-  const { distance, dirt } = race.course;
-  const cm = Math.max(race.cm ?? 0, data.latestCm + 1);
   const fromCm =
     data.past.length > 0 ? Math.min(...data.past.map((statline) => statline.cm)) : undefined;
+  const precomputed =
+    race.course.courseId !== undefined ? data.forecasts?.[String(race.course.courseId)] : undefined;
+  if (precomputed !== undefined) {
+    const rows: TargetRow[] = RUNNING_STYLES.flatMap((style) => {
+      const value = precomputed[style];
+      return value !== undefined ? [{ style, stats: value }] : [];
+    });
+    if (rows.length > 0) {
+      return {
+        kind: 'forecast',
+        margin: data.errors.model,
+        fromCm,
+        latestCm: data.latestCm,
+        method: data.method,
+        rows
+      };
+    }
+  }
+
+  if (data.model === undefined) return undefined;
+
+  const { distance, dirt } = race.course;
+  const cm = Math.max(race.cm ?? 0, data.latestCm + 1);
   return {
     kind: 'forecast',
     margin: data.errors.model,
     fromCm,
     latestCm: data.latestCm,
+    method: data.method,
     rows: RUNNING_STYLES.map((style) => ({
       style,
-      stats: forecastStatline(data.model, { style, distance, dirt, cm })
+      stats: forecastStatline(data.model!, { style, distance, dirt, cm })
     }))
   };
 }

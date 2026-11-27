@@ -33,7 +33,7 @@
   const note = $derived(
     target.kind === 'winners'
       ? 'Median of the runners who won their room, with the middle half of them, in tens.'
-      : `Forecast from ${target.fromCm !== undefined && target.latestCm !== undefined ? `CM${target.fromCm}–${target.latestCm}` : 'past CM'} winners for the current stat era, in tens. ± is the typical miss.`
+      : `Forecast from ${target.fromCm !== undefined && target.latestCm !== undefined ? `CM${target.fromCm}–${target.latestCm}` : 'past CM'} winners${target.method ? ' and simulator course physics' : ' for the current stat era'}, in tens. ± is the typical miss.`
   );
 
   function groupLabel(group: StatlineGroup): string {

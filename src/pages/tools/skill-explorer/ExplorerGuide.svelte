@@ -73,10 +73,10 @@
         <li>
           <strong>Win rate, not raw lengths:</strong> Height is the
           <strong>win-rate percentage points</strong> added in full <strong>9-runner rooms</strong>,
-          standardized to a <strong>20% ace baseline</strong> (<code>+2%</code> ≈ 2 extra wins per
-          100 races). Distance gained alone does not tell the whole story: adding lengths when you
-          are already far ahead or far behind barely moves win rate, while a timely burst in a
-          contested acceleration or spurt window can decide close races even if the skill does
+          standardized to a <strong>35% Group A ace baseline</strong> (<code>+2%</code> ≈ 2 extra
+          wins per 100 races). Distance gained alone does not tell the whole story: adding lengths
+          when you are already far ahead or far behind barely moves win rate, while a timely burst
+          in a contested acceleration or spurt window can decide close races even if the skill does
           little when it triggers early.
         </li>
         <!-- prettier-ignore -->
@@ -149,10 +149,10 @@
         </li>
         <li>
           <strong>Representative ace ensemble:</strong>
-          Each style is evaluated across multiple real non-debuffer ace builds with realistic skill counts
-          and forecasted track stats. Click
-          <strong>Reference build</strong>
-          to inspect the headline build for the selected style.
+          Each style is evaluated across four real competitive CM ace builds screened into the 30–40%
+          Group A win-rate band, with hybrid physics-backed target stats. Click
+          <strong>Reference builds</strong>
+          to inspect all four builds for the selected style.
         </li>
         <li>
           <strong>Model calibrated to full races:</strong>

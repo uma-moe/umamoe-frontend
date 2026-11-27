@@ -58,7 +58,7 @@
     type UmaSkills,
     type UnvaluedSkills
   } from './skill-explorer/umas/uma-skills';
-  import BuildPanel from './skill-explorer/build/BuildPanel.svelte';
+  import BuildPanel, { type ReferenceBuildView } from './skill-explorer/build/BuildPanel.svelte';
   import ExplorerGuide from './skill-explorer/ExplorerGuide.svelte';
   import SkillExplorerFilters from './skill-explorer/SkillExplorerFilters.svelte';
   import SkillScatter from './skill-explorer/scatter/SkillScatter.svelte';
@@ -208,7 +208,11 @@
       ? targetStatlines(statlines, {
           cm: selectedMeeting?.number,
           course: selectedCourse
-            ? { distance: selectedCourse.distance, dirt: selectedCourse.surface === 2 }
+            ? {
+                courseId: selectedCourse.courseId,
+                distance: selectedCourse.distance,
+                dirt: selectedCourse.surface === 2
+              }
             : undefined
         })
       : undefined
@@ -260,7 +264,20 @@
   /** The reference build, which the values are measured in, is shown on a single course for a single style. */
   const buildStyle = $derived(selectedCourse && style !== 'all' ? style : undefined);
   const referenceBuild = $derived(buildStyle ? scopeData?.builds?.[buildStyle] : undefined);
+  const styleReferences = $derived(buildStyle ? (scopeData?.references?.[buildStyle] ?? []) : []);
   const styleBaseline = $derived(buildStyle ? scopeData?.baselines?.[buildStyle] : undefined);
+  const umaNameByCard = $derived(new Map(umas.map((uma) => [uma.cardId, uma.name])));
+  const referenceBuildViews = $derived<ReferenceBuildView[]>(
+    styleReferences.map((ref) => ({
+      card: ref.card,
+      name: umaNameByCard.get(ref.card) ?? `Card ${ref.card}`,
+      portrait: umaPortrait(ref.card),
+      stats: ref.stats,
+      baselineWin: ref.baselineWin,
+      source: ref.source,
+      skills: ref.skills.map((skillId) => relatedSkill(skillId))
+    }))
+  );
   const points = $derived(scopeData?.styles[style] ?? []);
   const hasSectionWins = $derived(points.some((point) => point.sectionWins !== undefined));
   const heldRarities = $derived(raritiesOf(points, skills));
@@ -484,7 +501,12 @@
   }
 
   function inReferenceBuild(skillId: number): boolean {
-    return style !== 'all' && Boolean(referenceBuild?.includes(skillId));
+    if (style === 'all') return false;
+    if (styleReferences.length > 0) {
+      return styleReferences.some((ref) => ref.skills.includes(skillId));
+    }
+
+    return Boolean(referenceBuild?.includes(skillId));
   }
 
   function restorePick(loaded: ExplorerIndex): void {
@@ -728,9 +750,10 @@
         {#if (buildStyle && referenceBuild) || target}
           <!-- The values' build and target stats: they share the title row on wide screens, and align edge-to-edge below it on smaller ones. -->
           <div class="scope-tools">
-            {#if buildStyle && referenceBuild}
+            {#if buildStyle && (referenceBuild || referenceBuildViews.length > 0)}
               <BuildPanel
-                skills={referenceBuild.map((skillId) => relatedSkill(skillId))}
+                skills={(referenceBuild ?? []).map((skillId) => relatedSkill(skillId))}
+                references={referenceBuildViews}
                 styleName={STYLE_NAMES[buildStyle]}
                 baseline={styleBaseline}
               />
